@@ -1,0 +1,42 @@
+﻿{
+    "clock_locked":  true,
+    "failed_passes":  [
+
+                      ],
+    "diagnosis_status":  "INCONCLUSIVE",
+    "runs":  [
+                 {
+                     "pass0":  {
+                                   "exit_code":  0
+                               },
+                     "pass1":  {
+                                   "exit_code":  0
+                               },
+                     "id":  "runA",
+                     "order":  "pass0_first"
+                 },
+                 {
+                     "pass0":  {
+                                   "exit_code":  0
+                               },
+                     "pass1":  {
+                                   "exit_code":  0
+                               },
+                     "id":  "runB",
+                     "order":  "pass1_first"
+                 },
+                 {
+                     "pass0":  {
+                                   "exit_code":  0
+                               },
+                     "pass1":  {
+                                   "exit_code":  0
+                               },
+                     "id":  "runC",
+                     "order":  "pass0_first_locked"
+                 }
+             ],
+    "diagnosis":  [
+                      "INCONCLUSIVE"
+                  ]
+}

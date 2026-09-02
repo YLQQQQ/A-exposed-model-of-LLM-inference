@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exposedpath.dev/schemas/prompt_tokens.schema.json",
+  "title": "Prompt Tokens Input Contract",
+  "description": "Fixed input tokens for LLM inference benchmarking. Generated offline by prepare-prompt-tokens.",
+  "type": "object",
+  "required": ["schema_version", "tokenizer_id", "fixed_input_tokens", "samples"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version identifier, e.g. exposedpath-v3"
+    },
+    "tokenizer_id": {
+      "type": "string",
+      "description": "Identifier for the tokenizer used (model path or HF repo id)"
+    },
+    "tokenizer_revision": {
+      "type": "string",
+      "description": "Tokenizer revision or commit hash"
+    },
+    "chat_template": {
+      "description": "Chat template string or null",
+      "oneOf": [{"type": "string"}, {"type": "null"}]
+    },
+    "special_tokens": {
+      "type": "object",
+      "description": "Special token IDs",
+      "properties": {
+        "eos_token_id": {"type": "integer"},
+        "pad_token_id": {"type": "integer"},
+        "bos_token_id": {"type": "integer"}
+      }
+    },
+    "fixed_input_tokens": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "description": "Exact input token count for every sample"
+    },
+    "samples": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["sample_index", "input_ids"],
+        "properties": {
+          "sample_index": {"type": "integer", "minimum": 0},
+          "input_ids": {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 0}
+          },
+          "attention_mask": {
+            "type": "array",
+            "items": {"type": "integer"}
+          },
+          "source_text": {"type": "string"}
+        }
+      }
+    }
+  }
+}

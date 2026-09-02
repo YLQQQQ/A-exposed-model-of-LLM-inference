@@ -1,0 +1,18 @@
+﻿# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.pytest_cache/
+
+# nsys 采集结果（体积大，按需上传）
+nsys_results/
+nsys_matrix/
+
+# 模型文件（太大，不传）
+models/
+
+# IDE / 系统
+.vscode/
+*.lnk
+desktop.ini

@@ -1,0 +1,87 @@
+﻿{
+    "failed_passes":  [
+                          "runA/pass0",
+                          "runB/pass0",
+                          "runC/pass0"
+                      ],
+    "execution_status":  "EXECUTION_FAILURE",
+    "diagnosis_status":  "EXECUTION_FAILURE",
+    "execution_parity_status":  "MISMATCH: MISMATCH: pass0 parity missing; pass1 parity missing; MISMATCH: pass0 parity missing; pass1 parity missing; MISMATCH: pass0 parity missing; pass1 parity missing",
+    "diagnosis_limitations":  [
+
+                              ],
+    "clock_intervention_status":  "NOT_REQUESTED",
+    "root_cause_status":  "UNRESOLVED",
+    "runs":  [
+                 {
+                     "pass1_latency_count":  0,
+                     "pass0_mean_e2e_ms":  null,
+                     "id":  "runA",
+                     "parity_reasons":  [
+                                            "pass0 parity missing",
+                                            "pass1 parity missing"
+                                        ],
+                     "parity_status":  "MISMATCH: pass0 parity missing; pass1 parity missing",
+                     "order":  "pass0_first",
+                     "pass1_mean_e2e_ms":  null,
+                     "pass0":  {
+                                   "exit_code":  1
+                               },
+                     "pass1":  {
+                                   "exit_code":  0
+                               },
+                     "pass0_latency_count":  0,
+                     "pass1_over_pass0_ratio":  null
+                 },
+                 {
+                     "pass1_latency_count":  0,
+                     "pass0_mean_e2e_ms":  null,
+                     "id":  "runB",
+                     "parity_reasons":  [
+                                            "pass0 parity missing",
+                                            "pass1 parity missing"
+                                        ],
+                     "parity_status":  "MISMATCH: pass0 parity missing; pass1 parity missing",
+                     "order":  "pass1_first",
+                     "pass1_mean_e2e_ms":  null,
+                     "pass0":  {
+                                   "exit_code":  1
+                               },
+                     "pass1":  {
+                                   "exit_code":  0
+                               },
+                     "pass0_latency_count":  0,
+                     "pass1_over_pass0_ratio":  null
+                 },
+                 {
+                     "pass1_over_pass0_ratio":  null,
+                     "id":  "runC",
+                     "pass0":  {
+                                   "exit_code":  1
+                               },
+                     "pass1":  {
+                                   "exit_code":  0
+                               },
+                     "clock_lock_succeeded":  false,
+                     "pass1_mean_e2e_ms":  null,
+                     "pass0_latency_count":  0,
+                     "pass0_mean_e2e_ms":  null,
+                     "order":  "pass0_first",
+                     "parity_reasons":  [
+                                            "pass0 parity missing",
+                                            "pass1 parity missing"
+                                        ],
+                     "parity_status":  "MISMATCH: pass0 parity missing; pass1 parity missing",
+                     "pass1_latency_count":  0,
+                     "clock_lock_requested":  false
+                 }
+             ],
+    "diagnosis":  [
+                      "CLOCK_CAUSALITY_NOT_EVALUATED"
+                  ],
+    "ratios":  {
+                   "runC":  null,
+                   "runB":  null,
+                   "runA":  null
+               }
+}

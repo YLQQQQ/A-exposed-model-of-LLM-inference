@@ -1,0 +1,197 @@
+{
+  "schema_version": "exposedpath-v3-pilot-3",
+  "generated_at": "2026-07-21",
+  "modified": [
+    {
+      "path": "README.md",
+      "sha256": "467067274dcbcdb3390eb0fd48f28935e81d32657b47ad803adc42f9b4e2d319",
+      "server_action": "overwrite"
+    },
+    {
+      "path": "analysis/accounting_utils.py",
+      "sha256": "c2e3965293323424558f4355e1491d302c6ee35e1d2776989fa5fd4d5258feae",
+      "server_action": "overwrite"
+    },
+    {
+      "path": "analysis/exposed_accounting.py",
+      "sha256": "4348ac1e74e681cb9c91b471c6c582880cb1e5b886ab1e8440bbae5c9d4dd293",
+      "server_action": "overwrite"
+    },
+    {
+      "path": "bench_eager.py",
+      "sha256": "210580fc87edc298bea61a578945d2416c7f98cb104c339356b347b5a246a448",
+      "server_action": "overwrite"
+    },
+    {
+      "path": "run_matrix.py",
+      "sha256": "628c176a6a46fa430615c092d9fbd4903bc2111b0cc465c0760b9e9b1b24b379",
+      "server_action": "overwrite"
+    },
+    {
+      "path": "run_one.py",
+      "sha256": "a00648b6c8e9eade84a41ac37b8d6181d3703d4dffe5f76b3a59853c70374350",
+      "server_action": "overwrite"
+    },
+    {
+      "path": "scripts/run_all_nsys_matrix.ps1",
+      "sha256": "6b4ad6553ec3f6079a2effa69df0810acbe03c1486eb4d13c758afde413e52e8",
+      "server_action": "overwrite"
+    },
+    {
+      "path": "scripts/run_nsys_matrix.ps1",
+      "sha256": "583008f0315185fb270e67fe7cc5d81f018e94e359153bbe172d92d81d19fa04",
+      "server_action": "overwrite"
+    },
+    {
+      "path": "scripts/run_nsys_single.ps1",
+      "sha256": "b47c164df6191f004d802f693b6d6f286a618259be68e186a66e6b28d570c6db",
+      "server_action": "overwrite"
+    },
+    {
+      "path": "tests/test_exposed_accounting.py",
+      "sha256": "9dc9eea3bb5e5cc056c74f38215ddacc1955d1617c3f77039ef788c1600c32d0",
+      "server_action": "overwrite"
+    }
+  ],
+  "added": [
+    {
+      "path": "CHANGE_MANIFEST.md",
+      "sha256": "d22d31e9cea36ed0c45c2ae356e531d550ca3ec17617ff75a7b3398eb15fd8c0",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "SERVER_SYNC_MANIFEST.json",
+      "sha256": "c4c6a5f3514fb7cc1c7d195b56a32268ff9d7f0094dbd07be602bdbff9521a3e",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "docs/pilot_runner_contract.md",
+      "sha256": "0f08e104c469562dec2558c972859f5659ace57a9753100d7c9049bf8873b367",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "docs/server_smoke_test.md",
+      "sha256": "96f9840922d49269747abc76919e59506e2772fbe779fa334a0c12342925d2d6",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "exposedpath/__init__.py",
+      "sha256": "e8a755439f13533ab95b8e5c3475a0ed8852ad386d82130503b631b42acd7d62",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "exposedpath/__main__.py",
+      "sha256": "66a8a135835601199bf0e828888ac14ec1796690cecc3b63cfcb12d250ce3daa",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "exposedpath/cli.py",
+      "sha256": "a2e7ab2f21c08fc787cc86b5fd518d2e3a73cba0d8cdd6df9e2797bc8696e966",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "exposedpath/ids.py",
+      "sha256": "148dcd3fac4be5b41eee0440a34b8bdfd37eebcae63c487d15bde02bb3fd3fb8",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "exposedpath/manifest.py",
+      "sha256": "bc71d23cc239d58fdad54738f09abf3091a43d69bf383b5e0e568e8a074af827",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "exposedpath/nvtx.py",
+      "sha256": "3310bae172da92a02dbbaa99498a21810f01f5f5b5e7d88bab06c8e033ccfcb5",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "exposedpath/results.py",
+      "sha256": "eaf9458404547fad38c92766b47ff1131d0bfec872093f99921cd22bae160df0",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "exposedpath/runner.py",
+      "sha256": "e415b08553221a571c46ee78bd7c0d7dbe2731f777908b2f0ffdcafa0d0e8ccb",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "exposedpath/validation.py",
+      "sha256": "c1a51723fe533a41e4634b117afcece9832f16a276a49a25f90f28c6527a652f",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "exposedpath/workload.py",
+      "sha256": "a700481d040d37713d4b297a88f8015f31e82c931711428db0612892ac6857d1",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "schemas/prompt_tokens.schema.json",
+      "sha256": "997caf17a8ab8175ae8683591e6d670a994c2dbd57a66fe32bc6ce9261524932",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "schemas/wmpc_manifest.schema.json",
+      "sha256": "e4501861c73f132b0fb3a9f1ec4f4558f1a4abd65636730b194c18eefa571fa9",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "scripts/run_pass0.ps1",
+      "sha256": "bcbb411055d2c527adbb3bd5a4ab889dd2681cd1f58a86d4142a3a8792c7147f",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "scripts/run_pass1_nsys.ps1",
+      "sha256": "c4aea034c395c17ca0170c2bf607d3a60a4118c5684e4a12182fd868606dc4a9",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "scripts/run_server_smoke_test.ps1",
+      "sha256": "ca04cd200d7013e98b7a68bf6de93036a509b41a3eae0d860a6f56e125d9c477",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "scripts/run_wmpc_pilot.ps1",
+      "sha256": "52345eb10894d3b957fe736512cb58d7c0809a92dc5e98e9ede9fced1b3e97f1",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "scripts/verify_pilot_install.ps1",
+      "sha256": "364437595dd090417f123c0f6099a5d920f6ad1833310f7a88079a018992dafe",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "tests/test_exposedpath_v3.py",
+      "sha256": "01975c3dbbeda928f93ebe33f76b176a4ba1ac80ad3f21b825fb64472b4aced1",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "tests/test_server_smoke_script.py",
+      "sha256": "45072cbd1e72341f4969988fae68788839ab287821aaabe7c297602f59f2d270",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "deployment/install_on_server.ps1",
+      "sha256": "e890bcccd204fc136a2118cae8814de8f366c4eb2bb51ee910a7276ea8b4ce1f",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "deployment/verify_deployment.ps1",
+      "sha256": "00379bc15f62d88b19924228774cc8ab833b9421f07c5196fa3e3d9a308ed1d5",
+      "server_action": "create_and_copy"
+    },
+    {
+      "path": "deployment/DEPLOYMENT_README.md",
+      "sha256": "d191a43d61eaf5b57bd31e0e8425affa357796017984a2fd538669e0df122ebf",
+      "server_action": "create_and_copy"
+    }
+  ],
+  "deleted": [],
+  "renamed": [],
+  "dependency_changed": false,
+  "required_commands": [
+    "python -m compileall exposedpath analysis",
+    "python -m pytest -q",
+    "python -m exposedpath --help",
+    "powershell -File scripts/verify_pilot_install.ps1"
+  ]
+}

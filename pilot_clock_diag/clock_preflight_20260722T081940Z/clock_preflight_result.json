@@ -1,0 +1,27 @@
+﻿{
+    "samples":  [
+
+                ],
+    "succeeded":  false,
+    "requested_mhz":  1740,
+    "failure_reason":  "CLOCK_LOCK_PERMISSION_DENIED",
+    "tolerance_mhz":  50,
+    "pm_cmd":  null,
+    "verify_cmds":  [
+
+                    ],
+    "lgc_cmd":  {
+                    "stdout":  "The current user does not have permission to change clocks for GPU 00000000:01:00.0.\r\nTerminating early due to previous errors.\r\n",
+                    "command":  "nvidia-smi -i 0 -lgc 1740",
+                    "stderr":  "",
+                    "exit_code":  4
+                },
+    "persistence_mode_status":  "NOT_APPLICABLE_WINDOWS",
+    "reset_exit":  4,
+    "reset_cmd":  {
+                      "stdout":  "The current user does not have permission to change clocks for GPU 00000000:01:00.0.\r\nTerminating early due to previous errors.\r\n",
+                      "command":  "nvidia-smi -i 0 -rgc",
+                      "stderr":  "",
+                      "exit_code":  4
+                  }
+}

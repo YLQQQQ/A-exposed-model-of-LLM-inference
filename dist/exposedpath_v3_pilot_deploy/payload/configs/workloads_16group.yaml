@@ -1,0 +1,103 @@
+# 16-group matrix: 4 prompt_len × 4 batch_size, output_len=16
+# All groups share the same canonical text, truncated to prompt_len tokens.
+# warmup=5, repeat=10, streaming
+
+_prompt: &prompt |
+  Large language models have transformed the field of artificial intelligence by demonstrating remarkable capabilities in natural language understanding and generation. These models, based on the transformer architecture, are trained on vast corpora of text data using self-supervised learning objectives. The pre-training phase involves predicting the next token in a sequence given the preceding context, which allows the model to learn rich representations of language structure, factual knowledge, and reasoning patterns. After pre-training, models can be fine-tuned on specific tasks or aligned with human preferences through techniques such as reinforcement learning from human feedback. The inference process for autoregressive language models consists of two distinct phases. First, the prefill phase processes the entire input prompt in parallel, computing key-value caches for all input tokens simultaneously. This phase is typically compute-bound due to the large matrix multiplications involved in the attention mechanism and feed-forward networks. Second, the decode phase generates output tokens one at a time in an autoregressive manner, where each new token depends on all previously generated tokens through the causal attention mask. The decode phase is generally memory-bandwidth-bound because it must repeatedly access the growing key-value cache stored in GPU high-bandwidth memory. Understanding the performance characteristics of both phases is essential for optimizing deployment on resource-constrained devices such as local workstations, edge servers, and personal computers. On these platforms, factors such as GPU compute throughput, memory bandwidth limitations, host-device communication overhead, and runtime scheduling delays all contribute to the end-to-end latency experienced by users. Efficient inference on local and private devices requires careful accounting of where time is spent across the entire system stack, from the application level down to individual GPU kernel executions and memory operations. This experiment systematically measures and attributes the exposed latency in each phase of the inference pipeline, decomposing the total wall-clock time into fine-grained categories that reveal which hardware and software components are the dominant contributors to the observed latency. The key metrics include device compute time spent executing GPU kernels, memory transfer time for data movement between host and device, submission overhead from launching CUDA operations, host runtime spent in CPU-side processing, and synchronization residual from waiting for GPU work to complete. By varying prompt length and batch size across a matrix of configurations, we can observe how the latency composition shifts and identify the key bottlenecks that must be addressed to improve the user experience in practical deployment scenarios. This methodology enables a principled approach to performance analysis and optimization for on-device large language model serving. The experimental setup includes a comprehensive benchmarking framework that captures detailed execution traces using NVIDIA Nsight Systems, providing fine-grained visibility into CUDA API calls, GPU kernel executions, memory copy operations, and NVTX ranges that demarcate the logical phases of each inference request. The collected trace data is exported to SQLite format and parsed through a custom analysis pipeline that performs critical path decomposition, identifying which events lie on the end-to-end critical path and therefore directly contribute to user-perceived latency. Events that execute concurrently with critical path work are classified as hidden, while those that extend the frontier of wall-clock progress are classified as exposed. This distinction is crucial because raw profiler durations summed across all events typically far exceed the actual wall-clock time, making naive aggregation misleading for understanding real user experience. The analysis further classifies each exposed segment into provenance categories that trace back through the dependency chain, revealing whether a particular GPU kernel was blocked by a preceding memory transfer, another kernel on the same stream, or by host-side submission delays. By examining these patterns across the full matrix of prompt lengths and batch sizes, we can characterize how the bottleneck profile evolves as workload characteristics change, providing actionable insights for system designers and deployment engineers working on practical LLM serving infrastructure. Beyond the immediate performance characterization, this work also investigates how the exposed latency profile varies across different hardware configurations and deployment conditions. The transition from high-end data center GPUs to consumer-grade and professional workstation GPUs introduces significant shifts in the relative importance of different latency components. On devices with more limited memory bandwidth, the decode phase can become increasingly bottlenecked by the rate at which key-value cache entries can be accessed, making the memory subsystem a dominant factor in the user experience. Conversely, on devices with lower compute throughput, the prefill phase may dominate the total latency as the large matrix operations require more time to complete. The interaction between batch size and these hardware constraints is particularly important for practical deployments where multiple requests may need to be served concurrently. As batch size increases, the prefill phase benefits from the additional parallelism, allowing multiple input sequences to be processed simultaneously through the same matrix multiplications. However, this increased parallelism comes at the cost of proportionally larger key-value cache memory consumption, which can stress the memory subsystem during the decode phase. The trade-off between compute efficiency and memory pressure represents a fundamental design tension in LLM serving systems that must be carefully balanced based on the specific hardware characteristics and workload requirements of each deployment scenario. The provenance analysis methodology developed in this work provides a systematic framework for understanding not only which components contribute to end-to-end latency but also why those contributions arise in the first place. By tracing each exposed GPU operation back through its dependency chain to the originating host-side submission, we can distinguish between latency that is intrinsic to the computation itself and latency that results from scheduling artifacts, resource contention, or suboptimal runtime behavior. This distinction is essential because it separates optimization targets that can be addressed through algorithmic improvements from those that require system-level interventions. For example, a GPU kernel that spends significant time waiting for a preceding memory transfer to complete points toward opportunities for better compute and memory overlap through techniques such as double buffering or asynchronous prefetching. Similarly, kernels that are delayed by host-side submission gaps suggest that the CPU runtime is struggling to keep the GPU pipeline fed, indicating a need for more aggressive batching of CUDA operations or reduction of Python overhead in the serving stack. The integration of NVTX annotations throughout the inference pipeline enables this analysis to be performed at multiple levels of abstraction, from the high-level prefill and decode phases down to individual transformer layers and attention operations. This hierarchical view allows performance engineers to quickly narrow down the source of latency anomalies and focus optimization efforts where they will have the greatest impact on user-perceived responsiveness in real-world deployments of large language models on local and private computing infrastructure with constrained hardware resources.
+
+workloads:
+  - id: w01_p128_b1_o16
+    prompt: *prompt
+    prompt_len: 128
+    batch_size: 1
+    output_len: 16
+
+  - id: w02_p128_b2_o16
+    prompt: *prompt
+    prompt_len: 128
+    batch_size: 2
+    output_len: 16
+
+  - id: w03_p128_b4_o16
+    prompt: *prompt
+    prompt_len: 128
+    batch_size: 4
+    output_len: 16
+
+  - id: w04_p128_b8_o16
+    prompt: *prompt
+    prompt_len: 128
+    batch_size: 8
+    output_len: 16
+
+  - id: w05_p256_b1_o16
+    prompt: *prompt
+    prompt_len: 256
+    batch_size: 1
+    output_len: 16
+
+  - id: w06_p256_b2_o16
+    prompt: *prompt
+    prompt_len: 256
+    batch_size: 2
+    output_len: 16
+
+  - id: w07_p256_b4_o16
+    prompt: *prompt
+    prompt_len: 256
+    batch_size: 4
+    output_len: 16
+
+  - id: w08_p256_b8_o16
+    prompt: *prompt
+    prompt_len: 256
+    batch_size: 8
+    output_len: 16
+
+  - id: w09_p512_b1_o16
+    prompt: *prompt
+    prompt_len: 512
+    batch_size: 1
+    output_len: 16
+
+  - id: w10_p512_b2_o16
+    prompt: *prompt
+    prompt_len: 512
+    batch_size: 2
+    output_len: 16
+
+  - id: w11_p512_b4_o16
+    prompt: *prompt
+    prompt_len: 512
+    batch_size: 4
+    output_len: 16
+
+  - id: w12_p512_b8_o16
+    prompt: *prompt
+    prompt_len: 512
+    batch_size: 8
+    output_len: 16
+
+  - id: w13_p1024_b1_o16
+    prompt: *prompt
+    prompt_len: 1024
+    batch_size: 1
+    output_len: 16
+
+  - id: w14_p1024_b2_o16
+    prompt: *prompt
+    prompt_len: 1024
+    batch_size: 2
+    output_len: 16
+
+  - id: w15_p1024_b4_o16
+    prompt: *prompt
+    prompt_len: 1024
+    batch_size: 4
+    output_len: 16
+
+  - id: w16_p1024_b8_o16
+    prompt: *prompt
+    prompt_len: 1024
+    batch_size: 8
+    output_len: 16

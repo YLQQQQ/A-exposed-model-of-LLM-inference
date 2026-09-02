@@ -1,0 +1,27 @@
+﻿Traceback (most recent call last):
+  File "C:\Users\yeliuqiang1104\Desktop\YLQ_test\exposedpath\manifest.py", line 186, in load_manifest
+    data = json.loads(path.read_text(encoding="utf-8"))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\yeliuqiang1104\anaconda3\Lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\yeliuqiang1104\anaconda3\Lib\json\decoder.py", line 340, in decode
+    raise JSONDecodeError("Extra data", s, end)
+json.decoder.JSONDecodeError: Extra data: line 1 column 3 (char 2)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\yeliuqiang1104\Desktop\YLQ_test\exposedpath\__main__.py", line 5, in <module>
+    main()
+  File "C:\Users\yeliuqiang1104\Desktop\YLQ_test\exposedpath\cli.py", line 241, in main
+    cmd_run_pass(args)
+  File "C:\Users\yeliuqiang1104\Desktop\YLQ_test\exposedpath\cli.py", line 163, in cmd_run_pass
+    manifest = load_manifest(manifest_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\yeliuqiang1104\Desktop\YLQ_test\exposedpath\manifest.py", line 188, in load_manifest
+    raise ValueError(f"Invalid JSON in {path}: {e}")
+ValueError: Invalid JSON in C:\Users\yeliuqiang1104\Desktop\YLQ_test\exposedpath\__init__.py: Extra data: line 1 column 3 (char 2)
+

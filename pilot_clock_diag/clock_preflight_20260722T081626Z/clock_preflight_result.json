@@ -1,0 +1,32 @@
+﻿{
+    "samples":  [
+
+                ],
+    "succeeded":  false,
+    "requested_mhz":  1740,
+    "failure_reason":  "CLOCK_VERIFICATION_QUERY_FAILED: cannot parse clock value",
+    "tolerance_mhz":  50,
+    "pm_cmd":  null,
+    "verify_cmds":  [
+                        {
+                            "stdout":  "Wed Jul 22 16:16:31 2026        +-----------------------------------------------------------------------------------------+ | NVIDIA-SMI 581.57                 Driver Version: 581.57         CUDA Version: 13.0     | +-----------------------------------------+------------------------+----------------------+ | GPU  Name                  Driver-Model | Bus-Id          Disp.A | Volatile Uncorr. ECC | | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. | |                                         |                        |               MIG M. | |=========================================+========================+======================| |   0  NVIDIA GeForce GTX 1650      WDDM  |   00000000:01:00.0 Off |                  N/A | | N/A   45C    P8              6W /   30W |       0MiB /   4096MiB |      0%      Default | |                                         |                        |                  N/A | +-----------------------------------------+------------------------+----------------------+  +-----------------------------------------------------------------------------------------+ | Processes:                                                                              | |  GPU   GI   CI              PID   Type   Process name                        GPU Memory | |        ID   ID                                                               Usage      | |=========================================================================================| |  No running processes found                                                             | +-----------------------------------------------------------------------------------------+",
+                            "command":  "nvidia-smi -i 0 ",
+                            "stderr":  "",
+                            "exit_code":  0
+                        }
+                    ],
+    "lgc_cmd":  {
+                    "stdout":  "Wed Jul 22 16:16:26 2026        +-----------------------------------------------------------------------------------------+ | NVIDIA-SMI 581.57                 Driver Version: 581.57         CUDA Version: 13.0     | +-----------------------------------------+------------------------+----------------------+ | GPU  Name                  Driver-Model | Bus-Id          Disp.A | Volatile Uncorr. ECC | | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. | |                                         |                        |               MIG M. | |=========================================+========================+======================| |   0  NVIDIA GeForce GTX 1650      WDDM  |   00000000:01:00.0 Off |                  N/A | | N/A   43C    P8              3W /   30W |       0MiB /   4096MiB |      0%      Default | |                                         |                        |                  N/A | +-----------------------------------------+------------------------+----------------------+  +-----------------------------------------------------------------------------------------+ | Processes:                                                                              | |  GPU   GI   CI              PID   Type   Process name                        GPU Memory | |        ID   ID                                                               Usage      | |=========================================================================================| |  No running processes found                                                             | +-----------------------------------------------------------------------------------------+",
+                    "command":  "nvidia-smi -i 0 ",
+                    "stderr":  "",
+                    "exit_code":  0
+                },
+    "persistence_mode_status":  "NOT_APPLICABLE_WINDOWS",
+    "reset_exit":  0,
+    "reset_cmd":  {
+                      "stdout":  "Wed Jul 22 16:16:31 2026        +-----------------------------------------------------------------------------------------+ | NVIDIA-SMI 581.57                 Driver Version: 581.57         CUDA Version: 13.0     | +-----------------------------------------+------------------------+----------------------+ | GPU  Name                  Driver-Model | Bus-Id          Disp.A | Volatile Uncorr. ECC | | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. | |                                         |                        |               MIG M. | |=========================================+========================+======================| |   0  NVIDIA GeForce GTX 1650      WDDM  |   00000000:01:00.0 Off |                  N/A | | N/A   45C    P8              3W /   30W |       0MiB /   4096MiB |      0%      Default | |                                         |                        |                  N/A | +-----------------------------------------+------------------------+----------------------+  +-----------------------------------------------------------------------------------------+ | Processes:                                                                              | |  GPU   GI   CI              PID   Type   Process name                        GPU Memory | |        ID   ID                                                               Usage      | |=========================================================================================| |  No running processes found                                                             | +-----------------------------------------------------------------------------------------+",
+                      "command":  "nvidia-smi -i 0 ",
+                      "stderr":  "",
+                      "exit_code":  0
+                  }
+}

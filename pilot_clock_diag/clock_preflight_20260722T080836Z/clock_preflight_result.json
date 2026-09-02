@@ -1,0 +1,14 @@
+﻿{
+    "samples":  [
+
+                ],
+    "cmd_stdout":  "Setting persistence mode is not supported for GPU 00000000:01:00.0 on this platform. Treating as warning and moving on. All done.\nThe current user does not have permission to change clocks for GPU 00000000:01:00.0. Terminating early due to previous errors.",
+    "succeeded":  false,
+    "lgc_exit":  4,
+    "requested_mhz":  1740,
+    "failure_reason":  "CLOCK_LOCK_COMMAND_FAILED: nvidia-smi -lgc 1740 exit=4",
+    "tolerance_mhz":  50,
+    "cmd_stderr":  "",
+    "pm_exit":  0,
+    "reset_exit":  0
+}

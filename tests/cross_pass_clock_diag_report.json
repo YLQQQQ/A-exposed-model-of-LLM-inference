@@ -1,0 +1,38 @@
+﻿{
+    "runs":  [
+                 {
+                     "pass0":  {
+                                   "exit_code":  1
+                               },
+                     "pass1":  {
+                                   "exit_code":  1
+                               },
+                     "id":  "runA",
+                     "order":  "pass0_first"
+                 },
+                 {
+                     "pass0":  {
+                                   "exit_code":  1
+                               },
+                     "pass1":  {
+                                   "exit_code":  1
+                               },
+                     "id":  "runB",
+                     "order":  "pass1_first"
+                 },
+                 {
+                     "pass0":  {
+                                   "exit_code":  1
+                               },
+                     "pass1":  {
+                                   "exit_code":  1
+                               },
+                     "id":  "runC",
+                     "order":  "pass0_first_locked"
+                 }
+             ],
+    "diagnosis":  [
+
+                  ],
+    "clock_locked":  true
+}
