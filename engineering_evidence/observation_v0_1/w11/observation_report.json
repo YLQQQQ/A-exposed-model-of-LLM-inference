@@ -1,0 +1,171 @@
+{
+  "schema_version": "exposedpath.observation-report/0.1.0",
+  "contract_version": "exposedpath-v1.4.1-draft-0.1",
+  "analyzer_version": "0.1.0",
+  "generated_at_utc": "2026-09-08T07:59:53.941503+00:00",
+  "data_role": "Prototype",
+  "observed_facts": {
+    "sqlite": {
+      "name": "w11_p512_b4_o16.sqlite",
+      "size_bytes": 27336704,
+      "sha256": "8E8CC7913F74B8466C24CDA8C25BD37566BE6A1AA9711E05EB214646111F91A3"
+    },
+    "raw": {
+      "sha256": "981DB025CAB3E4A43A099F11AE200D424D2F101186970490D9C33C2BE5852E13",
+      "collector_version": "2025.6.3.541-256337736014v0"
+    },
+    "source_manifest": {
+      "name": null,
+      "sha256": null
+    },
+    "export": {
+      "product_name": "NVIDIA Nsight Systems",
+      "product_version": "2026.1.1.204",
+      "schema_version": "3.24.14",
+      "platform": "windows-desktop",
+      "lazy": "true"
+    },
+    "capture": {
+      "event_types": [
+        "CpuCycles",
+        "NvtxEvents",
+        "Cuda"
+      ]
+    },
+    "gpus": [
+      {
+        "device_id": 0,
+        "name": "NVIDIA GeForce RTX 4090"
+      },
+      {
+        "device_id": 1,
+        "name": "NVIDIA GeForce RTX 4090"
+      },
+      {
+        "device_id": 2,
+        "name": "NVIDIA GeForce RTX 4090"
+      },
+      {
+        "device_id": 3,
+        "name": "NVIDIA RTX 6000 Ada Generation"
+      },
+      {
+        "device_id": 4,
+        "name": "NVIDIA GeForce RTX 4090 - virtual adapter"
+      },
+      {
+        "device_id": 5,
+        "name": "Microsoft Basic Render Driver"
+      }
+    ],
+    "row_counts": {
+      "NVTX_EVENTS": 95,
+      "CUPTI_ACTIVITY_KIND_RUNTIME": 208042,
+      "CUPTI_ACTIVITY_KIND_SYNCHRONIZATION": 446,
+      "CUPTI_ACTIVITY_KIND_KERNEL": 205558,
+      "CUPTI_ACTIVITY_KIND_MEMCPY": 354,
+      "CUPTI_ACTIVITY_KIND_MEMSET": 128,
+      "DIAGNOSTIC_EVENT": 22
+    },
+    "phase_label_counts": {
+      "decode": 5,
+      "full_request": 5,
+      "prefill": 5
+    }
+  },
+  "derived_checks": {
+    "supported_export_schemas": [
+      {
+        "product_version": "2026.1.1.204",
+        "schema_version": "3.24.14"
+      }
+    ],
+    "required_tables": {
+      "META_DATA_CAPTURE": {
+        "present": true,
+        "missing_columns": []
+      },
+      "META_DATA_EXPORT": {
+        "present": true,
+        "missing_columns": []
+      },
+      "StringIds": {
+        "present": true,
+        "missing_columns": []
+      },
+      "NVTX_EVENTS": {
+        "present": true,
+        "missing_columns": []
+      },
+      "CUPTI_ACTIVITY_KIND_RUNTIME": {
+        "present": true,
+        "missing_columns": []
+      },
+      "CUPTI_ACTIVITY_KIND_SYNCHRONIZATION": {
+        "present": true,
+        "missing_columns": []
+      },
+      "CUPTI_ACTIVITY_KIND_KERNEL": {
+        "present": true,
+        "missing_columns": []
+      },
+      "CUPTI_ACTIVITY_KIND_MEMCPY": {
+        "present": true,
+        "missing_columns": []
+      },
+      "CUPTI_ACTIVITY_KIND_MEMSET": {
+        "present": true,
+        "missing_columns": []
+      },
+      "ENUM_CUPTI_SYNC_TYPE": {
+        "present": true,
+        "missing_columns": []
+      },
+      "TARGET_INFO_CUDA_CONTEXT_INFO": {
+        "present": true,
+        "missing_columns": []
+      },
+      "TARGET_INFO_CUDA_STREAM": {
+        "present": true,
+        "missing_columns": []
+      },
+      "TARGET_INFO_GPU": {
+        "present": true,
+        "missing_columns": []
+      },
+      "DIAGNOSTIC_EVENT": {
+        "present": true,
+        "missing_columns": []
+      }
+    },
+    "sync_correlation": {
+      "total": 446,
+      "missing_correlation": 0,
+      "non_unique_runtime_mapping": 0
+    },
+    "dropped_record_evidence": []
+  },
+  "validity": {
+    "status": "ambiguous",
+    "issues": [
+      {
+        "level": "warning",
+        "code": "LAZY_EXPORT",
+        "detail": "历史导出采用 lazy=true；本次必需表均需实际存在。"
+      },
+      {
+        "level": "ambiguous",
+        "code": "MISSING_SOURCE_MANIFEST",
+        "detail": null
+      }
+    ]
+  },
+  "research_eligibility": {
+    "formal_evidence": false,
+    "blocking_reasons": [
+      "ANALYZER_SCOPE_OBSERVATION_ONLY",
+      "Q0_NOT_RUN"
+    ],
+    "q0_status": "NOT_RUN"
+  }
+}
