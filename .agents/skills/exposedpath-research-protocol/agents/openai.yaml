@@ -1,0 +1,4 @@
+interface:
+  display_name: "ExposedPath 研究协议"
+  short_description: "指导 ExposedPath 语义、验证与实验阶段门"
+  default_prompt: "使用 $exposedpath-research-protocol 对这个 ExposedPath 任务进行分类，应用当前研究合同，并指出下一个证据 gate。"
