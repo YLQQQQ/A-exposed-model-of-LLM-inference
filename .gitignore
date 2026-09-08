@@ -14,5 +14,6 @@ models/
 
 # IDE / 系统
 .vscode/
+.worktrees/
 *.lnk
 desktop.ini
