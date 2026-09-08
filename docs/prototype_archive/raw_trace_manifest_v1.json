@@ -1,0 +1,31 @@
+{
+  "manifest_schema_version": "1.0.0",
+  "research_target_version": "v1.4.1",
+  "data_role": "Prototype",
+  "prototype_tag": "prototype-windows-v0.1",
+  "prototype_commit": "abab013c5483109007ab5a2a232438d46bbaf02b",
+  "raw_root": "nsys_results",
+  "collector_version": "2025.6.3.541-256337736014v0",
+  "verified_reader_version": "2026.1.1.204-261137176666v0",
+  "immutability_rule": "Raw 文件只读；所有导出和分析结果写入独立派生目录。",
+  "files": [
+    {
+      "path": "nsys_results/w01_p128_b1_o16.nsys-rep",
+      "size_bytes": 9799685,
+      "last_write_time_utc": "2026-07-08T14:32:25.5177455Z",
+      "sha256": "4CE938EC5B44C657BF90FD732D23A2F92E2D546ADF3F00758BBCA8784C1210C4"
+    },
+    {
+      "path": "nsys_results/w04_p128_b8_o16.nsys-rep",
+      "size_bytes": 9996436,
+      "last_write_time_utc": "2026-07-08T14:33:07.4717205Z",
+      "sha256": "A18C33B27AC384223CE07F02E49784628A9AC3001711AAAA8D0DBA23BFFD4A3A"
+    },
+    {
+      "path": "nsys_results/w11_p512_b4_o16.nsys-rep",
+      "size_bytes": 9677123,
+      "last_write_time_utc": "2026-07-08T14:52:39.5835497Z",
+      "sha256": "981DB025CAB3E4A43A099F11AE200D424D2F101186970490D9C33C2BE5852E13"
+    }
+  ]
+}
