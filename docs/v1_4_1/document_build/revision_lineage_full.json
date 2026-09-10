@@ -1,0 +1,19 @@
+{
+  "schema": "exposedpath-document-revision-lineage/1.0",
+  "design": {
+    "source_filename": "ExposedPath_研究设计与论文证据框架_v6.0_语义冻结增补_蓝色标注版.docx",
+    "source_sha256": "0EE058EE1DD2D1FB69EC59D230DBD6B6F03BAEDC319D9C246AEE3ED229B530F1",
+    "output": "docs/current/ExposedPath_研究设计与论文证据框架_v7.0_v1.4.1整合修订版.docx",
+    "output_sha256": "4331468276BEFB9A50FCDCFF9E3442DA60825228CADD2756BF38FCAAEA0927FE",
+    "source_package_parts": 32,
+    "output_package_parts": 24
+  },
+  "protocol": {
+    "source_filename": "ExposedPath_实验与分析协议冻结版_v2.0_语义冻结增补_蓝色标注版.docx",
+    "source_sha256": "1AD97E338F03C951E46BD81B15A5633D46A3B6E6490FEC4B2DFA8840028C0685",
+    "output": "docs/current/ExposedPath_实验与分析协议_v2.1_v1.4.1整合修订版_Pre-Pilot.docx",
+    "output_sha256": "7CCA23D96577A69C8D8597254B7CB4F10942D7DCC9000320B4BF96E6329904A7",
+    "source_package_parts": 29,
+    "output_package_parts": 21
+  }
+}

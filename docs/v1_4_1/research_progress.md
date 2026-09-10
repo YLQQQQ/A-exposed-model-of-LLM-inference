@@ -2,9 +2,10 @@
 
 ## 当前快照
 
-- 清单版本：`0.2`
+- 清单版本：`0.3`
 - 最近更新：`2026-09-10`
-- 权威研究方案：ExposedPath `v1.4.1`
+- 权威研究主体：`docs/current/ExposedPath_研究设计与论文证据框架_v7.0_v1.4.1整合修订版.docx`
+- 当前执行依据：`docs/current/ExposedPath_实验与分析协议_v2.1_v1.4.1整合修订版_Pre-Pilot.docx`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
@@ -33,10 +34,11 @@
 - [x] `EP-FND-04` 明确 GPU 前可完成范围和验收边界。证据：`docs/v1_4_1/pre_gpu_readiness_design_v0_1.md`。
 - [x] `EP-FND-05` 验证新版 Nsight 能只读处理三份历史报告，并区分采集器与导出器版本。证据：`docs/prototype_archive/README.md`、`engineering_evidence/observation_v0_1/`。
 - [x] `EP-FND-06` 审计并固定研究文档权威层级。证据：`docs/v1_4_1/document_consolidation_plan.md`；确认实验协议 v2.0 才是协议修订底稿，WMPC v1.5 仅作候选配置来源，原件均保留并记录 SHA-256。
-- [x] `EP-FND-07` 形成研究设计主体 v7.0 Pre-Pilot 整合候选版。证据：`docs/v1_4_1/research_design_integrated_candidate_v7_0.md`、`docs/v1_4_1/revised_documents/ExposedPath_研究设计与论文证据框架_v7.0_Pre-Pilot整合候选版.docx`。
-- [x] `EP-FND-08` 形成实验与分析协议 v2.1 Pre-Pilot 整合候选版。证据：`docs/v1_4_1/experiment_protocol_candidate_v2_1.md`、`docs/v1_4_1/revised_documents/ExposedPath_实验与分析协议_v2.1_Pre-Pilot整合候选版.docx`。
-- [ ] `EP-FND-09`（受阻）完成两份候选 DOCX 的页面渲染与视觉验收。结构和关键语义检查已通过；当前主机未发现 Word 或 LibreOffice 渲染器，不能确认分页、表格跨页和文字截断。
-- [ ] `EP-FND-10`（未开始）由用户审阅候选版，并在 Gate 1 通过后决定是否提升为新的权威研究设计/协议版本；在此之前 v1.4.1 仍为当前权威。
+- [x] `EP-FND-07` 形成研究设计主体 v7.0 Pre-Pilot 摘要候选版。该文件现仅保留为阶段性整合记录，已被完整母版修订版取代。
+- [x] `EP-FND-08` 形成实验与分析协议 v2.1 Pre-Pilot 摘要候选版。该文件现仅保留为阶段性整合记录，已被完整母版修订版取代。
+- [x] `EP-FND-09` 完成两份完整 DOCX 的结构、关键语义与页面视觉验收。证据：`docs/v1_4_1/document_build/verify_full_revision.py` 校验通过；LibreOffice 全页渲染为研究主体 40 页、实验协议 27 页，未发现截断、越界或不可读表格。
+- [x] `EP-FND-10` 按用户明确要求将完整修订版提升为当前研究主体与 Pre-Pilot 执行依据。该升级不代表 Gate 1 或 Protocol Freeze 通过。
+- [x] `EP-FND-11` 基于 v6.0 与 v2.0 母版逐章吸收 v1.4.1，保留 36/39 张表、原章节、图片和横纵节，形成两份直接交付 DOCX。证据：`docs/current/`、`docs/v1_4_1/document_build/revision_lineage_full.json`。
 
 ## Gate 0：封存旧 Prototype
 
@@ -197,7 +199,7 @@
 - `EP-ISSUE-02`：三份历史 trace 缺少 source manifest。影响：validity 必须保持 `ambiguous`，不能升级数据资格。
 - `EP-ISSUE-03`：仓库全量测试最近记录为 `226 passed, 2 failed`；既有失败为 `tests/test_server_smoke_script.py::test_dry_run` 和 `test_spaces`。影响：跨平台执行层需单独修复或重新界定，但不应掩盖为新增 analyzer 失败。
 - `EP-ISSUE-04`：当前无 GPU。影响：Q0 真实 trace、跨平台 GPU smoke、Engineering Pilot 及后续实验保持 `BLOCKED`；不影响 Gate 1 至 Gate 5 的离线设计和确定性测试工作。
-- `EP-ISSUE-05`：当前主机未发现可用的 Word/LibreOffice DOCX 渲染器。影响：候选文档已通过 OOXML、结构和关键语义检查，但页面级视觉验收保持 `BLOCKED`；不影响 Measurement Contract 的文本设计。
+- `EP-ISSUE-05`（已解决）：使用校验过哈希的 LibreOffice 临时解包版本完成本地全页渲染；研究主体 40 页、实验协议 27 页均已检查。渲染器仅用于文档 QA，不改变研究 Gate。
 
 ## 固定执行顺序与最近任务
 
@@ -217,3 +219,4 @@
 |---|---|---|---|---|
 | 0.1 | 2026-09-10 | 首次建立完整清单；纳入无 GPU 离线路线、自然逐 Token 同步边界和现有 observation 基础 | 全部 | 当前尚未 Protocol Freeze，也无 Formal 数据，不产生失效 |
 | 0.2 | 2026-09-10 | 完成旧研究设计、WMPC、实验协议与 v1.4.1 的权威关系审计；新增两份 Pre-Pilot 整合候选版。协议修订底稿由此前假定的 WMPC v1.5 更正为实验协议 v2.0，WMPC 仅保留为候选配置来源；执行 Gate 顺序不变 | EP-FND-06 至 EP-FND-10 | 未改变冻结协议；当前无 Formal 数据，不产生失效 |
+| 0.3 | 2026-09-10 | 基于两份完整 Word 母版逐章吸收 v1.4.1，完成结构/语义自动校验和 40/27 页视觉验收；摘要候选版降为历史整合记录，完整 v7.0 成为当前研究主体，v2.1 成为 Pre-Pilot 执行依据 | EP-FND-07 至 EP-FND-11、EP-ISSUE-05 | 未通过 Gate 1 或 Protocol Freeze；当前无 Formal 数据，不产生失效 |
