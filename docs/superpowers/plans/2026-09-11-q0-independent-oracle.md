@@ -33,7 +33,7 @@
 - `load_oracle_bundle(root: Path | None = None) -> dict[str, Any]`
 - `calculate_expected_timing(case: Mapping[str, Any], sync_label: str) -> dict[str, int | None]`
 
-- [ ] **步骤 1：写失败测试**
+- [x] **步骤 1：写失败测试**
 
 ```python
 def test_duplicate_case_id_is_rejected():
@@ -50,17 +50,17 @@ def test_oracle_does_not_infer_wait_set():
         validate_oracle_bundle(bundle)
 ```
 
-- [ ] **步骤 2：运行红灯**
+- [x] **步骤 2：运行红灯**
 
 ```powershell
 python -m pytest tests/test_v141_q0_oracle.py -q -p no:cacheprovider
 ```
 
-- [ ] **步骤 3：实现最小读取、校验和独立区间函数**
+- [x] **步骤 3：实现最小读取、校验和独立区间函数**
 
 校验 case/sync/activity 标签唯一，expected 必需字段存在，`W(s)` 只引用 case 内活动，terminal 必须符合 expected validity。区间函数只接收已写定 `W(s)`，计算 wait-set hidden/exposed union、terminal pre-sync/overlap 和 sync 内 return tail；禁止遍历 dependency edges 生成答案。
 
-- [ ] **步骤 4：运行绿灯并提交**
+- [x] **步骤 4：运行绿灯并提交**
 
 ```powershell
 python -m pytest tests/test_v141_q0_oracle.py -q -p no:cacheprovider
