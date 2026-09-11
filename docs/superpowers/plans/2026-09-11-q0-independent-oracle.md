@@ -122,28 +122,28 @@ git commit -m "test: define q0 positive oracle cases"
 - 独立性脚本解析 `exposedpath_v141/q0_oracle.py` 的 AST，拒绝 `analysis`、旧 `exposedpath` 以及 `exposedpath_v141.raw/sync/accounting` 导入。
 - 覆盖审查输出正例、负例、含糊例和必需特性数量。
 
-- [ ] **步骤 1：先写缺口覆盖与非法导入测试**
+- [x] **步骤 1：先写缺口覆盖与非法导入测试**
 
 覆盖 terminal tie、missing event/correlation、dropped records、external ownership、submission race、legacy/PTDS、multi-thread ordered、overlapping Host sync、phase spill、invocation bleed、graph unsupported、同步 D2H unsupported 和 query/poll。
 
-- [ ] **步骤 2：运行红灯**
+- [x] **步骤 2：运行红灯**
 
 ```powershell
 python -m pytest tests/test_v141_q0_oracle.py -q -p no:cacheprovider
 ```
 
-- [ ] **步骤 3：写入剩余 expected 并实现 AST 独立性检查**
+- [x] **步骤 3：写入剩余 expected 并实现 AST 独立性检查**
 
 所有 `AMBIGUOUS/INVALID` case 必须给出 primary reason，且不得伪造 terminal；`VALID_EMPTY` 必须显式 `W=[]`、terminal N/A、B_NOT_APPLICABLE。
 
-- [ ] **步骤 4：运行绿灯和独立性检查**
+- [x] **步骤 4：运行绿灯和独立性检查**
 
 ```powershell
 python -m pytest tests/test_v141_q0_oracle.py -q -p no:cacheprovider
 python scripts/verify_q0_oracle_independence.py
 ```
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```powershell
 git add q0/oracle_cases_v0_2.json tests/test_v141_q0_oracle.py scripts/verify_q0_oracle_independence.py docs/superpowers/plans/2026-09-11-q0-independent-oracle.md

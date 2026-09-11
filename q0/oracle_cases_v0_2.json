@@ -73,7 +73,7 @@
       "case_class": "POSITIVE",
       "required_for_q0": true,
       "features": ["CONTEXT", "CROSS_STREAM"],
-      "required_contract_rules": ["MC-S-005", "MC-S-009"],
+      "required_contract_rules": ["MC-S-004", "MC-S-009"],
       "construction": {
         "activities": [
           {"activity_label": "K_CTX_A", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 65},
@@ -104,7 +104,7 @@
       "case_class": "POSITIVE",
       "required_for_q0": true,
       "features": ["EVENT_PREFIX", "COMPLETED_BEFORE"],
-      "required_contract_rules": ["MC-S-006", "MC-S-008"],
+      "required_contract_rules": ["MC-S-005", "MC-S-008"],
       "construction": {
         "activities": [
           {"activity_label": "K_BEFORE_RECORD", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 40},
@@ -137,7 +137,7 @@
       "case_class": "POSITIVE",
       "required_for_q0": true,
       "features": ["CROSS_STREAM_EVENT", "STREAM"],
-      "required_contract_rules": ["MC-S-003", "MC-S-006", "MC-S-008"],
+      "required_contract_rules": ["MC-S-003", "MC-S-005", "MC-S-008"],
       "construction": {
         "activities": [
           {"activity_label": "K_PRODUCER", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 45},
@@ -171,7 +171,7 @@
       "case_class": "BOUNDARY",
       "required_for_q0": true,
       "features": ["COMPLETED_BEFORE", "STREAM"],
-      "required_contract_rules": ["MC-S-007", "MC-B-002"],
+      "required_contract_rules": ["MC-S-008", "MC-B-002"],
       "construction": {
         "activities": [
           {"activity_label": "K_DONE", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 30}
@@ -201,7 +201,7 @@
       "case_class": "BOUNDARY",
       "required_for_q0": true,
       "features": ["VALID_EMPTY", "STREAM"],
-      "required_contract_rules": ["MC-S-013", "MC-A-008", "MC-B-005"],
+      "required_contract_rules": ["MC-S-012", "MC-A-003", "MC-B-003"],
       "construction": {
         "activities": [],
         "syncs": [
@@ -229,7 +229,7 @@
       "case_class": "POSITIVE",
       "required_for_q0": true,
       "features": ["KERNEL_MEMOP_MIXED", "DEVICE"],
-      "required_contract_rules": ["MC-A-003", "MC-B-003"],
+      "required_contract_rules": ["MC-A-001", "MC-B-002"],
       "construction": {
         "activities": [
           {"activity_label": "KERNEL_A", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 75},
@@ -254,6 +254,321 @@
           "b_relations": ["terminal=MEMCPY_B", "terminal_kind=MEMOP"]
         }
       ]}
+    },
+    {
+      "case_id": "Q0-TERMINAL-TIE-001",
+      "case_class": "AMBIGUOUS",
+      "required_for_q0": true,
+      "features": ["TERMINAL_TIE"],
+      "required_contract_rules": ["MC-S-011", "MC-A-004"],
+      "construction": {
+        "activities": [
+          {"activity_label": "K_TIE_A", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 90},
+          {"activity_label": "K_TIE_B", "activity_type": "KERNEL", "start_ns": 20, "end_ns": 90}
+        ],
+        "syncs": [{"sync_label": "S_DEVICE", "sync_kind": "DEVICE", "start_ns": 50, "end_ns": 100}],
+        "dependency_edges": []
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_DEVICE", "wait_set_status": "AMBIGUOUS",
+        "wait_set_activity_labels": ["K_TIE_A", "K_TIE_B"],
+        "terminal": {"status": "AMBIGUOUS", "kind": "NONE", "activity_label": null},
+        "validity": "AMBIGUOUS", "primary_reason": "TERMINAL_TIE",
+        "secondary_reasons": [], "b_status": "B_AMBIGUOUS",
+        "a_relations": ["whole_sync=A_unattributed"], "b_relations": []
+      }]}
+    },
+    {
+      "case_id": "Q0-MISSING-EVENT-001",
+      "case_class": "NEGATIVE",
+      "required_for_q0": true,
+      "features": ["MISSING_EVENT_MAPPING"],
+      "required_contract_rules": ["MC-S-005", "MC-S-013"],
+      "construction": {
+        "activities": [{"activity_label": "K_EVENT", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 80}],
+        "syncs": [{"sync_label": "S_EVENT", "sync_kind": "EVENT", "start_ns": 50, "end_ns": 90}],
+        "dependency_edges": []
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_EVENT", "wait_set_status": "INVALID",
+        "wait_set_activity_labels": [],
+        "terminal": {"status": "INVALID", "kind": "NONE", "activity_label": null},
+        "validity": "INVALID", "primary_reason": "MISSING_EVENT_RECORD",
+        "secondary_reasons": [], "b_status": "B_INVALID",
+        "a_relations": ["whole_sync=A_unattributed"], "b_relations": []
+      }]}
+    },
+    {
+      "case_id": "Q0-MISSING-CORR-001",
+      "case_class": "NEGATIVE",
+      "required_for_q0": true,
+      "features": ["MISSING_CORRELATION"],
+      "required_contract_rules": ["MC-S-002", "MC-S-013"],
+      "construction": {
+        "activities": [{"activity_label": "K_UNMAPPED", "activity_type": "KERNEL", "start_ns": 20, "end_ns": 80}],
+        "syncs": [{"sync_label": "S_STREAM", "sync_kind": "STREAM", "start_ns": 50, "end_ns": 90}],
+        "dependency_edges": []
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_STREAM", "wait_set_status": "INVALID",
+        "wait_set_activity_labels": [],
+        "terminal": {"status": "INVALID", "kind": "NONE", "activity_label": null},
+        "validity": "INVALID", "primary_reason": "MISSING_ACTIVITY_CORRELATION",
+        "secondary_reasons": [], "b_status": "B_INVALID",
+        "a_relations": ["whole_sync=A_unattributed"], "b_relations": []
+      }]}
+    },
+    {
+      "case_id": "Q0-DROPPED-001",
+      "case_class": "NEGATIVE",
+      "required_for_q0": true,
+      "features": ["DROPPED_RECORDS"],
+      "required_contract_rules": ["MC-S-013", "MC-A-004"],
+      "construction": {
+        "activities": [{"activity_label": "K_VISIBLE", "activity_type": "KERNEL", "start_ns": 20, "end_ns": 80}],
+        "syncs": [{"sync_label": "S_DEVICE", "sync_kind": "DEVICE", "start_ns": 50, "end_ns": 90}],
+        "dependency_edges": [], "trace_status": "DROPPED_RECORDS"
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_DEVICE", "wait_set_status": "INVALID",
+        "wait_set_activity_labels": [],
+        "terminal": {"status": "INVALID", "kind": "NONE", "activity_label": null},
+        "validity": "INVALID", "primary_reason": "TRACE_DROPPED_RECORDS",
+        "secondary_reasons": [], "b_status": "B_INVALID",
+        "a_relations": ["affected_window=A_unattributed"], "b_relations": []
+      }]}
+    },
+    {
+      "case_id": "Q0-EXTERNAL-001",
+      "case_class": "NEGATIVE",
+      "required_for_q0": true,
+      "features": ["EXTERNAL_OWNERSHIP"],
+      "required_contract_rules": ["MC-S-007", "MC-S-013"],
+      "construction": {
+        "activities": [{"activity_label": "K_EXTERNAL", "activity_type": "KERNEL", "start_ns": 20, "end_ns": 80}],
+        "syncs": [{"sync_label": "S_DEVICE", "sync_kind": "DEVICE", "start_ns": 50, "end_ns": 90}],
+        "dependency_edges": [], "activity_owner": "OUTSIDE_REQUEST"
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_DEVICE", "wait_set_status": "INVALID",
+        "wait_set_activity_labels": [],
+        "terminal": {"status": "INVALID", "kind": "NONE", "activity_label": null},
+        "validity": "INVALID", "primary_reason": "EXTERNAL_OWNERSHIP_IN_SCOPE",
+        "secondary_reasons": [], "b_status": "B_INVALID",
+        "a_relations": ["whole_sync=A_unattributed"], "b_relations": []
+      }]}
+    },
+    {
+      "case_id": "Q0-SUBMISSION-RACE-001",
+      "case_class": "AMBIGUOUS",
+      "required_for_q0": true,
+      "features": ["SUBMISSION_RACE"],
+      "required_contract_rules": ["MC-S-002", "MC-S-013"],
+      "construction": {
+        "activities": [{"activity_label": "K_RACE", "activity_type": "KERNEL", "start_ns": 50, "end_ns": 85}],
+        "syncs": [{"sync_label": "S_STREAM", "sync_kind": "STREAM", "start_ns": 50, "end_ns": 90}],
+        "dependency_edges": [], "submission_evidence": "TIED_AND_UNRESOLVED"
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_STREAM", "wait_set_status": "AMBIGUOUS", "wait_set_activity_labels": [],
+        "terminal": {"status": "AMBIGUOUS", "kind": "NONE", "activity_label": null},
+        "validity": "AMBIGUOUS", "primary_reason": "SUBMISSION_ORDER_AMBIGUOUS",
+        "secondary_reasons": [], "b_status": "B_AMBIGUOUS",
+        "a_relations": ["whole_sync=A_unattributed"], "b_relations": []
+      }]}
+    },
+    {
+      "case_id": "Q0-DEFAULT-LEGACY-001",
+      "case_class": "BOUNDARY",
+      "required_for_q0": true,
+      "features": ["DEFAULT_STREAM_LEGACY"],
+      "required_contract_rules": ["MC-S-003", "MC-S-006", "MC-S-009"],
+      "construction": {
+        "activities": [
+          {"activity_label": "K_NONDEFAULT", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 65},
+          {"activity_label": "K_LEGACY_DEFAULT", "activity_type": "KERNEL", "start_ns": 65, "end_ns": 90}
+        ],
+        "syncs": [{"sync_label": "S_DEFAULT", "sync_kind": "STREAM", "start_ns": 70, "end_ns": 100}],
+        "dependency_edges": [{"from": "K_NONDEFAULT", "to": "K_LEGACY_DEFAULT", "edge_type": "LEGACY_DEFAULT_STREAM_ORDER"}],
+        "default_stream_mode": "LEGACY"
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_DEFAULT", "wait_set_status": "VALID_NONEMPTY",
+        "wait_set_activity_labels": ["K_NONDEFAULT", "K_LEGACY_DEFAULT"],
+        "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "K_LEGACY_DEFAULT"},
+        "validity": "VALID_NONEMPTY", "primary_reason": null, "secondary_reasons": [],
+        "b_status": "B_VALID", "a_relations": ["A_device_wait_ns=20", "A_sync_residual_ns=10"],
+        "b_relations": ["legacy_cross_stream_predecessor_in_W"]
+      }]}
+    },
+    {
+      "case_id": "Q0-DEFAULT-PTDS-001",
+      "case_class": "BOUNDARY",
+      "required_for_q0": true,
+      "features": ["DEFAULT_STREAM_PTDS", "UNRELATED_OVERLAP"],
+      "required_contract_rules": ["MC-S-003", "MC-S-006", "MC-S-009"],
+      "construction": {
+        "activities": [
+          {"activity_label": "K_OTHER_THREAD", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 95},
+          {"activity_label": "K_PTDS", "activity_type": "KERNEL", "start_ns": 20, "end_ns": 80}
+        ],
+        "syncs": [{"sync_label": "S_PTDS", "sync_kind": "STREAM", "start_ns": 50, "end_ns": 90}],
+        "dependency_edges": [], "default_stream_mode": "PER_THREAD"
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_PTDS", "wait_set_status": "VALID_NONEMPTY",
+        "wait_set_activity_labels": ["K_PTDS"],
+        "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "K_PTDS"},
+        "validity": "VALID_NONEMPTY", "primary_reason": null, "secondary_reasons": [],
+        "b_status": "B_VALID",
+        "a_relations": ["A_device_wait_ns=30", "A_sync_residual_ns=10", "K_OTHER_THREAD_not_dependency"],
+        "b_relations": ["ptds_scope_is_thread_local"]
+      }]}
+    },
+    {
+      "case_id": "Q0-MULTITHREAD-ORDERED-001",
+      "case_class": "POSITIVE",
+      "required_for_q0": true,
+      "features": ["MULTITHREAD_ORDERED", "CROSS_STREAM_EVENT"],
+      "required_contract_rules": ["MC-S-002", "MC-S-005", "MC-S-009"],
+      "construction": {
+        "activities": [
+          {"activity_label": "K_THREAD_A", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 45},
+          {"activity_label": "K_THREAD_B", "activity_type": "KERNEL", "start_ns": 50, "end_ns": 85}
+        ],
+        "syncs": [{"sync_label": "S_THREAD_B", "sync_kind": "STREAM", "start_ns": 60, "end_ns": 95}],
+        "dependency_edges": [
+          {"from": "K_THREAD_A", "to": "EVENT_MT", "edge_type": "EVENT_RECORD_FRONTIER"},
+          {"from": "EVENT_MT", "to": "K_THREAD_B", "edge_type": "STREAM_WAIT_EVENT"}
+        ],
+        "host_threads": ["THREAD_A", "THREAD_B"]
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_THREAD_B", "wait_set_status": "VALID_NONEMPTY",
+        "wait_set_activity_labels": ["K_THREAD_A", "K_THREAD_B"],
+        "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "K_THREAD_B"},
+        "validity": "VALID_NONEMPTY", "primary_reason": null, "secondary_reasons": [],
+        "b_status": "B_VALID", "a_relations": ["A_device_wait_ns=25", "A_sync_residual_ns=10"],
+        "b_relations": ["cross_thread_order_requires_event_evidence"]
+      }]}
+    },
+    {
+      "case_id": "Q0-OVERLAPPING-HOST-SYNC-001",
+      "case_class": "BOUNDARY",
+      "required_for_q0": true,
+      "features": ["OVERLAPPING_HOST_SYNC"],
+      "required_contract_rules": ["MC-A-001", "MC-B-004"],
+      "construction": {
+        "activities": [
+          {"activity_label": "K_A", "activity_type": "KERNEL", "start_ns": 20, "end_ns": 85},
+          {"activity_label": "K_B", "activity_type": "KERNEL", "start_ns": 30, "end_ns": 95}
+        ],
+        "syncs": [
+          {"sync_label": "S_A", "sync_kind": "STREAM", "start_ns": 50, "end_ns": 90},
+          {"sync_label": "S_B", "sync_kind": "STREAM", "start_ns": 60, "end_ns": 100}
+        ],
+        "dependency_edges": []
+      },
+      "expected": {"syncs": [
+        {"sync_label": "S_A", "wait_set_status": "VALID_NONEMPTY", "wait_set_activity_labels": ["K_A"],
+         "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "K_A"},
+         "validity": "VALID_NONEMPTY", "primary_reason": null, "secondary_reasons": [], "b_status": "B_VALID",
+         "a_relations": ["A_uses_interval_union"], "b_relations": ["B_is_per_sync"]},
+        {"sync_label": "S_B", "wait_set_status": "VALID_NONEMPTY", "wait_set_activity_labels": ["K_B"],
+         "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "K_B"},
+         "validity": "VALID_NONEMPTY", "primary_reason": null, "secondary_reasons": [], "b_status": "B_VALID",
+         "a_relations": ["A_overlap_not_double_counted"], "b_relations": ["B_records_not_summed"]}
+      ]}
+    },
+    {
+      "case_id": "Q0-PHASE-SPILL-001",
+      "case_class": "BOUNDARY",
+      "required_for_q0": true,
+      "features": ["PHASE_SPILL"],
+      "required_contract_rules": ["MC-S-014", "MC-A-005"],
+      "construction": {
+        "activities": [{"activity_label": "K_PREFILL_ORIGIN", "activity_type": "KERNEL", "start_ns": 40, "end_ns": 80}],
+        "syncs": [{"sync_label": "S_DECODE_OWNER", "sync_kind": "STREAM", "start_ns": 60, "end_ns": 90}],
+        "dependency_edges": [], "activity_origin_phase": "PREFILL", "sync_owner_phase": "DECODE"
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_DECODE_OWNER", "wait_set_status": "VALID_NONEMPTY",
+        "wait_set_activity_labels": ["K_PREFILL_ORIGIN"],
+        "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "K_PREFILL_ORIGIN"},
+        "validity": "VALID_NONEMPTY", "primary_reason": null, "secondary_reasons": [],
+        "b_status": "B_VALID", "a_relations": ["accounting_owner_phase=DECODE"],
+        "b_relations": ["activity_origin_phase=PREFILL", "cross_phase=true"]
+      }]}
+    },
+    {
+      "case_id": "Q0-INVOCATION-BLEED-001",
+      "case_class": "NEGATIVE",
+      "required_for_q0": true,
+      "features": ["INVOCATION_BLEED"],
+      "required_contract_rules": ["MC-S-013"],
+      "construction": {
+        "activities": [{"activity_label": "K_PRIOR_INVOCATION", "activity_type": "KERNEL", "start_ns": 20, "end_ns": 80}],
+        "syncs": [{"sync_label": "S_CURRENT", "sync_kind": "DEVICE", "start_ns": 50, "end_ns": 90}],
+        "dependency_edges": [], "activity_invocation_id": "PREVIOUS"
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_CURRENT", "wait_set_status": "INVALID", "wait_set_activity_labels": [],
+        "terminal": {"status": "INVALID", "kind": "NONE", "activity_label": null},
+        "validity": "INVALID", "primary_reason": "INVOCATION_BLEED",
+        "secondary_reasons": [], "b_status": "B_INVALID",
+        "a_relations": ["affected_window=A_unattributed"], "b_relations": []
+      }]}
+    },
+    {
+      "case_id": "Q0-GRAPH-UNSUPPORTED-001",
+      "case_class": "NEGATIVE",
+      "required_for_q0": true,
+      "features": ["GRAPH_UNSUPPORTED"],
+      "required_contract_rules": ["MC-S-013", "MC-A-004"],
+      "construction": {
+        "activities": [{"activity_label": "GRAPH_NODE", "activity_type": "KERNEL", "start_ns": 20, "end_ns": 80}],
+        "syncs": [{"sync_label": "S_GRAPH", "sync_kind": "STREAM", "start_ns": 50, "end_ns": 90}],
+        "dependency_edges": [], "launch_mode": "CUDA_GRAPH_WITHOUT_NODE_MAPPING"
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_GRAPH", "wait_set_status": "INVALID", "wait_set_activity_labels": [],
+        "terminal": {"status": "INVALID", "kind": "NONE", "activity_label": null},
+        "validity": "INVALID", "primary_reason": "GRAPH_MAPPING_UNSUPPORTED",
+        "secondary_reasons": [], "b_status": "B_INVALID",
+        "a_relations": ["whole_sync=A_unattributed"], "b_relations": []
+      }]}
+    },
+    {
+      "case_id": "Q0-SYNC-D2H-UNSUPPORTED-001",
+      "case_class": "NEGATIVE",
+      "required_for_q0": true,
+      "features": ["SYNC_D2H_UNSUPPORTED"],
+      "required_contract_rules": ["MC-S-001", "MC-S-013"],
+      "construction": {
+        "activities": [{"activity_label": "COPY_D2H", "activity_type": "MEMOP", "start_ns": 20, "end_ns": 80}],
+        "syncs": [{"sync_label": "S_SYNC_COPY", "sync_kind": "SYNCHRONOUS_COPY", "start_ns": 10, "end_ns": 85}],
+        "dependency_edges": []
+      },
+      "expected": {"syncs": [{
+        "sync_label": "S_SYNC_COPY", "wait_set_status": "INVALID", "wait_set_activity_labels": [],
+        "terminal": {"status": "INVALID", "kind": "NONE", "activity_label": null},
+        "validity": "INVALID", "primary_reason": "UNSUPPORTED_SYNC_API",
+        "secondary_reasons": [], "b_status": "B_INVALID",
+        "a_relations": ["whole_sync=A_unattributed"], "b_relations": []
+      }]}
+    },
+    {
+      "case_id": "Q0-QUERY-001",
+      "case_class": "BOUNDARY",
+      "required_for_q0": true,
+      "features": ["QUERY_NON_SYNC"],
+      "required_contract_rules": ["MC-S-001"],
+      "construction": {
+        "activities": [{"activity_label": "K_RUNNING", "activity_type": "KERNEL", "start_ns": 20, "end_ns": 80}],
+        "syncs": [], "api_calls": [{"api_label": "Q_EVENT", "api_kind": "EVENT_QUERY", "start_ns": 50, "end_ns": 51}],
+        "dependency_edges": []
+      },
+      "expected": {"syncs": [], "non_sync_api_labels": ["Q_EVENT"]}
     }
   ]
 }

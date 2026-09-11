@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
+from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -12,6 +16,7 @@ from exposedpath_v141.q0_oracle import (
     load_oracle_bundle,
     validate_oracle_bundle,
 )
+from scripts.verify_q0_oracle_independence import check_source
 
 
 def literal_bundle():
@@ -210,3 +215,119 @@ def test_committed_oracle_has_hand_checkable_timing(case_id, sync_label, expecte
     cases = {case["case_id"]: case for case in load_oracle_bundle()["cases"]}
 
     assert calculate_expected_timing(cases[case_id], sync_label) == expected
+
+
+def test_negative_ambiguous_and_boundary_cases_exist():
+    cases = {case["case_id"]: case for case in load_oracle_bundle()["cases"]}
+
+    assert {
+        "Q0-TERMINAL-TIE-001",
+        "Q0-MISSING-EVENT-001",
+        "Q0-MISSING-CORR-001",
+        "Q0-DROPPED-001",
+        "Q0-EXTERNAL-001",
+        "Q0-SUBMISSION-RACE-001",
+        "Q0-DEFAULT-LEGACY-001",
+        "Q0-DEFAULT-PTDS-001",
+        "Q0-MULTITHREAD-ORDERED-001",
+        "Q0-OVERLAPPING-HOST-SYNC-001",
+        "Q0-PHASE-SPILL-001",
+        "Q0-INVOCATION-BLEED-001",
+        "Q0-GRAPH-UNSUPPORTED-001",
+        "Q0-SYNC-D2H-UNSUPPORTED-001",
+        "Q0-QUERY-001",
+    } <= set(cases)
+
+
+def test_required_failure_modes_have_explicit_non_valid_answers():
+    cases = load_oracle_bundle()["cases"]
+    targeted = [
+        case
+        for case in cases
+        if case["case_class"] in {"NEGATIVE", "AMBIGUOUS"}
+    ]
+
+    assert targeted
+    for case in targeted:
+        for expected_sync in case["expected"]["syncs"]:
+            assert expected_sync["validity"] in {"INVALID", "AMBIGUOUS"}
+            assert expected_sync["primary_reason"]
+            assert expected_sync["terminal"]["status"] != "VALID"
+
+
+def test_oracle_feature_matrix_is_complete():
+    features = {
+        feature
+        for case in load_oracle_bundle()["cases"]
+        for feature in case["features"]
+    }
+
+    assert {
+        "TERMINAL_TIE",
+        "MISSING_EVENT_MAPPING",
+        "MISSING_CORRELATION",
+        "DROPPED_RECORDS",
+        "EXTERNAL_OWNERSHIP",
+        "SUBMISSION_RACE",
+        "DEFAULT_STREAM_LEGACY",
+        "DEFAULT_STREAM_PTDS",
+        "MULTITHREAD_ORDERED",
+        "OVERLAPPING_HOST_SYNC",
+        "PHASE_SPILL",
+        "INVOCATION_BLEED",
+        "GRAPH_UNSUPPORTED",
+        "SYNC_D2H_UNSUPPORTED",
+        "QUERY_NON_SYNC",
+    } <= features
+
+
+def test_oracle_references_only_frozen_rules_and_reason_codes():
+    root = Path(__file__).resolve().parents[1]
+    contract = json.loads(
+        (root / "docs" / "v1_4_1" / "contracts" / "measurement_contract_v0_2.json")
+        .read_text(encoding="utf-8")
+    )
+    known_rules = {rule["rule_id"] for rule in contract["rules"]}
+    reason_validity = {
+        reason: group["default_validity"]
+        for group in contract["s_layer"]["reason_priority"]
+        for reason in group["reasons"]
+    }
+
+    for case in load_oracle_bundle()["cases"]:
+        assert set(case["required_contract_rules"]) <= known_rules
+        for expected_sync in case["expected"]["syncs"]:
+            reason = expected_sync["primary_reason"]
+            if reason is not None:
+                assert reason in reason_validity
+                assert expected_sync["validity"] == reason_validity[reason]
+
+
+def test_oracle_independence_checker_passes():
+    root = Path(__file__).resolve().parents[1]
+    completed = subprocess.run(
+        [sys.executable, str(root / "scripts" / "verify_q0_oracle_independence.py")],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "oracle_independence: PASS" in completed.stdout
+
+
+def test_oracle_independence_checker_rejects_analyzer_import_and_inference():
+    source = """
+import analysis
+
+def calculate_expected_timing(case, sync_label):
+    edges = case[\"construction\"][\"dependency_edges\"]
+    return recover_wait_set(edges)
+"""
+
+    problems = check_source(source)
+
+    assert "禁止导入: analysis" in problems
+    assert "区间函数禁止读取 dependency_edges" in problems
+    assert "区间函数禁止调用被测逻辑: recover_wait_set" in problems
