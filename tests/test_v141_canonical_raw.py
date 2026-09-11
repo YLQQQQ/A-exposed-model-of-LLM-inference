@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from copy import deepcopy
 import hashlib
+import gzip
 import json
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 
 import pytest
 
@@ -16,6 +19,8 @@ from exposedpath_v141.canonical_raw import (
     load_canonical_raw_schema,
     validate_canonical_raw_schema,
 )
+from exposedpath_v141.cli import main
+from scripts.verify_canonical_raw_boundary import check_source as check_downstream_source
 
 
 SQLITE_SCHEMA = """
@@ -151,7 +156,8 @@ def _make_manifest(path: Path) -> None:
 
 
 def _read_jsonl(path: Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    with gzip.open(path, "rt", encoding="utf-8") as handle:
+        return [json.loads(line) for line in handle]
 
 
 def test_committed_canonical_raw_schema_is_valid():
@@ -273,9 +279,9 @@ def test_converter_resolves_names_ids_and_source_rows(tmp_path):
         collector_version="synthetic",
         source_manifest=source_manifest,
     )
-    cuda_api = _read_jsonl(manifest_path.parent / "cuda_api.jsonl")[0]
-    sync = _read_jsonl(manifest_path.parent / "physical_sync.jsonl")[0]
-    activities = _read_jsonl(manifest_path.parent / "device_activity.jsonl")
+    cuda_api = _read_jsonl(manifest_path.parent / "cuda_api.jsonl.gz")[0]
+    sync = _read_jsonl(manifest_path.parent / "physical_sync.jsonl.gz")[0]
+    activities = _read_jsonl(manifest_path.parent / "device_activity.jsonl.gz")
 
     assert cuda_api["api_name"] == "cudaStreamSynchronize"
     assert cuda_api["global_tid"] == global_tid
@@ -336,7 +342,7 @@ def test_structured_nvtx_identity_is_parsed_without_filename_inference(tmp_path)
     manifest_path = convert_sqlite_to_canonical(
         database, tmp_path / "canonical", "Engineering", "D" * 64, "synthetic", source_manifest
     )
-    nvtx = _read_jsonl(manifest_path.parent / "nvtx.jsonl")[0]
+    nvtx = _read_jsonl(manifest_path.parent / "nvtx.jsonl.gz")[0]
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert nvtx["structured_identity"] == identity
@@ -351,7 +357,7 @@ def test_legacy_phase_label_is_preserved_but_identity_is_not_guessed(tmp_path):
     manifest_path = convert_sqlite_to_canonical(
         database, tmp_path / "canonical", "Engineering", "E" * 64, "synthetic"
     )
-    nvtx = _read_jsonl(manifest_path.parent / "nvtx.jsonl")[0]
+    nvtx = _read_jsonl(manifest_path.parent / "nvtx.jsonl.gz")[0]
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert nvtx["text"] == "full_request"
@@ -405,7 +411,7 @@ def test_incomplete_structured_marker_does_not_receive_partial_identity(tmp_path
     manifest_path = convert_sqlite_to_canonical(
         database, tmp_path / "canonical", "Engineering", "0" * 64, "synthetic", source_manifest
     )
-    nvtx = _read_jsonl(manifest_path.parent / "nvtx.jsonl")[0]
+    nvtx = _read_jsonl(manifest_path.parent / "nvtx.jsonl.gz")[0]
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert nvtx["structured_identity"] is None
@@ -452,8 +458,8 @@ def test_cuda_event_linkage_is_preserved_separately_from_physical_sync(tmp_path)
     manifest_path = convert_sqlite_to_canonical(
         database, tmp_path / "canonical", "Engineering", "1" * 64, "synthetic", source_manifest
     )
-    event = _read_jsonl(manifest_path.parent / "cuda_event.jsonl")[0]
-    sync = _read_jsonl(manifest_path.parent / "physical_sync.jsonl")[0]
+    event = _read_jsonl(manifest_path.parent / "cuda_event.jsonl.gz")[0]
+    sync = _read_jsonl(manifest_path.parent / "physical_sync.jsonl.gz")[0]
 
     assert (event["event_id"], event["event_sync_id"]) == (9, 10)
     assert event["record_id"].startswith("cuda_event:")
@@ -500,3 +506,85 @@ def test_invalid_evidence_refuses_conversion_and_leaves_no_output(
         )
 
     assert not output.exists()
+
+
+def test_convert_sqlite_cli_reports_ambiguous_engineering_output(tmp_path, capsys):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    output = tmp_path / "canonical"
+
+    return_code = main(
+        [
+            "convert-sqlite",
+            "--sqlite", str(database),
+            "--output-dir", str(output),
+            "--data-role", "Engineering",
+            "--raw-sha256", "4" * 64,
+            "--collector-version", "synthetic",
+            "--source-manifest", str(source_manifest),
+        ]
+    )
+    printed = capsys.readouterr().out
+
+    assert return_code == 2
+    assert "identity_validity: AMBIGUOUS" in printed
+    assert "q0_status: NOT_RUN" in printed
+    assert (output / "canonical_manifest.json").is_file()
+
+
+def test_downstream_boundary_rejects_direct_nsys_sqlite_access():
+    source = """
+import sqlite3
+
+def recover_wait_set(connection):
+    return connection.execute(\"SELECT * FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION\")
+"""
+
+    problems = check_downstream_source(source)
+
+    assert "下游模块禁止导入 sqlite3" in problems
+    assert any("CUPTI_ACTIVITY_KIND_" in problem for problem in problems)
+
+
+def test_historical_regression_report_preserves_frozen_raw_identity():
+    root = Path(__file__).resolve().parents[1]
+    frozen = json.loads(
+        (root / "docs" / "prototype_archive" / "raw_trace_manifest_v1.json")
+        .read_text(encoding="utf-8")
+    )
+    regression = json.loads(
+        (
+            root
+            / "engineering_evidence"
+            / "canonical_raw_v0_2"
+            / "historical_regression.json"
+        ).read_text(encoding="utf-8")
+    )
+    frozen_by_path = {item["path"]: item["sha256"] for item in frozen["files"]}
+
+    assert regression["verdict"] == "ENGINEERING_REGRESSION_PASS"
+    assert regression["research_eligibility"]["q0"] == "NOT_RUN"
+    assert len(regression["cases"]) == 3
+    for case in regression["cases"]:
+        raw = case["raw"]
+        assert raw["sha256_before"] == frozen_by_path[raw["path"]]
+        assert raw["sha256_after"] == raw["sha256_before"]
+        assert case["canonical"]["observation_validity"] == "ambiguous"
+        assert case["canonical"]["identity_validity"] == "AMBIGUOUS"
+        assert case["canonical"]["compressed_record_bytes"] < case["sqlite"]["size_bytes"]
+
+
+def test_repository_downstream_modules_obey_canonical_raw_boundary():
+    root = Path(__file__).resolve().parents[1]
+    completed = subprocess.run(
+        [sys.executable, str(root / "scripts" / "verify_canonical_raw_boundary.py")],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "canonical_raw_boundary: PASS" in completed.stdout

@@ -1,0 +1,85 @@
+{
+  "report_version": "exposedpath-canonical-raw-historical-regression/0.2.0",
+  "executed_at": "2026-09-11",
+  "data_role": "Engineering",
+  "canonical_schema_version": "exposedpath-canonical-raw/0.2.0",
+  "measurement_contract_version": "exposedpath-measurement-contract-0.2.0",
+  "exporter": {
+    "name": "NVIDIA Nsight Systems",
+    "version": "2026.1.1.204-261137176666v0",
+    "export_product_version": "2026.1.1.204",
+    "export_schema_version": "3.24.14",
+    "lazy": false
+  },
+  "commands": {
+    "export": "nsys export --type sqlite --lazy=false --force-overwrite=false --output <temporary.sqlite> <immutable.nsys-rep>",
+    "convert": "python -m exposedpath_v141 convert-sqlite --sqlite <temporary.sqlite> --output-dir <temporary-derived-dir> --data-role Engineering --raw-sha256 <frozen-hash> --collector-version 2025.6.3.541-256337736014v0"
+  },
+  "raw_immutability_verdict": "PASS",
+  "research_eligibility": {
+    "q0": "NOT_RUN",
+    "pilot": false,
+    "formal": false,
+    "reason": "三份历史 trace 无 source manifest，NVTX 为旧式标签；仅用于 Engineering 回归。"
+  },
+  "cases": [
+    {
+      "case_id": "w01",
+      "raw": {
+        "path": "nsys_results/w01_p128_b1_o16.nsys-rep",
+        "sha256_before": "4CE938EC5B44C657BF90FD732D23A2F92E2D546ADF3F00758BBCA8784C1210C4",
+        "sha256_after": "4CE938EC5B44C657BF90FD732D23A2F92E2D546ADF3F00758BBCA8784C1210C4"
+      },
+      "sqlite": {
+        "size_bytes": 28778496,
+        "sha256": "DE8EE3E4BEC68F7C37402E065E291F95EF35D4B35EA0DFAE3F3183785FA04107"
+      },
+      "canonical": {
+        "compressed_record_bytes": 11862927,
+        "observation_validity": "ambiguous",
+        "identity_validity": "AMBIGUOUS",
+        "record_counts": {"nvtx": 95, "cuda_api": 211780, "physical_sync": 446, "device_activity": 209848, "cuda_event": 0, "context": 1, "stream": 10, "diagnostic": 22},
+        "file_sha256": {"nvtx": "8B8188BCF4CDCA5F3CACFE6E32FEC5C6762F02F47306EDE39D9D62458BF0EA40", "cuda_api": "45E9DA51FF22C5229F192AFC56C2877694E1078CFBB7B33EC7B29D03238FEC68", "physical_sync": "7C09BDE4CC75B0107E66B46B90A26D177B4331DF56E81BA889C807A48F6B1DF5", "device_activity": "99BE53BAE39B810DFD037E4583E36515DD90D4EB2A293796BCF60991FE29D03A"}
+      }
+    },
+    {
+      "case_id": "w04",
+      "raw": {
+        "path": "nsys_results/w04_p128_b8_o16.nsys-rep",
+        "sha256_before": "A18C33B27AC384223CE07F02E49784628A9AC3001711AAAA8D0DBA23BFFD4A3A",
+        "sha256_after": "A18C33B27AC384223CE07F02E49784628A9AC3001711AAAA8D0DBA23BFFD4A3A"
+      },
+      "sqlite": {
+        "size_bytes": 29188096,
+        "sha256": "359E5D47AF0B1FB8C825D49C2261A00D4FAE1B9A8D686E76E56A6465CC5F93CB"
+      },
+      "canonical": {
+        "compressed_record_bytes": 12211931,
+        "observation_validity": "ambiguous",
+        "identity_validity": "AMBIGUOUS",
+        "record_counts": {"nvtx": 95, "cuda_api": 214970, "physical_sync": 446, "device_activity": 212984, "cuda_event": 0, "context": 1, "stream": 10, "diagnostic": 22},
+        "file_sha256": {"nvtx": "29980896A1100B70CA798A83CFB7C1D50CEC1CCB7B4F344E788DF8DD00B981B4", "cuda_api": "7E00FA506609376FEE27DC1EC2B3F6D4387000D6BE91C338304A94781A3A96E0", "physical_sync": "0A166D4763BFBB02EC1039A360590F4E62FE8F9395DD8F2316F99036D4824E9E", "device_activity": "19B6FEB4DAB1AB0581235EA5E1730872315E28D40E6BD706FE9881C2781349DB"}
+      }
+    },
+    {
+      "case_id": "w11",
+      "raw": {
+        "path": "nsys_results/w11_p512_b4_o16.nsys-rep",
+        "sha256_before": "981DB025CAB3E4A43A099F11AE200D424D2F101186970490D9C33C2BE5852E13",
+        "sha256_after": "981DB025CAB3E4A43A099F11AE200D424D2F101186970490D9C33C2BE5852E13"
+      },
+      "sqlite": {
+        "size_bytes": 28282880,
+        "sha256": "209F57F70C637FBFDBDAC0216AF4856919F9F6F74964E2A9315692815BFBC992"
+      },
+      "canonical": {
+        "compressed_record_bytes": 11426830,
+        "observation_validity": "ambiguous",
+        "identity_validity": "AMBIGUOUS",
+        "record_counts": {"nvtx": 95, "cuda_api": 208042, "physical_sync": 446, "device_activity": 206040, "cuda_event": 0, "context": 1, "stream": 10, "diagnostic": 22},
+        "file_sha256": {"nvtx": "E62CFBC848EAEED954DD8D2A9B88BE0FE466E7002809070F847534C1C6A1483E", "cuda_api": "62E1925319C451DC1AB84B16BB366C6BE336C6F6A982F7CB2CB09D8F7ED5B3D9", "physical_sync": "F1AC03CD90BDD176FC4CEC2E7A43448BDB33B4D53EF89220F8E9C1E4269A215D", "device_activity": "D276A6F1EE863DF6979E84B0D05DD1E686E5B682311DBB33FA02B5FE6F85A71E"}
+      }
+    }
+  ],
+  "verdict": "ENGINEERING_REGRESSION_PASS"
+}

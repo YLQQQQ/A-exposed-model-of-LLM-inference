@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import gzip
+import io
 import json
 import os
 import shutil
@@ -257,12 +259,25 @@ def _base(kind: str, table: str, rowid: int) -> dict[str, Any]:
 
 
 def _write_jsonl(path: Path, records: list[dict[str, Any]]) -> dict[str, Any]:
-    with path.open("x", encoding="utf-8", newline="\n") as handle:
-        for record in records:
-            handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
-            handle.write("\n")
-        handle.flush()
-        os.fsync(handle.fileno())
+    with path.open("xb") as raw_handle:
+        with gzip.GzipFile(
+            filename="", mode="wb", fileobj=raw_handle, mtime=0
+        ) as gzip_handle:
+            with io.TextIOWrapper(
+                gzip_handle, encoding="utf-8", newline="\n"
+            ) as text_handle:
+                for record in records:
+                    text_handle.write(
+                        json.dumps(
+                            record,
+                            ensure_ascii=False,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        )
+                    )
+                    text_handle.write("\n")
+        raw_handle.flush()
+        os.fsync(raw_handle.fileno())
     return {
         "filename": path.name,
         "record_count": len(records),

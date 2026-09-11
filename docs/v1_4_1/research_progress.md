@@ -2,15 +2,15 @@
 
 ## 当前快照
 
-- 清单版本：`0.7`
+- 清单版本：`0.8`
 - 最近更新：`2026-09-11`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G3-05`，冻结 Canonical Raw schema；随后实现 SQLite 到 Canonical Raw 的确定性转换器
-- 当前总体判断：Measurement Contract v0.2 和 Q0 独立标准答案设计已通过离线内部审查；Canonical Raw、S、A/B 与真实 Q0 均未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
+- 当前最高优先级：`EP-G4-01`，只从 Canonical Raw 恢复 completion set 与 `W(s)`；随后完成 terminal、ownership 和 validity
+- 当前总体判断：Measurement Contract、Q0 独立标准答案设计和 Canonical Raw v0.2 已通过离线/Engineering 审查；S、A/B 与真实 Q0 均未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -64,7 +64,7 @@
 - [x] `EP-G1-08` 冻结 A/B 字段、互斥/守恒、B per-sync 生命周期，以及 D/Exposure Signature 的纯派生规则。证据：合同第 10～12 节及机器合同 `a_layer/b_layer/derived`。
 - [x] `EP-G1-09` 为 37 条合同规则建立 25 个验证案例映射并完成内部合同审查。证据：`measurement_contract_test_map_v0_2.json`、`tests/test_v141_contract.py`；`python -m exposedpath_v141 validate-contract` 输出 `37/37 (100%)` 与 `PASS`。
 
-**下一项：**Gate 2 已完成；进入 `EP-G3-05` 冻结 Canonical Raw schema，不得跳过 Raw 合同直接实现 S 或 A/B。
+**下一项：**Gate 2、3 已完成；进入 `EP-G4-01`，S 层只能读取 Canonical Raw，不得回退到直接查询 Nsight SQLite。
 
 ## Gate 2：设计 Q0 独立标准答案
 
@@ -78,26 +78,26 @@
 
 ## Gate 3：Canonical Raw 层
 
-**Gate verdict：`FAIL`。** observation gate 已有可运行基础，但唯一、版本化的 Canonical Raw schema 和转换器尚未建立。
+**Gate verdict：`PASS`。** 只表示唯一、版本化 Canonical Raw schema、只读转换器、identity/fail-closed 边界和三份历史 trace Engineering 回归通过；不表示 S/A/B 已实现或 Q0 已通过。
 
 - [x] `EP-G3-01` 建立独立新版入口 `python -m exposedpath_v141 inspect-sqlite`，未覆盖旧 analyzer。
 - [x] `EP-G3-02` 对支持的 Nsight schema、必需表/字段、sync correlation 和 dropped-record 诊断执行 fail-closed 检查。
 - [x] `EP-G3-03` 三份历史 trace 的 observation 回归稳定；因缺 source manifest 保持 `ambiguous`。证据：`engineering_evidence/observation_v0_1/`。
 - [x] `EP-G3-04` 新版 observation 定向测试通过。证据：最近记录为 `8 passed`，测试文件 `tests/test_v141_observation.py`。
-- [ ] `EP-G3-05`（未开始）冻结 Canonical Raw schema、身份、时钟域、lineage 和诊断字段。
-- [ ] `EP-G3-06`（未开始）实现 SQLite 到 Canonical Raw 的确定性转换器。
-- [ ] `EP-G3-07`（未开始）建立合成 SQLite fixture、历史 trace 回归和 schema 版本拒绝测试。
-- [ ] `EP-G3-08`（未开始）确保所有下游层只读取 Canonical Raw，不再直接查询 Nsight 表。
+- [x] `EP-G3-05` 冻结 Canonical Raw v0.2 的八类记录、结构化 NVTX、单 trace 相对纳秒时钟、source-row identity、lineage、诊断和研究资格字段。证据：`canonical_raw_schema_v0_2.json`、`canonical_raw_v0_2.md`。
+- [x] `EP-G3-06` 实现 SQLite 到确定性 gzip JSONL bundle 的只读转换器；已有输出拒绝覆盖，临时目录成功后原子改名。
+- [x] `EP-G3-07` 建立合成 SQLite、未知 schema、缺表/重复 correlation/dropped/逆序时间等测试，并完成三份历史 trace 回归。证据：`tests/test_v141_canonical_raw.py`、`engineering_evidence/canonical_raw_v0_2/historical_regression.json`。
+- [x] `EP-G3-08` 建立下游边界静态检查，禁止未来 S/A/B 导入 sqlite3 或直接引用 Nsight 私有表名。当前下游模块尚未创建，测试同时用恶意样例证明检查器能拒绝越界访问。证据：`scripts/verify_canonical_raw_boundary.py`。
 
 ## Gate 4：S 同步语义层
 
-**Gate verdict：`NOT_RUN`。** S 层尚未实现。
+**Gate verdict：`NOT_RUN`。** Canonical Raw 前置条件已满足，S 层尚未实现。
 
-- [ ] `EP-G4-01`（受阻于 Gate 3）实现每个同步的 completion set 与 `W(s)` 恢复。
-- [ ] `EP-G4-02`（受阻）实现 terminal 唯一性、并列候选、ownership 和 validity。
-- [ ] `EP-G4-03`（受阻）验证提前完成但属于 completion set 的活动仍进入 `W(s)`。
-- [ ] `EP-G4-04`（受阻）验证仅时间重叠而无依赖的活动不会进入 `W(s)`。
-- [ ] `EP-G4-05`（受阻）完成三类同步的确定性 fixture 和语义不变量测试。
+- [ ] `EP-G4-01`（未开始）实现每个同步的 completion set 与 `W(s)` 恢复。
+- [ ] `EP-G4-02`（未开始）实现 terminal 唯一性、并列候选、ownership 和 validity。
+- [ ] `EP-G4-03`（未开始）验证提前完成但属于 completion set 的活动仍进入 `W(s)`。
+- [ ] `EP-G4-04`（未开始）验证仅时间重叠而无依赖的活动不会进入 `W(s)`。
+- [ ] `EP-G4-05`（未开始）完成三类同步的确定性 fixture 和语义不变量测试。
 
 ## Gate 5：A/B，再到 D/Exposure Signature
 
@@ -198,7 +198,7 @@
 
 - `EP-ISSUE-01`：旧 runner 的首 Token 时间取在异步 argmax 提交后，但后续 EOS `.any()` 可能触发隐式同步，Token 完成边界不一致。影响：Gate 1、7；不得直接用于新版 phase 定义。
 - `EP-ISSUE-02`：三份历史 trace 缺少 source manifest。影响：validity 必须保持 `ambiguous`，不能升级数据资格。
-- `EP-ISSUE-03`：Gate 2 完成后的仓库全量测试为 `270 passed, 2 failed`；两项失败与工作前基线相同，仍为 `tests/test_server_smoke_script.py::test_dry_run` 和 `test_spaces`。影响：跨平台执行层需单独修复或重新界定，但不属于 Gate 2 新增失败。
+- `EP-ISSUE-03`：Gate 3 完成后的仓库全量测试为 `297 passed, 2 failed`；两项失败与工作前基线相同，仍为 `tests/test_server_smoke_script.py::test_dry_run` 和 `test_spaces`。影响：跨平台执行层需单独修复或重新界定，但不属于 Gate 2/3 新增失败。
 - `EP-ISSUE-04`：当前无 GPU。影响：Q0 真实 trace、跨平台 GPU smoke、Engineering Pilot 及后续实验保持 `BLOCKED`；不影响 Gate 1 至 Gate 5 的离线设计和确定性测试工作。
 - `EP-ISSUE-05`（已解决）：使用校验过哈希的 LibreOffice 临时解包版本完成本地全页渲染；研究主体 40 页、实验协议 27 页均已检查。渲染器仅用于文档 QA，不改变研究 Gate。
 
@@ -208,11 +208,11 @@
 
 最近应执行的五项任务：
 
-1. `EP-G3-05`：冻结 Canonical Raw schema、稳定身份、时钟域、lineage 和诊断字段。
-2. `EP-G3-06`：实现 SQLite 到 Canonical Raw 的确定性转换器，输出写入版本化派生目录且不覆盖 Raw。
-3. `EP-G3-07`：建立合成 SQLite fixture、三份历史 trace 回归和未知 schema 拒绝测试。
-4. `EP-G3-08`：建立边界检查，保证下游 S/A/B 只能读取 Canonical Raw。
-5. 审查 Gate 3；通过后才进入 Gate 4 的 `W(s)`、terminal 和 validity 实现。
+1. `EP-G4-01`：定义 S 输入模型，并按 stream/device/context/event completion scope 恢复 completion set 与 `W(s)`。
+2. `EP-G4-02`：实现 semantic frontier、唯一 terminal、tie、ownership 和 validity 原因优先级。
+3. `EP-G4-03`：用 Q0 oracle 的 completed-before 等案例验证“已完成仍在 W”。
+4. `EP-G4-04`：用无关跨流重叠案例验证“时间重叠不产生依赖”。
+5. `EP-G4-05`：完成确定性 fixture 与 S 层审查；通过后才进入 A/B。
 
 ## 计划调整记录
 
@@ -225,3 +225,4 @@
 | 0.5 | 2026-09-11 | 完成 v7.1 背景与研究立意补齐、两份文档的简洁命名、结构/语义自动校验及 40/27 页全页视觉验收；移除封面标题装饰线并修正表格与章节分页。 | EP-FND-12、EP-ISSUE-05 | 不改变 Measurement Contract、Gate 或 Formal 数据资格；下一步仍为 EP-G1-02 |
 | 0.6 | 2026-09-11 | 完成 Measurement Contract v0.2：冻结 Token/phase、自然与干预同步身份、三类 completion scope、提交证明、`W(s)`、terminal、validity、A/B 与纯派生规则；建立 37 条规则到 25 个验证案例的机器映射和合同校验命令。 | EP-G1-02 至 EP-G1-09 | Gate 1 内部合同审查 PASS；不改变 Q0、Pilot、Protocol Freeze 或 Formal 数据资格；下一步为 EP-G2-01 |
 | 0.7 | 2026-09-11 | 完成 Q0 独立标准答案设计：23 个必需案例覆盖 25 个特性，预写 `W(s)`、terminal、validity 和 A/B 关系，并增加 AST 独立性检查及 `DESIGN_ONLY_PASS` CLI。 | EP-G2-01 至 EP-G2-05、EP-G3-05 | Gate 2 设计审查 PASS；真实 Q0 仍未运行，Gate 6 保持 BLOCKED；不改变 Pilot、Protocol Freeze 或 Formal 数据资格；下一步为 EP-G3-05 |
+| 0.8 | 2026-09-11 | 完成 Canonical Raw v0.2：冻结八类事实记录与 identity/clock/lineage 合同，实现只读 gzip JSONL 转换、越层访问检查，并对三份历史 trace 完成 Engineering 回归与 Raw 哈希复核。 | EP-G3-05 至 EP-G3-08、EP-G4-01 至 EP-G4-05 | Gate 3 PASS；历史数据仍为 ambiguous Engineering 证据，真实 Q0 与 Gate 6 不变；下一步为 EP-G4-01 |

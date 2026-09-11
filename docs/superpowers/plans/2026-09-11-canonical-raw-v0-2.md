@@ -73,13 +73,13 @@
 - 修改：`docs/v1_4_1/research_progress.md`
 - 修改：`tests/test_v141_canonical_raw.py`
 
-- [ ] 先写 `convert-sqlite` CLI 失败测试，再实现命令。
-- [ ] 使用本机 Nsight 2026.1.1 将三份封存 `.nsys-rep` 只读导出到临时目录，再转换 Canonical Raw；比较 Raw 前后 SHA-256。
-- [ ] 记录三份历史输入的行数、输出文件哈希、validity 和限制；不提交大型临时 SQLite/JSONL。
-- [ ] 增加下游边界测试/检查，禁止未来 `sync/accounting` 模块直接出现 Nsight 表名或 sqlite 查询。
-- [ ] 写中文 schema 说明并将 Gate 3 更新为 PASS；明确历史回归不是 Q0。
-- [ ] 运行定向、CLI、三份历史回归、全量测试和 `git diff --check`；只允许两项既有 PowerShell smoke 失败。
-- [ ] 提交 Gate 3。
+- [x] 先写 `convert-sqlite` CLI 失败测试，再实现命令。
+- [x] 使用本机 Nsight 2026.1.1 将三份封存 `.nsys-rep` 只读导出到临时目录，再转换 Canonical Raw；比较 Raw 前后 SHA-256。
+- [x] 记录三份历史输入的行数、输出文件哈希、validity 和限制；不提交大型临时 SQLite/JSONL。
+- [x] 增加下游边界测试/检查，禁止未来 `sync/accounting` 模块直接出现 Nsight 表名或 sqlite 查询。
+- [x] 写中文 schema 说明并将 Gate 3 更新为 PASS；明确历史回归不是 Q0。
+- [x] 运行定向、CLI、三份历史回归、全量测试和 `git diff --check`；只复现两项既有 PowerShell smoke 失败。
+- [x] 提交 Gate 3。
 
 ## 完成后的下一 Gate
 

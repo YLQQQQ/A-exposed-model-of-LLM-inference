@@ -1,5 +1,7 @@
 # ExposedPath v1.4.1 Analyzer 输入输出合同（草案 0.1）
 
+> **历史状态说明（2026-09-11）：** 本文件只保留 Gate 1 之前的 observation 草案与追溯价值，其中“尚未冻结”的描述不再代表当前状态。现行 Measurement Contract 见 `measurement_contract_v0_2.md`，现行 Raw 边界见 `canonical_raw_v0_2.md` 及 `contracts/canonical_raw_schema_v0_2.json`，最新完成状态只看 `research_progress.md`。
+
 ## 当前用途与边界
 
 本合同服务于 Prototype/Engineering 阶段的离线 analyzer 重建。它只冻结第一段边界：`Nsight SQLite -> observation report`。当前版本不实现 S、A、B、D 或 Exposure Signature，也不能作为 Q0、Pilot、Protocol Freeze 或 Formal 实验已经就绪的证据。

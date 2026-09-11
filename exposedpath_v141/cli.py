@@ -8,6 +8,10 @@ import sys
 from pathlib import Path
 
 from .contract import ContractValidationError, load_contract_bundle
+from .canonical_raw import (
+    CanonicalRawSchemaError,
+    convert_sqlite_to_canonical,
+)
 from .observation import inspect_sqlite, write_report_new
 from .q0_oracle import OracleValidationError, load_oracle_bundle
 
@@ -40,6 +44,20 @@ def _build_parser() -> argparse.ArgumentParser:
     inspect_parser.add_argument("--raw-sha256")
     inspect_parser.add_argument("--collector-version")
     inspect_parser.add_argument("--source-manifest", type=Path)
+
+    convert_parser = subparsers.add_parser(
+        "convert-sqlite", help="只读转换 Nsight SQLite 为 Canonical Raw bundle"
+    )
+    convert_parser.add_argument("--sqlite", required=True, type=Path)
+    convert_parser.add_argument("--output-dir", required=True, type=Path)
+    convert_parser.add_argument(
+        "--data-role",
+        required=True,
+        choices=("Prototype", "Engineering", "Pilot", "Formal"),
+    )
+    convert_parser.add_argument("--raw-sha256")
+    convert_parser.add_argument("--collector-version")
+    convert_parser.add_argument("--source-manifest", type=Path)
 
     subparsers.add_parser(
         "validate-contract", help="校验 Measurement Contract 包内部一致性"
@@ -112,6 +130,35 @@ def main(argv: list[str] | None = None) -> int:
         print("q0_execution_status: NOT_RUN")
         print("verdict: DESIGN_ONLY_PASS")
         return 0
+
+    if args.command == "convert-sqlite":
+        try:
+            manifest_path = convert_sqlite_to_canonical(
+                sqlite_path=args.sqlite,
+                output_dir=args.output_dir,
+                data_role=args.data_role,
+                raw_sha256=args.raw_sha256,
+                collector_version=args.collector_version,
+                source_manifest=args.source_manifest,
+            )
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (
+            CanonicalRawSchemaError,
+            FileExistsError,
+            OSError,
+            ValueError,
+            json.JSONDecodeError,
+        ) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+
+        observation_status = manifest["observation_validity"]["status"]
+        identity_status = manifest["identity"]["status"]
+        print(f"canonical_manifest: {manifest_path}")
+        print(f"observation_validity: {observation_status}")
+        print(f"identity_validity: {identity_status}")
+        print(f"q0_status: {manifest['research_eligibility']['q0_status']}")
+        return 2 if "ambiguous" in {observation_status, identity_status.lower()} else 0
 
     if args.command != "inspect-sqlite":
         return 1
