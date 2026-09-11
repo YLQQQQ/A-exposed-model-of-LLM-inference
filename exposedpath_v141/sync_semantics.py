@@ -6,6 +6,7 @@ import gzip
 import hashlib
 import json
 import re
+from collections import defaultdict
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -333,6 +334,48 @@ def _normalize_sync(
     return result
 
 
+def _normalize_event_record(
+    event: Mapping[str, Any],
+    cuda_api_records: list[Mapping[str, Any]],
+    nvtx_records: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    result = dict(event)
+    correlation_id = event.get("correlation_id")
+    candidates = [
+        api
+        for api in cuda_api_records
+        if api.get("correlation_id") == correlation_id
+        and classify_cuda_api(str(api.get("api_name", "")))["sync_kind"] == "EVENT_RECORD"
+    ]
+    if correlation_id is None or len(candidates) != 1:
+        result.update(
+            host_start_ns=None,
+            host_end_ns=None,
+            request_id=None,
+            repeat_id=None,
+            invocation_identity=None,
+            ownership_status="INVALID",
+            ownership_reasons=["MISSING_EVENT_RECORD"],
+        )
+        return result
+    api = candidates[0]
+    ownership = _phase_ownership(
+        int(api["start_ns"]), int(api["end_ns"]), api.get("global_tid"), nvtx_records
+    )
+    identity = ownership["identity"]
+    result.update(
+        host_start_ns=api["start_ns"],
+        host_end_ns=api["end_ns"],
+        request_id=identity.get("request_id") if identity else None,
+        repeat_id=identity.get("repeat_id") if identity else None,
+        invocation_identity=identity,
+        ownership_status=ownership["status"],
+        ownership_reasons=ownership["reasons"],
+        ownership_range_record_ids=ownership["range_record_ids"],
+    )
+    return result
+
+
 def build_semantic_inventory(bundle: Mapping[str, Any]) -> dict[str, Any]:
     """把 Canonical Raw 事实标准化为 S 层待建图对象，不恢复依赖。"""
 
@@ -341,6 +384,7 @@ def build_semantic_inventory(bundle: Mapping[str, Any]) -> dict[str, Any]:
     input_status, input_reasons = _manifest_input_status(manifest)
     nvtx = list(records["nvtx"])
     cuda_api = list(records["cuda_api"])
+    normalized_syncs = [_normalize_sync(sync, nvtx) for sync in records["cuda_sync"]]
     return {
         "input_status": input_status,
         "input_reasons": input_reasons,
@@ -349,13 +393,16 @@ def build_semantic_inventory(bundle: Mapping[str, Any]) -> dict[str, Any]:
             _normalize_activity(activity, cuda_api, nvtx)
             for activity in records["device_activity"]
         ],
-        "syncs": [_normalize_sync(sync, nvtx) for sync in records["cuda_sync"]],
+        "syncs": [sync for sync in normalized_syncs if sync["role"] != "DEPENDENCY_EDGE"],
         "dependency_events": [
-            _normalize_sync(event, nvtx)
-            for event in records.get("cuda_sync", [])
-            if classify_cuda_api(str(event.get("runtime_api_name", "")))["role"]
-            == "DEPENDENCY_EDGE"
+            sync for sync in normalized_syncs if sync["role"] == "DEPENDENCY_EDGE"
         ],
+        "event_records": [
+            _normalize_event_record(event, cuda_api, nvtx)
+            for event in records.get("cuda_event", [])
+        ],
+        "contexts": list(records.get("context", [])),
+        "streams": list(records.get("stream", [])),
     }
 
 
@@ -403,10 +450,361 @@ def submission_evidence(
     """只接受冻结合同中的两种提交证据。"""
 
     gpu_start = activity.get("start_ns")
+    enqueue_start = activity.get("enqueue_start_ns")
     enqueue_end = activity.get("enqueue_end_ns")
     sync_start = sync.get("host_start_ns")
     if gpu_start is not None and sync_start is not None and gpu_start < sync_start:
         return {"status": "PROVEN", "proof": "GPU_STARTED_BEFORE_SYNC", "reason": None}
     if enqueue_end is not None and sync_start is not None and enqueue_end <= sync_start:
         return {"status": "PROVEN", "proof": "ENQUEUE_COMPLETED_BEFORE_SYNC", "reason": None}
+    if enqueue_start is not None and sync_start is not None and enqueue_start >= sync_start:
+        return {"status": "NOT_PRECEDING", "proof": None, "reason": None}
     return {"status": "AMBIGUOUS", "proof": None, "reason": "SUBMISSION_ORDER_AMBIGUOUS"}
+
+
+def _add_edge(
+    predecessors: dict[str, set[str]],
+    edges: list[dict[str, Any]],
+    source: str,
+    target: str,
+    edge_type: str,
+) -> None:
+    if source == target or source in predecessors[target]:
+        return
+    predecessors[target].add(source)
+    edges.append({"from": source, "to": target, "edge_type": edge_type})
+
+
+def _stream_flags(inventory: Mapping[str, Any]) -> dict[tuple[Any, Any], Any]:
+    return {
+        (stream.get("context_id"), stream.get("stream_id")): stream.get("flag")
+        for stream in inventory.get("streams", [])
+    }
+
+
+def _null_streams(inventory: Mapping[str, Any]) -> dict[Any, Any]:
+    return {
+        context.get("context_id"): context.get("null_stream_id")
+        for context in inventory.get("contexts", [])
+    }
+
+
+def _same_invocation(left: Mapping[str, Any], right: Mapping[str, Any]) -> bool:
+    left_identity = left.get("invocation_identity")
+    right_identity = right.get("invocation_identity")
+    if isinstance(left_identity, Mapping) and isinstance(right_identity, Mapping):
+        return _identity_key(left_identity) == _identity_key(right_identity)
+    return (left.get("request_id"), left.get("repeat_id")) == (
+        right.get("request_id"), right.get("repeat_id")
+    )
+
+
+def _build_same_stream_edges(
+    activities: list[Mapping[str, Any]],
+    predecessors: dict[str, set[str]],
+    edges: list[dict[str, Any]],
+) -> list[str]:
+    issues: list[str] = []
+    groups: dict[tuple[Any, ...], list[Mapping[str, Any]]] = defaultdict(list)
+    for activity in activities:
+        identity = activity.get("invocation_identity")
+        invocation = _identity_key(identity) if isinstance(identity, Mapping) else (
+            activity.get("request_id"), activity.get("repeat_id")
+        )
+        groups[(activity.get("context_id"), activity.get("stream_id"), *invocation)].append(activity)
+    for group in groups.values():
+        ordered = sorted(group, key=lambda item: (item["start_ns"], item["end_ns"], item["record_id"]))
+        for previous, current in zip(ordered, ordered[1:]):
+            if previous["end_ns"] <= current["start_ns"]:
+                _add_edge(
+                    predecessors,
+                    edges,
+                    str(previous["record_id"]),
+                    str(current["record_id"]),
+                    "SAME_STREAM_ORDER",
+                )
+            else:
+                issues.append("DEPENDENCY_CLOSURE_AMBIGUOUS")
+    return issues
+
+
+def _capture_event_prefixes(
+    inventory: Mapping[str, Any],
+    predecessors: dict[str, set[str]],
+    edges: list[dict[str, Any]],
+) -> tuple[dict[Any, str], list[str]]:
+    event_nodes: dict[Any, str] = {}
+    issues: list[str] = []
+    activities = inventory["activities"]
+    for event in inventory.get("event_records", []):
+        event_sync_id = event.get("event_sync_id")
+        if event_sync_id is None or event.get("ownership_status") != "VALID":
+            issues.extend(event.get("ownership_reasons", ["MISSING_EVENT_RECORD"]))
+            continue
+        node_id = f"event::{event['record_id']}"
+        event_nodes[event_sync_id] = node_id
+        for activity in activities:
+            if (
+                activity.get("context_id") != event.get("context_id")
+                or activity.get("stream_id") != event.get("stream_id")
+                or not _same_invocation(activity, event)
+            ):
+                continue
+            proof = submission_evidence(activity, event)
+            if proof["status"] == "PROVEN":
+                _add_edge(
+                    predecessors, edges, str(activity["record_id"]), node_id,
+                    "EVENT_RECORD_CAPTURE",
+                )
+            elif (
+                activity.get("enqueue_start_ns") is not None
+                and event.get("host_end_ns") is not None
+                and activity["enqueue_start_ns"] >= event["host_end_ns"]
+            ):
+                continue
+            else:
+                issues.append("DEPENDENCY_CLOSURE_AMBIGUOUS")
+    return event_nodes, issues
+
+
+def _add_stream_wait_edges(
+    inventory: Mapping[str, Any],
+    event_nodes: Mapping[Any, str],
+    predecessors: dict[str, set[str]],
+    edges: list[dict[str, Any]],
+) -> list[str]:
+    issues: list[str] = []
+    for wait in inventory.get("dependency_events", []):
+        if wait.get("sync_kind") != "STREAM_WAIT_EVENT":
+            continue
+        event_node = event_nodes.get(wait.get("event_sync_id"))
+        if event_node is None:
+            issues.append("MISSING_EVENT_RECORD")
+            continue
+        for activity in inventory["activities"]:
+            if (
+                activity.get("context_id") != wait.get("context_id")
+                or activity.get("stream_id") != wait.get("stream_id")
+                or not _same_invocation(activity, wait)
+            ):
+                continue
+            enqueue_start = activity.get("enqueue_start_ns")
+            if (
+                enqueue_start is not None
+                and wait.get("host_end_ns") is not None
+                and enqueue_start >= wait["host_end_ns"]
+            ):
+                _add_edge(
+                    predecessors, edges, event_node, str(activity["record_id"]),
+                    "STREAM_WAIT_EVENT",
+                )
+            elif submission_evidence(activity, wait)["status"] != "PROVEN":
+                issues.append("DEPENDENCY_CLOSURE_AMBIGUOUS")
+    return issues
+
+
+def _add_default_stream_edges(
+    inventory: Mapping[str, Any],
+    predecessors: dict[str, set[str]],
+    edges: list[dict[str, Any]],
+) -> list[str]:
+    null_streams = _null_streams(inventory)
+    activities = inventory["activities"]
+    default_activities = [
+        activity
+        for activity in activities
+        if null_streams.get(activity.get("context_id")) == activity.get("stream_id")
+    ]
+    if not default_activities:
+        return []
+    mode = inventory.get("execution_context", {}).get("default_stream_mode")
+    if mode not in {"LEGACY", "PER_THREAD", "NO_DEFAULT_STREAM_OBSERVED"}:
+        return ["DEFAULT_STREAM_MODE_UNKNOWN"]
+    if mode != "LEGACY":
+        return []
+    flags = _stream_flags(inventory)
+    for default in default_activities:
+        for other in activities:
+            if (
+                other.get("context_id") != default.get("context_id")
+                or other.get("stream_id") == default.get("stream_id")
+                or flags.get((other.get("context_id"), other.get("stream_id"))) == 1
+                or not _same_invocation(default, other)
+            ):
+                continue
+            if other.get("enqueue_end_ns") <= default.get("enqueue_start_ns"):
+                _add_edge(
+                    predecessors, edges, str(other["record_id"]), str(default["record_id"]),
+                    "SUPPORTED_DEFAULT_STREAM_ORDER",
+                )
+            elif default.get("enqueue_end_ns") <= other.get("enqueue_start_ns"):
+                _add_edge(
+                    predecessors, edges, str(default["record_id"]), str(other["record_id"]),
+                    "SUPPORTED_DEFAULT_STREAM_ORDER",
+                )
+    return []
+
+
+def _scope_matches(activity: Mapping[str, Any], sync: Mapping[str, Any]) -> bool:
+    kind = sync.get("sync_kind")
+    if kind == "STREAM":
+        return (
+            activity.get("context_id") == sync.get("context_id")
+            and activity.get("stream_id") == sync.get("stream_id")
+        )
+    if kind == "CONTEXT":
+        return activity.get("context_id") == sync.get("context_id")
+    if kind == "DEVICE":
+        return activity.get("device_id") == sync.get("device_id")
+    return False
+
+
+def _transitive_predecessors(
+    seeds: set[str], predecessors: Mapping[str, set[str]]
+) -> set[str]:
+    closure = set(seeds)
+    pending = list(seeds)
+    while pending:
+        node = pending.pop()
+        for predecessor in predecessors.get(node, set()):
+            if predecessor not in closure:
+                closure.add(predecessor)
+                pending.append(predecessor)
+    return closure
+
+
+def recover_wait_set(
+    inventory: Mapping[str, Any],
+    sync: Mapping[str, Any],
+) -> dict[str, Any]:
+    """依 completion scope 恢复单个同步的 W(s)，不使用时间重叠建边。"""
+
+    activities = list(inventory["activities"])
+    by_id = {str(activity["record_id"]): activity for activity in activities}
+    predecessors: dict[str, set[str]] = defaultdict(set)
+    edges: list[dict[str, Any]] = []
+    reasons: list[str] = list(inventory.get("input_reasons", []))
+    graph_inventory = dict(inventory)
+    if sync.get("sync_kind") == "EVENT":
+        relevant_event_ids = {sync.get("event_sync_id")}
+        relevant_waits: list[Mapping[str, Any]] = []
+    elif sync.get("sync_kind") == "STREAM":
+        relevant_waits = [
+            wait
+            for wait in inventory.get("dependency_events", [])
+            if wait.get("context_id") == sync.get("context_id")
+            and wait.get("stream_id") == sync.get("stream_id")
+            and wait.get("host_end_ns") is not None
+            and sync.get("host_start_ns") is not None
+            and wait["host_end_ns"] <= sync["host_start_ns"]
+        ]
+        relevant_event_ids = {wait.get("event_sync_id") for wait in relevant_waits}
+    else:
+        relevant_waits = []
+        relevant_event_ids = set()
+    graph_inventory["dependency_events"] = relevant_waits
+    graph_inventory["event_records"] = [
+        event
+        for event in inventory.get("event_records", [])
+        if event.get("event_sync_id") in relevant_event_ids
+    ]
+    relevant_streams = {
+        (event.get("context_id"), event.get("stream_id"))
+        for event in graph_inventory["event_records"]
+    }
+    if sync.get("sync_kind") == "STREAM":
+        relevant_streams.add((sync.get("context_id"), sync.get("stream_id")))
+    mode = inventory.get("execution_context", {}).get("default_stream_mode")
+    if sync.get("sync_kind") == "DEVICE":
+        graph_activities = [
+            activity for activity in activities
+            if activity.get("device_id") == sync.get("device_id")
+        ]
+    elif sync.get("sync_kind") == "CONTEXT" or (
+        mode not in {"PER_THREAD", "NO_DEFAULT_STREAM_OBSERVED"}
+        and sync.get("context_id") is not None
+    ):
+        graph_activities = [
+            activity for activity in activities
+            if activity.get("context_id") == sync.get("context_id")
+        ]
+    else:
+        graph_activities = [
+            activity for activity in activities
+            if (activity.get("context_id"), activity.get("stream_id")) in relevant_streams
+        ]
+    graph_activities = [
+        activity for activity in graph_activities if _same_invocation(activity, sync)
+    ]
+    graph_inventory["activities"] = graph_activities
+    reasons.extend(_build_same_stream_edges(graph_activities, predecessors, edges))
+    event_nodes, event_issues = _capture_event_prefixes(
+        graph_inventory, predecessors, edges
+    )
+    reasons.extend(event_issues)
+    reasons.extend(
+        _add_stream_wait_edges(graph_inventory, event_nodes, predecessors, edges)
+    )
+    reasons.extend(_add_default_stream_edges(graph_inventory, predecessors, edges))
+
+    seeds: set[str] = set()
+    event_record_id = None
+    if sync.get("sync_kind") == "EVENT":
+        event_node = event_nodes.get(sync.get("event_sync_id"))
+        if event_node is None:
+            reasons.append("MISSING_EVENT_RECORD")
+        else:
+            seeds.add(event_node)
+            event_record_id = event_node.removeprefix("event::")
+    else:
+        for activity in activities:
+            if not _scope_matches(activity, sync):
+                continue
+            proof = submission_evidence(activity, sync)
+            if proof["status"] == "NOT_PRECEDING":
+                continue
+            if proof["status"] != "PROVEN":
+                reasons.append(str(proof["reason"]))
+                continue
+            relation = ownership_supported(activity, sync)
+            if not relation["supported"]:
+                reasons.extend(activity.get("ownership_reasons", []))
+                reasons.append(relation["reason"])
+                continue
+            seeds.add(str(activity["record_id"]))
+
+    closure = _transitive_predecessors(seeds, predecessors)
+    wait_ids: list[str] = []
+    submission: dict[str, dict[str, Any]] = {}
+    cross_phase = False
+    for activity_id in closure:
+        activity = by_id.get(activity_id)
+        if activity is None:
+            continue
+        relation = ownership_supported(activity, sync)
+        if not relation["supported"]:
+            reasons.append(str(relation["reason"]))
+            continue
+        proof = submission_evidence(activity, sync)
+        submission[activity_id] = proof
+        if proof["status"] != "PROVEN":
+            reasons.append(str(proof["reason"]))
+            continue
+        wait_ids.append(activity_id)
+        cross_phase = cross_phase or relation["cross_phase_dependency"]
+
+    wait_ids.sort(key=lambda item: (by_id[item]["start_ns"], by_id[item]["end_ns"], item))
+    ordered_reasons = list(dict.fromkeys(reason for reason in reasons if reason and reason != "None"))
+    return {
+        "sync_id": sync.get("record_id"),
+        "dependency_closure_status": "AMBIGUOUS" if ordered_reasons else "COMPLETE",
+        "wait_set_activity_ids": wait_ids,
+        "submission_evidence": submission,
+        "dependency_edges": edges,
+        "event_record_id": event_record_id,
+        "reasons": ordered_reasons,
+        "activity_origin_phases": {
+            activity_id: by_id[activity_id].get("origin_phase") for activity_id in wait_ids
+        },
+        "cross_phase_dependency": cross_phase,
+    }
