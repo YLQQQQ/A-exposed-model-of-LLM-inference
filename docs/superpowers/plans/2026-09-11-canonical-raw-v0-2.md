@@ -44,11 +44,11 @@
 - 修改：`exposedpath_v141/canonical_raw.py`
 - 修改：`tests/test_v141_canonical_raw.py`
 
-- [ ] 先用合成 SQLite 写失败测试：记录数、名称解析、排序、source identity、globalTid 拆分和输入不变。
-- [ ] 实现只读、流式、确定性转换；每种记录写独立 JSONL，manifest 最后生成。
-- [ ] 输出采用临时同级目录后原子改名，已存在目标拒绝覆盖。
-- [ ] 验证重复运行内容稳定；仅 `generated_at_utc` 不进入记录文件内容哈希。
-- [ ] 定向测试通过并提交。
+- [x] 先用合成 SQLite 写失败测试：记录数、名称解析、排序、source identity、globalTid 拆分和输入不变。
+- [x] 实现按表只读、确定性转换；每种记录写独立 JSONL，manifest 最后生成。当前 Engineering 实现以内存列表完成跨表稳定排序，是否流式化留待 Engineering Pilot 根据规模证据决定。
+- [x] 输出采用临时同级目录后原子改名，已存在目标拒绝覆盖。
+- [x] 验证重复运行内容稳定；仅 `generated_at_utc` 不进入记录文件内容哈希。
+- [x] 定向测试通过并提交。
 
 ### 任务 3：补齐 identity、event 与 fail-closed 边界
 

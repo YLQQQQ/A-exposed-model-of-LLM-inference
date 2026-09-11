@@ -18,7 +18,7 @@
   },
   "record_identity": {
     "tuple": ["source_sqlite_sha256", "source_table", "source_rowid"],
-    "record_id_format": "{record_kind}:{source_rowid}",
+    "record_id_format": "{record_kind}:{source_table}:{source_rowid}",
     "timestamp_order_is_identity": false,
     "filename_is_experiment_identity": false
   },
@@ -47,42 +47,42 @@
   "record_types": {
     "nvtx": {
       "filename": "nvtx.jsonl",
-      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "start_ns", "end_ns", "event_type", "text", "global_tid", "process_id", "thread_id", "structured_identity"],
-      "nullable_fields": ["range_id", "category_id", "color", "end_global_tid", "end_process_id", "end_thread_id", "text_id", "domain_id", "json_text"]
+      "required_non_null_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "start_ns", "event_type", "text"],
+      "nullable_fields": ["end_ns", "global_tid", "process_id", "thread_id", "structured_identity", "range_id", "category_id", "color", "end_global_tid", "end_process_id", "end_thread_id", "text_id", "domain_id", "json_text"]
     },
     "cuda_api": {
       "filename": "cuda_api.jsonl",
-      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "start_ns", "end_ns", "api_name", "global_tid", "process_id", "thread_id", "correlation_id", "return_value"],
-      "nullable_fields": ["event_class", "name_id", "callchain_id"]
+      "required_non_null_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "start_ns", "end_ns", "api_name", "return_value"],
+      "nullable_fields": ["global_tid", "process_id", "thread_id", "correlation_id", "event_class", "name_id", "callchain_id"]
     },
     "physical_sync": {
       "filename": "physical_sync.jsonl",
-      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "start_ns", "end_ns", "device_id", "context_id", "stream_id", "correlation_id", "global_pid", "process_id", "sync_type_id", "sync_type_name", "sync_type_label", "runtime_mapping_count", "runtime_api_name"],
-      "nullable_fields": ["green_context_id", "event_id", "event_sync_id", "runtime_record_id", "runtime_start_ns", "runtime_end_ns", "runtime_global_tid", "runtime_thread_id"]
+      "required_non_null_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "start_ns", "end_ns", "device_id", "context_id", "stream_id", "correlation_id", "sync_type_id", "sync_type_name", "sync_type_label", "runtime_mapping_count", "runtime_api_name"],
+      "nullable_fields": ["global_pid", "process_id", "green_context_id", "event_id", "event_sync_id", "runtime_record_id", "runtime_start_ns", "runtime_end_ns", "runtime_global_tid", "runtime_thread_id"]
     },
     "device_activity": {
       "filename": "device_activity.jsonl",
-      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "activity_kind", "start_ns", "end_ns", "device_id", "context_id", "stream_id", "correlation_id", "global_pid", "process_id", "name", "attributes"],
-      "nullable_fields": ["green_context_id", "graph_node_id", "graph_id"]
+      "required_non_null_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "activity_kind", "start_ns", "end_ns", "device_id", "context_id", "stream_id", "name", "attributes"],
+      "nullable_fields": ["correlation_id", "global_pid", "process_id", "green_context_id", "graph_node_id", "graph_id"]
     },
     "cuda_event": {
       "filename": "cuda_event.jsonl",
-      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "timestamp_ns", "device_id", "context_id", "stream_id", "correlation_id", "global_pid", "process_id", "event_id", "event_sync_id"],
-      "nullable_fields": ["green_context_id"]
+      "required_non_null_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "timestamp_ns", "device_id", "context_id", "stream_id", "event_id"],
+      "nullable_fields": ["correlation_id", "global_pid", "process_id", "event_sync_id", "green_context_id"]
     },
     "context": {
       "filename": "context.jsonl",
-      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "process_id", "device_id", "context_id", "null_stream_id"],
+      "required_non_null_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "process_id", "device_id", "context_id", "null_stream_id"],
       "nullable_fields": ["hardware_id", "vm_id", "parent_context_id", "is_green_context"]
     },
     "stream": {
       "filename": "stream.jsonl",
-      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "process_id", "context_id", "stream_id"],
+      "required_non_null_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "process_id", "context_id", "stream_id"],
       "nullable_fields": ["hardware_id", "vm_id", "priority", "flag"]
     },
     "diagnostic": {
       "filename": "diagnostic.jsonl",
-      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "timestamp_ns", "source_id", "severity_id", "text"],
+      "required_non_null_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "timestamp_ns", "source_id", "severity_id", "text"],
       "nullable_fields": []
     }
   },

@@ -3,14 +3,155 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import hashlib
+import json
+from pathlib import Path
+import sqlite3
 
 import pytest
 
 from exposedpath_v141.canonical_raw import (
     CanonicalRawSchemaError,
+    convert_sqlite_to_canonical,
     load_canonical_raw_schema,
     validate_canonical_raw_schema,
 )
+
+
+SQLITE_SCHEMA = """
+CREATE TABLE META_DATA_CAPTURE(name TEXT NOT NULL, value TEXT);
+CREATE TABLE META_DATA_EXPORT(name TEXT NOT NULL, value TEXT);
+CREATE TABLE StringIds(id INTEGER PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE NVTX_EVENTS(start INTEGER NOT NULL, end INTEGER, eventType INTEGER NOT NULL,
+ rangeId INTEGER, category INTEGER, color INTEGER, text TEXT, globalTid INTEGER,
+ endGlobalTid INTEGER, textId INTEGER, domainId INTEGER, jsonText TEXT);
+CREATE TABLE CUPTI_ACTIVITY_KIND_RUNTIME(start INTEGER NOT NULL, end INTEGER NOT NULL,
+ eventClass INTEGER NOT NULL, globalTid INTEGER, correlationId INTEGER, nameId INTEGER NOT NULL,
+ returnValue INTEGER NOT NULL, callchainId INTEGER);
+CREATE TABLE CUPTI_ACTIVITY_KIND_SYNCHRONIZATION(start INTEGER NOT NULL, end INTEGER NOT NULL,
+ deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, greenContextId INTEGER,
+ streamId INTEGER NOT NULL, correlationId INTEGER, globalPid INTEGER,
+ deprecatedSyncType INTEGER, syncType INTEGER NOT NULL, eventId INTEGER NOT NULL,
+ eventSyncId INTEGER);
+CREATE TABLE CUPTI_ACTIVITY_KIND_KERNEL(start INTEGER NOT NULL, end INTEGER NOT NULL,
+ deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, greenContextId INTEGER,
+ streamId INTEGER NOT NULL, correlationId INTEGER, globalPid INTEGER,
+ demangledName INTEGER NOT NULL, shortName INTEGER NOT NULL, graphNodeId INTEGER, graphId INTEGER);
+CREATE TABLE CUPTI_ACTIVITY_KIND_MEMCPY(start INTEGER NOT NULL, end INTEGER NOT NULL,
+ deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, greenContextId INTEGER,
+ streamId INTEGER NOT NULL, correlationId INTEGER, globalPid INTEGER, bytes INTEGER NOT NULL,
+ copyKind INTEGER NOT NULL, srcKind INTEGER, dstKind INTEGER, graphNodeId INTEGER);
+CREATE TABLE CUPTI_ACTIVITY_KIND_MEMSET(start INTEGER NOT NULL, end INTEGER NOT NULL,
+ deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, greenContextId INTEGER,
+ streamId INTEGER NOT NULL, correlationId INTEGER, globalPid INTEGER, value INTEGER NOT NULL,
+ bytes INTEGER NOT NULL, graphNodeId INTEGER, memKind INTEGER);
+CREATE TABLE CUPTI_ACTIVITY_KIND_CUDA_EVENT(timestamp INTEGER, deviceId INTEGER NOT NULL,
+ contextId INTEGER NOT NULL, greenContextId INTEGER, streamId INTEGER NOT NULL,
+ correlationId INTEGER, globalPid INTEGER, eventId INTEGER NOT NULL, eventSyncId INTEGER);
+CREATE TABLE ENUM_CUPTI_SYNC_TYPE(id INTEGER NOT NULL, name TEXT, label TEXT);
+CREATE TABLE TARGET_INFO_CUDA_CONTEXT_INFO(nullStreamId INTEGER NOT NULL, hwId INTEGER NOT NULL,
+ vmId INTEGER NOT NULL, processId INTEGER NOT NULL, deviceId INTEGER NOT NULL,
+ contextId INTEGER NOT NULL, parentContextId INTEGER, isGreenContext INTEGER);
+CREATE TABLE TARGET_INFO_CUDA_STREAM(streamId INTEGER NOT NULL, hwId INTEGER NOT NULL,
+ vmId INTEGER NOT NULL, processId INTEGER NOT NULL, contextId INTEGER NOT NULL,
+ priority INTEGER NOT NULL, flag INTEGER NOT NULL);
+CREATE TABLE TARGET_INFO_GPU(id INTEGER NOT NULL, name TEXT);
+CREATE TABLE DIAGNOSTIC_EVENT(timestamp INTEGER NOT NULL, source INTEGER NOT NULL,
+ severity INTEGER NOT NULL, text TEXT NOT NULL);
+"""
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest().upper()
+
+
+def _make_source_sqlite(path: Path) -> int:
+    global_tid = (1 << 56) | (2 << 48) | (3 << 24) | 4
+    global_pid = (1 << 56) | (2 << 48) | (3 << 24)
+    connection = sqlite3.connect(path)
+    connection.executescript(SQLITE_SCHEMA)
+    connection.executemany(
+        "INSERT INTO META_DATA_EXPORT VALUES (?,?)",
+        [
+            ("EXPORT_PRODUCT_VERSION", "2026.1.1.204"),
+            ("EXPORT_SCHEMA_VERSION", "3.24.14"),
+            ("EXPORT_PARAM_LAZY", "false"),
+        ],
+    )
+    connection.executemany(
+        "INSERT INTO META_DATA_CAPTURE VALUES (?,?)",
+        [("CAPTURE_EVENT_TYPE", "Cuda"), ("CAPTURE_EVENT_TYPE", "NvtxEvents")],
+    )
+    connection.executemany(
+        "INSERT INTO StringIds VALUES (?,?)",
+        [(1, "cudaStreamSynchronize"), (2, "myKernel")],
+    )
+    connection.execute(
+        "INSERT INTO NVTX_EVENTS VALUES (10,90,59,NULL,NULL,NULL,'full_request',?,NULL,NULL,NULL,NULL)",
+        (global_tid,),
+    )
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES (40,80,0,?,7,1,0,NULL)",
+        (global_tid,),
+    )
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES "
+        "(45,75,0,1,NULL,2,7,?,NULL,3,4294967295,NULL)",
+        (global_pid,),
+    )
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_KERNEL VALUES "
+        "(20,70,0,1,NULL,2,6,?,2,2,NULL,NULL)",
+        (global_pid,),
+    )
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_MEMCPY VALUES "
+        "(15,18,0,1,NULL,2,5,?,64,1,1,2,NULL)",
+        (global_pid,),
+    )
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_MEMSET VALUES "
+        "(18,19,0,1,NULL,2,5,?,0,64,NULL,2)",
+        (global_pid,),
+    )
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_CUDA_EVENT VALUES "
+        "(30,0,1,NULL,2,8,?,9,10)",
+        (global_pid,),
+    )
+    connection.execute(
+        "INSERT INTO ENUM_CUPTI_SYNC_TYPE VALUES (3,'STREAM_SYNCHRONIZE','Stream sync')"
+    )
+    connection.execute(
+        "INSERT INTO TARGET_INFO_CUDA_CONTEXT_INFO VALUES (0,1,2,3,0,1,NULL,0)"
+    )
+    connection.execute(
+        "INSERT INTO TARGET_INFO_CUDA_STREAM VALUES (2,1,2,3,1,0,0)"
+    )
+    connection.execute("INSERT INTO TARGET_INFO_GPU VALUES (0,'test-gpu')")
+    connection.commit()
+    connection.close()
+    return global_tid
+
+
+def _make_manifest(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "experiment_id": "exp",
+                "wmpc_id": "w01",
+                "run_id": "run-1",
+                "run_role": "Engineering",
+                "pass_id": "Pass1",
+                "repeat_id": "r0",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _read_jsonl(path: Path) -> list[dict]:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
 
 
 def test_committed_canonical_raw_schema_is_valid():
@@ -42,7 +183,7 @@ def test_missing_record_kind_is_rejected():
 
 def test_duplicate_or_overlapping_fields_are_rejected():
     schema = deepcopy(load_canonical_raw_schema())
-    schema["record_types"]["nvtx"]["required_fields"].append("record_id")
+    schema["record_types"]["nvtx"]["required_non_null_fields"].append("record_id")
 
     with pytest.raises(CanonicalRawSchemaError, match="字段重复"):
         validate_canonical_raw_schema(schema)
@@ -92,3 +233,77 @@ def test_source_adapter_is_locked_to_reviewed_nsys_schema():
             "export_schema_version": "3.24.14",
         }
     ]
+
+
+def test_converter_preserves_input_and_writes_all_record_types(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    before = _sha256(database)
+
+    manifest_path = convert_sqlite_to_canonical(
+        database,
+        tmp_path / "canonical",
+        data_role="Engineering",
+        raw_sha256="A" * 64,
+        collector_version="2025.6.3",
+        source_manifest=source_manifest,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert _sha256(database) == before
+    assert set(manifest["files"]) == set(load_canonical_raw_schema()["record_types"])
+    assert manifest["files"]["device_activity"]["record_count"] == 3
+    assert manifest["files"]["physical_sync"]["record_count"] == 1
+    assert all((manifest_path.parent / item["filename"]).is_file() for item in manifest["files"].values())
+
+
+def test_converter_resolves_names_ids_and_source_rows(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    global_tid = _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+
+    manifest_path = convert_sqlite_to_canonical(
+        database,
+        tmp_path / "canonical",
+        data_role="Engineering",
+        raw_sha256="B" * 64,
+        collector_version="synthetic",
+        source_manifest=source_manifest,
+    )
+    cuda_api = _read_jsonl(manifest_path.parent / "cuda_api.jsonl")[0]
+    sync = _read_jsonl(manifest_path.parent / "physical_sync.jsonl")[0]
+    activities = _read_jsonl(manifest_path.parent / "device_activity.jsonl")
+
+    assert cuda_api["api_name"] == "cudaStreamSynchronize"
+    assert cuda_api["global_tid"] == global_tid
+    assert (cuda_api["process_id"], cuda_api["thread_id"]) == (3, 4)
+    assert sync["runtime_mapping_count"] == 1
+    assert sync["runtime_api_name"] == "cudaStreamSynchronize"
+    assert sync["record_id"] == "physical_sync:CUPTI_ACTIVITY_KIND_SYNCHRONIZATION:1"
+    assert [item["activity_kind"] for item in activities] == ["MEMCPY", "MEMSET", "KERNEL"]
+    assert activities[-1]["name"] == "myKernel"
+
+
+def test_record_files_are_deterministic_and_output_is_never_overwritten(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+
+    first = convert_sqlite_to_canonical(
+        database, tmp_path / "first", "Engineering", "C" * 64, "synthetic", source_manifest
+    )
+    second = convert_sqlite_to_canonical(
+        database, tmp_path / "second", "Engineering", "C" * 64, "synthetic", source_manifest
+    )
+    first_manifest = json.loads(first.read_text(encoding="utf-8"))
+    second_manifest = json.loads(second.read_text(encoding="utf-8"))
+
+    assert first_manifest["files"] == second_manifest["files"]
+    with pytest.raises(FileExistsError, match="拒绝覆盖"):
+        convert_sqlite_to_canonical(
+            database, tmp_path / "first", "Engineering", "C" * 64, "synthetic", source_manifest
+        )
