@@ -26,6 +26,15 @@ _ROLE_BY_UNIVERSE = {
     "IN_UNIVERSE_UNSUPPORTED": "UNSUPPORTED",
     "NON_BLOCKING_QUERY": "NON_SYNC",
 }
+_INVOCATION_FIELDS = (
+    "experiment_id",
+    "wmpc_id",
+    "run_id",
+    "run_role",
+    "pass_id",
+    "request_id",
+    "repeat_id",
+)
 
 
 def _sha256(path: Path) -> str:
@@ -151,3 +160,253 @@ def load_canonical_bundle(manifest_path: Path) -> dict[str, Any]:
             raise SyncSemanticsError(f"{kind} 记录数不匹配")
         records[kind] = loaded
     return {"manifest": manifest, "records": records, "schema": schema}
+
+
+def _identity_key(identity: Mapping[str, Any]) -> tuple[Any, ...]:
+    return tuple(identity.get(field) for field in _INVOCATION_FIELDS)
+
+
+def _phase_ownership(
+    start_ns: int,
+    end_ns: int,
+    global_tid: int | None,
+    nvtx_records: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """用同线程结构化半开区间恢复 invocation 与 phase ownership。"""
+
+    candidates: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
+    for record in nvtx_records:
+        identity = record.get("structured_identity")
+        if not isinstance(identity, Mapping) or identity.get("kind") not in {"request", "phase"}:
+            continue
+        if global_tid is None or record.get("global_tid") != global_tid:
+            continue
+        range_end = record.get("end_ns")
+        if range_end is None:
+            continue
+        if record.get("start_ns") <= start_ns and end_ns <= range_end:
+            candidates.append((record, identity))
+
+    if not candidates:
+        return {
+            "status": "INVALID",
+            "identity": None,
+            "phase": None,
+            "range_record_ids": [],
+            "reasons": ["INVOCATION_BOUNDARY_INVALID"],
+        }
+
+    invocation_keys = {_identity_key(identity) for _, identity in candidates}
+    if len(invocation_keys) != 1:
+        return {
+            "status": "AMBIGUOUS",
+            "identity": None,
+            "phase": None,
+            "range_record_ids": sorted(str(record["record_id"]) for record, _ in candidates),
+            "reasons": ["INVOCATION_OWNERSHIP_AMBIGUOUS"],
+        }
+
+    specific = [item for item in candidates if item[1].get("phase") != "full_request"]
+    selectable = specific or candidates
+    minimum_span = min(int(record["end_ns"]) - int(record["start_ns"]) for record, _ in selectable)
+    innermost = [
+        item
+        for item in selectable
+        if int(item[0]["end_ns"]) - int(item[0]["start_ns"]) == minimum_span
+    ]
+    phases = {identity.get("phase") for _, identity in innermost}
+    if len(phases) != 1:
+        return {
+            "status": "AMBIGUOUS",
+            "identity": None,
+            "phase": None,
+            "range_record_ids": sorted(str(record["record_id"]) for record, _ in candidates),
+            "reasons": ["PHASE_OWNERSHIP_AMBIGUOUS"],
+        }
+
+    selected_identity = dict(innermost[0][1])
+    return {
+        "status": "VALID",
+        "identity": selected_identity,
+        "phase": selected_identity["phase"],
+        "range_record_ids": sorted(str(record["record_id"]) for record, _ in candidates),
+        "reasons": [],
+    }
+
+
+def _manifest_input_status(manifest: Mapping[str, Any]) -> tuple[str, list[str]]:
+    observation = manifest.get("observation_validity", {})
+    observation_status = str(observation.get("status", "invalid")).lower()
+    if observation_status == "invalid":
+        return "INVALID", ["TRACE_DROPPED_RECORDS"]
+    identity = manifest.get("identity", {})
+    if str(identity.get("status", "AMBIGUOUS")).upper() != "VALID":
+        return "AMBIGUOUS", ["INVOCATION_OWNERSHIP_AMBIGUOUS"]
+    if observation_status != "valid":
+        return "AMBIGUOUS", ["INVOCATION_OWNERSHIP_AMBIGUOUS"]
+    return "VALID", []
+
+
+def _normalize_activity(
+    activity: Mapping[str, Any],
+    cuda_api_records: list[Mapping[str, Any]],
+    nvtx_records: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    result = dict(activity)
+    correlation_id = activity.get("correlation_id")
+    enqueues = [api for api in cuda_api_records if api.get("correlation_id") == correlation_id]
+    if correlation_id is None or len(enqueues) != 1:
+        result.update(
+            enqueue_record_id=None,
+            enqueue_start_ns=None,
+            enqueue_end_ns=None,
+            enqueue_global_tid=None,
+            request_id=None,
+            repeat_id=None,
+            origin_phase=None,
+            invocation_identity=None,
+            ownership_status="INVALID",
+            ownership_reasons=["MISSING_ACTIVITY_CORRELATION"],
+        )
+        return result
+
+    enqueue = enqueues[0]
+    ownership = _phase_ownership(
+        int(enqueue["start_ns"]),
+        int(enqueue["end_ns"]),
+        enqueue.get("global_tid"),
+        nvtx_records,
+    )
+    identity = ownership["identity"]
+    result.update(
+        enqueue_record_id=enqueue["record_id"],
+        enqueue_start_ns=enqueue["start_ns"],
+        enqueue_end_ns=enqueue["end_ns"],
+        enqueue_global_tid=enqueue.get("global_tid"),
+        request_id=identity.get("request_id") if identity else None,
+        repeat_id=identity.get("repeat_id") if identity else None,
+        origin_phase=ownership["phase"],
+        invocation_identity=identity,
+        ownership_status=ownership["status"],
+        ownership_reasons=ownership["reasons"],
+        ownership_range_record_ids=ownership["range_record_ids"],
+    )
+    return result
+
+
+def _normalize_sync(
+    sync: Mapping[str, Any],
+    nvtx_records: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    result = dict(sync)
+    classification = classify_cuda_api(str(sync.get("runtime_api_name", "")))
+    host_start = sync.get("runtime_start_ns")
+    host_end = sync.get("runtime_end_ns")
+    if host_start is None or host_end is None:
+        ownership = {
+            "status": "INVALID",
+            "identity": None,
+            "phase": None,
+            "range_record_ids": [],
+            "reasons": ["INVOCATION_BOUNDARY_INVALID"],
+        }
+    else:
+        ownership = _phase_ownership(
+            int(host_start),
+            int(host_end),
+            sync.get("runtime_global_tid"),
+            nvtx_records,
+        )
+    identity = ownership["identity"]
+    result.update(
+        host_start_ns=host_start,
+        host_end_ns=host_end,
+        request_id=identity.get("request_id") if identity else None,
+        repeat_id=identity.get("repeat_id") if identity else None,
+        sync_owner_phase=ownership["phase"],
+        invocation_identity=identity,
+        ownership_status=ownership["status"],
+        ownership_reasons=ownership["reasons"],
+        ownership_range_record_ids=ownership["range_record_ids"],
+        **classification,
+    )
+    return result
+
+
+def build_semantic_inventory(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    """把 Canonical Raw 事实标准化为 S 层待建图对象，不恢复依赖。"""
+
+    records = bundle["records"]
+    manifest = bundle["manifest"]
+    input_status, input_reasons = _manifest_input_status(manifest)
+    nvtx = list(records["nvtx"])
+    cuda_api = list(records["cuda_api"])
+    return {
+        "input_status": input_status,
+        "input_reasons": input_reasons,
+        "execution_context": dict(manifest.get("execution_context", {})),
+        "activities": [
+            _normalize_activity(activity, cuda_api, nvtx)
+            for activity in records["device_activity"]
+        ],
+        "syncs": [_normalize_sync(sync, nvtx) for sync in records["cuda_sync"]],
+        "dependency_events": [
+            _normalize_sync(event, nvtx)
+            for event in records.get("cuda_sync", [])
+            if classify_cuda_api(str(event.get("runtime_api_name", "")))["role"]
+            == "DEPENDENCY_EDGE"
+        ],
+    }
+
+
+def ownership_supported(
+    activity: Mapping[str, Any],
+    sync: Mapping[str, Any],
+) -> dict[str, Any]:
+    """判断 activity 是否属于 sync 的同一次 batched invocation。"""
+
+    if activity.get("ownership_status") != "VALID" or sync.get("ownership_status") != "VALID":
+        return {
+            "supported": False,
+            "cross_phase_dependency": False,
+            "reason": "INVOCATION_OWNERSHIP_AMBIGUOUS",
+        }
+    activity_identity = activity.get("invocation_identity")
+    sync_identity = sync.get("invocation_identity")
+    if isinstance(activity_identity, Mapping) and isinstance(sync_identity, Mapping):
+        same_invocation = _identity_key(activity_identity) == _identity_key(sync_identity)
+    else:
+        same_invocation = (
+            activity.get("request_id"),
+            activity.get("repeat_id"),
+        ) == (
+            sync.get("request_id"),
+            sync.get("repeat_id"),
+        )
+    if not same_invocation:
+        return {
+            "supported": False,
+            "cross_phase_dependency": False,
+            "reason": "INVOCATION_BLEED",
+        }
+    return {
+        "supported": True,
+        "cross_phase_dependency": activity.get("origin_phase") != sync.get("sync_owner_phase"),
+        "reason": None,
+    }
+
+
+def submission_evidence(
+    activity: Mapping[str, Any],
+    sync: Mapping[str, Any],
+) -> dict[str, Any]:
+    """只接受冻结合同中的两种提交证据。"""
+
+    gpu_start = activity.get("start_ns")
+    enqueue_end = activity.get("enqueue_end_ns")
+    sync_start = sync.get("host_start_ns")
+    if gpu_start is not None and sync_start is not None and gpu_start < sync_start:
+        return {"status": "PROVEN", "proof": "GPU_STARTED_BEFORE_SYNC", "reason": None}
+    if enqueue_end is not None and sync_start is not None and enqueue_end <= sync_start:
+        return {"status": "PROVEN", "proof": "ENQUEUE_COMPLETED_BEFORE_SYNC", "reason": None}
+    return {"status": "AMBIGUOUS", "proof": None, "reason": "SUBMISSION_ORDER_AMBIGUOUS"}
