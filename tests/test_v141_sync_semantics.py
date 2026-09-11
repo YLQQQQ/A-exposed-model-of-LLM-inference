@@ -645,6 +645,54 @@ def test_legacy_default_stream_adds_only_blocking_stream_edges_while_ptds_does_n
     assert "a:nonblocking" not in legacy["wait_set_activity_ids"]
 
 
+def test_no_default_stream_observed_manifest_conflicts_with_observed_null_stream():
+    default = _owned_activity("a:default", 0, 10, 40)
+    blocking = _owned_activity("a:blocking", 2, 45, 90)
+
+    result = recover_wait_set(
+        _semantic_inventory([default, blocking], mode="NO_DEFAULT_STREAM_OBSERVED"),
+        _owned_sync("STREAM", 60, 100, stream_id=2),
+    )
+
+    assert result["dependency_closure_status"] == "AMBIGUOUS"
+    assert result["reasons"] == ["DEFAULT_STREAM_MODE_UNKNOWN"]
+
+
+def test_legacy_default_cross_thread_enqueue_overlap_is_ambiguous():
+    default = _owned_activity(
+        "a:default", 0, 10, 40, enqueue_start=10, enqueue_end=40
+    )
+    blocking = _owned_activity(
+        "a:blocking", 2, 45, 90, enqueue_start=30, enqueue_end=50
+    )
+
+    result = recover_wait_set(
+        _semantic_inventory([default, blocking], mode="LEGACY"),
+        _owned_sync("STREAM", 60, 100, stream_id=2),
+    )
+
+    assert result["dependency_closure_status"] == "AMBIGUOUS"
+    assert result["reasons"] == ["DEPENDENCY_CLOSURE_AMBIGUOUS"]
+
+
+def test_legacy_external_default_predecessor_fails_closed():
+    external_default = _owned_activity(
+        "a:external-default", 0, 10, 40, request_id="req-old",
+        enqueue_start=10, enqueue_end=20,
+    )
+    target = _owned_activity(
+        "a:target", 2, 45, 90, enqueue_start=30, enqueue_end=40
+    )
+
+    result = analyze_sync_semantics(
+        _semantic_inventory([external_default, target], mode="LEGACY"),
+        _owned_sync("STREAM", 60, 100, stream_id=2),
+    )
+
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == "INVOCATION_BLEED"
+
+
 def test_submission_race_makes_closure_ambiguous_without_guessing_membership():
     racing = _owned_activity(
         "a:racing", 2, 70, 90, enqueue_start=45, enqueue_end=60
@@ -657,6 +705,7 @@ def test_submission_race_makes_closure_ambiguous_without_guessing_membership():
     assert result["wait_set_activity_ids"] == []
     assert result["dependency_closure_status"] == "AMBIGUOUS"
     assert result["reasons"] == ["SUBMISSION_ORDER_AMBIGUOUS"]
+    assert result["submission_evidence"]["a:racing"]["status"] == "AMBIGUOUS"
 
 
 def test_definitely_post_sync_activity_is_excluded_without_poisoning_closure():
@@ -700,6 +749,118 @@ def test_unrelated_broken_event_evidence_does_not_poison_stream_sync():
 
     assert result["dependency_closure_status"] == "COMPLETE"
     assert result["reasons"] == []
+
+
+def test_missing_activity_correlation_is_invalid_not_generic_ownership_ambiguity():
+    from exposedpath_v141.q0_oracle import load_oracle_bundle
+
+    expected = next(
+        case for case in load_oracle_bundle()["cases"]
+        if case["case_id"] == "Q0-MISSING-CORR-001"
+    )["expected"]["syncs"][0]
+    missing = _owned_activity("a:missing-corr", 2, 20, 80)
+    missing.update(
+        enqueue_record_id=None,
+        enqueue_start_ns=None,
+        enqueue_end_ns=None,
+        request_id=None,
+        repeat_id=None,
+        invocation_identity=None,
+        ownership_status="INVALID",
+        ownership_reasons=["MISSING_ACTIVITY_CORRELATION"],
+    )
+
+    result = analyze_sync_semantics(
+        _semantic_inventory([missing]), _owned_sync("STREAM", 50, 90, stream_id=2)
+    )
+
+    assert result["validity"] == expected["validity"]
+    assert result["primary_reason"] == expected["primary_reason"]
+
+
+def test_stream_wait_event_without_consumer_still_exposes_producer_to_stream_sync():
+    producer = _owned_activity("a:producer-only", 2, 10, 45)
+    event_record = {
+        "record_id": "event:producer-only", "event_id": 9, "event_sync_id": 90,
+        "context_id": 1, "stream_id": 2, "host_start_ns": 25, "host_end_ns": 30,
+        "request_id": "req-0", "repeat_id": "r0", "ownership_status": "VALID",
+        "invocation_identity": _identity("decode"),
+    }
+    wait = {
+        "record_id": "edge:last-wait", "sync_kind": "STREAM_WAIT_EVENT",
+        "role": "DEPENDENCY_EDGE", "event_id": 9, "event_sync_id": 90,
+        "context_id": 1, "stream_id": 4, "host_start_ns": 32, "host_end_ns": 35,
+        "ownership_status": "VALID", "request_id": "req-0", "repeat_id": "r0",
+        "invocation_identity": _identity("decode"),
+    }
+
+    result = analyze_sync_semantics(
+        _semantic_inventory(
+            [producer], event_records=[event_record], dependency_events=[wait]
+        ),
+        _owned_sync("STREAM", 60, 100, stream_id=4),
+    )
+
+    assert result["wait_set_activity_ids"] == ["a:producer-only"]
+    assert result["terminal"]["activity_id"] == "a:producer-only"
+    assert result["validity"] == "VALID_NONEMPTY"
+
+
+def test_external_event_predecessor_is_not_filtered_before_ownership_check():
+    from exposedpath_v141.q0_oracle import load_oracle_bundle
+
+    expected = next(
+        case for case in load_oracle_bundle()["cases"]
+        if case["case_id"] == "Q0-INVOCATION-BLEED-001"
+    )["expected"]["syncs"][0]
+    producer = _owned_activity(
+        "a:external-producer", 2, 10, 45, request_id="req-old"
+    )
+    event_record = {
+        "record_id": "event:external", "event_id": 9, "event_sync_id": 90,
+        "context_id": 1, "stream_id": 2, "host_start_ns": 25, "host_end_ns": 30,
+        "request_id": "req-old", "repeat_id": "r0", "ownership_status": "VALID",
+        "invocation_identity": _identity("decode", request_id="req-old"),
+    }
+    wait = {
+        "record_id": "edge:current-wait", "sync_kind": "STREAM_WAIT_EVENT",
+        "role": "DEPENDENCY_EDGE", "event_id": 9, "event_sync_id": 90,
+        "context_id": 1, "stream_id": 4, "host_start_ns": 32, "host_end_ns": 35,
+        "ownership_status": "VALID", "request_id": "req-0", "repeat_id": "r0",
+        "invocation_identity": _identity("decode"),
+    }
+
+    result = analyze_sync_semantics(
+        _semantic_inventory(
+            [producer], event_records=[event_record], dependency_events=[wait]
+        ),
+        _owned_sync("STREAM", 60, 100, stream_id=4),
+    )
+
+    assert result["validity"] == expected["validity"]
+    assert result["primary_reason"] == expected["primary_reason"]
+
+
+def test_static_dependency_graph_is_reused_for_repeated_syncs_in_same_scope(monkeypatch):
+    import exposedpath_v141.sync_semantics as semantics
+
+    inventory = _semantic_inventory([
+        _owned_activity("a:first", 2, 10, 30),
+        _owned_activity("a:second", 2, 35, 80),
+    ])
+    calls = 0
+    original = semantics._build_same_stream_edges
+
+    def counted(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(semantics, "_build_same_stream_edges", counted)
+    analyze_sync_semantics(inventory, _owned_sync("STREAM", 50, 90, stream_id=2))
+    analyze_sync_semantics(inventory, _owned_sync("STREAM", 60, 100, stream_id=2))
+
+    assert calls == 1
 
 
 def test_terminal_comes_from_semantic_frontier_and_completed_before_remains_nonempty():

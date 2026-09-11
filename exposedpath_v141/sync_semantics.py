@@ -452,11 +452,29 @@ def ownership_supported(
 ) -> dict[str, Any]:
     """判断 activity 是否属于 sync 的同一次 batched invocation。"""
 
-    if activity.get("ownership_status") != "VALID" or sync.get("ownership_status") != "VALID":
+    if activity.get("ownership_status") != "VALID":
+        activity_reasons = list(activity.get("ownership_reasons", []))
+        reason = activity_reasons[0] if activity_reasons else (
+            "INVOCATION_OWNERSHIP_AMBIGUOUS"
+            if activity.get("ownership_status") == "AMBIGUOUS"
+            else "INVOCATION_BOUNDARY_INVALID"
+        )
         return {
             "supported": False,
             "cross_phase_dependency": False,
-            "reason": "INVOCATION_OWNERSHIP_AMBIGUOUS",
+            "reason": reason,
+        }
+    if sync.get("ownership_status") != "VALID":
+        sync_reasons = list(sync.get("ownership_reasons", []))
+        reason = sync_reasons[0] if sync_reasons else (
+            "INVOCATION_OWNERSHIP_AMBIGUOUS"
+            if sync.get("ownership_status") == "AMBIGUOUS"
+            else "INVOCATION_BOUNDARY_INVALID"
+        )
+        return {
+            "supported": False,
+            "cross_phase_dependency": False,
+            "reason": reason,
         }
     activity_identity = activity.get("invocation_identity")
     sync_identity = sync.get("invocation_identity")
@@ -587,7 +605,6 @@ def _capture_event_prefixes(
             if (
                 activity.get("context_id") != event.get("context_id")
                 or activity.get("stream_id") != event.get("stream_id")
-                or not _same_invocation(activity, event)
             ):
                 continue
             proof = submission_evidence(activity, event)
@@ -612,7 +629,8 @@ def _add_stream_wait_edges(
     event_nodes: Mapping[Any, str],
     predecessors: dict[str, set[str]],
     edges: list[dict[str, Any]],
-) -> list[str]:
+) -> tuple[list[str], list[str]]:
+    wait_nodes: list[str] = []
     issues: list[str] = []
     for wait in inventory.get("dependency_events", []):
         if wait.get("sync_kind") != "STREAM_WAIT_EVENT":
@@ -621,11 +639,15 @@ def _add_stream_wait_edges(
         if event_node is None:
             issues.append("MISSING_EVENT_RECORD")
             continue
+        wait_node = f"wait::{wait['record_id']}"
+        wait_nodes.append(wait_node)
+        _add_edge(
+            predecessors, edges, event_node, wait_node, "STREAM_WAIT_EVENT"
+        )
         for activity in inventory["activities"]:
             if (
                 activity.get("context_id") != wait.get("context_id")
                 or activity.get("stream_id") != wait.get("stream_id")
-                or not _same_invocation(activity, wait)
             ):
                 continue
             enqueue_start = activity.get("enqueue_start_ns")
@@ -635,12 +657,12 @@ def _add_stream_wait_edges(
                 and enqueue_start >= wait["host_end_ns"]
             ):
                 _add_edge(
-                    predecessors, edges, event_node, str(activity["record_id"]),
-                    "STREAM_WAIT_EVENT",
+                    predecessors, edges, wait_node, str(activity["record_id"]),
+                    "SAME_STREAM_ORDER",
                 )
             elif submission_evidence(activity, wait)["status"] != "PROVEN":
                 issues.append("DEPENDENCY_CLOSURE_AMBIGUOUS")
-    return issues
+    return wait_nodes, issues
 
 
 def _add_default_stream_edges(
@@ -660,29 +682,40 @@ def _add_default_stream_edges(
     mode = inventory.get("execution_context", {}).get("default_stream_mode")
     if mode not in {"LEGACY", "PER_THREAD", "NO_DEFAULT_STREAM_OBSERVED"}:
         return ["DEFAULT_STREAM_MODE_UNKNOWN"]
+    if mode == "NO_DEFAULT_STREAM_OBSERVED":
+        return ["DEFAULT_STREAM_MODE_UNKNOWN"]
     if mode != "LEGACY":
         return []
     flags = _stream_flags(inventory)
+    issues: list[str] = []
     for default in default_activities:
         for other in activities:
             if (
                 other.get("context_id") != default.get("context_id")
                 or other.get("stream_id") == default.get("stream_id")
                 or flags.get((other.get("context_id"), other.get("stream_id"))) == 1
-                or not _same_invocation(default, other)
             ):
                 continue
-            if other.get("enqueue_end_ns") <= default.get("enqueue_start_ns"):
+            ordering_values = (
+                other.get("enqueue_start_ns"), other.get("enqueue_end_ns"),
+                default.get("enqueue_start_ns"), default.get("enqueue_end_ns"),
+            )
+            if any(value is None for value in ordering_values):
+                issues.append("DEPENDENCY_CLOSURE_AMBIGUOUS")
+                continue
+            if other["enqueue_end_ns"] <= default["enqueue_start_ns"]:
                 _add_edge(
                     predecessors, edges, str(other["record_id"]), str(default["record_id"]),
                     "SUPPORTED_DEFAULT_STREAM_ORDER",
                 )
-            elif default.get("enqueue_end_ns") <= other.get("enqueue_start_ns"):
+            elif default["enqueue_end_ns"] <= other["enqueue_start_ns"]:
                 _add_edge(
                     predecessors, edges, str(default["record_id"]), str(other["record_id"]),
                     "SUPPORTED_DEFAULT_STREAM_ORDER",
                 )
-    return []
+            else:
+                issues.append("DEPENDENCY_CLOSURE_AMBIGUOUS")
+    return list(dict.fromkeys(issues))
 
 
 def _scope_matches(activity: Mapping[str, Any], sync: Mapping[str, Any]) -> bool:
@@ -721,8 +754,6 @@ def recover_wait_set(
 
     activities = list(inventory["activities"])
     by_id = {str(activity["record_id"]): activity for activity in activities}
-    predecessors: dict[str, set[str]] = defaultdict(set)
-    edges: list[dict[str, Any]] = []
     reasons: list[str] = list(inventory.get("input_reasons", []))
     graph_inventory = dict(inventory)
     if sync.get("sync_kind") == "EVENT":
@@ -748,46 +779,82 @@ def recover_wait_set(
         for event in inventory.get("event_records", [])
         if event.get("event_sync_id") in relevant_event_ids
     ]
-    relevant_streams = {
-        (event.get("context_id"), event.get("stream_id"))
-        for event in graph_inventory["event_records"]
-    }
-    if sync.get("sync_kind") == "STREAM":
-        relevant_streams.add((sync.get("context_id"), sync.get("stream_id")))
     mode = inventory.get("execution_context", {}).get("default_stream_mode")
-    if sync.get("sync_kind") == "DEVICE":
-        graph_activities = [
-            activity for activity in activities
-            if activity.get("device_id") == sync.get("device_id")
-        ]
-    elif sync.get("sync_kind") == "CONTEXT" or (
-        mode not in {"PER_THREAD", "NO_DEFAULT_STREAM_OBSERVED"}
-        and sync.get("context_id") is not None
-    ):
-        graph_activities = [
-            activity for activity in activities
-            if activity.get("context_id") == sync.get("context_id")
-        ]
-    else:
-        graph_activities = [
-            activity for activity in activities
-            if (activity.get("context_id"), activity.get("stream_id")) in relevant_streams
-        ]
-    graph_activities = [
-        activity for activity in graph_activities if _same_invocation(activity, sync)
-    ]
-    graph_inventory["activities"] = graph_activities
-    reasons.extend(_build_same_stream_edges(graph_activities, predecessors, edges))
-    event_nodes, event_issues = _capture_event_prefixes(
-        graph_inventory, predecessors, edges
+    cache_key = (
+        sync.get("sync_kind"), sync.get("device_id"), sync.get("context_id"),
+        sync.get("stream_id"), sync.get("event_sync_id"), mode,
+        tuple(str(wait.get("record_id")) for wait in relevant_waits),
+        tuple(str(event.get("record_id")) for event in graph_inventory["event_records"]),
     )
-    reasons.extend(event_issues)
-    reasons.extend(
-        _add_stream_wait_edges(graph_inventory, event_nodes, predecessors, edges)
-    )
-    reasons.extend(_add_default_stream_edges(graph_inventory, predecessors, edges))
+    cache = inventory.setdefault("_semantic_graph_cache", {}) if isinstance(inventory, dict) else {}
+    cached = cache.get(cache_key)
+    if cached is None:
+        predecessors: dict[str, set[str]] = defaultdict(set)
+        edges: list[dict[str, Any]] = []
+        graph_reasons: list[str] = []
+        relevant_streams = {
+            (event.get("context_id"), event.get("stream_id"))
+            for event in graph_inventory["event_records"]
+        }
+        if sync.get("sync_kind") == "STREAM":
+            relevant_streams.add((sync.get("context_id"), sync.get("stream_id")))
+        if sync.get("sync_kind") == "DEVICE":
+            graph_activities = [
+                activity for activity in activities
+                if activity.get("device_id") == sync.get("device_id")
+            ]
+        elif sync.get("sync_kind") == "CONTEXT" or (
+            mode != "PER_THREAD" and sync.get("context_id") is not None
+        ):
+            graph_activities = [
+                activity for activity in activities
+                if activity.get("context_id") == sync.get("context_id")
+            ]
+        else:
+            graph_activities = [
+                activity for activity in activities
+                if (activity.get("context_id"), activity.get("stream_id")) in relevant_streams
+            ]
+        graph_inventory["activities"] = graph_activities
+        graph_reasons.extend(
+            _build_same_stream_edges(graph_activities, predecessors, edges)
+        )
+        event_nodes, event_issues = _capture_event_prefixes(
+            graph_inventory, predecessors, edges
+        )
+        graph_reasons.extend(event_issues)
+        wait_nodes, wait_issues = _add_stream_wait_edges(
+            graph_inventory, event_nodes, predecessors, edges
+        )
+        graph_reasons.extend(wait_issues)
+        graph_reasons.extend(
+            _add_default_stream_edges(graph_inventory, predecessors, edges)
+        )
+        cached = {
+            "predecessors": predecessors,
+            "edges": edges,
+            "event_nodes": event_nodes,
+            "wait_nodes": wait_nodes,
+            "reasons": list(dict.fromkeys(graph_reasons)),
+            "semantic_owners": [
+                *graph_inventory["event_records"],
+                *graph_inventory["dependency_events"],
+            ],
+        }
+        cache[cache_key] = cached
+    predecessors = cached["predecessors"]
+    edges = cached["edges"]
+    event_nodes = cached["event_nodes"]
+    wait_nodes = cached["wait_nodes"]
+    reasons.extend(cached["reasons"])
+    for semantic_owner in cached["semantic_owners"]:
+        relation = ownership_supported(semantic_owner, sync)
+        if not relation["supported"]:
+            reasons.extend(semantic_owner.get("ownership_reasons", []))
+            reasons.append(str(relation["reason"]))
 
     seeds: set[str] = set()
+    submission: dict[str, dict[str, Any]] = {}
     event_record_id = None
     if sync.get("sync_kind") == "EVENT":
         event_node = event_nodes.get(sync.get("event_sync_id"))
@@ -797,10 +864,13 @@ def recover_wait_set(
             seeds.add(event_node)
             event_record_id = event_node.removeprefix("event::")
     else:
+        if sync.get("sync_kind") == "STREAM":
+            seeds.update(wait_nodes)
         for activity in activities:
             if not _scope_matches(activity, sync):
                 continue
             proof = submission_evidence(activity, sync)
+            submission[str(activity["record_id"])] = proof
             if proof["status"] == "NOT_PRECEDING":
                 continue
             if proof["status"] != "PROVEN":
@@ -815,7 +885,6 @@ def recover_wait_set(
 
     closure = _transitive_predecessors(seeds, predecessors)
     wait_ids: list[str] = []
-    submission: dict[str, dict[str, Any]] = {}
     cross_phase = False
     for activity_id in closure:
         activity = by_id.get(activity_id)
@@ -869,7 +938,12 @@ def _ordered_reasons(reasons: list[str]) -> tuple[str | None, list[str], str | N
     if not unique:
         return None, [], None
     primary = unique[0]
-    return primary, unique[1:], rules[primary][1]
+    validity = (
+        "INVALID"
+        if any(rules[reason][1] == "INVALID" for reason in unique)
+        else rules[primary][1]
+    )
+    return primary, unique[1:], validity
 
 
 def _semantic_frontier(

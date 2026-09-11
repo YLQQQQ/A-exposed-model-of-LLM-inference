@@ -16,7 +16,7 @@ S 层回答的不是“哪些 GPU 活动与同步在时间上重叠”，而是�
 
 依赖边只来自同 stream 顺序、event record 捕获、stream wait event 和已声明的 legacy default-stream 规则。活动时间戳只用于确定同一语义流内部的顺序或描述状态，跨流时间重叠本身绝不建边。
 
-- Stream sync：目标流在同步入口前的提交前缀，加上 event/default-stream 的可观察传递前驱。
+- Stream sync：目标流在同步入口前的提交前缀，加上 event/default-stream 的可观察传递前驱。`streamWaitEvent` 自身作为目标流的 completion 节点；即使其后没有 consumer activity，被该 event 捕获的 producer 前缀也不会丢失。
 - Device sync：目标 device 上此前提交且属于同一 invocation 的可观察任务。
 - Context sync：目标 context 内此前提交且属于同一 invocation 的可观察任务。
 - Event sync：使用 `eventSyncId` 精确关联 event record，恢复该 record 捕获的 stream 前缀；不按 eventId 或时间距离猜“最近记录”。
@@ -29,7 +29,7 @@ CUDA event 事实的解释依据 CUPTI 官方定义：CUDA event activity 的 co
 
 terminal 先从 `W(s)` 的语义最大节点求 frontier。frontier 唯一时直接选择；多个 frontier 只有在共享时钟域中存在唯一最晚完成者时才能选择；相同最晚完成时间按 0 ns 容差记为 `TERMINAL_TIE/AMBIGUOUS`。terminal 晚于同步返回为 `INVALID`。空且证据完整的 completion scope 是 `VALID_EMPTY`，不是缺失数据，也不会把已提前完成的活动误删成空集合。
 
-原因按 Measurement Contract 的冻结优先级输出 primary/secondary。输入 identity/observation 已 ambiguous 时不尝试生成“看似合理”的 `W(s)`；旧 trace 可以生成 S 派生产物以验证链路，但记录保持 fail closed，不能升级为 Q0、Pilot 或 Formal 证据。
+原因按 Measurement Contract 的冻结优先级输出 primary/secondary；任何必需事实缺失产生的 `INVALID` 证据都不能被通用 ownership 歧义降级。依赖图先保留完整可观察前驱，再检查 ownership，不能预先删除外部 invocation。输入 identity/observation 已 ambiguous 时不尝试生成“看似合理”的 `W(s)`；旧 trace 可以生成 S 派生产物以验证链路，但记录保持 fail closed，不能升级为 Q0、Pilot 或 Formal 证据。
 
 ## 5. 当前验证边界
 

@@ -83,6 +83,10 @@ def test_empty_canonical_bundle_produces_versioned_immutable_s_bundle(tmp_path):
 
     assert manifest["schema_version"] == "exposedpath-s-layer/0.2.0"
     assert manifest["source"]["canonical_manifest_sha256"] == _sha256(canonical_manifest)
+    assert manifest["source"]["sync_registry"]["version"] == (
+        "exposedpath-sync-registry-0.2.0"
+    )
+    assert len(manifest["source"]["sync_registry"]["sha256"]) == 64
     assert manifest["summary"] == {
         "physical_sync_count": 0,
         "valid_nonempty_count": 0,

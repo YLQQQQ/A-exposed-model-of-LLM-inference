@@ -20,6 +20,7 @@ from .sync_semantics import (
     analyze_sync_semantics,
     build_semantic_inventory,
     load_canonical_bundle,
+    load_sync_registry,
 )
 
 
@@ -92,6 +93,12 @@ def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path) -> Path:
     if output_dir.exists():
         raise FileExistsError(f"拒绝覆盖已有输出目录: {output_dir}")
     schema = load_s_layer_schema()
+    repository_root = Path(__file__).resolve().parents[1]
+    registry_path = (
+        repository_root / "docs" / "v1_4_1" / "contracts"
+        / "sync_semantics_registry_v0_2.json"
+    )
+    registry = load_sync_registry(repository_root)
     bundle = load_canonical_bundle(canonical_manifest)
     inventory = build_semantic_inventory(bundle)
     records = [analyze_sync_semantics(inventory, sync) for sync in inventory["syncs"]]
@@ -119,6 +126,10 @@ def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path) -> Path:
                 "canonical_manifest_name": canonical_manifest.name,
                 "canonical_manifest_sha256": _sha256(canonical_manifest),
                 "source_sqlite_sha256": bundle["manifest"]["source"]["sqlite"]["sha256"],
+                "sync_registry": {
+                    "version": registry["registry_version"],
+                    "sha256": _sha256(registry_path),
+                },
             },
             "input_validity": {
                 "status": inventory["input_status"],
