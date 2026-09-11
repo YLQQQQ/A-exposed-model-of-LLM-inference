@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .contract import ContractValidationError, load_contract_bundle
 from .observation import inspect_sqlite, write_report_new
+from .q0_oracle import OracleValidationError, load_oracle_bundle
 
 
 def _configure_stdio() -> None:
@@ -43,6 +44,9 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "validate-contract", help="校验 Measurement Contract 包内部一致性"
     )
+    subparsers.add_parser(
+        "validate-q0-oracle", help="校验 Q0 独立标准答案的设计与覆盖"
+    )
     return parser
 
 
@@ -74,6 +78,39 @@ def main(argv: list[str] | None = None) -> int:
         print(f"rule_coverage: {covered}/{total} ({coverage}%)")
         print("gate_scope: CONTRACT_INTERNAL_CONSISTENCY_ONLY")
         print("verdict: PASS")
+        return 0
+
+    if args.command == "validate-q0-oracle":
+        try:
+            bundle = load_oracle_bundle()
+            from scripts.verify_q0_oracle_independence import check_source
+
+            oracle_path = Path(__file__).resolve().with_name("q0_oracle.py")
+            independence_problems = check_source(oracle_path.read_text(encoding="utf-8"))
+            if independence_problems:
+                raise OracleValidationError("；".join(independence_problems))
+        except (OSError, json.JSONDecodeError, OracleValidationError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+
+        cases = bundle["cases"]
+        class_counts: dict[str, int] = {}
+        for case in cases:
+            case_class = case["case_class"]
+            class_counts[case_class] = class_counts.get(case_class, 0) + 1
+        features = {feature for case in cases for feature in case["features"]}
+        required = sum(bool(case["required_for_q0"]) for case in cases)
+        print(f"oracle_version: {bundle['oracle_version']}")
+        print(f"cases_total: {len(cases)}")
+        print(f"required_cases: {required}")
+        print(
+            "class_counts: "
+            + ", ".join(f"{name}={class_counts[name]}" for name in sorted(class_counts))
+        )
+        print(f"feature_coverage: {len(features)}")
+        print("independence_scope: STATIC_EXPECTED_AND_INTERVAL_ARITHMETIC_ONLY")
+        print("q0_execution_status: NOT_RUN")
+        print("verdict: DESIGN_ONLY_PASS")
         return 0
 
     if args.command != "inspect-sqlite":

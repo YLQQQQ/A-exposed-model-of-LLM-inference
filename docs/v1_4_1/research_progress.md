@@ -2,15 +2,15 @@
 
 ## 当前快照
 
-- 清单版本：`0.6`
+- 清单版本：`0.7`
 - 最近更新：`2026-09-11`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G2-01` 至 `EP-G2-05`，设计与审查 Q0 独立标准答案
-- 当前总体判断：Measurement Contract v0.2 已通过内部合同审查；Canonical Raw、S、A/B 与真实 Q0 均未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
+- 当前最高优先级：`EP-G3-05`，冻结 Canonical Raw schema；随后实现 SQLite 到 Canonical Raw 的确定性转换器
+- 当前总体判断：Measurement Contract v0.2 和 Q0 独立标准答案设计已通过离线内部审查；Canonical Raw、S、A/B 与真实 Q0 均未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -64,17 +64,17 @@
 - [x] `EP-G1-08` 冻结 A/B 字段、互斥/守恒、B per-sync 生命周期，以及 D/Exposure Signature 的纯派生规则。证据：合同第 10～12 节及机器合同 `a_layer/b_layer/derived`。
 - [x] `EP-G1-09` 为 37 条合同规则建立 25 个验证案例映射并完成内部合同审查。证据：`measurement_contract_test_map_v0_2.json`、`tests/test_v141_contract.py`；`python -m exposedpath_v141 validate-contract` 输出 `37/37 (100%)` 与 `PASS`。
 
-**下一项：**进入 `EP-G2-01`，为 Q0 受控案例建立独立 expected/oracle；不得跳到 S 或 A/B 实现。
+**下一项：**Gate 2 已完成；进入 `EP-G3-05` 冻结 Canonical Raw schema，不得跳过 Raw 合同直接实现 S 或 A/B。
 
 ## Gate 2：设计 Q0 独立标准答案
 
-**Gate verdict：`NOT_RUN`。** Gate 1 已提供稳定语义输入，现在开始建立独立 expected/oracle；本 Gate 完成仍不等于真实 Q0 通过。
+**Gate verdict：`PASS`。** 只表示 23 个受控案例的 expected/oracle 已预先写定、可机器校验且独立于被测 analyzer；不表示 CUDA 微程序已实现、真实 trace 已采集或 Q0 已执行。
 
-- [ ] `EP-G2-01`（未开始）建立受控 CUDA 用例目录：stream、device/context、event。
-- [ ] `EP-G2-02`（未开始）覆盖提前完成、同步期间完成、跨流重叠但无依赖、terminal 唯一/并列、外部 ownership、缺失映射和 dropped records。
-- [ ] `EP-G2-03`（未开始）为每个用例预先写定 `W(s)`、terminal、validity 和 A/B 关系。
-- [ ] `EP-G2-04`（未开始）证明 oracle 不调用或复制 analyzer 的被测实现。
-- [ ] `EP-G2-05`（未开始）审查正例、负例和含糊例完整性。
+- [x] `EP-G2-01` 建立 stream、device/context、event 等受控用例定义目录。证据：`q0/oracle_cases_v0_2.json`。这里只是微程序设计输入，可执行 CUDA 微程序仍属于 `EP-G6-01`。
+- [x] `EP-G2-02` 覆盖提前完成、同步期间完成、跨流重叠但无依赖、terminal 唯一/并列、外部 ownership、缺失映射和 dropped records。
+- [x] `EP-G2-03` 为 23 个必需用例预先写定 `W(s)`、terminal、validity 和 A/B 关系。
+- [x] `EP-G2-04` 建立 AST 独立性检查，禁止 oracle 导入旧 analyzer 或未来 Raw/S/A/B 实现，并禁止区间函数读取 dependency edges。证据：`scripts/verify_q0_oracle_independence.py`。
+- [x] `EP-G2-05` 完成 7 个正例、7 个边界例、2 个含糊例、7 个负例及 25 个特性的覆盖审查。证据：`docs/v1_4_1/q0_oracle_design_v0_2.md`、`tests/test_v141_q0_oracle.py`；CLI 输出 `DESIGN_ONLY_PASS`。
 
 ## Gate 3：Canonical Raw 层
 
@@ -84,7 +84,7 @@
 - [x] `EP-G3-02` 对支持的 Nsight schema、必需表/字段、sync correlation 和 dropped-record 诊断执行 fail-closed 检查。
 - [x] `EP-G3-03` 三份历史 trace 的 observation 回归稳定；因缺 source manifest 保持 `ambiguous`。证据：`engineering_evidence/observation_v0_1/`。
 - [x] `EP-G3-04` 新版 observation 定向测试通过。证据：最近记录为 `8 passed`，测试文件 `tests/test_v141_observation.py`。
-- [ ] `EP-G3-05`（受阻于 Gate 1）冻结 Canonical Raw schema、身份、时钟域、lineage 和诊断字段。
+- [ ] `EP-G3-05`（未开始）冻结 Canonical Raw schema、身份、时钟域、lineage 和诊断字段。
 - [ ] `EP-G3-06`（未开始）实现 SQLite 到 Canonical Raw 的确定性转换器。
 - [ ] `EP-G3-07`（未开始）建立合成 SQLite fixture、历史 trace 回归和 schema 版本拒绝测试。
 - [ ] `EP-G3-08`（未开始）确保所有下游层只读取 Canonical Raw，不再直接查询 Nsight 表。
@@ -93,7 +93,7 @@
 
 **Gate verdict：`NOT_RUN`。** S 层尚未实现。
 
-- [ ] `EP-G4-01`（受阻于 Gate 1、3）实现每个同步的 completion set 与 `W(s)` 恢复。
+- [ ] `EP-G4-01`（受阻于 Gate 3）实现每个同步的 completion set 与 `W(s)` 恢复。
 - [ ] `EP-G4-02`（受阻）实现 terminal 唯一性、并列候选、ownership 和 validity。
 - [ ] `EP-G4-03`（受阻）验证提前完成但属于 completion set 的活动仍进入 `W(s)`。
 - [ ] `EP-G4-04`（受阻）验证仅时间重叠而无依赖的活动不会进入 `W(s)`。
@@ -124,7 +124,7 @@
 
 **Gate verdict：`BLOCKED`。** 旧 runner 可运行，但首 Token 与后续 Token 的完成语义不一致，且尚无双平台真实 GPU smoke 证据。
 
-- [ ] `EP-G7-01`（受阻于 Gate 1）设计并实现一致、可观察的 Token 就绪边界。
+- [ ] `EP-G7-01`（等待前序 Gate）设计并实现一致、可观察的 Token 就绪边界。
 - [ ] `EP-G7-02`（未开始）分离 G1 自然逐 Token 同步和 N1 人为干预模式。
 - [ ] `EP-G7-03`（未开始）冻结 Pass0/Pass1 输入、身份、边界和执行策略一致性。
 - [ ] `EP-G7-04`（未开始）补齐 manifest、环境、early EOS、排除、retry、attempt 和 data role 字段。
@@ -198,7 +198,7 @@
 
 - `EP-ISSUE-01`：旧 runner 的首 Token 时间取在异步 argmax 提交后，但后续 EOS `.any()` 可能触发隐式同步，Token 完成边界不一致。影响：Gate 1、7；不得直接用于新版 phase 定义。
 - `EP-ISSUE-02`：三份历史 trace 缺少 source manifest。影响：validity 必须保持 `ambiguous`，不能升级数据资格。
-- `EP-ISSUE-03`：仓库全量测试最近记录为 `226 passed, 2 failed`；既有失败为 `tests/test_server_smoke_script.py::test_dry_run` 和 `test_spaces`。影响：跨平台执行层需单独修复或重新界定，但不应掩盖为新增 analyzer 失败。
+- `EP-ISSUE-03`：Gate 2 完成后的仓库全量测试为 `270 passed, 2 failed`；两项失败与工作前基线相同，仍为 `tests/test_server_smoke_script.py::test_dry_run` 和 `test_spaces`。影响：跨平台执行层需单独修复或重新界定，但不属于 Gate 2 新增失败。
 - `EP-ISSUE-04`：当前无 GPU。影响：Q0 真实 trace、跨平台 GPU smoke、Engineering Pilot 及后续实验保持 `BLOCKED`；不影响 Gate 1 至 Gate 5 的离线设计和确定性测试工作。
 - `EP-ISSUE-05`（已解决）：使用校验过哈希的 LibreOffice 临时解包版本完成本地全页渲染；研究主体 40 页、实验协议 27 页均已检查。渲染器仅用于文档 QA，不改变研究 Gate。
 
@@ -208,11 +208,11 @@
 
 最近应执行的五项任务：
 
-1. `EP-G2-01`：建立 stream、device/context、event 的 Q0 受控案例目录和统一 expected schema。
-2. `EP-G2-02`：补齐 completed-before、valid-empty、无关重叠、tie、ownership、missing mapping、dropped 和 submission race。
-3. `EP-G2-03`：逐 case 写定 `W(s)`、terminal、validity 和 A/B 关系。
-4. `EP-G2-04`：建立 oracle 独立性检查，禁止复用正式 S/A/B 分类实现。
-5. `EP-G2-05`：审查正例、负例和含糊例覆盖；通过后再进入 Gate 3 Canonical Raw。
+1. `EP-G3-05`：冻结 Canonical Raw schema、稳定身份、时钟域、lineage 和诊断字段。
+2. `EP-G3-06`：实现 SQLite 到 Canonical Raw 的确定性转换器，输出写入版本化派生目录且不覆盖 Raw。
+3. `EP-G3-07`：建立合成 SQLite fixture、三份历史 trace 回归和未知 schema 拒绝测试。
+4. `EP-G3-08`：建立边界检查，保证下游 S/A/B 只能读取 Canonical Raw。
+5. 审查 Gate 3；通过后才进入 Gate 4 的 `W(s)`、terminal 和 validity 实现。
 
 ## 计划调整记录
 
@@ -224,3 +224,4 @@
 | 0.4 | 2026-09-10 | 复核发现 v7.0 的自动检查偏重方法语义，第一章未完整吸收 v1.4.1 的背景论证。启动 v7.1 修订，并将两个当前入口简化为 `ExposedPath_研究设计.docx` 与 `ExposedPath_实验协议.docx` | EP-FND-09、EP-FND-11、EP-FND-12 | 不改变 Measurement Contract、Gate 或 Formal 数据资格 |
 | 0.5 | 2026-09-11 | 完成 v7.1 背景与研究立意补齐、两份文档的简洁命名、结构/语义自动校验及 40/27 页全页视觉验收；移除封面标题装饰线并修正表格与章节分页。 | EP-FND-12、EP-ISSUE-05 | 不改变 Measurement Contract、Gate 或 Formal 数据资格；下一步仍为 EP-G1-02 |
 | 0.6 | 2026-09-11 | 完成 Measurement Contract v0.2：冻结 Token/phase、自然与干预同步身份、三类 completion scope、提交证明、`W(s)`、terminal、validity、A/B 与纯派生规则；建立 37 条规则到 25 个验证案例的机器映射和合同校验命令。 | EP-G1-02 至 EP-G1-09 | Gate 1 内部合同审查 PASS；不改变 Q0、Pilot、Protocol Freeze 或 Formal 数据资格；下一步为 EP-G2-01 |
+| 0.7 | 2026-09-11 | 完成 Q0 独立标准答案设计：23 个必需案例覆盖 25 个特性，预写 `W(s)`、terminal、validity 和 A/B 关系，并增加 AST 独立性检查及 `DESIGN_ONLY_PASS` CLI。 | EP-G2-01 至 EP-G2-05、EP-G3-05 | Gate 2 设计审查 PASS；真实 Q0 仍未运行，Gate 6 保持 BLOCKED；不改变 Pilot、Protocol Freeze 或 Formal 数据资格；下一步为 EP-G3-05 |

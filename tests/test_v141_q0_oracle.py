@@ -16,6 +16,7 @@ from exposedpath_v141.q0_oracle import (
     load_oracle_bundle,
     validate_oracle_bundle,
 )
+from exposedpath_v141.cli import main
 from scripts.verify_q0_oracle_independence import check_source
 
 
@@ -331,3 +332,12 @@ def calculate_expected_timing(case, sync_label):
     assert "禁止导入: analysis" in problems
     assert "区间函数禁止读取 dependency_edges" in problems
     assert "区间函数禁止调用被测逻辑: recover_wait_set" in problems
+
+
+def test_validate_q0_oracle_cli_is_scope_limited(capsys):
+    assert main(["validate-q0-oracle"]) == 0
+    output = capsys.readouterr().out
+
+    assert "cases_total: 23" in output
+    assert "q0_execution_status: NOT_RUN" in output
+    assert "verdict: DESIGN_ONLY_PASS" in output

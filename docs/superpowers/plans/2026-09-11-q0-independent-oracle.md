@@ -166,7 +166,7 @@ git commit -m "test: complete q0 oracle edge cases"
 
 - `python -m exposedpath_v141 validate-q0-oracle` 输出 case 数、覆盖组、独立性状态和 `DESIGN_ONLY_PASS`。
 
-- [ ] **步骤 1：先写 CLI 失败测试，再实现验证命令**
+- [x] **步骤 1：先写 CLI 失败测试，再实现验证命令**
 
 ```python
 def test_validate_q0_oracle_cli_is_scope_limited(capsys):
@@ -174,15 +174,15 @@ def test_validate_q0_oracle_cli_is_scope_limited(capsys):
     assert "verdict: DESIGN_ONLY_PASS" in capsys.readouterr().out
 ```
 
-- [ ] **步骤 2：写中文设计说明**
+- [x] **步骤 2：写中文设计说明**
 
 说明 case schema、符号标签映射、数值/关系两类 expected、独立性边界、覆盖矩阵、未来真实 Q0 使用方式，以及为什么 Gate 2 PASS 不等于 Gate 6 PASS。
 
-- [ ] **步骤 3：更新科研进度**
+- [x] **步骤 3：更新科研进度**
 
 通过全部离线检查后，将 `EP-G2-01` 至 `EP-G2-05` 标记完成，Gate 2 改为 PASS；最高优先级切换到 `EP-G3-05` Canonical Raw schema。Gate 6 继续保持 BLOCKED。
 
-- [ ] **步骤 4：最终验证**
+- [x] **步骤 4：最终验证**
 
 ```powershell
 python -m compileall -q exposedpath_v141 scripts
@@ -195,7 +195,7 @@ git diff --check
 
 全量回归只允许复现已记录的两项 PowerShell smoke 基线失败，不得出现新增失败。
 
-- [ ] **步骤 5：提交 Gate 2**
+- [x] **步骤 5：提交 Gate 2**
 
 ```powershell
 git add docs/v1_4_1/q0_oracle_design_v0_2.md docs/v1_4_1/research_progress.md exposedpath_v141/cli.py tests/test_v141_q0_oracle.py docs/superpowers/plans/2026-09-11-q0-independent-oracle.md
