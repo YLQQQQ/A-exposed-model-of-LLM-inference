@@ -31,11 +31,11 @@
 - 新建：`exposedpath_v141/canonical_raw.py`
 - 新建：`tests/test_v141_canonical_raw.py`
 
-- [ ] 先写 schema 缺字段、重复字段、未知 record kind、S/A/B 字段混入等失败测试。
-- [ ] 实现 schema bundle 加载与校验器。
-- [ ] 冻结 bundle manifest、NVTX、CUDA API、physical sync、device activity、CUDA event、context、stream、diagnostic 的必需/可空字段。
-- [ ] 冻结版本、时钟、lineage、记录身份、数据角色和 fail-closed 状态字段。
-- [ ] 定向测试通过并提交。
+- [x] 先写 schema 缺字段、重复字段、未知 record kind、S/A/B 字段混入等失败测试。
+- [x] 实现 schema bundle 加载与校验器。
+- [x] 冻结 bundle manifest、NVTX、CUDA API、physical sync、device activity、CUDA event、context、stream、diagnostic 的必需/可空字段。
+- [x] 冻结版本、时钟、lineage、记录身份、数据角色和 fail-closed 状态字段。
+- [x] 定向测试通过并提交。
 
 ### 任务 2：实现确定性 SQLite 转换核心
 

@@ -1,0 +1,98 @@
+{
+  "schema_version": "exposedpath-canonical-raw/0.2.0",
+  "measurement_contract_version": "exposedpath-measurement-contract-0.2.0",
+  "status": "ENGINEERING_PRE_PILOT",
+  "adapter_id": "NSYS-SQLITE-2026.1.1-3.24.14",
+  "source_adapters": [
+    {
+      "adapter_id": "NSYS-SQLITE-2026.1.1-3.24.14",
+      "export_product_version": "2026.1.1.204",
+      "export_schema_version": "3.24.14"
+    }
+  ],
+  "clock_model": {
+    "clock_domain_id": "NSYS_TRACE_RELATIVE_NS",
+    "unit": "ns",
+    "comparison_scope": "SINGLE_SOURCE_TRACE_ONLY",
+    "timestamp_normalization": "DISABLED"
+  },
+  "record_identity": {
+    "tuple": ["source_sqlite_sha256", "source_table", "source_rowid"],
+    "record_id_format": "{record_kind}:{source_rowid}",
+    "timestamp_order_is_identity": false,
+    "filename_is_experiment_identity": false
+  },
+  "structured_nvtx": {
+    "prefix": "EXPOSEDPATH_JSON_V1:",
+    "allowed_kinds": ["request", "phase", "token_ready", "sync", "marker"],
+    "required_identity_fields": [
+      "experiment_id", "wmpc_id", "run_id", "run_role", "pass_id",
+      "request_id", "repeat_id", "phase", "callsite_id", "sync_origin",
+      "sync_ordinal"
+    ],
+    "legacy_label_policy": "PRESERVE_AS_TEXT_WITHOUT_IDENTITY_INFERENCE"
+  },
+  "bundle_manifest": {
+    "filename": "canonical_manifest.json",
+    "required_fields": [
+      "schema_version", "measurement_contract_version", "adapter_id",
+      "analyzer_version", "generated_at_utc", "data_role", "source",
+      "clock", "identity", "files", "observation_validity",
+      "research_eligibility"
+    ]
+  },
+  "record_base_required_fields": [
+    "record_id", "source_table", "source_rowid", "clock_domain_id"
+  ],
+  "record_types": {
+    "nvtx": {
+      "filename": "nvtx.jsonl",
+      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "start_ns", "end_ns", "event_type", "text", "global_tid", "process_id", "thread_id", "structured_identity"],
+      "nullable_fields": ["range_id", "category_id", "color", "end_global_tid", "end_process_id", "end_thread_id", "text_id", "domain_id", "json_text"]
+    },
+    "cuda_api": {
+      "filename": "cuda_api.jsonl",
+      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "start_ns", "end_ns", "api_name", "global_tid", "process_id", "thread_id", "correlation_id", "return_value"],
+      "nullable_fields": ["event_class", "name_id", "callchain_id"]
+    },
+    "physical_sync": {
+      "filename": "physical_sync.jsonl",
+      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "start_ns", "end_ns", "device_id", "context_id", "stream_id", "correlation_id", "global_pid", "process_id", "sync_type_id", "sync_type_name", "sync_type_label", "runtime_mapping_count", "runtime_api_name"],
+      "nullable_fields": ["green_context_id", "event_id", "event_sync_id", "runtime_record_id", "runtime_start_ns", "runtime_end_ns", "runtime_global_tid", "runtime_thread_id"]
+    },
+    "device_activity": {
+      "filename": "device_activity.jsonl",
+      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "activity_kind", "start_ns", "end_ns", "device_id", "context_id", "stream_id", "correlation_id", "global_pid", "process_id", "name", "attributes"],
+      "nullable_fields": ["green_context_id", "graph_node_id", "graph_id"]
+    },
+    "cuda_event": {
+      "filename": "cuda_event.jsonl",
+      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "timestamp_ns", "device_id", "context_id", "stream_id", "correlation_id", "global_pid", "process_id", "event_id", "event_sync_id"],
+      "nullable_fields": ["green_context_id"]
+    },
+    "context": {
+      "filename": "context.jsonl",
+      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "process_id", "device_id", "context_id", "null_stream_id"],
+      "nullable_fields": ["hardware_id", "vm_id", "parent_context_id", "is_green_context"]
+    },
+    "stream": {
+      "filename": "stream.jsonl",
+      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "process_id", "context_id", "stream_id"],
+      "nullable_fields": ["hardware_id", "vm_id", "priority", "flag"]
+    },
+    "diagnostic": {
+      "filename": "diagnostic.jsonl",
+      "required_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "timestamp_ns", "source_id", "severity_id", "text"],
+      "nullable_fields": []
+    }
+  },
+  "forbidden_semantic_fields": [
+    "wait_set_activity_ids", "terminal", "validity", "primary_reason",
+    "A_host_path_ns", "A_cuda_api_ns", "A_device_wait_ns",
+    "A_sync_residual_ns", "A_unattributed_ns", "B_status",
+    "D_margin", "D_score", "Exposure_Signature"
+  ],
+  "invalid_input_policy": "REFUSE_CONVERSION",
+  "ambiguous_engineering_policy": "CONVERT_AND_PROPAGATE_ISSUES",
+  "existing_output_policy": "REFUSE_OVERWRITE"
+}
