@@ -258,11 +258,11 @@ git commit -m "docs: freeze synchronization and accounting semantics"
 - 中文正文按机器规则 ID 逐段解释输入、处理、输出、拒答条件和研究解释边界。
 - 进度清单记录 EP-G1-02 至 EP-G1-09 的证据和 Gate verdict。
 
-- [ ] **步骤 1：撰写规范正文**
+- [x] **步骤 1：撰写规范正文**
 
 正文必须包含：适用范围与非主张；时间/身份基本规则；phase/Token 边界；自然与人为同步；physical sync universe；submission 与依赖闭包；三类 completion scope；`W(s)`；terminal；validity/reason；A/B；D/Signature；输出最小字段；规则到测试映射；当前 prototype 差距；版本兼容与变更规则；NVIDIA 官方语义来源。
 
-- [ ] **步骤 2：运行合同校验和禁止占位扫描**
+- [x] **步骤 2：运行合同校验和禁止占位扫描**
 
 ```powershell
 python -m pytest tests/test_v141_contract.py -q -p no:cacheprovider
@@ -271,7 +271,7 @@ rg -n "TODO|TBD|待定|时间重叠.*依赖|B.*跨同步.*求和" docs/v1_4_1/me
 
 预期：测试通过；扫描只允许出现明确的禁止性表述，不允许出现未解决占位。
 
-- [ ] **步骤 3：逐条审查 EP-G1-02 至 EP-G1-09**
+- [x] **步骤 3：逐条审查 EP-G1-02 至 EP-G1-09**
 
 ```powershell
 python -m exposedpath_v141 validate-contract
@@ -279,11 +279,11 @@ python -m exposedpath_v141 validate-contract
 
 预期：输出合同版本、registry 版本、规则数、案例数、覆盖率 `100%` 和 `PASS`。该命令仅表示合同内部审查通过，不表示 analyzer 或 Q0 通过。
 
-- [ ] **步骤 4：更新科研进度唯一事实源**
+- [x] **步骤 4：更新科研进度唯一事实源**
 
 将清单版本递增；只有在默认合同加载、规则映射覆盖和全文审查均通过后，才勾选 `EP-G1-02` 至 `EP-G1-09` 并把 Gate 1 改为 `PASS`。最高优先级随后改为 Gate 2 的 Q0 独立标准答案设计；Gate 3 至 Gate 14 的 verdict 保持原状态。
 
-- [ ] **步骤 5：运行最小检查与全量回归**
+- [x] **步骤 5：运行最小检查与全量回归**
 
 ```powershell
 python -m compileall exposedpath_v141
@@ -294,7 +294,7 @@ git diff --check
 
 预期：新增定向测试全部通过；全量测试仅允许复现已经记录的两项 PowerShell smoke 基线失败，不得出现新失败。
 
-- [ ] **步骤 6：提交任务 4**
+- [x] **步骤 6：提交任务 4**
 
 ```powershell
 git add docs/v1_4_1/measurement_contract_v0_2.md docs/v1_4_1/research_progress.md docs/superpowers/plans/2026-09-11-measurement-contract-v0-2.md exposedpath_v141/cli.py

@@ -188,7 +188,7 @@
         "rank": 4,
         "class": "SUPPORT",
         "default_validity": "INVALID",
-        "reasons": ["UNSUPPORTED_SYNC_API", "GRAPH_MAPPING_UNSUPPORTED"]
+        "reasons": ["UNCLASSIFIED_CUDA_API", "UNSUPPORTED_SYNC_API", "GRAPH_MAPPING_UNSUPPORTED"]
       },
       {
         "rank": 5,
@@ -289,6 +289,12 @@
     "valid_sync_residual_formula": "sync.duration_ns-A_device_wait_for_sync_ns",
     "valid_empty_sync_category": "A_sync_residual",
     "ambiguous_invalid_sync_category": "A_unattributed",
+    "fail_closed_scope": {
+      "TRACE_DROPPED_RECORDS": "ENTIRE_AFFECTED_WINDOW",
+      "CLOCK_DOMAIN_UNRESOLVED": "ENTIRE_AFFECTED_WINDOW",
+      "INVOCATION_BOUNDARY_INVALID": "ENTIRE_AFFECTED_WINDOW",
+      "SYNC_LOCAL_INVALIDITY": "PHYSICAL_SYNC_INTERVAL"
+    },
     "host_path_is_residual_not_cpu_busy": true,
     "host_path_requires_valid_window_ownership": true,
     "phase_clipping": "INTERSECT_EVERY_INTERVAL_WITH_PHASE_HALF_OPEN_WINDOW",
@@ -399,7 +405,10 @@
       "formula": "versioned_projection_of_frozen_A_and_per_sync_B",
       "creates_new_wall_clock_budget": false,
       "reads_raw_timestamps_to_reclassify_time": false,
-      "hardware_root_cause_claim_allowed": false
+      "hardware_root_cause_claim_allowed": false,
+      "b_grouping_keys": ["phase", "sync_kind", "sync_origin", "callsite_id"],
+      "b_summary_statistics": ["count", "median", "p90"],
+      "additive_b_total_allowed": false
     }
   },
   "rules": [

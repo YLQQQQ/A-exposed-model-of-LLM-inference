@@ -2,6 +2,10 @@
   "registry_version": "exposedpath-sync-registry-0.2.0",
   "contract_version": "exposedpath-measurement-contract-0.2.0",
   "status": "ENGINEERING_PRE_PILOT",
+  "unknown_api_policy": {
+    "potentially_blocking_unmatched_api": "UNCLASSIFIED_CUDA_API",
+    "may_be_silently_treated_as_non_sync": false
+  },
   "rules": [
     {
       "registry_rule_id": "SYNC-STREAM-RUNTIME-001",

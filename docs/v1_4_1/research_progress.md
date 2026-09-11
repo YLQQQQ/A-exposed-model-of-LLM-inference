@@ -2,15 +2,15 @@
 
 ## 当前快照
 
-- 清单版本：`0.5`
+- 清单版本：`0.6`
 - 最近更新：`2026-09-11`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G1-02` 至 `EP-G1-09`，完成并审查 Measurement Contract v0.2
-- 当前总体判断：GPU 前离线准备正在进行；`Q0`、Engineering Pilot、Protocol Freeze 和正式实验均未完成
+- 当前最高优先级：`EP-G2-01` 至 `EP-G2-05`，设计与审查 Q0 独立标准答案
+- 当前总体判断：Measurement Contract v0.2 已通过内部合同审查；Canonical Raw、S、A/B 与真实 Q0 均未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -52,23 +52,23 @@
 
 ## Gate 1：Measurement Contract v0.2
 
-**Gate verdict：`FAIL`。** observation 输入边界已有草案，但完整的 S、A/B、D/Signature、phase completion 和 validity 语义尚未冻结。
+**Gate verdict：`PASS`。** 只表示 phase/Token、同步身份、completion scope、`W(s)`、terminal、validity、A/B 和派生规则已形成版本化、机器可检查且无未决语义占位的合同；不表示实现正确或 Q0 已通过。
 
 - [x] `EP-G1-01` 完成 `Nsight SQLite -> observation report` 合同草案 0.1。证据：`docs/v1_4_1/analyzer_contract_v0_1.md`。
-- [ ] `EP-G1-02`（进行中）定义 Request、Prefill、Decode、首 Token 和后续 Token 的可观察完成边界。
-- [ ] `EP-G1-03`（未开始）定义自然逐 Token 同步与 N1 人为同步干预的身份和隔离规则。
-- [ ] `EP-G1-04`（未开始）冻结 stream、device/context、event synchronization 的 completion scope。
-- [ ] `EP-G1-05`（未开始）冻结 `W(s)` 的提交顺序、context/stream/event、ownership 和排除规则。
-- [ ] `EP-G1-06`（未开始）冻结 terminal 的选择规则、并列候选和时间容差。
-- [ ] `EP-G1-07`（未开始）冻结 valid/ambiguous/invalid 判定、原因码和逐层传播规则。
-- [ ] `EP-G1-08`（未开始）冻结 A/B 字段、互斥/守恒规则，以及 D/Exposure Signature 的纯派生规则。
-- [ ] `EP-G1-09`（未开始）为每条合同规则建立测试映射并完成合同审查；无未决语义占位后才可将 Gate 改为 `PASS`。
+- [x] `EP-G1-02` 定义 Request、Prefill、Decode、首 Token 和后续 Token 的可观察完成边界。证据：`measurement_contract_v0_2.md` 第 3～4 节及机器合同 `phase_boundaries`。
+- [x] `EP-G1-03` 定义自然逐 Token 同步、N1 人为同步与仅标记版本的互斥身份，并冻结 Pass0/Pass1 完成行为等价。证据：合同第 5 节及 `sync_identity`、`pass_parity`。
+- [x] `EP-G1-04` 冻结 stream、device、context、event synchronization 的 completion scope；同步 copy 保持透明 unsupported。证据：合同第 6～7 节及 `sync_semantics_registry_v0_2.json`。
+- [x] `EP-G1-05` 冻结 `W(s)` 的提交证明、同流/event/default-stream 传递依赖、ownership 和排除规则。证据：合同第 7 节及机器合同 `s_layer`。
+- [x] `EP-G1-06` 冻结 terminal 的 semantic frontier 优先规则、并列候选及 0 ns 语义容差；Pilot 统计比较容差不得改变身份。证据：合同第 8 节及 `s_layer.terminal`。
+- [x] `EP-G1-07` 冻结 `VALID_NONEMPTY/VALID_EMPTY/AMBIGUOUS/INVALID`、原因码优先级和 A/B fail-closed 传播。证据：合同第 9 节及 `s_layer.validity/reason_priority`。
+- [x] `EP-G1-08` 冻结 A/B 字段、互斥/守恒、B per-sync 生命周期，以及 D/Exposure Signature 的纯派生规则。证据：合同第 10～12 节及机器合同 `a_layer/b_layer/derived`。
+- [x] `EP-G1-09` 为 37 条合同规则建立 25 个验证案例映射并完成内部合同审查。证据：`measurement_contract_test_map_v0_2.json`、`tests/test_v141_contract.py`；`python -m exposedpath_v141 validate-contract` 输出 `37/37 (100%)` 与 `PASS`。
 
-**下一项：**先完成 `EP-G1-02`，再依次推进 `EP-G1-03` 至 `EP-G1-09`；不得跳到 S 或 A/B 实现。
+**下一项：**进入 `EP-G2-01`，为 Q0 受控案例建立独立 expected/oracle；不得跳到 S 或 A/B 实现。
 
 ## Gate 2：设计 Q0 独立标准答案
 
-**Gate verdict：`NOT_RUN`。** 必须等待 Gate 1 的语义输入稳定，但用例目录可以在 Gate 1 后半段开始整理。
+**Gate verdict：`NOT_RUN`。** Gate 1 已提供稳定语义输入，现在开始建立独立 expected/oracle；本 Gate 完成仍不等于真实 Q0 通过。
 
 - [ ] `EP-G2-01`（未开始）建立受控 CUDA 用例目录：stream、device/context、event。
 - [ ] `EP-G2-02`（未开始）覆盖提前完成、同步期间完成、跨流重叠但无依赖、terminal 唯一/并列、外部 ownership、缺失映射和 dropped records。
@@ -208,11 +208,11 @@
 
 最近应执行的五项任务：
 
-1. `EP-G1-02`：确定 Token 就绪和各 phase 的可观察完成边界。
-2. `EP-G1-03`、`EP-G1-04`：隔离自然/人为同步并冻结三类同步 scope。
-3. `EP-G1-05` 至 `EP-G1-08`：完成 `W(s)`、terminal、validity、A/B/D/Signature 合同。
-4. `EP-G1-09`：建立规则到测试的映射并审查 Gate 1。
-5. Gate 1 通过后进入 `EP-G2-01`，不得提前用实现细节生成 Q0 标准答案。
+1. `EP-G2-01`：建立 stream、device/context、event 的 Q0 受控案例目录和统一 expected schema。
+2. `EP-G2-02`：补齐 completed-before、valid-empty、无关重叠、tie、ownership、missing mapping、dropped 和 submission race。
+3. `EP-G2-03`：逐 case 写定 `W(s)`、terminal、validity 和 A/B 关系。
+4. `EP-G2-04`：建立 oracle 独立性检查，禁止复用正式 S/A/B 分类实现。
+5. `EP-G2-05`：审查正例、负例和含糊例覆盖；通过后再进入 Gate 3 Canonical Raw。
 
 ## 计划调整记录
 
@@ -223,3 +223,4 @@
 | 0.3 | 2026-09-10 | 基于两份完整 Word 母版逐章吸收 v1.4.1，完成结构/语义自动校验和 40/27 页视觉验收；摘要候选版降为历史整合记录，完整 v7.0 成为当前研究主体，v2.1 成为 Pre-Pilot 执行依据 | EP-FND-07 至 EP-FND-11、EP-ISSUE-05 | 未通过 Gate 1 或 Protocol Freeze；当前无 Formal 数据，不产生失效 |
 | 0.4 | 2026-09-10 | 复核发现 v7.0 的自动检查偏重方法语义，第一章未完整吸收 v1.4.1 的背景论证。启动 v7.1 修订，并将两个当前入口简化为 `ExposedPath_研究设计.docx` 与 `ExposedPath_实验协议.docx` | EP-FND-09、EP-FND-11、EP-FND-12 | 不改变 Measurement Contract、Gate 或 Formal 数据资格 |
 | 0.5 | 2026-09-11 | 完成 v7.1 背景与研究立意补齐、两份文档的简洁命名、结构/语义自动校验及 40/27 页全页视觉验收；移除封面标题装饰线并修正表格与章节分页。 | EP-FND-12、EP-ISSUE-05 | 不改变 Measurement Contract、Gate 或 Formal 数据资格；下一步仍为 EP-G1-02 |
+| 0.6 | 2026-09-11 | 完成 Measurement Contract v0.2：冻结 Token/phase、自然与干预同步身份、三类 completion scope、提交证明、`W(s)`、terminal、validity、A/B 与纯派生规则；建立 37 条规则到 25 个验证案例的机器映射和合同校验命令。 | EP-G1-02 至 EP-G1-09 | Gate 1 内部合同审查 PASS；不改变 Q0、Pilot、Protocol Freeze 或 Formal 数据资格；下一步为 EP-G2-01 |

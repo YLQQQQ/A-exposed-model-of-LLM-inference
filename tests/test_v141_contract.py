@@ -6,6 +6,7 @@ from copy import deepcopy
 
 import pytest
 
+from exposedpath_v141.cli import main
 from exposedpath_v141.contract import (
     ContractValidationError,
     load_contract_bundle,
@@ -310,3 +311,28 @@ def test_cross_sync_b_aggregation_is_rejected():
 
     with pytest.raises(ContractValidationError, match="B 层"):
         validate_contract_bundle(contract, registry, test_map)
+
+
+def test_validate_contract_cli_reports_scope_limited_pass(capsys):
+    return_code = main(["validate-contract"])
+    captured = capsys.readouterr()
+
+    assert return_code == 0
+    assert "contract_version: exposedpath-measurement-contract-0.2.0" in captured.out
+    assert "rule_coverage: 37/37 (100%)" in captured.out
+    assert "gate_scope: CONTRACT_INTERNAL_CONSISTENCY_ONLY" in captured.out
+    assert "verdict: PASS" in captured.out
+
+
+def test_global_trace_failure_makes_the_whole_window_unattributed():
+    a = load_contract_bundle()["contract"]["a_layer"]
+
+    assert a["fail_closed_scope"]["TRACE_DROPPED_RECORDS"] == "ENTIRE_AFFECTED_WINDOW"
+    assert a["fail_closed_scope"]["SYNC_LOCAL_INVALIDITY"] == "PHYSICAL_SYNC_INTERVAL"
+
+
+def test_signature_uses_distributions_not_additive_b_totals():
+    signature = load_contract_bundle()["contract"]["derived"]["Exposure_Signature"]
+
+    assert signature["b_summary_statistics"] == ["count", "median", "p90"]
+    assert signature["additive_b_total_allowed"] is False
