@@ -2,7 +2,7 @@
 
 ## 当前快照
 
-- 清单版本：`1.1`
+- 清单版本：`1.2`
 - 最近更新：`2026-09-11`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
@@ -198,7 +198,7 @@
 
 - `EP-ISSUE-01`：旧 runner 的首 Token 时间取在异步 argmax 提交后，但后续 EOS `.any()` 可能触发隐式同步，Token 完成边界不一致。影响：Gate 1、7；不得直接用于新版 phase 定义。
 - `EP-ISSUE-02`：三份历史 trace 缺少 source manifest。影响：validity 必须保持 `ambiguous`，不能升级数据资格。
-- `EP-ISSUE-03`：Gate 4 第二轮复审修正后的仓库全量测试为 `362 passed, 2 failed`；两项失败与工作前基线相同，仍为 `tests/test_server_smoke_script.py::test_dry_run` 和 `test_spaces`。影响：跨平台执行层需单独修复或重新界定，但不属于 Gate 2～4 新增失败。
+- `EP-ISSUE-03`：Gate 4 第三轮复审修正后的仓库全量测试为 `365 passed, 2 failed`；两项失败与工作前基线相同，仍为 `tests/test_server_smoke_script.py::test_dry_run` 和 `test_spaces`。影响：跨平台执行层需单独修复或重新界定，但不属于 Gate 2～4 新增失败。
 - `EP-ISSUE-04`：当前无 GPU。影响：Q0 真实 trace、跨平台 GPU smoke、Engineering Pilot 及后续实验保持 `BLOCKED`；不影响 Gate 1 至 Gate 5 的离线设计和确定性测试工作。
 - `EP-ISSUE-05`（已解决）：使用校验过哈希的 LibreOffice 临时解包版本完成本地全页渲染；研究主体 40 页、实验协议 27 页均已检查。渲染器仅用于文档 QA，不改变研究 Gate。
 - `EP-ISSUE-06`：S 层已对 event/wait 的 context/stream 活动查找建立索引，并缓存重复 scope 建图；event/default-stream 密集型大 trace 的规模性能尚未在真实 Engineering 数据上验收。影响：需在 Engineering Pilot 记录耗时与峰值内存；当前不改变 S 语义正确性或数据资格。
@@ -230,3 +230,4 @@
 | 0.9 | 2026-09-11 | 完成 S v0.2：Canonical-only ownership、submission、completion graph、`W(s)`、terminal、validity、版本化输出与历史 trace fail-closed 回归；下一优先级切换为 A/B | EP-G4-01 至 EP-G4-05、EP-G5-01 | 未改变 Protocol Freeze；真实 Q0 未运行，当前无 Formal 数据，不产生失效 |
 | 1.0 | 2026-09-11 | Gate 4 独立代码复审后修正三项语义缺陷：missing correlation 不再被降级、wait-event 末端节点不再漏 producer、外部 invocation 不再于建图前静默删除；同时补齐 default-stream 冲突/歧义、submission 审计信息、registry lineage 与重复 scope 建图缓存 | EP-G4-01 至 EP-G4-05 | 未改变 Measurement Contract 或 Protocol Freeze；原 Gate 4 实现结论经修正后重新验证，真实 Q0 状态不变 |
 | 1.1 | 2026-09-11 | Gate 4 第二轮独立复审后要求 eventSyncId 唯一映射并校验 event/context/device；修正缺失 correlation 与提交顺序不明并存时的 invalid 传播，以及未来 default-stream overlap 对较早同步的污染；补充 event/wait 查找索引和 9 个回归案例 | EP-G4-01 至 EP-G4-05、EP-ISSUE-03、EP-ISSUE-06 | 未改变 Measurement Contract、Q0 状态或 Protocol Freeze；当前仍无 Formal 数据，不产生失效 |
+| 1.2 | 2026-09-11 | Gate 4 第三轮独立复审发现缺失 correlation 的强 invalid 在 event 捕获和 legacy default-stream 路径仍可能被顺序歧义覆盖；补齐三条路径的统一 fail-closed 传播和 3 个回归案例 | EP-G4-02、EP-G4-05、EP-ISSUE-03 | 未改变 Measurement Contract、Q0 状态或 Protocol Freeze；当前仍无 Formal 数据，不产生失效 |

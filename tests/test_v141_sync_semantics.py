@@ -907,6 +907,86 @@ def test_missing_correlation_remains_invalid_when_submission_order_is_also_unkno
     assert "SUBMISSION_ORDER_AMBIGUOUS" in result["secondary_reasons"]
 
 
+def _missing_correlation_activity(record_id: str, stream_id: int) -> dict:
+    activity = _owned_activity(record_id, stream_id, 70, 90)
+    activity.update(
+        enqueue_record_id=None,
+        enqueue_start_ns=None,
+        enqueue_end_ns=None,
+        request_id=None,
+        repeat_id=None,
+        invocation_identity=None,
+        ownership_status="INVALID",
+        ownership_reasons=["MISSING_ACTIVITY_CORRELATION"],
+    )
+    return activity
+
+
+def _valid_event_record(record_id: str = "event:missing-corr") -> dict:
+    return {
+        "record_id": record_id, "event_id": 9, "event_sync_id": 90,
+        "device_id": 0, "context_id": 1, "stream_id": 2,
+        "host_start_ns": 25, "host_end_ns": 30,
+        "request_id": "req-0", "repeat_id": "r0",
+        "ownership_status": "VALID", "ownership_reasons": [],
+        "invocation_identity": _identity("decode"),
+    }
+
+
+def test_event_prefix_missing_correlation_is_invalid_not_only_ambiguous():
+    result = analyze_sync_semantics(
+        _semantic_inventory(
+            [_missing_correlation_activity("a:event-missing-corr", 2)],
+            event_records=[_valid_event_record()],
+        ),
+        _owned_sync(
+            "EVENT", 60, 100, stream_id=None, event_id=9, event_sync_id=90
+        ),
+    )
+
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == "MISSING_ACTIVITY_CORRELATION"
+    assert "SUBMISSION_ORDER_AMBIGUOUS" in result["secondary_reasons"]
+
+
+def test_stream_wait_producer_missing_correlation_is_invalid_not_only_ambiguous():
+    wait = {
+        "record_id": "edge:missing-corr", "sync_kind": "STREAM_WAIT_EVENT",
+        "role": "DEPENDENCY_EDGE", "event_id": 9, "event_sync_id": 90,
+        "device_id": 0, "context_id": 1, "stream_id": 4,
+        "host_start_ns": 32, "host_end_ns": 35,
+        "ownership_status": "VALID", "ownership_reasons": [],
+        "request_id": "req-0", "repeat_id": "r0",
+        "invocation_identity": _identity("decode"),
+    }
+    result = analyze_sync_semantics(
+        _semantic_inventory(
+            [_missing_correlation_activity("a:wait-missing-corr", 2)],
+            event_records=[_valid_event_record("event:wait-missing-corr")],
+            dependency_events=[wait],
+        ),
+        _owned_sync("STREAM", 60, 100, stream_id=4),
+    )
+
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == "MISSING_ACTIVITY_CORRELATION"
+
+
+def test_legacy_default_predecessor_missing_correlation_is_invalid():
+    missing_default = _missing_correlation_activity("a:default-missing-corr", 0)
+    target = _owned_activity(
+        "a:legacy-target", 2, 40, 80, enqueue_start=20, enqueue_end=30
+    )
+
+    result = analyze_sync_semantics(
+        _semantic_inventory([missing_default, target], mode="LEGACY"),
+        _owned_sync("STREAM", 50, 100, stream_id=2),
+    )
+
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == "MISSING_ACTIVITY_CORRELATION"
+
+
 def test_stream_wait_event_without_consumer_still_exposes_producer_to_stream_sync():
     producer = _owned_activity("a:producer-only", 2, 10, 45)
     event_record = {

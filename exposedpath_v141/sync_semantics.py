@@ -520,6 +520,23 @@ def submission_evidence(
     return {"status": "AMBIGUOUS", "proof": None, "reason": "SUBMISSION_ORDER_AMBIGUOUS"}
 
 
+def _unresolved_candidate_reasons(
+    candidate: Mapping[str, Any],
+    boundary: Mapping[str, Any],
+    proof: Mapping[str, Any],
+) -> list[str]:
+    """保留候选映射缺失等强 invalid，不让较弱的顺序歧义覆盖。"""
+
+    reasons: list[str] = []
+    relation = ownership_supported(candidate, boundary)
+    if not relation["supported"]:
+        reasons.extend(candidate.get("ownership_reasons", []))
+        reasons.append(str(relation["reason"]))
+    if proof.get("status") != "PROVEN" and proof.get("reason") is not None:
+        reasons.append(str(proof["reason"]))
+    return reasons
+
+
 def _add_edge(
     predecessors: dict[str, set[str]],
     edges: list[dict[str, Any]],
@@ -629,6 +646,7 @@ def _capture_event_prefixes(
             ):
                 continue
             else:
+                issues.extend(_unresolved_candidate_reasons(activity, event, proof))
                 issues.append("DEPENDENCY_CLOSURE_AMBIGUOUS")
     return event_nodes, event_records, issues
 
@@ -732,6 +750,11 @@ def _add_default_stream_edges(
                 default.get("enqueue_start_ns"), default.get("enqueue_end_ns"),
             )
             if any(value is None for value in ordering_values):
+                for candidate in (default, other):
+                    proof = submission_evidence(candidate, sync)
+                    issues.extend(
+                        _unresolved_candidate_reasons(candidate, sync, proof)
+                    )
                 issues.append("DEPENDENCY_CLOSURE_AMBIGUOUS")
                 continue
             if other["enqueue_end_ns"] <= default["enqueue_start_ns"]:
