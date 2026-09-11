@@ -36,7 +36,7 @@
 - 输出：`validate_contract_bundle(contract, registry, test_map) -> None`；不满足不变量时抛出 `ContractValidationError`。
 - 输出：`load_contract_bundle(root: Path | None = None) -> dict[str, Any]`；返回键 `contract`、`registry`、`test_map`。
 
-- [ ] **步骤 1：写入失败测试，覆盖可观察的合同破坏**
+- [x] **步骤 1：写入失败测试，覆盖可观察的合同破坏**
 
 ```python
 def test_duplicate_rule_id_is_rejected():
@@ -60,7 +60,7 @@ def test_derived_metric_cannot_read_raw_fields():
         validate_contract_bundle(contract, registry, test_map)
 ```
 
-- [ ] **步骤 2：运行定向测试并确认红灯来自接口尚不存在**
+- [x] **步骤 2：运行定向测试并确认红灯来自接口尚不存在**
 
 ```powershell
 python -m pytest tests/test_v141_contract.py -q -p no:cacheprovider
@@ -68,7 +68,7 @@ python -m pytest tests/test_v141_contract.py -q -p no:cacheprovider
 
 预期：collection 阶段因 `exposedpath_v141.contract` 不存在而失败。
 
-- [ ] **步骤 3：实现最小只读校验器**
+- [x] **步骤 3：实现最小只读校验器**
 
 ```python
 class ContractValidationError(ValueError):
@@ -85,7 +85,7 @@ def load_contract_bundle(root: Path | None = None) -> dict[str, Any]:
 
 校验器必须检查：三份版本互相绑定；规则 ID、registry rule ID、API alias 和案例 ID 唯一；每条合同规则至少映射一个案例；每个案例只能引用存在的规则；supported sync 必须声明 completion scope 和 required evidence；A 优先级恰好覆盖五个顶层类别；D/Signature 输入只允许引用 A/B；占位文本被拒绝。
 
-- [ ] **步骤 4：运行定向测试并确认绿灯**
+- [x] **步骤 4：运行定向测试并确认绿灯**
 
 ```powershell
 python -m pytest tests/test_v141_contract.py -q -p no:cacheprovider
@@ -93,7 +93,7 @@ python -m pytest tests/test_v141_contract.py -q -p no:cacheprovider
 
 预期：任务 1 的测试全部通过。
 
-- [ ] **步骤 5：提交任务 1**
+- [x] **步骤 5：提交任务 1**
 
 ```powershell
 git add exposedpath_v141/contract.py tests/test_v141_contract.py
