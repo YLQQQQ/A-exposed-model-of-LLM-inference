@@ -307,3 +307,196 @@ def test_record_files_are_deterministic_and_output_is_never_overwritten(tmp_path
         convert_sqlite_to_canonical(
             database, tmp_path / "first", "Engineering", "C" * 64, "synthetic", source_manifest
         )
+
+
+def test_structured_nvtx_identity_is_parsed_without_filename_inference(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    identity = {
+        "kind": "phase",
+        "experiment_id": "exp",
+        "wmpc_id": "w01",
+        "run_id": "run-1",
+        "run_role": "Engineering",
+        "pass_id": "Pass1",
+        "request_id": "req-0",
+        "repeat_id": "r0",
+        "phase": "full_request",
+    }
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "UPDATE NVTX_EVENTS SET text=?",
+        ("EXPOSEDPATH_JSON_V1:" + json.dumps(identity, separators=(",", ":")),),
+    )
+    connection.commit()
+    connection.close()
+
+    manifest_path = convert_sqlite_to_canonical(
+        database, tmp_path / "canonical", "Engineering", "D" * 64, "synthetic", source_manifest
+    )
+    nvtx = _read_jsonl(manifest_path.parent / "nvtx.jsonl")[0]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert nvtx["structured_identity"] == identity
+    assert manifest["identity"]["filename_inference_used"] is False
+    assert manifest["identity"]["nvtx_status"] == "VALID"
+
+
+def test_legacy_phase_label_is_preserved_but_identity_is_not_guessed(tmp_path):
+    database = tmp_path / "source.sqlite"
+    _make_source_sqlite(database)
+
+    manifest_path = convert_sqlite_to_canonical(
+        database, tmp_path / "canonical", "Engineering", "E" * 64, "synthetic"
+    )
+    nvtx = _read_jsonl(manifest_path.parent / "nvtx.jsonl")[0]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert nvtx["text"] == "full_request"
+    assert nvtx["structured_identity"] is None
+    assert manifest["identity"]["status"] == "AMBIGUOUS"
+    assert "UNSTRUCTURED_EXPOSEDPATH_PHASE_LABEL" in {
+        issue["code"] for issue in manifest["identity"]["issues"]
+    }
+    assert "MISSING_SOURCE_MANIFEST" in {
+        issue["code"] for issue in manifest["observation_validity"]["issues"]
+    }
+
+
+def test_malformed_structured_marker_is_preserved_and_marked_ambiguous(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    connection = sqlite3.connect(database)
+    connection.execute("UPDATE NVTX_EVENTS SET text='EXPOSEDPATH_JSON_V1:{bad json'")
+    connection.commit()
+    connection.close()
+
+    manifest_path = convert_sqlite_to_canonical(
+        database, tmp_path / "canonical", "Engineering", "F" * 64, "synthetic", source_manifest
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["identity"]["nvtx_status"] == "AMBIGUOUS"
+    assert "MALFORMED_STRUCTURED_NVTX" in {
+        issue["code"] for issue in manifest["identity"]["issues"]
+    }
+
+
+def test_incomplete_structured_marker_does_not_receive_partial_identity(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "UPDATE NVTX_EVENTS SET text=?",
+        (
+            "EXPOSEDPATH_JSON_V1:"
+            + json.dumps({"kind": "phase", "experiment_id": "exp", "phase": "prefill"}),
+        ),
+    )
+    connection.commit()
+    connection.close()
+
+    manifest_path = convert_sqlite_to_canonical(
+        database, tmp_path / "canonical", "Engineering", "0" * 64, "synthetic", source_manifest
+    )
+    nvtx = _read_jsonl(manifest_path.parent / "nvtx.jsonl")[0]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert nvtx["structured_identity"] is None
+    assert "INCOMPLETE_STRUCTURED_NVTX_IDENTITY" in {
+        issue["code"] for issue in manifest["identity"]["issues"]
+    }
+
+
+def test_manifest_and_nvtx_identity_conflict_is_not_silently_accepted(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    identity = {
+        "kind": "phase", "experiment_id": "exp", "wmpc_id": "w01",
+        "run_id": "different-run", "run_role": "Engineering", "pass_id": "Pass1",
+        "request_id": "req-0", "repeat_id": "r0", "phase": "full_request",
+    }
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "UPDATE NVTX_EVENTS SET text=?",
+        ("EXPOSEDPATH_JSON_V1:" + json.dumps(identity, separators=(",", ":")),),
+    )
+    connection.commit()
+    connection.close()
+
+    manifest_path = convert_sqlite_to_canonical(
+        database, tmp_path / "canonical", "Engineering", "3" * 64, "synthetic", source_manifest
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["identity"]["status"] == "AMBIGUOUS"
+    assert "MANIFEST_NVTX_IDENTITY_CONFLICT" in {
+        issue["code"] for issue in manifest["identity"]["issues"]
+    }
+
+
+def test_cuda_event_linkage_is_preserved_separately_from_physical_sync(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+
+    manifest_path = convert_sqlite_to_canonical(
+        database, tmp_path / "canonical", "Engineering", "1" * 64, "synthetic", source_manifest
+    )
+    event = _read_jsonl(manifest_path.parent / "cuda_event.jsonl")[0]
+    sync = _read_jsonl(manifest_path.parent / "physical_sync.jsonl")[0]
+
+    assert (event["event_id"], event["event_sync_id"]) == (9, 10)
+    assert event["record_id"].startswith("cuda_event:")
+    assert sync["record_id"].startswith("physical_sync:")
+
+
+@pytest.mark.parametrize(
+    ("mutation", "error_pattern"),
+    [
+        (
+            "UPDATE META_DATA_EXPORT SET value='unknown' WHERE name='EXPORT_SCHEMA_VERSION'",
+            "observation invalid",
+        ),
+        (
+            "INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES (41,79,0,NULL,7,1,0,NULL)",
+            "observation invalid",
+        ),
+        (
+            "INSERT INTO DIAGNOSTIC_EVENT VALUES (1,1,2,'events may be missing')",
+            "observation invalid",
+        ),
+        (
+            "UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET start=80,end=70",
+            "时间区间非法",
+        ),
+    ],
+)
+def test_invalid_evidence_refuses_conversion_and_leaves_no_output(
+    tmp_path, mutation, error_pattern
+):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    connection = sqlite3.connect(database)
+    connection.execute(mutation)
+    connection.commit()
+    connection.close()
+    output = tmp_path / "canonical"
+
+    with pytest.raises(ValueError, match=error_pattern):
+        convert_sqlite_to_canonical(
+            database, output, "Engineering", "2" * 64, "synthetic", source_manifest
+        )
+
+    assert not output.exists()

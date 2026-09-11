@@ -57,11 +57,11 @@
 - 修改：`exposedpath_v141/canonical_raw.py`
 - 修改：`tests/test_v141_canonical_raw.py`
 
-- [ ] 先写结构化 NVTX marker、旧标签不猜身份、eventSyncId 保留、runtime mapping 不唯一、dropped records、未知 schema 和无效时间区间测试。
-- [ ] 解析 `EXPOSEDPATH_JSON_V1:` 结构化标记；缺必需 identity 字段时标记问题，不补造值。
-- [ ] physical sync 同时保存 CUPTI sync 枚举与唯一 runtime API 映射；event record 独立保存。
-- [ ] observation invalid 时拒绝转换；Engineering ambiguous 可转换但完整传播问题和研究资格。
-- [ ] 定向测试通过并提交。
+- [x] 先写结构化 NVTX marker、旧标签不猜身份、eventSyncId 保留、runtime mapping 不唯一、dropped records、未知 schema 和无效时间区间测试。
+- [x] 解析 `EXPOSEDPATH_JSON_V1:` 结构化标记；缺必需 identity 字段或与 manifest 冲突时标记问题，不补造值。
+- [x] physical sync 同时保存 CUPTI sync 枚举与唯一 runtime API 映射；event record 独立保存。
+- [x] observation invalid 时拒绝转换；Engineering ambiguous 可转换但完整传播问题和研究资格。
+- [x] 定向测试通过并提交。
 
 ### 任务 4：CLI、历史 trace 回归与 Gate 3 审查
 

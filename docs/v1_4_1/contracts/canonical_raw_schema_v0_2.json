@@ -25,11 +25,17 @@
   "structured_nvtx": {
     "prefix": "EXPOSEDPATH_JSON_V1:",
     "allowed_kinds": ["request", "phase", "token_ready", "sync", "marker"],
-    "required_identity_fields": [
+    "common_identity_fields": [
       "experiment_id", "wmpc_id", "run_id", "run_role", "pass_id",
-      "request_id", "repeat_id", "phase", "callsite_id", "sync_origin",
-      "sync_ordinal"
+      "request_id", "repeat_id"
     ],
+    "required_fields_by_kind": {
+      "request": ["phase"],
+      "phase": ["phase"],
+      "token_ready": ["phase", "token_index", "callsite_id", "sync_origin", "sync_ordinal"],
+      "sync": ["phase", "callsite_id", "sync_origin", "sync_ordinal"],
+      "marker": ["phase", "callsite_id"]
+    },
     "legacy_label_policy": "PRESERVE_AS_TEXT_WITHOUT_IDENTITY_INFERENCE"
   },
   "bundle_manifest": {

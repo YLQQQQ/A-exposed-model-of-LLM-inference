@@ -157,10 +157,18 @@ def validate_canonical_raw_schema(schema: Mapping[str, Any]) -> None:
     if structured.get("prefix") != "EXPOSEDPATH_JSON_V1:":
         raise CanonicalRawSchemaError("结构化 NVTX 前缀不匹配")
     identity_fields = _list(
-        structured.get("required_identity_fields"),
-        "structured_nvtx.required_identity_fields",
+        structured.get("common_identity_fields"),
+        "structured_nvtx.common_identity_fields",
     )
-    _ensure_unique(identity_fields, "structured identity")
+    _ensure_unique(identity_fields, "structured common identity")
+    by_kind = _mapping(
+        structured.get("required_fields_by_kind"),
+        "structured_nvtx.required_fields_by_kind",
+    )
+    if set(by_kind) != set(structured.get("allowed_kinds", [])):
+        raise CanonicalRawSchemaError("结构化 NVTX kind 与字段规则不一致")
+    for kind, fields in by_kind.items():
+        _ensure_unique(_list(fields, f"structured_nvtx.{kind}"), f"structured {kind}")
     if structured.get("legacy_label_policy") != "PRESERVE_AS_TEXT_WITHOUT_IDENTITY_INFERENCE":
         raise CanonicalRawSchemaError("旧 NVTX 标签不得推断实验身份")
 
@@ -195,6 +203,17 @@ def _validate_record(kind: str, record: Mapping[str, Any], schema: Mapping[str, 
     null_required = sorted(field for field in non_null if record[field] is None)
     if null_required:
         raise ValueError(f"{kind} 必需非空字段为空: {null_required}")
+    if "start_ns" in record:
+        start = record["start_ns"]
+        end = record.get("end_ns")
+        if not isinstance(start, int) or start < 0:
+            raise ValueError(f"{kind} 时间区间非法")
+        if end is not None and (not isinstance(end, int) or end < start):
+            raise ValueError(f"{kind} 时间区间非法")
+    if "timestamp_ns" in record:
+        timestamp = record["timestamp_ns"]
+        if not isinstance(timestamp, int) or timestamp < 0:
+            raise ValueError(f"{kind} 时间区间非法")
 
 
 def _sha256(path: Path) -> str:
@@ -256,7 +275,51 @@ def _fetch_rows(connection: sqlite3.Connection, table: str, order: str) -> list[
     return list(connection.execute(f'SELECT rowid AS source_rowid, * FROM "{table}" ORDER BY {order}'))
 
 
-def _extract_records(connection: sqlite3.Connection) -> dict[str, list[dict[str, Any]]]:
+def _parse_structured_identity(
+    text: str,
+    record_id: str,
+    structured_schema: Mapping[str, Any],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    prefix = structured_schema["prefix"]
+    if not text.startswith(prefix):
+        return None, None
+    try:
+        payload = json.loads(text[len(prefix) :])
+    except json.JSONDecodeError as exc:
+        return None, {
+            "code": "MALFORMED_STRUCTURED_NVTX",
+            "detail": {"record_id": record_id, "message": str(exc)},
+        }
+    if not isinstance(payload, dict):
+        return None, {
+            "code": "MALFORMED_STRUCTURED_NVTX",
+            "detail": {"record_id": record_id, "message": "payload 不是对象"},
+        }
+    kind = payload.get("kind")
+    if kind not in structured_schema["allowed_kinds"]:
+        return None, {
+            "code": "UNKNOWN_STRUCTURED_NVTX_KIND",
+            "detail": {"record_id": record_id, "kind": kind},
+        }
+    required = list(structured_schema["common_identity_fields"])
+    required.extend(structured_schema["required_fields_by_kind"][kind])
+    missing = [
+        field
+        for field in required
+        if field not in payload or payload[field] is None or payload[field] == ""
+    ]
+    if missing:
+        return None, {
+            "code": "INCOMPLETE_STRUCTURED_NVTX_IDENTITY",
+            "detail": {"record_id": record_id, "missing_fields": missing},
+        }
+    return payload, None
+
+
+def _extract_records(
+    connection: sqlite3.Connection,
+    schema: Mapping[str, Any],
+) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
     strings = {
         int(row[0]): str(row[1])
         for row in connection.execute("SELECT id, value FROM StringIds")
@@ -271,19 +334,34 @@ def _extract_records(connection: sqlite3.Connection) -> dict[str, list[dict[str,
         "stream": [],
         "diagnostic": [],
     }
+    identity_issues: list[dict[str, Any]] = []
+    structured_count = 0
+    legacy_phase_count = 0
 
     for row in _fetch_rows(connection, "NVTX_EVENTS", "start, COALESCE(end,start), source_rowid"):
         pid, tid = _global_parts(row["globalTid"])
         end_pid, end_tid = _global_parts(row["endGlobalTid"])
         record = _base("nvtx", "NVTX_EVENTS", row["source_rowid"])
+        text = row["text"] if row["text"] is not None else strings.get(row["textId"], "")
+        structured_identity, identity_issue = _parse_structured_identity(
+            text,
+            record["record_id"],
+            schema["structured_nvtx"],
+        )
+        if structured_identity is not None:
+            structured_count += 1
+        elif text in {"full_request", "prefill", "decode"}:
+            legacy_phase_count += 1
+        if identity_issue is not None:
+            identity_issues.append(identity_issue)
         record.update(
             start_ns=row["start"], end_ns=row["end"], event_type=row["eventType"],
             range_id=row["rangeId"], category_id=row["category"], color=row["color"],
-            text=row["text"] if row["text"] is not None else strings.get(row["textId"], ""),
+            text=text,
             global_tid=row["globalTid"], process_id=pid, thread_id=tid,
             end_global_tid=row["endGlobalTid"], end_process_id=end_pid, end_thread_id=end_tid,
             text_id=row["textId"], domain_id=row["domainId"], json_text=row["jsonText"],
-            structured_identity=None,
+            structured_identity=structured_identity,
         )
         result["nvtx"].append(record)
 
@@ -408,7 +486,18 @@ def _extract_records(connection: sqlite3.Connection) -> dict[str, list[dict[str,
             text=row["text"],
         )
         result["diagnostic"].append(record)
-    return result
+    if legacy_phase_count:
+        identity_issues.append(
+            {
+                "code": "UNSTRUCTURED_EXPOSEDPATH_PHASE_LABEL",
+                "detail": {"record_count": legacy_phase_count},
+            }
+        )
+    if structured_count == 0 and legacy_phase_count == 0:
+        identity_issues.append(
+            {"code": "NO_STRUCTURED_EXPOSEDPATH_NVTX", "detail": {"record_count": 0}}
+        )
+    return result, identity_issues
 
 
 def convert_sqlite_to_canonical(
@@ -443,7 +532,7 @@ def convert_sqlite_to_canonical(
     staging = Path(tempfile.mkdtemp(prefix=f".{output_dir.name}_", dir=output_dir.parent))
     try:
         with _open_readonly(sqlite_path) as connection:
-            records = _extract_records(connection)
+            records, nvtx_identity_issues = _extract_records(connection, schema)
         files: dict[str, dict[str, Any]] = {}
         for kind, spec in schema["record_types"].items():
             for record in records[kind]:
@@ -458,7 +547,38 @@ def convert_sqlite_to_canonical(
             for field in identity_fields
         }
         missing_identity = [field for field, value in identity_values.items() if value is None]
-        identity_status = "VALID" if not missing_identity else "AMBIGUOUS"
+        identity_conflicts: list[dict[str, Any]] = []
+        if source_manifest_data is not None:
+            for nvtx_record in records["nvtx"]:
+                structured_identity = nvtx_record["structured_identity"]
+                if structured_identity is None:
+                    continue
+                mismatched = {
+                    field: {
+                        "manifest": source_manifest_data.get(field),
+                        "nvtx": structured_identity.get(field),
+                    }
+                    for field in identity_fields
+                    if source_manifest_data.get(field) is not None
+                    and structured_identity.get(field) != source_manifest_data.get(field)
+                }
+                if mismatched:
+                    identity_conflicts.append(
+                        {
+                            "record_id": nvtx_record["record_id"],
+                            "fields": mismatched,
+                        }
+                    )
+        if identity_conflicts:
+            nvtx_identity_issues.append(
+                {
+                    "code": "MANIFEST_NVTX_IDENTITY_CONFLICT",
+                    "detail": identity_conflicts,
+                }
+            )
+        identity_status = (
+            "VALID" if not missing_identity and not nvtx_identity_issues else "AMBIGUOUS"
+        )
         source_fact = observation["observed_facts"]
         canonical_manifest = {
             "schema_version": schema["schema_version"],
@@ -482,6 +602,8 @@ def convert_sqlite_to_canonical(
                 "values": identity_values,
                 "missing_fields": missing_identity,
                 "filename_inference_used": False,
+                "nvtx_status": "VALID" if not nvtx_identity_issues else "AMBIGUOUS",
+                "issues": nvtx_identity_issues,
             },
             "files": files,
             "observation_validity": observation["validity"],

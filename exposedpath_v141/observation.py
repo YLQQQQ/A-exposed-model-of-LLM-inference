@@ -43,6 +43,10 @@ REQUIRED_COLUMNS: dict[str, tuple[str, ...]] = {
         "start", "end", "deviceId", "contextId", "streamId", "correlationId",
         "globalPid", "bytes",
     ),
+    "CUPTI_ACTIVITY_KIND_CUDA_EVENT": (
+        "timestamp", "deviceId", "contextId", "streamId", "correlationId",
+        "globalPid", "eventId", "eventSyncId",
+    ),
     "ENUM_CUPTI_SYNC_TYPE": ("id", "name", "label"),
     "TARGET_INFO_CUDA_CONTEXT_INFO": (
         "processId", "deviceId", "contextId", "nullStreamId",
@@ -59,6 +63,7 @@ COUNT_TABLES = (
     "CUPTI_ACTIVITY_KIND_KERNEL",
     "CUPTI_ACTIVITY_KIND_MEMCPY",
     "CUPTI_ACTIVITY_KIND_MEMSET",
+    "CUPTI_ACTIVITY_KIND_CUDA_EVENT",
     "DIAGNOSTIC_EVENT",
 )
 
