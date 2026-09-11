@@ -1,6 +1,6 @@
 # ExposedPath：实验与分析协议
 
-> 历史说明：这是阶段性的摘要候选稿，现已被 `docs/current/ExposedPath_实验与分析协议_v2.1_v1.4.1整合修订版_Pre-Pilot.docx` 完整取代，不再作为当前执行入口。
+> 历史说明：这是阶段性的摘要候选稿，现已被 `docs/current/ExposedPath_实验协议.docx` 完整取代，不再作为当前执行入口。
 
 **版本：v2.1 Pre-Pilot 整合候选版**
 

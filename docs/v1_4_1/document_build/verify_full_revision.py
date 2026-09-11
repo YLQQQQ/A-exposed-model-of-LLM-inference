@@ -160,6 +160,10 @@ def main() -> None:
 
     design_required = [
         "Activity Cost 不等于 Request-Visible Exposure",
+        "时延敏感的异步 Host–accelerator 执行系统",
+        "传统性能指标与 ExposedPath 的测量对象",
+        "传统 trace 和 profiler 主要回答发生了哪些活动",
+        "Activity 到 Exposure 之间缺少可验证映射",
         "Raw→S→{A,B}→D/Exposure Signature",
         "时间重叠本身永远不能生成 dependency",
         "VALID_NONEMPTY",
@@ -170,10 +174,15 @@ def main() -> None:
         "自然逐 Token",
         "Token-ready completion boundary",
         "单 GPU、请求内部",
+        "Single GPU 自然构成当前基础执行域",
+        "研究不预设必须出现强反转或反常识结果",
+        "研究成败由证据等级决定",
         "历史产物已封存为 Prototype/Engineering 证据",
     ]
     protocol_required = [
         "实验与分析协议 v2.1 · Pre-Pilot",
+        "依据：《ExposedPath 研究设计》v7.1",
+        "不重复维护研究背景",
         "当前状态：Engineering/Pre-Pilot",
         "Measurement Contract 与 Canonical Raw 尚未完成",
         "No predecessor / valid-empty",

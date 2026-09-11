@@ -35,8 +35,8 @@
 
 ## 内容规则
 
-- 研究设计输出为当前完整主体 v7.0，吸收 v1.4.1 后可取代“主体 + 补充说明”的阅读组合。
-- 实验协议输出为 v2.1 Pre-Pilot 整合修订版；只有 Pilot 与全部冻结门通过后才能另行形成 Protocol Freeze 版本。
+- 研究设计输出为当前完整主体 v7.1，第一章完整归并 v1.4.1 的背景、立意和研究价值论证，可取代“主体 + 补充说明”的日常阅读组合。
+- 实验协议输出为 v2.1 Pre-Pilot 执行依据，不重复研究背景；只有 Pilot 与全部冻结门通过后才能另行形成 Protocol Freeze 版本。
 - 固定 `Raw -> S -> {A, B} -> D / Exposure Signature`，并明确 Activity Cost 与 Request-Visible Exposure 不同。
 - S 必须依据 completion semantics、提交关系与 ownership 恢复完整 `W(s)`；已在同步前完成的语义前驱仍属于 `W(s)`，时间重叠不能生成依赖。
 - terminal 必须有唯一 completion evidence；证据不足进入 ambiguous/invalid，并 fail closed。
@@ -47,7 +47,7 @@
 
 ## 输出与验收
 
-- `docs/current/ExposedPath_研究设计与论文证据框架_v7.0_v1.4.1整合修订版.docx`
-- `docs/current/ExposedPath_实验与分析协议_v2.1_v1.4.1整合修订版_Pre-Pilot.docx`
+- `docs/current/ExposedPath_研究设计.docx`
+- `docs/current/ExposedPath_实验协议.docx`
 - 自动检查：输入哈希未变、DOCX ZIP 完整、表/节/图片数量与图片哈希保持、关键语义齐全、过时硬承诺不存在、无 TODO/TBD、无修订批注残留。
 - 视觉检查：渲染全部页面，逐页检查溢出、截断、表格错位、横竖节异常和不可读字符。

@@ -1,4 +1,4 @@
-"""基于 v6.0/v2.0 母版生成吸收 v1.4.1 的完整整合修订版 DOCX。"""
+"""基于 v6.0/v2.0 母版生成当前 ExposedPath 研究设计与实验协议。"""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
-from docx.shared import RGBColor
+from docx.shared import Pt, RGBColor
 
 
 DESIGN_SHA256 = "0EE058EE1DD2D1FB69EC59D230DBD6B6F03BAEDC319D9C246AEE3ED229B530F1"
@@ -120,6 +120,42 @@ def set_table(table, rows: list[list[str]]) -> None:
             table.cell(row_index, column_index).text = value
 
 
+def format_background_comparison_table(table) -> None:
+    """压缩第一章比较表，并清除母版遗留的黄色修订底色。"""
+    for row_index, row in enumerate(table.rows):
+        fill = "D9EAF7" if row_index == 0 else ("FFFFFF" if row_index % 2 else "F5F8FA")
+        for cell in row.cells:
+            tc_pr = cell._tc.get_or_add_tcPr()
+            shading = tc_pr.find(qn("w:shd"))
+            if shading is None:
+                shading = OxmlElement("w:shd")
+                tc_pr.append(shading)
+            shading.set(qn("w:val"), "clear")
+            shading.set(qn("w:fill"), fill)
+            for paragraph in cell.paragraphs:
+                paragraph.paragraph_format.space_after = Pt(0)
+                paragraph.paragraph_format.line_spacing = 1.0
+                for run in paragraph.runs:
+                    run.font.size = Pt(8)
+                    run.bold = row_index == 0
+
+
+def remove_title_rule(doc: Document) -> None:
+    """移除母版 Title 样式自带的下边框，保留纯标题排版。"""
+    title_style = doc.styles["Title"]
+    paragraph_properties = title_style.element.get_or_add_pPr()
+    borders = paragraph_properties.find(qn("w:pBdr"))
+    if borders is not None:
+        paragraph_properties.remove(borders)
+
+
+def keep_table_row_together(row) -> None:
+    """避免表格行在分页处只留下极少文本。"""
+    row_properties = row._tr.get_or_add_trPr()
+    if row_properties.find(qn("w:cantSplit")) is None:
+        row_properties.append(OxmlElement("w:cantSplit"))
+
+
 def normalize_revision_marks(doc: Document) -> None:
     for style_name in ("Title", "Subtitle", "Heading 1", "Heading 2", "Heading 3"):
         if style_name in doc.styles:
@@ -160,17 +196,34 @@ def patch_design(source: Path, output: Path) -> None:
     doc = Document(output)
 
     replacements = {
-        2: "同步语义感知的 LLM 推理请求可见暴露时延研究设计与论文证据框架",
-        3: "依据 v1.4.1 完整整合修订版",
+        2: "LLM 推理请求可见暴露研究设计",
+        3: "当前研究设计主体",
         4: "研究对象：单 GPU、请求内部、纯模型推理的 Host–accelerator request-visible exposure",
-        6: "版本定位：本文件已经吸收《ExposedPath CCF-A 顶刊研究定位与机制归因补充说明 v1.4.1》的研究定位、信息增量、决策增量与执行路线修正，作为当前研究设计主体。方法链固定为 Raw→S→{A,B}→D/Exposure Signature。实验执行、候选 WMPC、Q0、N1、G1/G2、Pilot 与冻结规则由《ExposedPath 实验与分析协议 v2.1（Pre-Pilot 整合修订版）》承接；当前代码和历史 trace 只表示 Prototype/Engineering 事实。",
-        7: "版本：v7.0　日期：2026 年 9 月 10 日　状态：当前研究设计整合修订版",
+        6: "版本定位：本文件已经逐章归并 v1.4.1 的研究背景、研究立意、测量语义、信息增量、决策增量与执行路线，作为当前研究设计主体。方法链固定为 Raw→S→{A,B}→D/Exposure Signature。具体执行合同由《ExposedPath 实验协议》承接；当前代码和历史 trace 只表示 Prototype/Engineering 事实。",
+        7: "版本：v7.1　日期：2026 年 9 月 10 日　状态：当前研究设计主体",
         8: "v1.4.1 整合结论：Activity Cost 不等于 Request-Visible Exposure；S 层必须依据 synchronization/completion semantics 恢复完整语义前驱集合 W(s)、terminal 证据与 validity，时间重叠本身不能证明 dependency；研究证据按 Correctness→Information Gain→Decision Gain 逐级建立。",
         9: "平台边界：当前方法以单 GPU、请求内部 Host–device execution domain 为核心；RTX 4090、RTX 6000 Ada 及其他 GPU 均须先通过正式平台资格检查，不能在 Pre-Pilot 阶段写成已冻结主平台。",
         11: "贡献一：方法候选。提出 ExposedPath，通过同步完成语义把 Raw trace 转换为可审计的 W(s)、terminal 与 validity，并在此基础上形成 request/phase 互斥墙钟 accounting 和 per-sync provenance；该贡献只有在 Q0 通过后才能表述为已验证方法。",
         12: "贡献二：信息增量候选。通过 N1 与 G1 检验传统 activity 指标与 request-visible exposure 在哪些条件下近似等价、稳定非等价或依赖执行区间变化；结果可以是比例、非比例、条件性或 null，主张随证据收缩。",
         13: "贡献三：决策增量候选。通过 G2 的预注册真实优化与 held-out 比较，检验 Exposure Signature 是否相对传统指标增加优化解释或优先级信息；若无增量，只保留正确性与信息边界，不声称优化预测或决策优势。",
-        43: "该定位必须通过三层证据建立：Q0 用受控 CUDA 微程序和独立 oracle 验证 Correctness；N1/G1 分别以人为 completion-boundary 干预和自然 workload 行为检验 Information Gain；G2 在冻结规则和 held-out 场景下检验 Decision Gain。任何后层结果都不能补偿前层 Gate 失败。",
+        26: "1.1 研究背景：用户可见时延来自异步 Host–Accelerator 协作",
+        27: "交互式 LLM 推理的用户感受首先体现在 request latency、Prefill latency、Decode latency 和逐 Token 生成速度。但一次模型推理并不是一串彼此孤立的 GPU kernel。Host 侧的框架与控制路径持续推进程序逻辑并提交 CUDA 工作，GPU 异步执行 kernel 和 MemOp，两侧可以重叠推进，最后在 synchronization/completion boundary 上汇合。因此，纯模型推理本身就是时延敏感的异步 Host–accelerator 执行系统。理解用户可见时延，需要解释这条协作链如何形成 request/phase wall-clock。",
+        28: "Nsight Systems、CUPTI 等工具能够可靠报告 kernel duration、GPU active/utilization、CUDA API duration、raw synchronization duration、API/kernel count 和 launch-to-start 等执行事实。这些事实描述 Activity Cost，即系统做了多少工作；它们不等于 Request-Visible Exposure，即这些异步工作中有多少真正暴露到请求或阶段墙钟。长 kernel 可能在 Host 开始等待前已完成大部分执行，长 sync 也可能只是等待边界发生迁移。ExposedPath 要解决的核心矛盾是 Activity Cost 不等于 Request-Visible Exposure。",
+        29: "1.1.1 传统性能指标与 ExposedPath 的测量对象",
+        30: "传统 trace 和 profiler 主要回答发生了哪些活动、哪里耗时以及设备是否繁忙。ExposedPath 在这些事实之上增加一层同步语义解释：哪些活动属于某次同步返回前必须完成的集合，它们有多少已经隐藏完成，有多少真正暴露为 request/phase 的设备等待。下表说明两类测量对象的关系。",
+        31: "1.2 现有研究脉络与 ExposedPath 的位置",
+        32: "已有研究分别解释 GPU 硬件与 kernel 行为、CPU–GPU 提交和排队、跨栈 profiling、LLM 阶段时延以及 serving 优化。这些工作为 ExposedPath 提供 Raw facts、硬件解释和系统背景，但尚未把异步 activity 按 CUDA synchronization/completion semantics 映射为互斥、守恒且可审计的 request-visible exposure。ExposedPath 补的是这一测量层，不替代 Nsight Compute、serving engine 或既有优化方法。",
+        33: "1.3 核心学术缺口：Activity 到 Exposure 之间缺少可验证映射",
+        34: "缺口 1：Activity Cost 与 Request-Visible Exposure 是不同测量对象。完整 kernel/API/sync duration、利用率或事件数量不能直接解释 request/phase 墙钟。",
+        35: "缺口 2：Temporal overlap 不等于 synchronization dependency。Stream、device/context 和 event synchronization 的 completion condition 不同，不能仅凭时间重叠判断谁在等待谁。",
+        36: "缺口 3：Raw trace 只提供执行事实，仍需 S 层恢复 W(s)、terminal 和 validity。缺少 identity、ownership、提交顺序或 completion evidence 时，分析必须 fail closed。",
+        37: "缺口 4：完整 request/phase accounting 与单次同步 provenance 回答不同问题。A 需要互斥并守恒于墙钟，B 只解释单次同步的 hidden progress、sync-overlap、terminal 和 return tail，不能跨同步直接求和。",
+        38: "缺口 5：现有指标是否足够不能靠预设判断。需要在冻结 workload 和 phase 下检验 activity 与 exposure 是近似成比例、稳定非成比例、随执行区间变化，还是基本等价。",
+        39: "缺口 6：测量信息只有在改变解释或决策时才形成更强系统价值。需要用真实、预注册的优化干预检验 Exposure Signature 是否相对传统指标增加 held-out 决策信息。",
+        40: "缺口 7：正确性、信息增量和决策增量必须分层取证。后层结果不能补偿错误的同步语义，也不能根据正式结果反向修改指标、工作负载或主张。",
+        41: "1.4 ExposedPath 的研究立意与贡献边界",
+        42: "ExposedPath 不是新的 serving engine，也不是恢复全部 CUDA 因果关系的通用 profiler。它是一种 trace-driven measurement methodology：先根据同步完成语义恢复 W(s)、terminal 与 validity，再用 A 解释 request/phase 墙钟去了哪里，用 B 解释单次同步如何形成，最后以 D 和 Exposure Signature 导航后续机制审计。",
+        43: "研究证据按 Correctness→Information Gain→Decision Gain 递进。Q0 用受控 CUDA 微程序和独立 oracle 验证测量语义；N1/G1 分别以人为 completion-boundary 干预和自然 workload 检验传统指标何时充分、何时失配；G2 在冻结规则和 held-out 场景下检验决策增量。研究不预设必须出现强反转或反常识结果；若传统指标在所测范围内已经充分，或 G2 没有增量，应如实收缩相应 claim。",
         50: "A/S/B 的核心 claim 只针对 T_model-request。流式推理中，为确认模型侧 Token 已就绪而发生的自然逐 Token 同步属于 Decode 完成边界；Token 就绪后的反分词、文本拼接、网络传输、前端显示和外部消费者处理不进入核心 A。tokenization、服务排队和外部 I/O 只能作为外层辅助项，不能归入 A_host_path。",
         53: "W/M/P/C 是实验因素，而不是四套互不相容的指标。核心 W 包含 fixed_input_tokens、fixed_output_tokens 与 batch_size；当前不研究请求并发或 continuous batching，但保留纯模型流式推理中自然逐 Token 的 Token-ready completion boundary。所有 invocation 隔离执行。batch=1 可表述为单请求；batch>1 的 E2E 与 A/B/D 对应整次 batched inference invocation，不分摊成单样本因果开销。",
         56: "vLLM、llama.cpp 等完整推理引擎会同时改变调度、KV cache、算子后端、stream 与 graph 组织，只能作为后续完整 computing-stack endpoint，不能替代 G2 的同栈单变量干预。具体候选与删减规则见实验协议 v2.1；在 Q0、N1/G1、G2 主线完成前不启动这些扩展。",
@@ -205,8 +258,9 @@ def patch_design(source: Path, output: Path) -> None:
         203: "Q0 是 correctness 硬门；N1 以人为 completion-boundary intervention 检验局部指标，G1 在自然逐 Token 同步与预定义 workload 下检验 activity→exposure 的比例、非比例或区间依赖关系；G2 才检验 held-out decision gain。G3/G4 为可选适用边界，G5–G7 延后。",
         204: "若 compile/graph 在 Pilot 中输出不一致、graph break/capture 不稳定或无法形成可审计同栈干预，则删除或收缩 G2，不修改框架源码、不临时改用跨栈 endpoint，也不改变 A/B 测量语义。",
         205: "3.4 三幅核心图、论文证据链与 Artifact",
+        215: "高水平 systems/measurement 研究不以是否自研算子作为唯一标准。本项目首先要证明测量对象新且正确，其次证明相对常规 activity 指标存在稳定、非冗余的信息，或明确界定常规指标已经充分的执行区间；若这些信息还能改变优化解释或优先级，才形成更强的 Decision Gain。强反转或反常识现象只是可能结果，不是预设成功条件。",
         229: "ExposedPath 面向单 GPU、请求内部的纯模型推理，依据 synchronization/completion semantics 把 activity 映射为 request-visible exposure：S 恢复 W(s)、terminal 证据与 validity；A 形成 request/phase 互斥墙钟 accounting；B 保留 per-sync hidden/exposed provenance；D 负责导航，Exposure Signature 负责从冻结 A/B 汇总机制。论文证据按 Correctness→Information Gain→Decision Gain 逐级成立。",
-        233: "程序字段、null/validity 规则、输出 schema 与 legacy migration 由《ExposedPath 实验与分析协议 v2.1（Pre-Pilot 整合修订版）》及 Measurement Contract 维护；本文件保留研究语义和 claim—evidence 边界。",
+        233: "程序字段、null/validity 规则、输出 schema 与 legacy migration 由《ExposedPath 实验协议》及 Measurement Contract 维护；本文件保留研究语义和 claim—evidence 边界。",
         261: "附录 D　历史 Prototype 结果与方向性线索（不得作为当前方法证据）",
         262: "本附录只保存冻结前历史 prototype 的双 GPU 输出，用于追溯旧实现和生成回归问题。由于 analyzer、W(s)、terminal、validity、manifest、repeat 和运行合同不符合或无法证明符合 v1.4.1，这些数据不得作为 Q0、Pilot 或 Formal 证据，也不得支持当前方法正确性。",
         264: "历史数据来自同一服务器的 RTX 4090 与 RTX 6000 Ada，各 16 个 Qwen2.5-1.5B workload，prompt={128,256,512,1024}、batch={1,2,4,8}、output=16、每组 5 repeats。它们仅用于 Prototype/Engineering 回归和识别旧实现问题。",
@@ -225,11 +279,19 @@ def patch_design(source: Path, output: Path) -> None:
     for index, text in replacements.items():
         set_paragraph(doc, index, text)
 
-    protocol_name = "实验与分析协议 v2.1（Pre-Pilot 整合修订版）"
+    protocol_name = "ExposedPath 实验协议"
     replace_in_all_text(doc, "实验与分析协议冻结版 v2.0", protocol_name)
     replace_in_all_text(doc, "实验协议 v2.0", "实验协议 v2.1")
     replace_in_all_text(doc, "Pre-Pilot Freeze", "Pre-Pilot 语义修订")
 
+    set_table(doc.tables[0], [
+        ["常见 trace 或 profiler 观察", "通常回答的问题", "ExposedPath 增加的问题", "严格解释边界"],
+        ["kernel duration / hotspot", "哪个 kernel 执行最长、热点在哪里", "该 activity 有多少属于 W(s)，多少真正暴露为设备等待", "完整 kernel duration 不是延迟贡献"],
+        ["GPU active / utilization", "GPU 是否繁忙、设备工作量是否增加", "设备工作有多少最终进入 request/phase 的 A_device_wait", "繁忙不等于用户正在等待"],
+        ["raw sync duration", "某个同步 API 在 Host 上持续多久", "它等待哪些 W(s)，terminal 是谁，等待是新增还是迁移", "局部 sync duration 不自动等于新增 E2E"],
+        ["API/kernel count、launch-to-start", "提交密度、启动或排队现象如何", "这些活动在互斥请求墙钟中占多少，是否形成暴露", "时间重叠和 correlation 不能单独证明 dependency"],
+    ])
+    format_background_comparison_table(doc.tables[0])
     set_table(doc.tables[5], [
         ["证据问题", "要回答的问题", "核心证据"],
         ["Q0 Correctness", "S 是否按 CUDA completion semantics 正确恢复 W(s)、terminal、validity，并使 A/B 满足语义不变量？", "受控 CUDA 微程序、独立 oracle、合成 fixture、真实 observation stack 与 fail-closed"],
@@ -280,7 +342,9 @@ def patch_design(source: Path, output: Path) -> None:
     doc.tables[24].cell(3, 2).text = "结果稳定、CI/coverage 可解释并符合冻结分析；不以‘必须非显然’作为数据质量门"
     doc.tables[26].cell(2, 2).text = "若存在稳定信息差异或明确等价边界，且 B 能解释；不预设必须误判"
     doc.tables[26].cell(3, 2).text = "允许同比、稳定非同比、区间依赖或 null；主张按结果限定"
+    doc.tables[28].cell(4, 1).text = "证明 conventional activity metrics 何时足够、何时不能唯一或可靠推出 exposure；强反转不是必要条件"
     doc.tables[30].cell(2, 1).text = "保留 Q0 方法贡献，按冻结结果收缩 Information Gain；不得看完 Formal 结果后重选 workload"
+    doc.tables[32].cell(7, 1).text = "N1/G1 给出传统指标与 exposure 的稳定非冗余差异，或明确、可复现的等价边界；B 解释对应机制"
     set_table(doc.tables[34], [
         ["历史质量项", "历史记录", "v1.4.1 下的资格判断"],
         ["Raw/S/A/B version", "exposedpath-v2", "旧 prototype 身份；不等价于当前方法"],
@@ -291,8 +355,10 @@ def patch_design(source: Path, output: Path) -> None:
         ["局部异常", "4090 p128/b1 曾出现 TRACE_ORDERING_ERROR", "保留为 Q0/回归负例线索"],
     ])
 
-    insert_block_after(find_paragraph(doc, "1.4 ExposedPath 的研究定位"), [
+    insert_block_after(find_paragraph(doc, "1.4 ExposedPath 的研究立意与贡献边界"), [
         ("核心问题：在延迟敏感、异步 LLM 推理中，Host 与 GPU 完成了多少活动，与其中多少通过 synchronization/completion dependency 暴露到 request/Prefill/Decode wall-clock，并不是同一个测量对象。ExposedPath 测量后者。", "Decision"),
+        ("研究意义：常规 activity 指标可能在某些执行区间足以代表 exposure，也可能出现稳定非同比或区间依赖关系。ExposedPath 不预设答案，而是提供可审计的测量方法，确定两者何时等价、何时失配以及失配由什么同步机制形成。", "Normal"),
+        ("Single GPU 自然构成当前基础执行域，因为一次请求已经包含 Host 控制、CUDA 提交、异步 GPU 执行、重叠、同步依赖、hidden progress 与 exposed wait。多 GPU 和在线 serving 会另外引入通信、排队、调度和共享 ownership，需要扩展 S 层语义；它们不是证明当前核心问题成立的前提。", "Normal"),
         ("核心贡献边界限定为单 GPU、请求内部的 Host–device exposure。多 GPU、分布式 serving、并发 ownership、硬件因果归因和通用性能预测均不在当前 claim 内。", "Normal"),
     ])
     insert_block_after(find_paragraph(doc, "2.3 S 层：同步语义归一化"), [
@@ -311,12 +377,28 @@ def patch_design(source: Path, output: Path) -> None:
     insert_block_after(find_paragraph(doc, "4.1 最终可能形成的贡献"), [
         ("以下贡献均为待证据支持的目标，而不是当前已完成事实。最高可防守主张由实际通过的 Gate 决定：Q0 支持正确性，N1/G1 支持信息增量，G2 支持决策增量；任何 null 或失败都必须触发对应 claim 收缩。", "Warning"),
     ])
+    insert_block_after(find_paragraph(doc, "4.5 最终停止与降级条件"), [
+        ("研究成败由证据等级决定：Q0 失败时停止扩展实验并修正测量语义；Q0 通过但 N1/G1 显示传统指标始终充分时，保留方法正确性与等价边界，重新评估 Information Gain 主张；出现稳定非冗余信息时形成核心实证贡献；只有 held-out G2 进一步增加优化解释或优先级信息时，才声称 Decision Gain。", "Decision"),
+    ])
 
+    # 避免相关工作总表只在上一页留下表头和首行，保持章节阅读连续性。
+    find_paragraph(doc, "1.2 现有研究脉络与 ExposedPath 的位置").paragraph_format.page_break_before = True
+
+    # 2.6 只是第二章内部小节，无需强制换页；4.6 的短结论块保持在同一页。
+    find_paragraph(doc, "2.6 B 层：终止活动生命周期与同步暴露必须分开").paragraph_format.page_break_before = False
+    claim_heading = find_paragraph(doc, "4.6 最终研究主句")
+    claim_heading.paragraph_format.keep_with_next = True
+    paragraphs = doc.paragraphs
+    claim_index = next(index for index, paragraph in enumerate(paragraphs) if paragraph._p is claim_heading._p)
+    paragraphs[claim_index + 1].paragraph_format.keep_together = True
+    paragraphs[claim_index + 1].paragraph_format.keep_with_next = False
+
+    remove_title_rule(doc)
     normalize_revision_marks(doc)
     set_update_fields(doc)
-    doc.core_properties.title = "ExposedPath 研究设计与论文证据框架 v7.0"
-    doc.core_properties.subject = "依据 v1.4.1 完整整合修订的当前研究设计主体"
-    doc.core_properties.comments = "v1.4.1 已吸收；实验状态仍为 Engineering/Pre-Pilot。"
+    doc.core_properties.title = "ExposedPath 研究设计"
+    doc.core_properties.subject = "当前研究设计主体 v7.1"
+    doc.core_properties.comments = "v1.4.1 的背景、立意、方法和执行路线已逐章归并；实验状态仍为 Engineering/Pre-Pilot。"
     doc.save(output)
 
 
@@ -327,10 +409,10 @@ def patch_protocol(source: Path, output: Path) -> None:
     doc = Document(output)
 
     replacements = {
-        2: "实验与分析协议 v2.1 Pre-Pilot 整合修订版",
+        2: "实验协议",
         3: "从 Measurement Contract、Q0 到 Pilot、Protocol Freeze、N1/G1 与 G2 的执行规范",
-        4: "依据：研究设计与论文证据框架 v7.0；v1.4.1 已完整吸收；方法链 Raw→S→{A,B}→D/Exposure Signature",
-        6: "修订说明：本版完整保留原实验协议的章节、表格和字段迁移附录，并将 v1.4.1 的语义修正逐章归并为正式正文。交付版不再以文字颜色区分新旧内容；后续实质变更必须通过版本号、修订记录和 Git 差异管理。",
+        4: "依据：《ExposedPath 研究设计》v7.1；方法链 Raw→S→{A,B}→D/Exposure Signature",
+        6: "文档职责：本协议承接研究设计中的方法与证据链，规定 Gate、数据角色、候选 WMPC、Q0、N1、G1/G2、Pilot 和冻结规则，不重复维护研究背景。后续实质变更通过文内版本号、修订记录和 Git 差异管理。",
         7: "本协议是当前 Pre-Pilot 执行依据，但不是 Protocol Freeze。它规定 Gate 顺序、数据角色、候选 WMPC、Q0/N1/G1/G2 设计与冻结要求；repeat、overhead、质量门、正式平台和最终矩阵必须由平台资格、OOM/可行域与 Pilot 决定。",
         8: "版本：v2.1　日期：2026 年 9 月 10 日　状态：Pre-Pilot 整合修订版（未冻结 Formal 协议）",
         10: "v1.4.1 整合结论：W(s) 是 synchronization/completion semantics 确定的完整请求内语义前驱集合，包括 sync 入口前已完成成员；valid-empty 不表示前驱已完成；terminal 与 validity 必须基于可验证且唯一的完成证据。",
@@ -383,7 +465,7 @@ def patch_protocol(source: Path, output: Path) -> None:
         "ExposedPath · 实验与分析协议 v2.1 · Pre-Pilot",
     )
 
-    replace_in_all_text(doc, "研究设计与论文证据框架 v6.0", "研究设计与论文证据框架 v7.0")
+    replace_in_all_text(doc, "研究设计与论文证据框架 v6.0", "ExposedPath 研究设计 v7.1")
     replace_in_all_text(doc, "Pre-Pilot Freeze", "Pre-Pilot 语义修订")
 
     t0 = doc.tables[0]
@@ -513,10 +595,14 @@ def patch_protocol(source: Path, output: Path) -> None:
     # 避免最后一行结论表单独落在末页；让整个停止/降级映射在新页完整呈现。
     find_paragraph(doc, "6.4 成功、停止、降级与 Claim 映射").paragraph_format.page_break_before = True
 
+    # 横向实验矩阵最后一行较长，禁止只把行尾单字拆到下一页。
+    keep_table_row_together(doc.tables[12].rows[-1])
+
+    remove_title_rule(doc)
     normalize_revision_marks(doc)
     set_update_fields(doc)
-    doc.core_properties.title = "ExposedPath 实验与分析协议 v2.1"
-    doc.core_properties.subject = "依据 v1.4.1 完整整合修订的 Pre-Pilot 执行协议"
+    doc.core_properties.title = "ExposedPath 实验协议"
+    doc.core_properties.subject = "依据 ExposedPath 研究设计 v7.1 的 Pre-Pilot 执行协议"
     doc.core_properties.comments = "尚未 Protocol Freeze；候选 WMPC、平台、阈值与统计规则须经 Pilot。"
     doc.save(output)
 

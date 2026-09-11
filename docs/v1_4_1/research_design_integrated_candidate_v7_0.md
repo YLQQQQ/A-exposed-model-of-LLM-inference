@@ -1,6 +1,6 @@
 # ExposedPath：研究设计与论文证据框架
 
-> 历史说明：这是阶段性的摘要候选稿，现已被 `docs/current/ExposedPath_研究设计与论文证据框架_v7.0_v1.4.1整合修订版.docx` 完整取代，不再作为当前研究主体。
+> 历史说明：这是阶段性的摘要候选稿，现已被 `docs/current/ExposedPath_研究设计.docx` 完整取代，不再作为当前研究主体。
 
 **版本：v7.0 Pre-Pilot 整合候选版**
 

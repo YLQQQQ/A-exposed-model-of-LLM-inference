@@ -5,7 +5,7 @@
 - `ExposedPath_研究设计与论文证据框架_v7.0_Pre-Pilot整合候选版.docx`
 - `ExposedPath_实验与分析协议_v2.1_Pre-Pilot整合候选版.docx`
 
-当前两份正式阅读入口均位于 `docs/current/`：研究设计 v7.0 完整整合修订版，以及实验协议 v2.1 Pre-Pilot 完整整合修订版。不要把本目录文件与当前研究主体并列使用。
+当前两份正式阅读入口均位于 `docs/current/`：`ExposedPath_研究设计.docx` 与 `ExposedPath_实验协议.docx`。不要把本目录文件与当前研究主体并列使用。
 
 可编辑的中文源文件位于上级目录：
 
