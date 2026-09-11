@@ -590,23 +590,32 @@ def _capture_event_prefixes(
     inventory: Mapping[str, Any],
     predecessors: dict[str, set[str]],
     edges: list[dict[str, Any]],
-) -> tuple[dict[Any, str], list[str]]:
+) -> tuple[dict[Any, str], dict[Any, Mapping[str, Any]], list[str]]:
     event_nodes: dict[Any, str] = {}
+    event_records: dict[Any, Mapping[str, Any]] = {}
     issues: list[str] = []
-    activities = inventory["activities"]
+    activities_by_stream: dict[tuple[Any, Any], list[Mapping[str, Any]]] = defaultdict(list)
+    for activity in inventory["activities"]:
+        activities_by_stream[
+            (activity.get("context_id"), activity.get("stream_id"))
+        ].append(activity)
+    records_by_sync_id: dict[Any, list[Mapping[str, Any]]] = defaultdict(list)
     for event in inventory.get("event_records", []):
-        event_sync_id = event.get("event_sync_id")
-        if event_sync_id is None or event.get("ownership_status") != "VALID":
+        records_by_sync_id[event.get("event_sync_id")].append(event)
+    for event_sync_id, candidates in records_by_sync_id.items():
+        if event_sync_id is None or len(candidates) != 1:
+            issues.append("MISSING_EVENT_RECORD")
+            continue
+        event = candidates[0]
+        if event.get("ownership_status") != "VALID":
             issues.extend(event.get("ownership_reasons", ["MISSING_EVENT_RECORD"]))
             continue
         node_id = f"event::{event['record_id']}"
         event_nodes[event_sync_id] = node_id
-        for activity in activities:
-            if (
-                activity.get("context_id") != event.get("context_id")
-                or activity.get("stream_id") != event.get("stream_id")
-            ):
-                continue
+        event_records[event_sync_id] = event
+        for activity in activities_by_stream[
+            (event.get("context_id"), event.get("stream_id"))
+        ]:
             proof = submission_evidence(activity, event)
             if proof["status"] == "PROVEN":
                 _add_edge(
@@ -621,22 +630,42 @@ def _capture_event_prefixes(
                 continue
             else:
                 issues.append("DEPENDENCY_CLOSURE_AMBIGUOUS")
-    return event_nodes, issues
+    return event_nodes, event_records, issues
+
+
+def _event_mapping_matches(
+    reference: Mapping[str, Any], event: Mapping[str, Any]
+) -> bool:
+    """要求 eventSyncId 所指记录与同步或 wait 的 event/scope 完全一致。"""
+
+    return all(
+        reference.get(field) is not None
+        and event.get(field) is not None
+        and reference.get(field) == event.get(field)
+        for field in ("event_id", "context_id", "device_id")
+    )
 
 
 def _add_stream_wait_edges(
     inventory: Mapping[str, Any],
     event_nodes: Mapping[Any, str],
+    event_records: Mapping[Any, Mapping[str, Any]],
     predecessors: dict[str, set[str]],
     edges: list[dict[str, Any]],
 ) -> tuple[list[str], list[str]]:
     wait_nodes: list[str] = []
     issues: list[str] = []
+    activities_by_stream: dict[tuple[Any, Any], list[Mapping[str, Any]]] = defaultdict(list)
+    for activity in inventory["activities"]:
+        activities_by_stream[
+            (activity.get("context_id"), activity.get("stream_id"))
+        ].append(activity)
     for wait in inventory.get("dependency_events", []):
         if wait.get("sync_kind") != "STREAM_WAIT_EVENT":
             continue
         event_node = event_nodes.get(wait.get("event_sync_id"))
-        if event_node is None:
+        event = event_records.get(wait.get("event_sync_id"))
+        if event_node is None or event is None or not _event_mapping_matches(wait, event):
             issues.append("MISSING_EVENT_RECORD")
             continue
         wait_node = f"wait::{wait['record_id']}"
@@ -644,12 +673,9 @@ def _add_stream_wait_edges(
         _add_edge(
             predecessors, edges, event_node, wait_node, "STREAM_WAIT_EVENT"
         )
-        for activity in inventory["activities"]:
-            if (
-                activity.get("context_id") != wait.get("context_id")
-                or activity.get("stream_id") != wait.get("stream_id")
-            ):
-                continue
+        for activity in activities_by_stream[
+            (wait.get("context_id"), wait.get("stream_id"))
+        ]:
             enqueue_start = activity.get("enqueue_start_ns")
             if (
                 enqueue_start is not None
@@ -667,11 +693,16 @@ def _add_stream_wait_edges(
 
 def _add_default_stream_edges(
     inventory: Mapping[str, Any],
+    sync: Mapping[str, Any],
     predecessors: dict[str, set[str]],
     edges: list[dict[str, Any]],
 ) -> list[str]:
     null_streams = _null_streams(inventory)
-    activities = inventory["activities"]
+    activities = [
+        activity
+        for activity in inventory["activities"]
+        if submission_evidence(activity, sync)["status"] != "NOT_PRECEDING"
+    ]
     default_activities = [
         activity
         for activity in activities
@@ -783,6 +814,7 @@ def recover_wait_set(
     cache_key = (
         sync.get("sync_kind"), sync.get("device_id"), sync.get("context_id"),
         sync.get("stream_id"), sync.get("event_sync_id"), mode,
+        sync.get("host_start_ns") if mode != "PER_THREAD" else None,
         tuple(str(wait.get("record_id")) for wait in relevant_waits),
         tuple(str(event.get("record_id")) for event in graph_inventory["event_records"]),
     )
@@ -819,21 +851,22 @@ def recover_wait_set(
         graph_reasons.extend(
             _build_same_stream_edges(graph_activities, predecessors, edges)
         )
-        event_nodes, event_issues = _capture_event_prefixes(
+        event_nodes, event_records, event_issues = _capture_event_prefixes(
             graph_inventory, predecessors, edges
         )
         graph_reasons.extend(event_issues)
         wait_nodes, wait_issues = _add_stream_wait_edges(
-            graph_inventory, event_nodes, predecessors, edges
+            graph_inventory, event_nodes, event_records, predecessors, edges
         )
         graph_reasons.extend(wait_issues)
         graph_reasons.extend(
-            _add_default_stream_edges(graph_inventory, predecessors, edges)
+            _add_default_stream_edges(graph_inventory, sync, predecessors, edges)
         )
         cached = {
             "predecessors": predecessors,
             "edges": edges,
             "event_nodes": event_nodes,
+            "event_records": event_records,
             "wait_nodes": wait_nodes,
             "reasons": list(dict.fromkeys(graph_reasons)),
             "semantic_owners": [
@@ -845,6 +878,7 @@ def recover_wait_set(
     predecessors = cached["predecessors"]
     edges = cached["edges"]
     event_nodes = cached["event_nodes"]
+    event_records = cached["event_records"]
     wait_nodes = cached["wait_nodes"]
     reasons.extend(cached["reasons"])
     for semantic_owner in cached["semantic_owners"]:
@@ -858,7 +892,8 @@ def recover_wait_set(
     event_record_id = None
     if sync.get("sync_kind") == "EVENT":
         event_node = event_nodes.get(sync.get("event_sync_id"))
-        if event_node is None:
+        event = event_records.get(sync.get("event_sync_id"))
+        if event_node is None or event is None or not _event_mapping_matches(sync, event):
             reasons.append("MISSING_EVENT_RECORD")
         else:
             seeds.add(event_node)
@@ -873,13 +908,15 @@ def recover_wait_set(
             submission[str(activity["record_id"])] = proof
             if proof["status"] == "NOT_PRECEDING":
                 continue
-            if proof["status"] != "PROVEN":
-                reasons.append(str(proof["reason"]))
-                continue
             relation = ownership_supported(activity, sync)
             if not relation["supported"]:
                 reasons.extend(activity.get("ownership_reasons", []))
                 reasons.append(relation["reason"])
+                if proof["status"] != "PROVEN":
+                    reasons.append(str(proof["reason"]))
+                continue
+            if proof["status"] != "PROVEN":
+                reasons.append(str(proof["reason"]))
                 continue
             seeds.add(str(activity["record_id"]))
 

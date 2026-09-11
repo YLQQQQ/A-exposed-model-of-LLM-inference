@@ -562,6 +562,7 @@ def test_event_sync_uses_exact_record_capture_and_excludes_post_record_activity(
         "record_id": "event:record-1",
         "event_id": 9,
         "event_sync_id": 90,
+        "device_id": 0,
         "context_id": 1,
         "stream_id": 2,
         "host_start_ns": 25,
@@ -581,18 +582,64 @@ def test_event_sync_uses_exact_record_capture_and_excludes_post_record_activity(
     assert result["event_record_id"] == "event:record-1"
 
 
+@pytest.mark.parametrize(
+    ("second_record", "sync_updates"),
+    [
+        (
+            {
+                "record_id": "event:duplicate", "event_id": 9,
+                "event_sync_id": 90, "device_id": 0, "context_id": 1,
+                "stream_id": 2, "host_start_ns": 26, "host_end_ns": 31,
+                "request_id": "req-0", "repeat_id": "r0",
+                "ownership_status": "VALID",
+                "invocation_identity": _identity("decode"),
+            },
+            {},
+        ),
+        (None, {"event_id": 10}),
+        (None, {"context_id": 2}),
+        (None, {"device_id": 1}),
+    ],
+)
+def test_event_sync_requires_one_record_matching_event_scope(second_record, sync_updates):
+    producer = _owned_activity("a:event-producer", 2, 10, 40)
+    event_record = {
+        "record_id": "event:unique", "event_id": 9, "event_sync_id": 90,
+        "device_id": 0, "context_id": 1, "stream_id": 2,
+        "host_start_ns": 25, "host_end_ns": 30,
+        "request_id": "req-0", "repeat_id": "r0",
+        "ownership_status": "VALID", "ownership_reasons": [],
+        "invocation_identity": _identity("decode"),
+    }
+    records = [event_record] + ([second_record] if second_record else [])
+    sync = _owned_sync(
+        "EVENT", 60, 80, stream_id=None, event_id=9, event_sync_id=90
+    )
+    sync.update(sync_updates)
+
+    result = analyze_sync_semantics(
+        _semantic_inventory([producer], event_records=records), sync
+    )
+
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == "MISSING_EVENT_RECORD"
+    assert result["event_record_id"] is None
+
+
 def test_stream_wait_event_adds_cross_stream_producer_to_consumer_closure():
     producer = _owned_activity("a:producer", 2, 10, 40, enqueue_start=10, enqueue_end=20)
     consumer = _owned_activity("a:consumer", 4, 50, 90, enqueue_start=40, enqueue_end=45)
     event_record = {
         "record_id": "event:record-1", "event_id": 9, "event_sync_id": 90,
-        "context_id": 1, "stream_id": 2, "host_start_ns": 25, "host_end_ns": 30,
+        "device_id": 0, "context_id": 1, "stream_id": 2,
+        "host_start_ns": 25, "host_end_ns": 30,
         "request_id": "req-0", "repeat_id": "r0", "ownership_status": "VALID",
         "invocation_identity": _identity("decode"),
     }
     wait = {
         "record_id": "edge:wait", "sync_kind": "STREAM_WAIT_EVENT", "role": "DEPENDENCY_EDGE",
-        "event_id": 9, "event_sync_id": 90, "context_id": 1, "stream_id": 4,
+        "event_id": 9, "event_sync_id": 90, "device_id": 0,
+        "context_id": 1, "stream_id": 4,
         "host_start_ns": 32, "host_end_ns": 35, "ownership_status": "VALID",
         "request_id": "req-0", "repeat_id": "r0", "invocation_identity": _identity("decode"),
     }
@@ -606,6 +653,49 @@ def test_stream_wait_event_adds_cross_stream_producer_to_consumer_closure():
     assert {edge["edge_type"] for edge in result["dependency_edges"]} >= {
         "EVENT_RECORD_CAPTURE", "STREAM_WAIT_EVENT"
     }
+
+
+@pytest.mark.parametrize(
+    ("wait_updates", "sync_updates"),
+    [
+        ({"event_id": 10}, {}),
+        ({"context_id": 2}, {"context_id": 2}),
+        ({"device_id": 1}, {"device_id": 1}),
+    ],
+)
+def test_stream_wait_requires_event_record_scope_match(wait_updates, sync_updates):
+    producer = _owned_activity("a:wait-producer", 2, 10, 40)
+    event_record = {
+        "record_id": "event:wait-scope", "event_id": 9, "event_sync_id": 90,
+        "device_id": 0, "context_id": 1, "stream_id": 2,
+        "host_start_ns": 25, "host_end_ns": 30,
+        "request_id": "req-0", "repeat_id": "r0",
+        "ownership_status": "VALID", "ownership_reasons": [],
+        "invocation_identity": _identity("decode"),
+    }
+    wait = {
+        "record_id": "edge:bad-scope", "sync_kind": "STREAM_WAIT_EVENT",
+        "role": "DEPENDENCY_EDGE", "event_id": 9, "event_sync_id": 90,
+        "device_id": 0, "context_id": 1, "stream_id": 4,
+        "host_start_ns": 32, "host_end_ns": 35,
+        "ownership_status": "VALID", "ownership_reasons": [],
+        "request_id": "req-0", "repeat_id": "r0",
+        "invocation_identity": _identity("decode"),
+    }
+    wait.update(wait_updates)
+    sync = _owned_sync("STREAM", 60, 100, stream_id=4)
+    sync.update(sync_updates)
+
+    result = analyze_sync_semantics(
+        _semantic_inventory(
+            [producer], event_records=[event_record], dependency_events=[wait]
+        ),
+        sync,
+    )
+
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == "MISSING_EVENT_RECORD"
+    assert result["wait_set_activity_ids"] == []
 
 
 def test_default_stream_mode_is_required_only_when_default_stream_is_observed():
@@ -673,6 +763,23 @@ def test_legacy_default_cross_thread_enqueue_overlap_is_ambiguous():
 
     assert result["dependency_closure_status"] == "AMBIGUOUS"
     assert result["reasons"] == ["DEPENDENCY_CLOSURE_AMBIGUOUS"]
+
+
+def test_future_default_stream_overlap_does_not_poison_earlier_stream_sync():
+    future_default = _owned_activity(
+        "a:future-default", 0, 80, 110, enqueue_start=70, enqueue_end=90
+    )
+    future_blocking = _owned_activity(
+        "a:future-blocking", 2, 90, 120, enqueue_start=80, enqueue_end=100
+    )
+
+    result = analyze_sync_semantics(
+        _semantic_inventory([future_default, future_blocking], mode="LEGACY"),
+        _owned_sync("STREAM", 50, 60, stream_id=2),
+    )
+
+    assert result["validity"] == "VALID_EMPTY"
+    assert result["primary_reason"] is None
 
 
 def test_legacy_external_default_predecessor_fails_closed():
@@ -778,18 +885,42 @@ def test_missing_activity_correlation_is_invalid_not_generic_ownership_ambiguity
     assert result["primary_reason"] == expected["primary_reason"]
 
 
+def test_missing_correlation_remains_invalid_when_submission_order_is_also_unknown():
+    missing = _owned_activity("a:missing-racing", 2, 70, 90)
+    missing.update(
+        enqueue_record_id=None,
+        enqueue_start_ns=None,
+        enqueue_end_ns=None,
+        request_id=None,
+        repeat_id=None,
+        invocation_identity=None,
+        ownership_status="INVALID",
+        ownership_reasons=["MISSING_ACTIVITY_CORRELATION"],
+    )
+
+    result = analyze_sync_semantics(
+        _semantic_inventory([missing]), _owned_sync("STREAM", 50, 100, stream_id=2)
+    )
+
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == "MISSING_ACTIVITY_CORRELATION"
+    assert "SUBMISSION_ORDER_AMBIGUOUS" in result["secondary_reasons"]
+
+
 def test_stream_wait_event_without_consumer_still_exposes_producer_to_stream_sync():
     producer = _owned_activity("a:producer-only", 2, 10, 45)
     event_record = {
         "record_id": "event:producer-only", "event_id": 9, "event_sync_id": 90,
-        "context_id": 1, "stream_id": 2, "host_start_ns": 25, "host_end_ns": 30,
+        "device_id": 0, "context_id": 1, "stream_id": 2,
+        "host_start_ns": 25, "host_end_ns": 30,
         "request_id": "req-0", "repeat_id": "r0", "ownership_status": "VALID",
         "invocation_identity": _identity("decode"),
     }
     wait = {
         "record_id": "edge:last-wait", "sync_kind": "STREAM_WAIT_EVENT",
         "role": "DEPENDENCY_EDGE", "event_id": 9, "event_sync_id": 90,
-        "context_id": 1, "stream_id": 4, "host_start_ns": 32, "host_end_ns": 35,
+        "device_id": 0, "context_id": 1, "stream_id": 4,
+        "host_start_ns": 32, "host_end_ns": 35,
         "ownership_status": "VALID", "request_id": "req-0", "repeat_id": "r0",
         "invocation_identity": _identity("decode"),
     }
@@ -818,14 +949,16 @@ def test_external_event_predecessor_is_not_filtered_before_ownership_check():
     )
     event_record = {
         "record_id": "event:external", "event_id": 9, "event_sync_id": 90,
-        "context_id": 1, "stream_id": 2, "host_start_ns": 25, "host_end_ns": 30,
+        "device_id": 0, "context_id": 1, "stream_id": 2,
+        "host_start_ns": 25, "host_end_ns": 30,
         "request_id": "req-old", "repeat_id": "r0", "ownership_status": "VALID",
         "invocation_identity": _identity("decode", request_id="req-old"),
     }
     wait = {
         "record_id": "edge:current-wait", "sync_kind": "STREAM_WAIT_EVENT",
         "role": "DEPENDENCY_EDGE", "event_id": 9, "event_sync_id": 90,
-        "context_id": 1, "stream_id": 4, "host_start_ns": 32, "host_end_ns": 35,
+        "device_id": 0, "context_id": 1, "stream_id": 4,
+        "host_start_ns": 32, "host_end_ns": 35,
         "ownership_status": "VALID", "request_id": "req-0", "repeat_id": "r0",
         "invocation_identity": _identity("decode"),
     }
