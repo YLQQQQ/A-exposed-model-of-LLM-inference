@@ -103,7 +103,7 @@
 
 **Gate verdict：`NOT_RUN`。** 新语义的 A/B/D/Exposure Signature 尚未实现；旧 accounting 不能视为本 Gate 进度。
 
-- [ ] `EP-G5-01`（受阻于 Gate 4）实现面向 request/phase、互斥且保守的 A。
+- [ ] `EP-G5-01`（未开始；Gate 4 已解除阻塞）实现面向 request/phase、互斥且保守的 A。
 - [ ] `EP-G5-02`（受阻）实现 A 的 residual、守恒容差和 invalid 传播。
 - [ ] `EP-G5-03`（受阻）实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。
 - [ ] `EP-G5-04`（受阻）仅从冻结后的 A/B 派生 D。
