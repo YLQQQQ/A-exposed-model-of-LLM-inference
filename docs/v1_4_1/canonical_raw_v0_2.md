@@ -10,7 +10,7 @@ Canonical Raw 不判断某个活动是否属于 `W(s)`，不选 terminal，也�
 
 输入为 Nsight SQLite、对应 `.nsys-rep` 的 SHA-256、采集器版本、数据角色和可选 source manifest。adapter 仅接受已经审查的 `EXPORT_PRODUCT_VERSION=2026.1.1.204` 与 `EXPORT_SCHEMA_VERSION=3.24.14`。
 
-输出是一个新目录，包含 `canonical_manifest.json` 和八类确定性 gzip JSONL：NVTX、CUDA API、physical sync、device activity、CUDA event、context、stream、diagnostic。已有输出目录一律拒绝覆盖；转换通过同级临时目录完成，全部成功后才原子改名。输入 SQLite 以 read-only/immutable 方式打开，Raw 报告只读取哈希。
+输出是一个新目录，包含 `canonical_manifest.json` 和八类确定性 gzip JSONL：NVTX、CUDA API、CUDA synchronization activity、device activity、CUDA event、context、stream、diagnostic。已有输出目录一律拒绝覆盖；转换通过同级临时目录完成，全部成功后才原子改名。输入 SQLite 以 read-only/immutable 方式打开，Raw 报告只读取哈希。
 
 ## 3. 记录身份与时钟
 
@@ -24,13 +24,13 @@ Canonical Raw 不判断某个活动是否属于 `W(s)`，不选 terminal，也�
 |---|---|---|
 | `nvtx.jsonl.gz` | `NVTX_EVENTS` + `StringIds` | 原始范围/标记、文本、线程和可选结构化身份 |
 | `cuda_api.jsonl.gz` | `CUPTI_ACTIVITY_KIND_RUNTIME` + `StringIds` | Host API 区间、名称、线程、correlation、返回值 |
-| `physical_sync.jsonl.gz` | `...SYNCHRONIZATION` + runtime + sync enum | CUPTI 同步事实及唯一 runtime API 映射；两套名称均保留 |
+| `cuda_sync.jsonl.gz` | `...SYNCHRONIZATION` + runtime + sync enum | 中性的 CUPTI synchronization activity 及唯一 runtime API 映射；两套名称均保留，尚未判定是否为 Host blocking sync |
 | `device_activity.jsonl.gz` | kernel/memcpy/memset | 活动区间、device/context/stream、correlation、名称与类型属性 |
 | `cuda_event.jsonl.gz` | `...CUDA_EVENT` | event record 的时间、eventId/eventSyncId、context/stream |
 | `context/stream.jsonl.gz` | `TARGET_INFO_CUDA_*` | context、null stream 与 stream 元数据 |
 | `diagnostic.jsonl.gz` | `DIAGNOSTIC_EVENT` | dropped/missing 等原始诊断文本与代码 |
 
-physical sync 的 `syncType` 枚举标签不能代替 runtime API 名称；event record 也不能伪装成 Host 阻塞同步。S 层以后必须同时使用这些事实和同步 registry。
+Raw 中的 CUDA synchronization activity 既可能对应 Host blocking sync，也可能表示依赖边；其 `syncType` 枚举标签不能代替 runtime API 名称。event record 也不能伪装成 Host 阻塞同步。S 层以后必须同时使用这些事实和同步 registry 才能分类。
 
 ## 5. 结构化 NVTX identity
 
@@ -46,7 +46,7 @@ physical sync 的 `syncType` 枚举标签不能代替 runtime API 名称；event
 
 三份封存报告均由 Nsight 2026.1.1 以 `lazy=false` 导出到临时 SQLite，再转换为 v0.2。Raw 前后哈希完全一致。三份 SQLite 分别约 28.8、29.2、28.3 MB；gzip Canonical 记录分别约 11.9、12.2、11.4 MB。初版未压缩 JSONL 曾使首份输出膨胀至约 248 MB，因此在 Gate 3 冻结前改为确定性 gzip。
 
-三份 trace 均有 95 条 NVTX、446 条 physical sync、约 20.6～21.5 万条 CUDA API 和约 20.6～21.3 万条 device activity；CUDA event 均为 0 条。它们都缺 source manifest 且只含旧式 phase 标签，所以 observation/identity 均保持 ambiguous。这证明转换链可运行并能 fail closed，不证明 event 语义正确，也不构成 Q0、Pilot 或 Formal 证据。完整计数与哈希见 `engineering_evidence/canonical_raw_v0_2/historical_regression.json`。
+三份 trace 均有 95 条 NVTX、446 条 CUDA synchronization activity、约 20.6～21.5 万条 CUDA API 和约 20.6～21.3 万条 device activity；CUDA event 均为 0 条。它们都缺 source manifest 且只含旧式 phase 标签，所以 observation/identity 均保持 ambiguous。这证明转换链可运行并能 fail closed，不证明 event 语义正确，也不构成 Q0、Pilot 或 Formal 证据。完整计数与哈希见 `engineering_evidence/canonical_raw_v0_2/historical_regression.json`。
 
 ## 8. 验证入口
 

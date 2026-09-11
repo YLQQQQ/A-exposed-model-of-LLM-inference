@@ -170,7 +170,7 @@ def test_all_required_record_kinds_are_frozen():
     assert set(schema["record_types"]) == {
         "nvtx",
         "cuda_api",
-        "physical_sync",
+        "cuda_sync",
         "device_activity",
         "cuda_event",
         "context",
@@ -181,7 +181,7 @@ def test_all_required_record_kinds_are_frozen():
 
 def test_missing_record_kind_is_rejected():
     schema = deepcopy(load_canonical_raw_schema())
-    del schema["record_types"]["physical_sync"]
+    del schema["record_types"]["cuda_sync"]
 
     with pytest.raises(CanonicalRawSchemaError, match="record kind"):
         validate_canonical_raw_schema(schema)
@@ -207,7 +207,7 @@ def test_duplicate_or_overlapping_fields_are_rejected():
 )
 def test_raw_schema_rejects_s_or_accounting_fields(forbidden):
     schema = deepcopy(load_canonical_raw_schema())
-    schema["record_types"]["physical_sync"]["nullable_fields"].append(forbidden)
+    schema["record_types"]["cuda_sync"]["nullable_fields"].append(forbidden)
 
     with pytest.raises(CanonicalRawSchemaError, match="越层字段"):
         validate_canonical_raw_schema(schema)
@@ -261,7 +261,7 @@ def test_converter_preserves_input_and_writes_all_record_types(tmp_path):
     assert _sha256(database) == before
     assert set(manifest["files"]) == set(load_canonical_raw_schema()["record_types"])
     assert manifest["files"]["device_activity"]["record_count"] == 3
-    assert manifest["files"]["physical_sync"]["record_count"] == 1
+    assert manifest["files"]["cuda_sync"]["record_count"] == 1
     assert all((manifest_path.parent / item["filename"]).is_file() for item in manifest["files"].values())
 
 
@@ -280,7 +280,7 @@ def test_converter_resolves_names_ids_and_source_rows(tmp_path):
         source_manifest=source_manifest,
     )
     cuda_api = _read_jsonl(manifest_path.parent / "cuda_api.jsonl.gz")[0]
-    sync = _read_jsonl(manifest_path.parent / "physical_sync.jsonl.gz")[0]
+    sync = _read_jsonl(manifest_path.parent / "cuda_sync.jsonl.gz")[0]
     activities = _read_jsonl(manifest_path.parent / "device_activity.jsonl.gz")
 
     assert cuda_api["api_name"] == "cudaStreamSynchronize"
@@ -288,7 +288,7 @@ def test_converter_resolves_names_ids_and_source_rows(tmp_path):
     assert (cuda_api["process_id"], cuda_api["thread_id"]) == (3, 4)
     assert sync["runtime_mapping_count"] == 1
     assert sync["runtime_api_name"] == "cudaStreamSynchronize"
-    assert sync["record_id"] == "physical_sync:CUPTI_ACTIVITY_KIND_SYNCHRONIZATION:1"
+    assert sync["record_id"] == "cuda_sync:CUPTI_ACTIVITY_KIND_SYNCHRONIZATION:1"
     assert [item["activity_kind"] for item in activities] == ["MEMCPY", "MEMSET", "KERNEL"]
     assert activities[-1]["name"] == "myKernel"
 
@@ -449,7 +449,7 @@ def test_manifest_and_nvtx_identity_conflict_is_not_silently_accepted(tmp_path):
     }
 
 
-def test_cuda_event_linkage_is_preserved_separately_from_physical_sync(tmp_path):
+def test_cuda_event_linkage_is_preserved_separately_from_cuda_sync(tmp_path):
     database = tmp_path / "source.sqlite"
     source_manifest = tmp_path / "run_manifest.json"
     _make_source_sqlite(database)
@@ -459,11 +459,11 @@ def test_cuda_event_linkage_is_preserved_separately_from_physical_sync(tmp_path)
         database, tmp_path / "canonical", "Engineering", "1" * 64, "synthetic", source_manifest
     )
     event = _read_jsonl(manifest_path.parent / "cuda_event.jsonl.gz")[0]
-    sync = _read_jsonl(manifest_path.parent / "physical_sync.jsonl.gz")[0]
+    sync = _read_jsonl(manifest_path.parent / "cuda_sync.jsonl.gz")[0]
 
     assert (event["event_id"], event["event_sync_id"]) == (9, 10)
     assert event["record_id"].startswith("cuda_event:")
-    assert sync["record_id"].startswith("physical_sync:")
+    assert sync["record_id"].startswith("cuda_sync:")
 
 
 @pytest.mark.parametrize(

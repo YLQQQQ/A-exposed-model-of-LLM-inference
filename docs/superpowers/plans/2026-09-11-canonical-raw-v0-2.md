@@ -33,7 +33,7 @@
 
 - [x] 先写 schema 缺字段、重复字段、未知 record kind、S/A/B 字段混入等失败测试。
 - [x] 实现 schema bundle 加载与校验器。
-- [x] 冻结 bundle manifest、NVTX、CUDA API、physical sync、device activity、CUDA event、context、stream、diagnostic 的必需/可空字段。
+- [x] 冻结 bundle manifest、NVTX、CUDA API、CUDA synchronization activity、device activity、CUDA event、context、stream、diagnostic 的必需/可空字段。
 - [x] 冻结版本、时钟、lineage、记录身份、数据角色和 fail-closed 状态字段。
 - [x] 定向测试通过并提交。
 
@@ -59,7 +59,7 @@
 
 - [x] 先写结构化 NVTX marker、旧标签不猜身份、eventSyncId 保留、runtime mapping 不唯一、dropped records、未知 schema 和无效时间区间测试。
 - [x] 解析 `EXPOSEDPATH_JSON_V1:` 结构化标记；缺必需 identity 字段或与 manifest 冲突时标记问题，不补造值。
-- [x] physical sync 同时保存 CUPTI sync 枚举与唯一 runtime API 映射；event record 独立保存。
+- [x] CUDA synchronization activity 同时保存 CUPTI sync 枚举与唯一 runtime API 映射；是否属于 Host blocking sync 留给 S 层 registry 分类，event record 独立保存。
 - [x] observation invalid 时拒绝转换；Engineering ambiguous 可转换但完整传播问题和研究资格。
 - [x] 定向测试通过并提交。
 

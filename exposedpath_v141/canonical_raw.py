@@ -29,7 +29,7 @@ _SCHEMA_PATH = (
 _REQUIRED_RECORD_KINDS = {
     "nvtx",
     "cuda_api",
-    "physical_sync",
+    "cuda_sync",
     "device_activity",
     "cuda_event",
     "context",
@@ -342,7 +342,7 @@ def _extract_records(
     result: dict[str, list[dict[str, Any]]] = {
         "nvtx": [],
         "cuda_api": [],
-        "physical_sync": [],
+        "cuda_sync": [],
         "device_activity": [],
         "cuda_event": [],
         "context": [],
@@ -406,7 +406,7 @@ def _extract_records(
         runtime = mappings[0] if len(mappings) == 1 else None
         enum_name, enum_label = sync_enums.get(row["syncType"], (None, None))
         record = _base(
-            "physical_sync", "CUPTI_ACTIVITY_KIND_SYNCHRONIZATION", row["source_rowid"]
+            "cuda_sync", "CUPTI_ACTIVITY_KIND_SYNCHRONIZATION", row["source_rowid"]
         )
         record.update(
             start_ns=row["start"], end_ns=row["end"], device_id=row["deviceId"],
@@ -423,7 +423,7 @@ def _extract_records(
             runtime_global_tid=runtime["global_tid"] if runtime else None,
             runtime_thread_id=runtime["thread_id"] if runtime else None,
         )
-        result["physical_sync"].append(record)
+        result["cuda_sync"].append(record)
 
     activity_specs = (
         ("CUPTI_ACTIVITY_KIND_KERNEL", "KERNEL"),
