@@ -149,6 +149,8 @@ def _make_manifest(path: Path) -> None:
                 "run_role": "Engineering",
                 "pass_id": "Pass1",
                 "repeat_id": "r0",
+                "default_stream_mode": "PER_THREAD",
+                "selected_device_id": 0,
             }
         ),
         encoding="utf-8",
@@ -262,6 +264,10 @@ def test_converter_preserves_input_and_writes_all_record_types(tmp_path):
     assert set(manifest["files"]) == set(load_canonical_raw_schema()["record_types"])
     assert manifest["files"]["device_activity"]["record_count"] == 3
     assert manifest["files"]["cuda_sync"]["record_count"] == 1
+    assert manifest["execution_context"] == {
+        "default_stream_mode": "PER_THREAD",
+        "selected_device_id": 0,
+    }
     assert all((manifest_path.parent / item["filename"]).is_file() for item in manifest["files"].values())
 
 

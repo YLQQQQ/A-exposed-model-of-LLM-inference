@@ -16,6 +16,8 @@ Canonical Raw 不判断某个活动是否属于 `W(s)`，不选 terminal，也�
 
 每条记录的全局身份是 `(source_sqlite_sha256, source_table, source_rowid)`。`record_id` 只是在 bundle 内的可读缩写，不能脱离 manifest 的 SQLite 哈希单独使用。时间排序和文件名均不得作为实验身份。
 
+bundle manifest 还保留 S 层必需但不属于事件行的执行上下文：`default_stream_mode` 与 `selected_device_id`。它们只能来自 source manifest；缺失时保持空值，不能从文件名或活动形状猜测。
+
 所有时间字段保留 Nsight 导出的单 trace 相对纳秒，时钟域固定为 `NSYS_TRACE_RELATIVE_NS`。区间采用半开语义；时间只能在同一 source trace 内比较，不允许把两份 trace 的相对时间直接相减。`globalTid/globalPid` 原值保留，拆出的 pid/tid 是依据 NVIDIA 序列化 GlobalId 位布局得到的派生便利字段。
 
 ## 4. 事实映射

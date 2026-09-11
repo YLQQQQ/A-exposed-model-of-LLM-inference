@@ -121,7 +121,9 @@ def validate_canonical_raw_schema(schema: Mapping[str, Any]) -> None:
     _text(manifest.get("filename"), "bundle_manifest.filename")
     manifest_fields = _list(manifest.get("required_fields"), "bundle_manifest.required_fields")
     _ensure_unique(manifest_fields, "bundle manifest")
-    if not {"source", "clock", "identity", "files", "observation_validity"} <= set(manifest_fields):
+    if not {
+        "source", "clock", "identity", "execution_context", "files", "observation_validity"
+    } <= set(manifest_fields):
         raise CanonicalRawSchemaError("bundle manifest 缺少 lineage 或 validity 字段")
 
     base_fields = _list(schema.get("record_base_required_fields"), "record_base_required_fields")
@@ -619,6 +621,23 @@ def convert_sqlite_to_canonical(
                 "filename_inference_used": False,
                 "nvtx_status": "VALID" if not nvtx_identity_issues else "AMBIGUOUS",
                 "issues": nvtx_identity_issues,
+            },
+            "execution_context": {
+                "default_stream_mode": (
+                    source_manifest_data.get("default_stream_mode")
+                    if source_manifest_data
+                    else None
+                ),
+                "selected_device_id": (
+                    source_manifest_data.get(
+                        "selected_device_id",
+                        source_manifest_data.get("gpu_index")
+                        if source_manifest_data
+                        else None,
+                    )
+                    if source_manifest_data
+                    else None
+                ),
             },
             "files": files,
             "observation_validity": observation["validity"],

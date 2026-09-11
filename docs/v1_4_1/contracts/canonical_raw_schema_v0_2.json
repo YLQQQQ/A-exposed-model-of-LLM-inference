@@ -43,7 +43,7 @@
     "required_fields": [
       "schema_version", "measurement_contract_version", "adapter_id",
       "analyzer_version", "generated_at_utc", "data_role", "source",
-      "clock", "identity", "files", "observation_validity",
+      "clock", "identity", "execution_context", "files", "observation_validity",
       "research_eligibility"
     ]
   },
