@@ -26,6 +26,7 @@ _A_CATEGORIES = {
 }
 _SUPPORTED_SYNC_CLASS = "SUPPORTED_PHYSICAL_BLOCKING_SYNC"
 _PLACEHOLDERS = ("todo", "tbd", "待定")
+_VALIDITY_STATES = {"VALID_NONEMPTY", "VALID_EMPTY", "AMBIGUOUS", "INVALID"}
 
 
 def _require_mapping(value: Any, label: str) -> Mapping[str, Any]:
@@ -101,6 +102,32 @@ def validate_contract_bundle(
         raise ContractValidationError("contract 引用的 registry 版本不一致")
     if contract.get("test_map_version") != test_map_version:
         raise ContractValidationError("contract 引用的 test_map 版本不一致")
+
+    time_model = contract.get("time_model")
+    if time_model is not None:
+        time_model = _require_mapping(time_model, "contract.time_model")
+        if (
+            time_model.get("semantic_ordering_tolerance_ns") != 0
+            or time_model.get("terminal_tie_tolerance_ns") != 0
+        ):
+            raise ContractValidationError("语义时间容差必须保持为 0 ns")
+
+    s_layer = contract.get("s_layer")
+    if s_layer is not None:
+        s_layer = _require_mapping(s_layer, "contract.s_layer")
+        validity = _require_mapping(s_layer.get("validity"), "contract.s_layer.validity")
+        states = _require_list(validity.get("states"), "contract.s_layer.validity.states")
+        if set(states) != _VALIDITY_STATES or len(states) != len(_VALIDITY_STATES):
+            raise ContractValidationError("S 层 validity 状态必须恰好包含四个冻结状态")
+        reason_priority = _require_list(
+            s_layer.get("reason_priority"), "contract.s_layer.reason_priority"
+        )
+        ranks = [
+            _require_mapping(item, "reason priority item").get("rank")
+            for item in reason_priority
+        ]
+        if len(ranks) != len(set(ranks)):
+            raise ContractValidationError("reason priority 的 rank 不得重复")
 
     rules = _require_list(contract.get("rules"), "contract.rules")
     rule_ids = [
@@ -178,6 +205,10 @@ def validate_contract_bundle(
 
     b_layer = _require_mapping(contract.get("b_layer"), "contract.b_layer")
     _require_list(b_layer.get("output_fields"), "contract.b_layer.output_fields")
+    if b_layer.get("aggregation_policy") != "NO_CROSS_SYNC_SUM":
+        raise ContractValidationError("B 层不得启用跨同步求和")
+    if b_layer.get("enters_a_wall_clock_budget") is not False:
+        raise ContractValidationError("B 层不得进入 A 的墙钟预算")
 
     derived = _require_mapping(contract.get("derived"), "contract.derived")
     for name, definition_value in derived.items():

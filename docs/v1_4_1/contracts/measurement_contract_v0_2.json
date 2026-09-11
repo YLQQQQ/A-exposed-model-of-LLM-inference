@@ -94,6 +94,168 @@
     "performance_source": "PASS0",
     "mechanism_source": "PASS1"
   },
+  "s_layer": {
+    "sync_universe_denominator": "all_physical_blocking_sync_calls_inside_the_request_or_phase_window",
+    "submission_proven": {
+      "any_of": [
+        "activity.gpu_start_ns < sync.host_start_ns",
+        "enqueue.host_end_ns <= sync.host_start_ns"
+      ],
+      "proof_meaning": "activity_entered_an_observable_orderable_execution_domain_before_sync",
+      "not_physical_hardware_queue_arrival": true,
+      "overlapping_enqueue_without_started_activity": "AMBIGUOUS",
+      "forbidden_proxies": [
+        "enqueue.host_start_ns",
+        "correlation_presence_only",
+        "fixed_lookback_window",
+        "temporal_overlap_only"
+      ]
+    },
+    "dependency_graph": {
+      "edge_types": [
+        "SAME_STREAM_ORDER",
+        "EVENT_RECORD_CAPTURE",
+        "STREAM_WAIT_EVENT",
+        "SUPPORTED_DEFAULT_STREAM_ORDER"
+      ],
+      "temporal_overlap_creates_edge": false,
+      "closure_direction": "transitive_predecessors_of_sync_completion_condition"
+    },
+    "completion_scopes": {
+      "STREAM": "target_stream_submission_prefix_plus_observable_transitive_event_and_default_stream_predecessors",
+      "DEVICE": "all_preceding_requested_tasks_on_the_selected_runtime_device_across_observable_owned_execution_contexts",
+      "CONTEXT": "all_preceding_requested_tasks_in_the_current_or_specified_driver_context_across_streams",
+      "EVENT": "state_captured_by_the_latest_event_record_visible_to_the_sync_call_excluding_post_record_activity"
+    },
+    "default_stream": {
+      "manifest_modes": ["LEGACY", "PER_THREAD", "NO_DEFAULT_STREAM_OBSERVED"],
+      "unknown_when_default_stream_is_observed": "AMBIGUOUS",
+      "unknown_reason": "DEFAULT_STREAM_MODE_UNKNOWN",
+      "legacy_nonblocking_stream_exception_required": true
+    },
+    "wait_set": {
+      "definition": "W(s)={e in semantic_predecessor_closure(s) where submission_proven(e,s) and ownership_supported(e,s)}",
+      "completed_before_sync_policy": "KEEP_IN_W",
+      "temporal_overlap_policy": "STATE_CLASSIFICATION_ONLY",
+      "external_or_unassigned_members_are_silently_removed": false
+    },
+    "ownership": {
+      "unit": "batched_inference_invocation",
+      "activity_origin_source": "correlated_enqueue_or_launch_invocation_and_phase",
+      "sync_owner_source": "sync_api_invocation_and_half_open_phase_window",
+      "wall_clock_owner_source": "atomic_interval_location_in_request_or_phase_window",
+      "cross_phase_dependency_allowed": true,
+      "cross_invocation_bleed_allowed_for_strong_claim": false
+    },
+    "terminal": {
+      "candidate_source": "maximal_nodes_of_semantic_dependency_frontier",
+      "unique_frontier_policy": "SELECT_UNIQUE_FRONTIER_EVIDENCE",
+      "multiple_frontier_policy": "SELECT_ONLY_UNIQUE_LATEST_COMPLETION_IN_SHARED_CLOCK_DOMAIN",
+      "equal_latest_completion_policy": "AMBIGUOUS",
+      "tie_tolerance_ns": 0,
+      "timestamp_scope": "SEMANTIC_IDENTITY_ONLY",
+      "terminal_after_sync_end_policy": "INVALID",
+      "terminal_may_be_activity_or_completion_boundary": true
+    },
+    "validity": {
+      "states": ["VALID_NONEMPTY", "VALID_EMPTY", "AMBIGUOUS", "INVALID"],
+      "valid_empty_definition": "observable_supported_owned_semantic_predecessor_closure_is_empty",
+      "completed_before_sync_can_be_valid_empty": false,
+      "ambiguous_definition": "two_or_more_semantically_plausible_reconstructions_remain",
+      "invalid_definition": "required_evidence_is_missing_conflicting_or_unsupported",
+      "unknown_becomes_zero": false
+    },
+    "reason_priority": [
+      {
+        "rank": 1,
+        "class": "TRACE_INTEGRITY",
+        "default_validity": "INVALID",
+        "reasons": ["TRACE_DROPPED_RECORDS", "CLOCK_DOMAIN_UNRESOLVED", "CLOCK_ORDER_INVALID"]
+      },
+      {
+        "rank": 2,
+        "class": "BOUNDARY_AND_OWNERSHIP",
+        "default_validity": "INVALID",
+        "reasons": ["INVOCATION_BOUNDARY_INVALID", "EXTERNAL_OWNERSHIP_IN_SCOPE", "INVOCATION_BLEED"]
+      },
+      {
+        "rank": 3,
+        "class": "OWNERSHIP_AMBIGUITY",
+        "default_validity": "AMBIGUOUS",
+        "reasons": ["INVOCATION_OWNERSHIP_AMBIGUOUS", "PHASE_OWNERSHIP_AMBIGUOUS"]
+      },
+      {
+        "rank": 4,
+        "class": "SUPPORT",
+        "default_validity": "INVALID",
+        "reasons": ["UNSUPPORTED_SYNC_API", "GRAPH_MAPPING_UNSUPPORTED"]
+      },
+      {
+        "rank": 5,
+        "class": "MAPPING",
+        "default_validity": "INVALID",
+        "reasons": ["MISSING_CONTEXT_ID", "MISSING_STREAM_ID", "MISSING_EVENT_ID", "MISSING_EVENT_RECORD", "MISSING_ACTIVITY_CORRELATION"]
+      },
+      {
+        "rank": 6,
+        "class": "SEMANTIC_AMBIGUITY",
+        "default_validity": "AMBIGUOUS",
+        "reasons": ["DEFAULT_STREAM_MODE_UNKNOWN", "SUBMISSION_ORDER_AMBIGUOUS", "DEPENDENCY_CLOSURE_AMBIGUOUS"]
+      },
+      {
+        "rank": 7,
+        "class": "CLOSURE",
+        "default_validity": "INVALID",
+        "reasons": ["DEPENDENCY_CLOSURE_UNOBSERVABLE"]
+      },
+      {
+        "rank": 8,
+        "class": "TERMINAL",
+        "default_validity": "AMBIGUOUS",
+        "reasons": ["TERMINAL_TIE"]
+      },
+      {
+        "rank": 9,
+        "class": "TERMINAL_INTEGRITY",
+        "default_validity": "INVALID",
+        "reasons": ["TERMINAL_NOT_FOUND", "TERMINAL_AFTER_SYNC_END"]
+      }
+    ],
+    "reason_output": {
+      "primary_reason": "highest_priority_reason",
+      "secondary_reasons": "all_remaining_observed_reasons_in_priority_order"
+    },
+    "output_fields": [
+      "sync_id",
+      "registry_rule_id",
+      "sync_universe_class",
+      "sync_kind",
+      "request_id",
+      "repeat_id",
+      "sync_owner_phase",
+      "sync_origin",
+      "callsite_id",
+      "host_start_ns",
+      "host_end_ns",
+      "device_id",
+      "context_id",
+      "stream_id",
+      "event_id",
+      "completion_scope",
+      "submission_evidence",
+      "dependency_closure_status",
+      "wait_set_status",
+      "wait_set_activity_ids",
+      "terminal",
+      "validity",
+      "primary_reason",
+      "secondary_reasons",
+      "activity_origin_phases",
+      "terminal_origin_phase",
+      "cross_phase_dependency",
+      "invocation_bleed"
+    ]
+  },
   "a_layer": {
     "top_level_categories": [
       "A_host_path",
@@ -115,28 +277,129 @@
       "A_device_wait_ns",
       "A_sync_residual_ns",
       "A_unattributed_ns"
-    ]
+    ],
+    "window_unit": "request_or_phase",
+    "atomic_boundaries": [
+      "window_start_and_end",
+      "cuda_api_start_and_end",
+      "physical_sync_start_and_end",
+      "wait_set_activity_start_and_end"
+    ],
+    "valid_sync_device_wait_formula": "measure([sync.start_ns,sync.end_ns) intersect union(activity_intervals_for_W(s)))",
+    "valid_sync_residual_formula": "sync.duration_ns-A_device_wait_for_sync_ns",
+    "valid_empty_sync_category": "A_sync_residual",
+    "ambiguous_invalid_sync_category": "A_unattributed",
+    "host_path_is_residual_not_cpu_busy": true,
+    "host_path_requires_valid_window_ownership": true,
+    "phase_clipping": "INTERSECT_EVERY_INTERVAL_WITH_PHASE_HALF_OPEN_WINDOW",
+    "top_level_conservation": "T_window_ns=sum(top_level_A_categories_ns)",
+    "top_level_overlap_allowed_ns": 0,
+    "top_level_uncovered_allowed_ns": 0,
+    "subcategories": {
+      "A_cuda_api": ["A_cuda_api_submit", "A_cuda_api_non_submit"],
+      "A_device_wait": [
+        "A_device_wait_kernel_only",
+        "A_device_wait_memop_only",
+        "A_device_wait_kernel_memop_mixed"
+      ]
+    },
+    "multiple_host_threads_policy": "INTERVAL_UNION_NOT_DURATION_SUM"
   },
   "b_layer": {
     "output_fields": [
       "sync_id",
+      "registry_rule_id",
+      "sync_kind",
+      "sync_origin",
+      "callsite_id",
+      "request_id",
+      "repeat_id",
+      "sync_owner_phase",
+      "activity_origin_phases",
+      "terminal_origin_phase",
+      "cross_phase_dependency",
+      "sync_start_ns",
+      "sync_end_ns",
       "wait_set_activity_ids",
       "wait_set_hidden_union_ns",
       "wait_set_exposed_union_ns",
       "terminal",
-      "validity"
+      "terminal_pre_sync_ns",
+      "terminal_overlap_sync_ns",
+      "sync_return_tail_ns",
+      "validity",
+      "primary_reason",
+      "secondary_reasons"
     ],
     "aggregation_policy": "NO_CROSS_SYNC_SUM",
-    "enters_a_wall_clock_budget": false
+    "enters_a_wall_clock_budget": false,
+    "validity_projection": {
+      "VALID_NONEMPTY": "B_VALID",
+      "VALID_EMPTY": "B_NOT_APPLICABLE",
+      "AMBIGUOUS": "B_AMBIGUOUS",
+      "INVALID": "B_INVALID"
+    },
+    "metrics": {
+      "wait_set_hidden_union_ns": {
+        "formula": "measure(union(W_activity_intervals intersect (-infinity,sync.start_ns)))",
+        "interpretation": "semantic_predecessor_execution_completed_before_sync_entry"
+      },
+      "wait_set_exposed_union_ns": {
+        "formula": "measure(union(W_activity_intervals intersect [sync.start_ns,sync.end_ns)))",
+        "interpretation": "wait_set_device_execution_visible_inside_this_sync"
+      },
+      "terminal_pre_sync_ns": {
+        "formula": "measure(terminal_activity_interval intersect (-infinity,sync.start_ns))",
+        "null_for_non_activity_terminal": true
+      },
+      "terminal_overlap_sync_ns": {
+        "formula": "measure(terminal_activity_interval intersect [sync.start_ns,sync.end_ns))",
+        "null_for_non_activity_terminal": true
+      },
+      "sync_return_tail_ns": {
+        "formula": "max(0, sync.end_ns - max(sync.start_ns, terminal.end_ns))",
+        "interpretation": "inside_sync_observed_tail_after_completion_condition",
+        "runtime_overhead_claim_allowed": false
+      }
+    },
+    "wait_set_exposed_equals_unclipped_sync_A_device_wait": true,
+    "terminal_total_duration_is_sync_blocking_time": false
   },
   "derived": {
+    "D_margin": {
+      "inputs": ["A_host_path_ns", "A_cuda_api_ns", "A_device_wait_ns"],
+      "formula": "A_device_wait_ns-A_host_path_ns-A_cuda_api_ns",
+      "unit": "INTEGER_NANOSECOND",
+      "claim_role": "NAVIGATION_ONLY"
+    },
     "D_score": {
       "inputs": ["A_host_path_ns", "A_cuda_api_ns", "A_device_wait_ns"],
-      "formula": "(A_device_wait_ns-A_host_path_ns-A_cuda_api_ns)/(A_device_wait_ns+A_host_path_ns+A_cuda_api_ns)"
+      "formula": "(A_device_wait_ns-A_host_path_ns-A_cuda_api_ns)/(A_device_wait_ns+A_host_path_ns+A_cuda_api_ns)",
+      "zero_denominator_result": null,
+      "claim_role": "NAVIGATION_ONLY"
     },
     "Exposure_Signature": {
-      "inputs": ["A_host_path_ns", "A_cuda_api_ns", "A_device_wait_ns", "A_sync_residual_ns", "A_unattributed_ns", "b.validity"],
-      "formula": "versioned_projection_of_frozen_A_and_per_sync_B"
+      "inputs": [
+        "A_host_path_ns",
+        "A_cuda_api_ns",
+        "A_device_wait_ns",
+        "A_sync_residual_ns",
+        "A_unattributed_ns",
+        "A_cuda_api_submit_ns",
+        "A_cuda_api_non_submit_ns",
+        "A_device_wait_kernel_only_ns",
+        "A_device_wait_memop_only_ns",
+        "A_device_wait_kernel_memop_mixed_ns",
+        "b.validity",
+        "b.wait_set_hidden_union_ns",
+        "b.wait_set_exposed_union_ns",
+        "b.terminal",
+        "b.sync_return_tail_ns"
+      ],
+      "formula": "versioned_projection_of_frozen_A_and_per_sync_B",
+      "creates_new_wall_clock_budget": false,
+      "reads_raw_timestamps_to_reclassify_time": false,
+      "hardware_root_cause_claim_allowed": false
     }
   },
   "rules": [
@@ -183,6 +446,110 @@
     {
       "rule_id": "MC-ID-004",
       "decision": "pass0_and_pass1_share_completion_behavior"
+    },
+    {
+      "rule_id": "MC-S-001",
+      "decision": "physical_sync_universe_is_registry_classified"
+    },
+    {
+      "rule_id": "MC-S-002",
+      "decision": "submission_requires_frozen_observable_ordering_evidence"
+    },
+    {
+      "rule_id": "MC-S-003",
+      "decision": "stream_scope_uses_observable_transitive_dependency_closure"
+    },
+    {
+      "rule_id": "MC-S-004",
+      "decision": "device_or_context_scope_covers_its_respective_preceding_requested_tasks"
+    },
+    {
+      "rule_id": "MC-S-005",
+      "decision": "event_scope_uses_latest_visible_record_capture_and_excludes_post_record_work"
+    },
+    {
+      "rule_id": "MC-S-006",
+      "decision": "observed_default_stream_requires_declared_mode"
+    },
+    {
+      "rule_id": "MC-S-007",
+      "decision": "wait_set_members_require_supported_request_ownership"
+    },
+    {
+      "rule_id": "MC-S-008",
+      "decision": "completed_before_sync_remains_in_W"
+    },
+    {
+      "rule_id": "MC-S-009",
+      "decision": "temporal_overlap_never_creates_dependency"
+    },
+    {
+      "rule_id": "MC-S-010",
+      "decision": "terminal_candidates_come_from_semantic_dependency_frontier"
+    },
+    {
+      "rule_id": "MC-S-011",
+      "decision": "terminal_tie_is_ambiguous_under_zero_nanosecond_semantic_tolerance"
+    },
+    {
+      "rule_id": "MC-S-012",
+      "decision": "valid_empty_ambiguous_and_invalid_are_distinct_states"
+    },
+    {
+      "rule_id": "MC-S-013",
+      "decision": "insufficient_evidence_fails_closed_with_versioned_reasons"
+    },
+    {
+      "rule_id": "MC-S-014",
+      "decision": "activity_origin_and_wall_clock_exposure_owner_are_distinct"
+    },
+    {
+      "rule_id": "MC-A-001",
+      "decision": "top_level_A_is_mutually_exclusive_and_conservative"
+    },
+    {
+      "rule_id": "MC-A-002",
+      "decision": "A_atomic_intervals_follow_frozen_priority"
+    },
+    {
+      "rule_id": "MC-A-003",
+      "decision": "valid_empty_sync_maps_to_sync_residual"
+    },
+    {
+      "rule_id": "MC-A-004",
+      "decision": "ambiguous_invalid_and_unsupported_sync_maps_to_unattributed"
+    },
+    {
+      "rule_id": "MC-A-005",
+      "decision": "cross_phase_activity_is_clipped_to_each_phase_window"
+    },
+    {
+      "rule_id": "MC-A-006",
+      "decision": "A_subcategories_partition_only_their_parent_category"
+    },
+    {
+      "rule_id": "MC-B-001",
+      "decision": "B_preserves_one_record_per_physical_sync"
+    },
+    {
+      "rule_id": "MC-B-002",
+      "decision": "B_hidden_exposed_and_tail_use_half_open_interval_union"
+    },
+    {
+      "rule_id": "MC-B-003",
+      "decision": "B_status_is_projected_from_S_validity_without_zero_fill"
+    },
+    {
+      "rule_id": "MC-B-004",
+      "decision": "B_never_enters_A_budget_or_unruled_cross_sync_sum"
+    },
+    {
+      "rule_id": "MC-D-001",
+      "decision": "D_margin_and_D_score_are_navigation_only_A_derivations"
+    },
+    {
+      "rule_id": "MC-D-002",
+      "decision": "Exposure_Signature_is_a_versioned_A_B_projection_without_new_accounting"
     }
   ]
 }

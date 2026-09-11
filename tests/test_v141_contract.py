@@ -204,3 +204,109 @@ def test_registry_separates_blocking_syncs_from_dependency_edges():
     assert classes["EDGE-STREAM-WAIT-EVENT-001"] == "DEVICE_DEPENDENCY_EDGE"
     assert classes["EDGE-EVENT-RECORD-001"] == "DEVICE_DEPENDENCY_EDGE"
     assert classes["NON-SYNC-QUERY-001"] == "NON_BLOCKING_QUERY"
+
+
+def test_default_bundle_keeps_completed_predecessors_and_rejects_overlap_dependency():
+    rules = {
+        rule["rule_id"]: rule for rule in load_contract_bundle()["contract"]["rules"]
+    }
+
+    assert rules["MC-S-008"]["decision"] == "completed_before_sync_remains_in_W"
+    assert rules["MC-S-009"]["decision"] == "temporal_overlap_never_creates_dependency"
+
+
+def test_submission_rule_uses_only_frozen_observable_ordering_evidence():
+    submission = load_contract_bundle()["contract"]["s_layer"]["submission_proven"]
+
+    assert submission["any_of"] == [
+        "activity.gpu_start_ns < sync.host_start_ns",
+        "enqueue.host_end_ns <= sync.host_start_ns",
+    ]
+    assert submission["overlapping_enqueue_without_started_activity"] == "AMBIGUOUS"
+
+
+def test_terminal_selection_uses_frontier_before_timestamps():
+    terminal = load_contract_bundle()["contract"]["s_layer"]["terminal"]
+
+    assert terminal["candidate_source"] == "maximal_nodes_of_semantic_dependency_frontier"
+    assert terminal["unique_frontier_policy"] == "SELECT_UNIQUE_FRONTIER_EVIDENCE"
+    assert terminal["equal_latest_completion_policy"] == "AMBIGUOUS"
+    assert terminal["tie_tolerance_ns"] == 0
+
+
+def test_validity_states_keep_empty_ambiguous_and_invalid_distinct():
+    validity = load_contract_bundle()["contract"]["s_layer"]["validity"]
+
+    assert set(validity["states"]) == {
+        "VALID_NONEMPTY",
+        "VALID_EMPTY",
+        "AMBIGUOUS",
+        "INVALID",
+    }
+    assert validity["completed_before_sync_can_be_valid_empty"] is False
+    assert validity["unknown_becomes_zero"] is False
+
+
+def test_a_priority_is_conservative_and_complete_in_default_bundle():
+    a = load_contract_bundle()["contract"]["a_layer"]
+
+    assert a["priority"] == [
+        "A_unattributed",
+        "A_device_wait",
+        "A_sync_residual",
+        "A_cuda_api",
+        "A_host_path",
+    ]
+    assert set(a["priority"]) == set(a["top_level_categories"])
+    assert a["valid_empty_sync_category"] == "A_sync_residual"
+    assert a["ambiguous_invalid_sync_category"] == "A_unattributed"
+
+
+def test_b_is_per_sync_and_return_tail_stays_inside_sync_window():
+    b = load_contract_bundle()["contract"]["b_layer"]
+
+    assert b["aggregation_policy"] == "NO_CROSS_SYNC_SUM"
+    assert b["enters_a_wall_clock_budget"] is False
+    assert b["metrics"]["sync_return_tail_ns"]["formula"] == (
+        "max(0, sync.end_ns - max(sync.start_ns, terminal.end_ns))"
+    )
+
+
+def test_d_and_signature_are_only_derived_views():
+    derived = load_contract_bundle()["contract"]["derived"]
+
+    assert derived["D_margin"]["formula"] == (
+        "A_device_wait_ns-A_host_path_ns-A_cuda_api_ns"
+    )
+    assert derived["D_score"]["zero_denominator_result"] is None
+    assert derived["Exposure_Signature"]["creates_new_wall_clock_budget"] is False
+
+
+def test_nonzero_semantic_tolerance_is_rejected():
+    contract, registry, test_map = valid_literal_bundle()
+    contract["time_model"] = {
+        "semantic_ordering_tolerance_ns": 1,
+        "terminal_tie_tolerance_ns": 0,
+    }
+
+    with pytest.raises(ContractValidationError, match="语义时间容差"):
+        validate_contract_bundle(contract, registry, test_map)
+
+
+def test_invalid_validity_state_set_is_rejected():
+    contract, registry, test_map = valid_literal_bundle()
+    contract["s_layer"] = {
+        "validity": {"states": ["VALID_NONEMPTY", "INVALID"]},
+        "reason_priority": [],
+    }
+
+    with pytest.raises(ContractValidationError, match="validity 状态"):
+        validate_contract_bundle(contract, registry, test_map)
+
+
+def test_cross_sync_b_aggregation_is_rejected():
+    contract, registry, test_map = valid_literal_bundle()
+    contract["b_layer"]["aggregation_policy"] = "SUM_ALL_SYNCS"
+
+    with pytest.raises(ContractValidationError, match="B 层"):
+        validate_contract_bundle(contract, registry, test_map)

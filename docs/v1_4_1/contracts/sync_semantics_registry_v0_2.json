@@ -23,15 +23,15 @@
       "registry_rule_id": "SYNC-DEVICE-RUNTIME-001",
       "aliases": ["cudaDeviceSynchronize"],
       "universe_class": "SUPPORTED_PHYSICAL_BLOCKING_SYNC",
-      "sync_kind": "DEVICE_CONTEXT",
-      "completion_scope": "current_runtime_primary_context_preceding_requested_tasks",
-      "required_evidence": ["sync_correlation_id", "device_id", "context_id", "submission_evidence", "dependency_edges", "request_identity"]
+      "sync_kind": "DEVICE",
+      "completion_scope": "current_runtime_device_preceding_requested_tasks",
+      "required_evidence": ["sync_correlation_id", "device_id", "observable_context_set", "submission_evidence", "dependency_edges", "request_identity"]
     },
     {
       "registry_rule_id": "SYNC-CONTEXT-DRIVER-001",
       "aliases": ["cuCtxSynchronize", "cuCtxSynchronize_v2"],
       "universe_class": "SUPPORTED_PHYSICAL_BLOCKING_SYNC",
-      "sync_kind": "DEVICE_CONTEXT",
+      "sync_kind": "CONTEXT",
       "completion_scope": "specified_or_current_context_preceding_requested_tasks",
       "required_evidence": ["sync_correlation_id", "context_id", "submission_evidence", "dependency_edges", "request_identity"]
     },

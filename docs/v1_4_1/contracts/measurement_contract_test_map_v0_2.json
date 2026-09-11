@@ -32,6 +32,101 @@
       "case_id": "PASS-PARITY-COMPLETION-001",
       "kind": "cross_pass_contract",
       "rule_ids": ["MC-ID-004"]
+    },
+    {
+      "case_id": "SYNC-UNIVERSE-REGISTRY-001",
+      "kind": "contract",
+      "rule_ids": ["MC-S-001"]
+    },
+    {
+      "case_id": "SUBMISSION-ORDER-PROVEN-001",
+      "kind": "synthetic_trace",
+      "rule_ids": ["MC-S-002"]
+    },
+    {
+      "case_id": "SUBMISSION-ORDER-RACE-001",
+      "kind": "synthetic_trace_and_q0_real",
+      "rule_ids": ["MC-S-002", "MC-S-013"]
+    },
+    {
+      "case_id": "STREAM-SCOPE-001",
+      "kind": "synthetic_trace_and_q0_real",
+      "rule_ids": ["MC-S-003", "MC-S-008", "MC-S-010"]
+    },
+    {
+      "case_id": "DEVICE-CONTEXT-SCOPE-001",
+      "kind": "synthetic_trace_and_q0_real",
+      "rule_ids": ["MC-S-004", "MC-S-007", "MC-S-010"]
+    },
+    {
+      "case_id": "EVENT-RECORD-PREFIX-001",
+      "kind": "synthetic_trace_and_q0_real",
+      "rule_ids": ["MC-S-005", "MC-S-010"]
+    },
+    {
+      "case_id": "DEFAULT-STREAM-LEGACY-001",
+      "kind": "synthetic_trace_and_q0_real",
+      "rule_ids": ["MC-S-006"]
+    },
+    {
+      "case_id": "DEFAULT-STREAM-PER-THREAD-001",
+      "kind": "synthetic_trace_and_q0_real",
+      "rule_ids": ["MC-S-006"]
+    },
+    {
+      "case_id": "UNRELATED-CROSS-STREAM-OVERLAP-001",
+      "kind": "synthetic_trace_and_q0_real",
+      "rule_ids": ["MC-S-009"]
+    },
+    {
+      "case_id": "TERMINAL-TIE-001",
+      "kind": "synthetic_trace",
+      "rule_ids": ["MC-S-011", "MC-S-012", "MC-S-013"]
+    },
+    {
+      "case_id": "VALID-EMPTY-001",
+      "kind": "synthetic_trace_and_q0_real",
+      "rule_ids": ["MC-S-012", "MC-A-003", "MC-B-003"]
+    },
+    {
+      "case_id": "MISSING-MAPPING-001",
+      "kind": "fault_injection",
+      "rule_ids": ["MC-S-013", "MC-A-004", "MC-B-003"]
+    },
+    {
+      "case_id": "EXTERNAL-OWNERSHIP-001",
+      "kind": "fault_injection",
+      "rule_ids": ["MC-S-007", "MC-S-013", "MC-A-004"]
+    },
+    {
+      "case_id": "PHASE-BOUNDARY-SPILL-001",
+      "kind": "synthetic_trace_and_q0_real",
+      "rule_ids": ["MC-S-014", "MC-A-005", "MC-B-001"]
+    },
+    {
+      "case_id": "A-PARTITION-CONSERVATION-001",
+      "kind": "synthetic_trace",
+      "rule_ids": ["MC-A-001", "MC-A-002", "MC-A-006"]
+    },
+    {
+      "case_id": "B-LIFECYCLE-COMPLETED-BEFORE-001",
+      "kind": "synthetic_trace",
+      "rule_ids": ["MC-S-008", "MC-B-001", "MC-B-002", "MC-B-004"]
+    },
+    {
+      "case_id": "B-LIFECYCLE-OVERLAP-001",
+      "kind": "synthetic_trace",
+      "rule_ids": ["MC-B-002", "MC-B-004"]
+    },
+    {
+      "case_id": "DERIVED-NAVIGATION-001",
+      "kind": "derived_output",
+      "rule_ids": ["MC-D-001"]
+    },
+    {
+      "case_id": "EXPOSURE-SIGNATURE-PURITY-001",
+      "kind": "derived_output",
+      "rule_ids": ["MC-D-002"]
     }
   ]
 }
