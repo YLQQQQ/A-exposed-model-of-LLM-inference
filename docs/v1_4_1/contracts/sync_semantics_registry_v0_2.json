@@ -1,0 +1,87 @@
+{
+  "registry_version": "exposedpath-sync-registry-0.2.0",
+  "contract_version": "exposedpath-measurement-contract-0.2.0",
+  "status": "ENGINEERING_PRE_PILOT",
+  "rules": [
+    {
+      "registry_rule_id": "SYNC-STREAM-RUNTIME-001",
+      "aliases": ["cudaStreamSynchronize"],
+      "universe_class": "SUPPORTED_PHYSICAL_BLOCKING_SYNC",
+      "sync_kind": "STREAM",
+      "completion_scope": "target_stream_dependency_closure_captured_before_sync",
+      "required_evidence": ["sync_correlation_id", "context_id", "stream_id", "submission_evidence", "dependency_edges", "request_identity"]
+    },
+    {
+      "registry_rule_id": "SYNC-STREAM-DRIVER-001",
+      "aliases": ["cuStreamSynchronize"],
+      "universe_class": "SUPPORTED_PHYSICAL_BLOCKING_SYNC",
+      "sync_kind": "STREAM",
+      "completion_scope": "target_stream_dependency_closure_captured_before_sync",
+      "required_evidence": ["sync_correlation_id", "context_id", "stream_id", "submission_evidence", "dependency_edges", "request_identity"]
+    },
+    {
+      "registry_rule_id": "SYNC-DEVICE-RUNTIME-001",
+      "aliases": ["cudaDeviceSynchronize"],
+      "universe_class": "SUPPORTED_PHYSICAL_BLOCKING_SYNC",
+      "sync_kind": "DEVICE_CONTEXT",
+      "completion_scope": "current_runtime_primary_context_preceding_requested_tasks",
+      "required_evidence": ["sync_correlation_id", "device_id", "context_id", "submission_evidence", "dependency_edges", "request_identity"]
+    },
+    {
+      "registry_rule_id": "SYNC-CONTEXT-DRIVER-001",
+      "aliases": ["cuCtxSynchronize", "cuCtxSynchronize_v2"],
+      "universe_class": "SUPPORTED_PHYSICAL_BLOCKING_SYNC",
+      "sync_kind": "DEVICE_CONTEXT",
+      "completion_scope": "specified_or_current_context_preceding_requested_tasks",
+      "required_evidence": ["sync_correlation_id", "context_id", "submission_evidence", "dependency_edges", "request_identity"]
+    },
+    {
+      "registry_rule_id": "SYNC-EVENT-RUNTIME-001",
+      "aliases": ["cudaEventSynchronize"],
+      "universe_class": "SUPPORTED_PHYSICAL_BLOCKING_SYNC",
+      "sync_kind": "EVENT",
+      "completion_scope": "event_state_captured_by_latest_record_visible_at_sync_call",
+      "required_evidence": ["sync_correlation_id", "event_id", "event_record_id", "record_context_id", "record_stream_id", "submission_evidence", "dependency_edges", "request_identity"]
+    },
+    {
+      "registry_rule_id": "SYNC-EVENT-DRIVER-001",
+      "aliases": ["cuEventSynchronize"],
+      "universe_class": "SUPPORTED_PHYSICAL_BLOCKING_SYNC",
+      "sync_kind": "EVENT",
+      "completion_scope": "event_state_captured_by_latest_record_visible_at_sync_call",
+      "required_evidence": ["sync_correlation_id", "event_id", "event_record_id", "record_context_id", "record_stream_id", "submission_evidence", "dependency_edges", "request_identity"]
+    },
+    {
+      "registry_rule_id": "EDGE-EVENT-RECORD-001",
+      "aliases": ["cudaEventRecord", "cudaEventRecordWithFlags", "cuEventRecord", "cuEventRecordWithFlags"],
+      "universe_class": "DEVICE_DEPENDENCY_EDGE",
+      "sync_kind": "EVENT_RECORD",
+      "completion_scope": "captures_record_stream_state_at_record_call",
+      "required_evidence": ["event_id", "context_id", "stream_id", "record_order"]
+    },
+    {
+      "registry_rule_id": "EDGE-STREAM-WAIT-EVENT-001",
+      "aliases": ["cudaStreamWaitEvent", "cuStreamWaitEvent"],
+      "universe_class": "DEVICE_DEPENDENCY_EDGE",
+      "sync_kind": "STREAM_WAIT_EVENT",
+      "completion_scope": "future_target_stream_work_depends_on_event_state_visible_at_wait_call",
+      "required_evidence": ["event_id", "target_context_id", "target_stream_id", "event_record_id", "wait_order"]
+    },
+    {
+      "registry_rule_id": "SYNC-COPY-IMPLICIT-001",
+      "aliases": ["cudaMemcpy", "cudaMemcpy2D", "cudaMemcpy3D", "cuMemcpyDtoH", "cuMemcpyDtoH_v2"],
+      "universe_class": "IN_UNIVERSE_UNSUPPORTED",
+      "sync_kind": "SYNCHRONOUS_COPY_OR_IMPLICIT_BLOCK",
+      "completion_scope": "not_recovered_in_registry_v0_2",
+      "required_evidence": ["copy_direction", "host_memory_kind", "stream_semantics", "context_id"]
+    },
+    {
+      "registry_rule_id": "NON-SYNC-QUERY-001",
+      "aliases": ["cudaEventQuery", "cudaStreamQuery", "cuEventQuery", "cuStreamQuery"],
+      "universe_class": "NON_BLOCKING_QUERY",
+      "sync_kind": "QUERY",
+      "completion_scope": "no_host_blocking_completion_wait_created_by_call",
+      "required_evidence": ["api_name"]
+    }
+  ]
+}

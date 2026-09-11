@@ -1,0 +1,188 @@
+{
+  "contract_version": "exposedpath-measurement-contract-0.2.0",
+  "registry_version": "exposedpath-sync-registry-0.2.0",
+  "test_map_version": "exposedpath-contract-test-map-0.2.0",
+  "status": "ENGINEERING_PRE_PILOT",
+  "research_scope": {
+    "gpu_count": 1,
+    "ownership_unit": "batched_inference_invocation",
+    "measured_interval": "pure_model_inference_until_token_ids_are_host_readable",
+    "excluded_after_token_ready": [
+      "detokenization",
+      "text_assembly",
+      "protocol_packaging",
+      "network_transport",
+      "frontend_display",
+      "external_consumer_processing"
+    ]
+  },
+  "time_model": {
+    "interval_convention": "HALF_OPEN_START_INCLUSIVE_END_EXCLUSIVE",
+    "storage_unit": "INTEGER_NANOSECOND",
+    "semantic_ordering_tolerance_ns": 0,
+    "terminal_tie_tolerance_ns": 0,
+    "pilot_statistical_comparison_tolerance_affects_semantic_identity": false
+  },
+  "phase_boundaries": {
+    "request_start": {
+      "point": "request.start",
+      "observable_condition": "fixed_input_tensors_resident_and_pre_request_drain_returned_immediately_before_first_prefill_model_call",
+      "drain_inside_window": false
+    },
+    "token_ready": {
+      "point_pattern": "token[i].host_readable",
+      "observable_condition": "all_token_ids_for_the_batched_invocation_are_readable_by_host_after_the_token_ready_blocking_operation_returns",
+      "text_available_required": false
+    },
+    "prefill": {
+      "start": "request.start",
+      "end": "token[0].host_readable",
+      "includes_first_token_selection": true,
+      "interval": "[request.start, token[0].host_readable)"
+    },
+    "decode": {
+      "start": "token[0].host_readable",
+      "end": "token[N-1].host_readable",
+      "empty_when_fixed_output_tokens": 1,
+      "step_interval_pattern": "[token[i-1].host_readable, token[i].host_readable) for i>=1"
+    },
+    "full_request": {
+      "start": "request.start",
+      "end": "token[N-1].host_readable",
+      "interval": "[request.start, token[N-1].host_readable)"
+    }
+  },
+  "sync_identity": {
+    "required_fields": [
+      "experiment_id",
+      "wmpc_id",
+      "run_id",
+      "run_role",
+      "pass_id",
+      "request_id",
+      "repeat_id",
+      "phase",
+      "callsite_id",
+      "sync_origin",
+      "sync_ordinal"
+    ],
+    "origins": {
+      "natural_token_ready": {
+        "study_role": "G1_NATURAL",
+        "is_physical_sync": true,
+        "additional_fields": ["token_index", "token_ready_mechanism"]
+      },
+      "n1_intervention": {
+        "study_role": "N1_INTERVENTION",
+        "is_physical_sync": true,
+        "additional_fields": ["intervention_variant_id", "intervention_ordinal"]
+      },
+      "non_sync_marker": {
+        "study_role": "IDENTITY_ONLY",
+        "is_physical_sync": false,
+        "additional_fields": ["marker_variant_id"]
+      }
+    },
+    "mixing_policy": "NATURAL_AND_INTERVENTION_RECORDS_MUST_REMAIN_SEPARATELY_IDENTIFIABLE"
+  },
+  "pass_parity": {
+    "same_fixed_inputs": true,
+    "same_generation_control_flow": true,
+    "same_token_ready_operations": true,
+    "same_sync_operations": true,
+    "pass1_only_adds": ["NVTX_MARKERS", "NSIGHT_PROFILER"],
+    "performance_source": "PASS0",
+    "mechanism_source": "PASS1"
+  },
+  "a_layer": {
+    "top_level_categories": [
+      "A_host_path",
+      "A_cuda_api",
+      "A_device_wait",
+      "A_sync_residual",
+      "A_unattributed"
+    ],
+    "priority": [
+      "A_unattributed",
+      "A_device_wait",
+      "A_sync_residual",
+      "A_cuda_api",
+      "A_host_path"
+    ],
+    "output_fields": [
+      "A_host_path_ns",
+      "A_cuda_api_ns",
+      "A_device_wait_ns",
+      "A_sync_residual_ns",
+      "A_unattributed_ns"
+    ]
+  },
+  "b_layer": {
+    "output_fields": [
+      "sync_id",
+      "wait_set_activity_ids",
+      "wait_set_hidden_union_ns",
+      "wait_set_exposed_union_ns",
+      "terminal",
+      "validity"
+    ],
+    "aggregation_policy": "NO_CROSS_SYNC_SUM",
+    "enters_a_wall_clock_budget": false
+  },
+  "derived": {
+    "D_score": {
+      "inputs": ["A_host_path_ns", "A_cuda_api_ns", "A_device_wait_ns"],
+      "formula": "(A_device_wait_ns-A_host_path_ns-A_cuda_api_ns)/(A_device_wait_ns+A_host_path_ns+A_cuda_api_ns)"
+    },
+    "Exposure_Signature": {
+      "inputs": ["A_host_path_ns", "A_cuda_api_ns", "A_device_wait_ns", "A_sync_residual_ns", "A_unattributed_ns", "b.validity"],
+      "formula": "versioned_projection_of_frozen_A_and_per_sync_B"
+    }
+  },
+  "rules": [
+    {
+      "rule_id": "MC-PH-001",
+      "decision": "request_starts_after_input_residency_and_pre_request_drain"
+    },
+    {
+      "rule_id": "MC-PH-002",
+      "decision": "token_ready_requires_host_readable_token_ids"
+    },
+    {
+      "rule_id": "MC-PH-003",
+      "decision": "prefill_ends_at_first_token_host_readable"
+    },
+    {
+      "rule_id": "MC-PH-004",
+      "decision": "decode_starts_at_first_token_ready_and_ends_at_final_token_ready"
+    },
+    {
+      "rule_id": "MC-PH-005",
+      "decision": "decode_step_i_is_bounded_by_consecutive_token_ready_points"
+    },
+    {
+      "rule_id": "MC-PH-006",
+      "decision": "decode_is_valid_empty_when_fixed_output_tokens_equals_one"
+    },
+    {
+      "rule_id": "MC-PH-007",
+      "decision": "post_token_text_and_transport_work_is_out_of_scope"
+    },
+    {
+      "rule_id": "MC-ID-001",
+      "decision": "natural_token_ready_sync_is_part_of_G1_natural_behavior"
+    },
+    {
+      "rule_id": "MC-ID-002",
+      "decision": "N1_intervention_sync_requires_variant_and_callsite_identity"
+    },
+    {
+      "rule_id": "MC-ID-003",
+      "decision": "natural_and_intervention_sync_must_not_be_mixed"
+    },
+    {
+      "rule_id": "MC-ID-004",
+      "decision": "pass0_and_pass1_share_completion_behavior"
+    }
+  ]
+}

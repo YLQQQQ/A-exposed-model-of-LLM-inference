@@ -1,0 +1,37 @@
+{
+  "test_map_version": "exposedpath-contract-test-map-0.2.0",
+  "contract_version": "exposedpath-measurement-contract-0.2.0",
+  "status": "ENGINEERING_PRE_PILOT",
+  "cases": [
+    {
+      "case_id": "PHASE-BOUNDARY-FIRST-TOKEN-001",
+      "kind": "runner_contract",
+      "rule_ids": ["MC-PH-001", "MC-PH-002", "MC-PH-003"]
+    },
+    {
+      "case_id": "PHASE-BOUNDARY-DECODE-001",
+      "kind": "runner_contract",
+      "rule_ids": ["MC-PH-004", "MC-PH-005", "MC-PH-006"]
+    },
+    {
+      "case_id": "PURE-INFERENCE-SCOPE-001",
+      "kind": "runner_contract",
+      "rule_ids": ["MC-PH-007"]
+    },
+    {
+      "case_id": "SYNC-IDENTITY-NATURAL-001",
+      "kind": "manifest_and_trace_identity",
+      "rule_ids": ["MC-ID-001", "MC-ID-003"]
+    },
+    {
+      "case_id": "SYNC-IDENTITY-INTERVENTION-001",
+      "kind": "manifest_and_trace_identity",
+      "rule_ids": ["MC-ID-002", "MC-ID-003"]
+    },
+    {
+      "case_id": "PASS-PARITY-COMPLETION-001",
+      "kind": "cross_pass_contract",
+      "rule_ids": ["MC-ID-004"]
+    }
+  ]
+}

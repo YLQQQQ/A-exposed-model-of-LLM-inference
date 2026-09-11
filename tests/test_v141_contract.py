@@ -6,7 +6,11 @@ from copy import deepcopy
 
 import pytest
 
-from exposedpath_v141.contract import ContractValidationError, validate_contract_bundle
+from exposedpath_v141.contract import (
+    ContractValidationError,
+    load_contract_bundle,
+    validate_contract_bundle,
+)
 
 
 def valid_literal_bundle():
@@ -162,3 +166,41 @@ def test_placeholder_text_is_rejected():
 
     with pytest.raises(ContractValidationError, match="占位文本"):
         validate_contract_bundle(contract, registry, test_map)
+
+
+def test_default_bundle_freezes_observable_token_boundaries():
+    bundle = load_contract_bundle()
+    phases = bundle["contract"]["phase_boundaries"]
+
+    assert phases["prefill"]["start"] == "request.start"
+    assert phases["prefill"]["end"] == "token[0].host_readable"
+    assert phases["decode"]["start"] == "token[0].host_readable"
+    assert phases["decode"]["empty_when_fixed_output_tokens"] == 1
+    assert phases["full_request"]["end"] == "token[N-1].host_readable"
+
+
+def test_natural_and_intervention_sync_have_disjoint_origins():
+    bundle = load_contract_bundle()
+    identities = bundle["contract"]["sync_identity"]["origins"]
+
+    assert identities["natural_token_ready"]["study_role"] == "G1_NATURAL"
+    assert identities["n1_intervention"]["study_role"] == "N1_INTERVENTION"
+    assert identities["non_sync_marker"]["is_physical_sync"] is False
+
+
+def test_pass0_and_pass1_share_completion_behavior():
+    parity = load_contract_bundle()["contract"]["pass_parity"]
+
+    assert parity["same_token_ready_operations"] is True
+    assert parity["same_sync_operations"] is True
+    assert parity["pass1_only_adds"] == ["NVTX_MARKERS", "NSIGHT_PROFILER"]
+
+
+def test_registry_separates_blocking_syncs_from_dependency_edges():
+    registry = load_contract_bundle()["registry"]
+    classes = {rule["registry_rule_id"]: rule["universe_class"] for rule in registry["rules"]}
+
+    assert classes["SYNC-STREAM-RUNTIME-001"] == "SUPPORTED_PHYSICAL_BLOCKING_SYNC"
+    assert classes["EDGE-STREAM-WAIT-EVENT-001"] == "DEVICE_DEPENDENCY_EDGE"
+    assert classes["EDGE-EVENT-RECORD-001"] == "DEVICE_DEPENDENCY_EDGE"
+    assert classes["NON-SYNC-QUERY-001"] == "NON_BLOCKING_QUERY"

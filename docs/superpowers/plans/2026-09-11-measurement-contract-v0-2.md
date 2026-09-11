@@ -117,7 +117,7 @@ git commit -m "test: validate measurement contract bundle"
 - `sync_identity` 区分 `natural_token_ready`、`n1_intervention` 与 `non_sync_marker`。
 - registry 为每个 physical blocking sync 提供 `registry_rule_id`、API alias、支持状态、completion scope 和必需证据。
 
-- [ ] **步骤 1：先写默认合同加载和边界行为测试**
+- [x] **步骤 1：先写默认合同加载和边界行为测试**
 
 ```python
 def test_default_bundle_freezes_observable_token_boundaries():
@@ -135,7 +135,7 @@ def test_natural_and_intervention_sync_have_disjoint_origins():
     assert identities["n1_intervention"]["study_role"] == "N1_INTERVENTION"
 ```
 
-- [ ] **步骤 2：运行测试并确认因合同文件缺失而失败**
+- [x] **步骤 2：运行测试并确认因合同文件缺失而失败**
 
 ```powershell
 python -m pytest tests/test_v141_contract.py -q -p no:cacheprovider
@@ -143,23 +143,23 @@ python -m pytest tests/test_v141_contract.py -q -p no:cacheprovider
 
 预期：默认合同文件不存在，测试失败。
 
-- [ ] **步骤 3：写入三份机器清单的第一部分**
+- [x] **步骤 3：写入三份机器清单的第一部分**
 
 冻结以下事实：输入张量已在目标设备上且 request 前 drain 完成后，紧邻首次模型调用前为 `request.start`；`token[i].host_readable` 是整批 Token ID 已经可被 Host 读取且对应阻塞操作已经返回；Prefill 结束于 `token[0].host_readable`；Decode 从该点开始，结束于 `token[N-1].host_readable`；`N=1` 时 Decode 是合法空区间；反分词、文本拼接、网络和前端均不进入窗口。
 
 自然同步必须携带 request/repeat/phase/token/callsite 身份。N1 同步必须另带 intervention variant、callsite 和 ordinal；Pass0 与 Pass1 执行相同同步和 Token-ready 路径，Pass1 只增加标记和 profiler。
 
-- [ ] **步骤 4：写入 physical blocking sync registry**
+- [x] **步骤 4：写入 physical blocking sync registry**
 
 核心支持项：Runtime/Driver stream synchronize、Runtime device synchronize、Driver context synchronize、Runtime/Driver event synchronize。依赖图节点包括 event record 与 stream wait event，但二者本身不被当作 Host blocking sync。同步 copy/隐式阻塞 API 进入 universe 但在 v0.2 标记 unsupported；query 和纯异步 enqueue 标记 non-sync。
 
-- [ ] **步骤 5：运行定向测试并确认绿灯**
+- [x] **步骤 5：运行定向测试并确认绿灯**
 
 ```powershell
 python -m pytest tests/test_v141_contract.py -q -p no:cacheprovider
 ```
 
-- [ ] **步骤 6：提交任务 2**
+- [x] **步骤 6：提交任务 2**
 
 ```powershell
 git add docs/v1_4_1/contracts tests/test_v141_contract.py
