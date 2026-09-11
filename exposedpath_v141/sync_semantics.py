@@ -8,6 +8,7 @@ import json
 import re
 from collections import defaultdict
 from collections.abc import Mapping
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -250,12 +251,12 @@ def _manifest_input_status(manifest: Mapping[str, Any]) -> tuple[str, list[str]]
 
 def _normalize_activity(
     activity: Mapping[str, Any],
-    cuda_api_records: list[Mapping[str, Any]],
+    cuda_apis_by_correlation: Mapping[Any, list[Mapping[str, Any]]],
     nvtx_records: list[Mapping[str, Any]],
 ) -> dict[str, Any]:
     result = dict(activity)
     correlation_id = activity.get("correlation_id")
-    enqueues = [api for api in cuda_api_records if api.get("correlation_id") == correlation_id]
+    enqueues = list(cuda_apis_by_correlation.get(correlation_id, []))
     if correlation_id is None or len(enqueues) != 1:
         result.update(
             enqueue_record_id=None,
@@ -319,6 +320,31 @@ def _normalize_sync(
             nvtx_records,
         )
     identity = ownership["identity"]
+    marker_candidates: list[Mapping[str, Any]] = []
+    if host_start is not None and host_end is not None:
+        for record in nvtx_records:
+            marker = record.get("structured_identity")
+            if not isinstance(marker, Mapping) or marker.get("kind") != "sync":
+                continue
+            if record.get("global_tid") != sync.get("runtime_global_tid"):
+                continue
+            marker_end = record.get("end_ns")
+            contains = (
+                marker_end is not None
+                and record.get("start_ns") <= host_start
+                and host_end <= marker_end
+            )
+            exact_mark = marker_end is None and record.get("start_ns") == host_start
+            if contains or exact_mark:
+                marker_candidates.append(marker)
+    marker_identity = marker_candidates[0] if len(marker_candidates) == 1 else None
+    marker_status = "VALID" if marker_identity is not None else (
+        "AMBIGUOUS" if marker_candidates else "INVALID"
+    )
+    if marker_identity is not None and identity is not None:
+        if _identity_key(marker_identity) != _identity_key(identity):
+            marker_status = "AMBIGUOUS"
+            marker_identity = None
     result.update(
         host_start_ns=host_start,
         host_end_ns=host_end,
@@ -329,6 +355,11 @@ def _normalize_sync(
         ownership_status=ownership["status"],
         ownership_reasons=ownership["reasons"],
         ownership_range_record_ids=ownership["range_record_ids"],
+        sync_identity_status=marker_status,
+        sync_origin=marker_identity.get("sync_origin") if marker_identity else None,
+        callsite_id=marker_identity.get("callsite_id") if marker_identity else None,
+        sync_ordinal=marker_identity.get("sync_ordinal") if marker_identity else None,
+        token_index=marker_identity.get("token_index") if marker_identity else None,
         **classification,
     )
     return result
@@ -336,14 +367,14 @@ def _normalize_sync(
 
 def _normalize_event_record(
     event: Mapping[str, Any],
-    cuda_api_records: list[Mapping[str, Any]],
+    cuda_apis_by_correlation: Mapping[Any, list[Mapping[str, Any]]],
     nvtx_records: list[Mapping[str, Any]],
 ) -> dict[str, Any]:
     result = dict(event)
     correlation_id = event.get("correlation_id")
     candidates = [
         api
-        for api in cuda_api_records
+        for api in cuda_apis_by_correlation.get(correlation_id, [])
         if api.get("correlation_id") == correlation_id
         and classify_cuda_api(str(api.get("api_name", "")))["sync_kind"] == "EVENT_RECORD"
     ]
@@ -384,21 +415,30 @@ def build_semantic_inventory(bundle: Mapping[str, Any]) -> dict[str, Any]:
     input_status, input_reasons = _manifest_input_status(manifest)
     nvtx = list(records["nvtx"])
     cuda_api = list(records["cuda_api"])
+    cuda_apis_by_correlation: dict[Any, list[Mapping[str, Any]]] = defaultdict(list)
+    for api in cuda_api:
+        cuda_apis_by_correlation[api.get("correlation_id")].append(api)
     normalized_syncs = [_normalize_sync(sync, nvtx) for sync in records["cuda_sync"]]
+    normalized_activities = (
+        [
+            _normalize_activity(activity, cuda_apis_by_correlation, nvtx)
+            for activity in records["device_activity"]
+        ]
+        if input_status == "VALID"
+        else []
+    )
     return {
         "input_status": input_status,
         "input_reasons": input_reasons,
         "execution_context": dict(manifest.get("execution_context", {})),
-        "activities": [
-            _normalize_activity(activity, cuda_api, nvtx)
-            for activity in records["device_activity"]
-        ],
+        "activity_count_observed": len(records["device_activity"]),
+        "activities": normalized_activities,
         "syncs": [sync for sync in normalized_syncs if sync["role"] != "DEPENDENCY_EDGE"],
         "dependency_events": [
             sync for sync in normalized_syncs if sync["role"] == "DEPENDENCY_EDGE"
         ],
         "event_records": [
-            _normalize_event_record(event, cuda_api, nvtx)
+            _normalize_event_record(event, cuda_apis_by_correlation, nvtx)
             for event in records.get("cuda_event", [])
         ],
         "contexts": list(records.get("context", [])),
@@ -808,3 +848,250 @@ def recover_wait_set(
         },
         "cross_phase_dependency": cross_phase,
     }
+
+
+@lru_cache(maxsize=1)
+def _reason_rules() -> dict[str, tuple[int, str]]:
+    from .contract import load_contract_bundle
+
+    priorities = load_contract_bundle()["contract"]["s_layer"]["reason_priority"]
+    return {
+        reason: (int(group["rank"]), str(group["default_validity"]))
+        for group in priorities
+        for reason in group["reasons"]
+    }
+
+
+def _ordered_reasons(reasons: list[str]) -> tuple[str | None, list[str], str | None]:
+    rules = _reason_rules()
+    unique = list(dict.fromkeys(reason for reason in reasons if reason in rules))
+    unique.sort(key=lambda reason: (rules[reason][0], reason))
+    if not unique:
+        return None, [], None
+    primary = unique[0]
+    return primary, unique[1:], rules[primary][1]
+
+
+def _semantic_frontier(
+    wait_ids: list[str], edges: list[Mapping[str, Any]]
+) -> list[str]:
+    wait_set = set(wait_ids)
+    outgoing: dict[str, set[str]] = defaultdict(set)
+    for edge in edges:
+        outgoing[str(edge["from"])].add(str(edge["to"]))
+
+    frontier: list[str] = []
+    for activity_id in wait_ids:
+        seen = {activity_id}
+        pending = list(outgoing.get(activity_id, set()))
+        has_wait_successor = False
+        while pending and not has_wait_successor:
+            node = pending.pop()
+            if node in seen:
+                continue
+            seen.add(node)
+            if node in wait_set:
+                has_wait_successor = True
+                break
+            pending.extend(outgoing.get(node, set()))
+        if not has_wait_successor:
+            frontier.append(activity_id)
+    return frontier
+
+
+def _invalid_terminal(status: str) -> dict[str, Any]:
+    return {
+        "status": "AMBIGUOUS" if status == "AMBIGUOUS" else "INVALID",
+        "kind": "NONE",
+        "activity_id": None,
+        "end_ns": None,
+        "clock_domain_id": None,
+    }
+
+
+def analyze_sync_semantics(
+    inventory: Mapping[str, Any],
+    sync: Mapping[str, Any],
+) -> dict[str, Any]:
+    """完成单个 physical sync 的 W(s)、terminal 与 validity 判定。"""
+
+    if inventory.get("input_status") == "VALID":
+        recovery = recover_wait_set(inventory, sync)
+    else:
+        recovery = {
+            "dependency_closure_status": "AMBIGUOUS",
+            "wait_set_activity_ids": [],
+            "submission_evidence": {},
+            "dependency_edges": [],
+            "event_record_id": None,
+            "reasons": list(inventory.get("input_reasons", [])),
+            "activity_origin_phases": {},
+            "cross_phase_dependency": False,
+        }
+    reasons = list(recovery["reasons"])
+    role = sync.get("role")
+    if role == "UNSUPPORTED":
+        reasons.append("UNSUPPORTED_SYNC_API")
+    elif role == "UNCLASSIFIED":
+        reasons.append("UNCLASSIFIED_CUDA_API")
+    elif role != "HOST_BLOCKING_SYNC":
+        reasons.append("UNCLASSIFIED_CUDA_API")
+
+    reasons.extend(sync.get("ownership_reasons", []))
+    if sync.get("ownership_status") == "AMBIGUOUS":
+        reasons.append("INVOCATION_OWNERSHIP_AMBIGUOUS")
+    elif sync.get("ownership_status") != "VALID":
+        reasons.append("INVOCATION_BOUNDARY_INVALID")
+    if any(sync.get(field) is None for field in ("sync_origin", "callsite_id", "sync_ordinal")):
+        reasons.append("INVOCATION_BOUNDARY_INVALID")
+
+    kind = sync.get("sync_kind")
+    if kind == "STREAM":
+        if sync.get("context_id") is None:
+            reasons.append("MISSING_CONTEXT_ID")
+        if sync.get("stream_id") is None:
+            reasons.append("MISSING_STREAM_ID")
+    elif kind == "DEVICE" and sync.get("device_id") is None:
+        reasons.append("MISSING_CONTEXT_ID")
+    elif kind == "CONTEXT" and sync.get("context_id") is None:
+        reasons.append("MISSING_CONTEXT_ID")
+    elif kind == "EVENT":
+        if sync.get("event_id") is None:
+            reasons.append("MISSING_EVENT_ID")
+        if sync.get("event_sync_id") is None:
+            reasons.append("MISSING_EVENT_RECORD")
+
+    activity_by_id = {
+        str(activity["record_id"]): activity for activity in inventory["activities"]
+    }
+    wait_activities = [
+        activity_by_id[activity_id]
+        for activity_id in recovery["wait_set_activity_ids"]
+        if activity_id in activity_by_id
+    ]
+    if any(
+        activity.get("graph_id") is not None and activity.get("graph_node_id") is None
+        for activity in wait_activities
+    ):
+        reasons.append("GRAPH_MAPPING_UNSUPPORTED")
+
+    frontier = _semantic_frontier(
+        recovery["wait_set_activity_ids"], recovery["dependency_edges"]
+    )
+    terminal: dict[str, Any]
+    if not recovery["wait_set_activity_ids"]:
+        terminal = {
+            "status": "NOT_APPLICABLE",
+            "kind": "NONE",
+            "activity_id": None,
+            "end_ns": None,
+            "clock_domain_id": None,
+        }
+    elif reasons:
+        primary, _, reason_validity = _ordered_reasons(reasons)
+        terminal = _invalid_terminal(reason_validity or "INVALID")
+    elif not frontier:
+        reasons.append("TERMINAL_NOT_FOUND")
+        terminal = _invalid_terminal("INVALID")
+    else:
+        frontier_activities = [activity_by_id[activity_id] for activity_id in frontier]
+        clock_domains = {activity.get("clock_domain_id") for activity in frontier_activities}
+        if None in clock_domains or len(clock_domains) != 1:
+            reasons.append("CLOCK_DOMAIN_UNRESOLVED")
+            terminal = _invalid_terminal("INVALID")
+        elif len(frontier_activities) == 1:
+            selected = frontier_activities[0]
+            terminal = {
+                "status": "VALID",
+                "kind": "ACTIVITY",
+                "activity_id": selected["record_id"],
+                "end_ns": selected["end_ns"],
+                "clock_domain_id": selected["clock_domain_id"],
+            }
+        else:
+            latest_end = max(int(activity["end_ns"]) for activity in frontier_activities)
+            latest = [
+                activity for activity in frontier_activities
+                if int(activity["end_ns"]) == latest_end
+            ]
+            if len(latest) != 1:
+                reasons.append("TERMINAL_TIE")
+                terminal = _invalid_terminal("AMBIGUOUS")
+            else:
+                selected = latest[0]
+                terminal = {
+                    "status": "VALID",
+                    "kind": "ACTIVITY",
+                    "activity_id": selected["record_id"],
+                    "end_ns": selected["end_ns"],
+                    "clock_domain_id": selected["clock_domain_id"],
+                }
+        if (
+            terminal["status"] == "VALID"
+            and sync.get("host_end_ns") is not None
+            and terminal["end_ns"] > sync["host_end_ns"]
+        ):
+            reasons.append("TERMINAL_AFTER_SYNC_END")
+            terminal = _invalid_terminal("INVALID")
+
+    primary_reason, secondary_reasons, reason_validity = _ordered_reasons(reasons)
+    if reason_validity is not None:
+        validity = reason_validity
+        if terminal["status"] in {"VALID", "NOT_APPLICABLE"}:
+            terminal = _invalid_terminal(validity)
+    elif recovery["wait_set_activity_ids"]:
+        validity = "VALID_NONEMPTY"
+    else:
+        validity = "VALID_EMPTY"
+
+    terminal_activity = activity_by_id.get(str(terminal.get("activity_id")))
+    result = {
+        "sync_id": sync.get("record_id"),
+        "registry_rule_id": sync.get("registry_rule_id"),
+        "sync_universe_class": sync.get("universe_class"),
+        "sync_kind": sync.get("sync_kind"),
+        "request_id": sync.get("request_id"),
+        "repeat_id": sync.get("repeat_id"),
+        "sync_owner_phase": sync.get("sync_owner_phase"),
+        "sync_origin": sync.get("sync_origin"),
+        "callsite_id": sync.get("callsite_id"),
+        "sync_ordinal": sync.get("sync_ordinal"),
+        "host_start_ns": sync.get("host_start_ns"),
+        "host_end_ns": sync.get("host_end_ns"),
+        "device_id": sync.get("device_id"),
+        "context_id": sync.get("context_id"),
+        "stream_id": sync.get("stream_id"),
+        "event_id": sync.get("event_id"),
+        "completion_scope": sync.get("completion_scope"),
+        "submission_evidence": recovery["submission_evidence"],
+        "dependency_closure_status": recovery["dependency_closure_status"],
+        "dependency_edges": recovery["dependency_edges"],
+        "event_record_id": recovery["event_record_id"],
+        "wait_set_status": validity,
+        "wait_set_activity_ids": recovery["wait_set_activity_ids"],
+        "semantic_frontier_activity_ids": frontier,
+        "terminal": terminal,
+        "validity": validity,
+        "primary_reason": primary_reason,
+        "secondary_reasons": secondary_reasons,
+        "activity_origin_phases": recovery["activity_origin_phases"],
+        "terminal_origin_phase": (
+            terminal_activity.get("origin_phase") if terminal_activity else None
+        ),
+        "cross_phase_dependency": recovery["cross_phase_dependency"],
+        "invocation_bleed": "INVOCATION_BLEED" in reasons,
+    }
+    return result
+
+
+def analyze_semantic_inventory(inventory: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """按稳定 Host 时间和 sync identity 分析全部 physical sync。"""
+
+    syncs = sorted(
+        inventory["syncs"],
+        key=lambda sync: (
+            sync.get("host_start_ns") if sync.get("host_start_ns") is not None else -1,
+            str(sync.get("record_id")),
+        ),
+    )
+    return [analyze_sync_semantics(inventory, sync) for sync in syncs]

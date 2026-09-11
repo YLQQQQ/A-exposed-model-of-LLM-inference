@@ -14,7 +14,9 @@ FORBIDDEN_TEXT = (
     "TARGET_INFO_CUDA_",
     "DIAGNOSTIC_EVENT",
 )
-DOWNSTREAM_PATTERNS = ("sync*.py", "accounting*.py", "derived*.py", "signature*.py")
+DOWNSTREAM_PATTERNS = (
+    "sync*.py", "s_*.py", "accounting*.py", "derived*.py", "signature*.py"
+)
 
 
 def check_source(source: str) -> list[str]:

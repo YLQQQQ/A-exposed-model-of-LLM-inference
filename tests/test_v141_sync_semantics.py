@@ -12,6 +12,7 @@ import pytest
 from exposedpath_v141.canonical_raw import load_canonical_raw_schema
 from exposedpath_v141.sync_semantics import (
     SyncSemanticsError,
+    analyze_sync_semantics,
     build_semantic_inventory,
     classify_cuda_api,
     load_canonical_bundle,
@@ -138,6 +139,18 @@ def _nvtx(record_id: str, start: int, end: int, phase: str, **identity_updates) 
         "end_ns": end,
         "global_tid": 1001,
         "structured_identity": identity,
+    }
+
+
+def _sync_nvtx(record_id: str, start: int, end: int, phase: str = "decode") -> dict:
+    identity = _identity(phase)
+    identity.update(
+        kind="sync", callsite_id="decode.token_ready",
+        sync_origin="natural_token_ready", sync_ordinal=0,
+    )
+    return {
+        "record_id": record_id, "start_ns": start, "end_ns": end,
+        "global_tid": 1001, "structured_identity": identity,
     }
 
 
@@ -285,6 +298,22 @@ def test_manifest_identity_problem_is_propagated_before_local_ownership():
 
     assert inventory["input_status"] == "AMBIGUOUS"
     assert inventory["input_reasons"] == ["INVOCATION_OWNERSHIP_AMBIGUOUS"]
+    assert inventory["activity_count_observed"] == 1
+    assert inventory["activities"] == []
+
+
+def test_ambiguous_input_fails_closed_without_reconstructing_a_plausible_wait_set():
+    inventory = _semantic_inventory([_owned_activity("a:plausible", 2, 20, 80)])
+    inventory["input_status"] = "AMBIGUOUS"
+    inventory["input_reasons"] = ["INVOCATION_OWNERSHIP_AMBIGUOUS"]
+
+    result = analyze_sync_semantics(
+        inventory, _owned_sync("STREAM", 50, 90, stream_id=2)
+    )
+
+    assert result["wait_set_activity_ids"] == []
+    assert result["validity"] == "AMBIGUOUS"
+    assert result["primary_reason"] == "INVOCATION_OWNERSHIP_AMBIGUOUS"
 
 
 def test_sync_ownership_uses_runtime_interval_and_preserves_cross_phase_candidate():
@@ -308,6 +337,24 @@ def test_sync_ownership_uses_runtime_interval_and_preserves_cross_phase_candidat
     assert normalized_sync["host_start_ns"] == 55
     assert normalized_sync["sync_owner_phase"] == "decode"
     assert relation == {"supported": True, "cross_phase_dependency": True, "reason": None}
+
+
+def test_sync_identity_comes_from_unique_structured_sync_marker():
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=[
+                _nvtx("range:decode", 0, 100, "decode"),
+                _sync_nvtx("range:sync", 50, 80),
+            ],
+            cuda_api=[], activities=[], syncs=[_sync()],
+        )
+    )
+
+    sync = inventory["syncs"][0]
+    assert sync["sync_identity_status"] == "VALID"
+    assert sync["sync_origin"] == "natural_token_ready"
+    assert sync["callsite_id"] == "decode.token_ready"
+    assert sync["sync_ordinal"] == 0
 
 
 def test_inventory_maps_cuda_event_record_and_stream_wait_edge_from_canonical_facts():
@@ -450,6 +497,9 @@ def _owned_sync(
         "request_id": "req-0",
         "repeat_id": "r0",
         "sync_owner_phase": phase,
+        "sync_origin": "natural_token_ready",
+        "callsite_id": "decode.token_ready",
+        "sync_ordinal": 0,
         "invocation_identity": identity,
         "ownership_status": "VALID",
         "ownership_reasons": [],
@@ -650,3 +700,135 @@ def test_unrelated_broken_event_evidence_does_not_poison_stream_sync():
 
     assert result["dependency_closure_status"] == "COMPLETE"
     assert result["reasons"] == []
+
+
+def test_terminal_comes_from_semantic_frontier_and_completed_before_remains_nonempty():
+    first = _owned_activity("a:first", 2, 10, 30)
+    terminal = _owned_activity("a:terminal", 2, 35, 45)
+    result = analyze_sync_semantics(
+        _semantic_inventory([first, terminal]),
+        _owned_sync("STREAM", 50, 80, stream_id=2),
+    )
+
+    assert result["wait_set_activity_ids"] == ["a:first", "a:terminal"]
+    assert result["terminal"] == {
+        "status": "VALID",
+        "kind": "ACTIVITY",
+        "activity_id": "a:terminal",
+        "end_ns": 45,
+        "clock_domain_id": "NSYS_TRACE_RELATIVE_NS",
+    }
+    assert result["validity"] == "VALID_NONEMPTY"
+
+
+def test_multiple_frontiers_use_unique_latest_completion_only_in_shared_clock():
+    early = _owned_activity("a:early", 2, 10, 70)
+    late = _owned_activity("a:late", 4, 20, 90)
+    result = analyze_sync_semantics(
+        _semantic_inventory([early, late]),
+        _owned_sync("DEVICE", 50, 100, stream_id=None, context_id=None),
+    )
+
+    assert result["terminal"]["activity_id"] == "a:late"
+    assert result["semantic_frontier_activity_ids"] == ["a:early", "a:late"]
+    assert result["validity"] == "VALID_NONEMPTY"
+
+
+def test_equal_latest_frontiers_are_ambiguous_with_zero_tolerance():
+    left = _owned_activity("a:left", 2, 10, 90)
+    right = _owned_activity("a:right", 4, 20, 90)
+    result = analyze_sync_semantics(
+        _semantic_inventory([left, right]),
+        _owned_sync("DEVICE", 50, 100, stream_id=None, context_id=None),
+    )
+
+    assert result["terminal"]["status"] == "AMBIGUOUS"
+    assert result["validity"] == "AMBIGUOUS"
+    assert result["primary_reason"] == "TERMINAL_TIE"
+
+
+def test_terminal_after_sync_return_is_invalid():
+    activity = _owned_activity("a:late-terminal", 2, 20, 110)
+    result = analyze_sync_semantics(
+        _semantic_inventory([activity]), _owned_sync("STREAM", 50, 100, stream_id=2)
+    )
+
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == "TERMINAL_AFTER_SYNC_END"
+
+
+def test_observable_empty_scope_is_valid_empty():
+    result = analyze_sync_semantics(
+        _semantic_inventory([]), _owned_sync("STREAM", 50, 80, stream_id=2)
+    )
+
+    assert result["wait_set_activity_ids"] == []
+    assert result["terminal"] == {
+        "status": "NOT_APPLICABLE", "kind": "NONE", "activity_id": None,
+        "end_ns": None, "clock_domain_id": None,
+    }
+    assert result["validity"] == "VALID_EMPTY"
+    assert result["primary_reason"] is None
+
+    from exposedpath_v141.s_bundle import load_s_layer_schema
+    assert set(result) == set(load_s_layer_schema()["sync_record_fields"])
+
+
+def test_reason_priority_is_contract_order_not_discovery_order():
+    racing = _owned_activity("a:racing", 2, 70, 90, enqueue_start=45, enqueue_end=60)
+    event_sync = _owned_sync(
+        "EVENT", 50, 100, stream_id=None, event_id=9, event_sync_id=90
+    )
+    result = analyze_sync_semantics(_semantic_inventory([racing]), event_sync)
+
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == "MISSING_EVENT_RECORD"
+
+
+def test_unsupported_physical_sync_fails_closed():
+    sync = _owned_sync("SYNCHRONOUS_COPY_OR_IMPLICIT_BLOCK", 50, 100)
+    sync["role"] = "UNSUPPORTED"
+    result = analyze_sync_semantics(_semantic_inventory([]), sync)
+
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == "UNSUPPORTED_SYNC_API"
+
+
+@pytest.mark.parametrize(
+    "case_id",
+    ["Q0-STREAM-001", "Q0-COMPLETED-001", "Q0-EMPTY-001", "Q0-TERMINAL-TIE-001"],
+)
+def test_s_layer_matches_frozen_q0_expected_for_core_cases(case_id):
+    from exposedpath_v141.q0_oracle import load_oracle_bundle
+
+    case = next(item for item in load_oracle_bundle()["cases"] if item["case_id"] == case_id)
+    construction = case["construction"]
+    sync_spec = construction["syncs"][0]
+    expected = case["expected"]["syncs"][0]
+    wait_labels = set(expected["wait_set_activity_labels"])
+    activities = []
+    for index, spec in enumerate(construction["activities"]):
+        stream = 2 if spec["activity_label"] in wait_labels else 4
+        if sync_spec["sync_kind"] in {"DEVICE", "CONTEXT"}:
+            stream = 2 + index
+        activities.append(
+            _owned_activity(
+                spec["activity_label"], stream, spec["start_ns"], spec["end_ns"],
+                enqueue_start=max(0, spec["start_ns"] - 10),
+                enqueue_end=max(0, min(spec["start_ns"], sync_spec["start_ns"] - 1)),
+            )
+        )
+    sync = _owned_sync(
+        sync_spec["sync_kind"], sync_spec["start_ns"], sync_spec["end_ns"],
+        stream_id=2 if sync_spec["sync_kind"] == "STREAM" else None,
+        context_id=None if sync_spec["sync_kind"] == "DEVICE" else 1,
+    )
+
+    result = analyze_sync_semantics(_semantic_inventory(activities), sync)
+
+    assert result["wait_set_activity_ids"] == expected["wait_set_activity_labels"]
+    assert result["validity"] == expected["validity"]
+    if expected["terminal"]["status"] == "VALID":
+        assert result["terminal"]["activity_id"] == expected["terminal"]["activity_label"]
+    else:
+        assert result["terminal"]["status"] == expected["terminal"]["status"]

@@ -14,6 +14,7 @@ from .canonical_raw import (
 )
 from .observation import inspect_sqlite, write_report_new
 from .q0_oracle import OracleValidationError, load_oracle_bundle
+from .s_bundle import SBundleError, analyze_canonical_to_s
 
 
 def _configure_stdio() -> None:
@@ -65,6 +66,11 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "validate-q0-oracle", help="校验 Q0 独立标准答案的设计与覆盖"
     )
+    s_parser = subparsers.add_parser(
+        "analyze-s", help="只读分析 Canonical Raw 并生成 S 层 bundle"
+    )
+    s_parser.add_argument("--canonical-manifest", required=True, type=Path)
+    s_parser.add_argument("--output-dir", required=True, type=Path)
     return parser
 
 
@@ -159,6 +165,30 @@ def main(argv: list[str] | None = None) -> int:
         print(f"identity_validity: {identity_status}")
         print(f"q0_status: {manifest['research_eligibility']['q0_status']}")
         return 2 if "ambiguous" in {observation_status, identity_status.lower()} else 0
+
+    if args.command == "analyze-s":
+        try:
+            manifest_path = analyze_canonical_to_s(
+                args.canonical_manifest, args.output_dir
+            )
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (SBundleError, FileExistsError, OSError, ValueError, json.JSONDecodeError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        summary = manifest["summary"]
+        print(f"s_manifest: {manifest_path}")
+        print(f"s_schema_version: {manifest['schema_version']}")
+        print(f"physical_sync_count: {summary['physical_sync_count']}")
+        print(f"valid_nonempty_count: {summary['valid_nonempty_count']}")
+        print(f"valid_empty_count: {summary['valid_empty_count']}")
+        print(f"ambiguous_count: {summary['ambiguous_count']}")
+        print(f"invalid_count: {summary['invalid_count']}")
+        print(f"q0_status: {manifest['research_eligibility']['q0_status']}")
+        if summary["invalid_count"]:
+            return 3
+        if summary["ambiguous_count"] or manifest["input_validity"]["status"] != "VALID":
+            return 2
+        return 0
 
     if args.command != "inspect-sqlite":
         return 1

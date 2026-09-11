@@ -1,0 +1,22 @@
+{
+  "schema_version": "exposedpath-s-layer/0.2.0",
+  "measurement_contract_version": "exposedpath-measurement-contract-0.2.0",
+  "input_schema_version": "exposedpath-canonical-raw/0.2.0",
+  "status": "ENGINEERING_PRE_PILOT",
+  "sync_records_filename": "s_sync_records.jsonl.gz",
+  "manifest_filename": "s_manifest.json",
+  "sync_record_fields": [
+    "sync_id", "registry_rule_id", "sync_universe_class", "sync_kind",
+    "request_id", "repeat_id", "sync_owner_phase", "sync_origin",
+    "callsite_id", "sync_ordinal", "host_start_ns", "host_end_ns",
+    "device_id", "context_id", "stream_id", "event_id", "completion_scope",
+    "submission_evidence", "dependency_closure_status", "dependency_edges",
+    "event_record_id", "wait_set_status", "wait_set_activity_ids",
+    "semantic_frontier_activity_ids", "terminal", "validity", "primary_reason",
+    "secondary_reasons", "activity_origin_phases", "terminal_origin_phase",
+    "cross_phase_dependency", "invocation_bleed"
+  ],
+  "validity_states": ["VALID_NONEMPTY", "VALID_EMPTY", "AMBIGUOUS", "INVALID"],
+  "existing_output_policy": "REFUSE_OVERWRITE",
+  "research_eligibility": "SYNTHETIC_TEST_PASS_DOES_NOT_IMPLY_Q0_PASS"
+}

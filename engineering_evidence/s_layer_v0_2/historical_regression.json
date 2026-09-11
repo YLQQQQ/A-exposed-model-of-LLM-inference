@@ -1,0 +1,35 @@
+{
+  "evidence_version": "exposedpath-s-historical-regression/0.1.0",
+  "date": "2026-09-11",
+  "data_role": "Engineering",
+  "case": {
+    "trace_name": "w01_p128_b1_o16.nsys-rep",
+    "trace_sha256": "4CE938EC5B44C657BF90FD732D23A2F92E2D546ADF3F00758BBCA8784C1210C4",
+    "exporter": "NVIDIA Nsight Systems 2026.1.1.204",
+    "sqlite_sha256": "A462CC2C0DEB3AB65E8529D275B9BFD44E6E4281EAFE736E3E010538F6F0505E",
+    "canonical_manifest_sha256": "997267CF1409146ACC16BF92E624ED9E99707415AE1FC9B3788CB92CD583AA27",
+    "s_manifest_sha256": "D4B149B7808B2D37A37BB63239790D2E4A5E4BEABF63B1353064337EA99BB333",
+    "s_records_sha256": "50B377D45C070C50A35C84F0FBBAC04C1A14C167EB027AAAF77270AE541BFAF9",
+    "input_status": "AMBIGUOUS",
+    "physical_sync_count": 446,
+    "valid_nonempty_count": 0,
+    "valid_empty_count": 0,
+    "ambiguous_count": 0,
+    "invalid_count": 446,
+    "primary_reason_counts": {
+      "INVOCATION_BOUNDARY_INVALID": 446
+    },
+    "secondary_reason_counts": {
+      "INVOCATION_OWNERSHIP_AMBIGUOUS": 446
+    },
+    "q0_status": "NOT_RUN"
+  },
+  "interpretation": {
+    "chain_executable": true,
+    "historical_identity_fail_closed": true,
+    "scientific_result_eligible": false,
+    "q0_evidence": false,
+    "pilot_evidence": false,
+    "formal_evidence": false
+  }
+}
