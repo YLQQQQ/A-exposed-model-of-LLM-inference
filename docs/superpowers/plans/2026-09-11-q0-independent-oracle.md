@@ -82,7 +82,7 @@ git commit -m "test: validate independent q0 oracle"
 - 每个 case 包含 `construction`、`expected.syncs`、`required_contract_rules` 和 `required_for_q0`。
 - 每个 activity 使用 `activity_label`；真实 trace 以后通过 Q0 marker/correlation 映射该标签。
 
-- [ ] **步骤 1：先写默认 bundle 的覆盖测试并确认因文件缺失而失败**
+- [x] **步骤 1：先写默认 bundle 的覆盖测试并确认因文件缺失而失败**
 
 ```python
 def test_core_positive_cases_exist():
@@ -90,17 +90,17 @@ def test_core_positive_cases_exist():
     assert {"Q0-STREAM-001", "Q0-DEVICE-001", "Q0-CONTEXT-001", "Q0-EVENT-001"} <= case_ids
 ```
 
-- [ ] **步骤 2：写入核心案例及手工 expected**
+- [x] **步骤 2：写入核心案例及手工 expected**
 
 至少写定：stream 同流前缀与无关流、device 跨流、driver context 跨流、event record 前缀、cross-stream wait-event、completed-before、valid-empty、kernel/MemOp mixed。每个案例明确 expected `W(s)`、terminal、validity、A/B 关系；合成时间案例写入可手算的纳秒值。
 
-- [ ] **步骤 3：验证标准答案与独立算术**
+- [x] **步骤 3：验证标准答案与独立算术**
 
 ```powershell
 python -m pytest tests/test_v141_q0_oracle.py -q -p no:cacheprovider
 ```
 
-- [ ] **步骤 4：提交核心正例**
+- [x] **步骤 4：提交核心正例**
 
 ```powershell
 git add q0/oracle_cases_v0_2.json tests/test_v141_q0_oracle.py docs/superpowers/plans/2026-09-11-q0-independent-oracle.md

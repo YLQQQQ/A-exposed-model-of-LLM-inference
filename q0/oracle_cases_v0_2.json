@@ -1,0 +1,259 @@
+{
+  "oracle_version": "exposedpath-q0-oracle-0.2.0",
+  "contract_version": "exposedpath-measurement-contract-0.2.0",
+  "oracle_scope": "STATIC_EXPECTED_AND_INTERVAL_ARITHMETIC_ONLY",
+  "cases": [
+    {
+      "case_id": "Q0-STREAM-001",
+      "case_class": "POSITIVE",
+      "required_for_q0": true,
+      "features": ["STREAM", "UNRELATED_OVERLAP"],
+      "required_contract_rules": ["MC-S-003", "MC-S-009", "MC-B-002"],
+      "construction": {
+        "activities": [
+          {"activity_label": "K_S1_A", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 30},
+          {"activity_label": "K_S1_B", "activity_type": "KERNEL", "start_ns": 30, "end_ns": 90},
+          {"activity_label": "K_OTHER", "activity_type": "KERNEL", "start_ns": 55, "end_ns": 95}
+        ],
+        "syncs": [
+          {"sync_label": "S_STREAM", "sync_kind": "STREAM", "start_ns": 50, "end_ns": 100}
+        ],
+        "dependency_edges": [
+          {"from": "K_S1_A", "to": "K_S1_B", "edge_type": "SAME_STREAM_ORDER"}
+        ]
+      },
+      "expected": {"syncs": [
+        {
+          "sync_label": "S_STREAM",
+          "wait_set_status": "VALID_NONEMPTY",
+          "wait_set_activity_labels": ["K_S1_A", "K_S1_B"],
+          "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "K_S1_B"},
+          "validity": "VALID_NONEMPTY",
+          "primary_reason": null,
+          "secondary_reasons": [],
+          "b_status": "B_VALID",
+          "a_relations": ["A_device_wait_ns=40", "A_sync_residual_ns=10", "K_OTHER_not_dependency"],
+          "b_relations": ["wait_set_exposed_union_ns=40", "sync_return_tail_ns=10"]
+        }
+      ]}
+    },
+    {
+      "case_id": "Q0-DEVICE-001",
+      "case_class": "POSITIVE",
+      "required_for_q0": true,
+      "features": ["DEVICE", "CROSS_STREAM"],
+      "required_contract_rules": ["MC-S-004", "MC-S-009"],
+      "construction": {
+        "activities": [
+          {"activity_label": "K_A", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 60},
+          {"activity_label": "K_B", "activity_type": "KERNEL", "start_ns": 20, "end_ns": 90}
+        ],
+        "syncs": [
+          {"sync_label": "S_DEVICE", "sync_kind": "DEVICE", "start_ns": 50, "end_ns": 100}
+        ],
+        "dependency_edges": []
+      },
+      "expected": {"syncs": [
+        {
+          "sync_label": "S_DEVICE",
+          "wait_set_status": "VALID_NONEMPTY",
+          "wait_set_activity_labels": ["K_A", "K_B"],
+          "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "K_B"},
+          "validity": "VALID_NONEMPTY",
+          "primary_reason": null,
+          "secondary_reasons": [],
+          "b_status": "B_VALID",
+          "a_relations": ["A_device_wait_ns=40", "A_sync_residual_ns=10"],
+          "b_relations": ["wait_set_exposed_union_ns=40", "terminal=K_B"]
+        }
+      ]}
+    },
+    {
+      "case_id": "Q0-CONTEXT-001",
+      "case_class": "POSITIVE",
+      "required_for_q0": true,
+      "features": ["CONTEXT", "CROSS_STREAM"],
+      "required_contract_rules": ["MC-S-005", "MC-S-009"],
+      "construction": {
+        "activities": [
+          {"activity_label": "K_CTX_A", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 65},
+          {"activity_label": "K_CTX_B", "activity_type": "KERNEL", "start_ns": 25, "end_ns": 85}
+        ],
+        "syncs": [
+          {"sync_label": "S_CONTEXT", "sync_kind": "CONTEXT", "start_ns": 50, "end_ns": 95}
+        ],
+        "dependency_edges": []
+      },
+      "expected": {"syncs": [
+        {
+          "sync_label": "S_CONTEXT",
+          "wait_set_status": "VALID_NONEMPTY",
+          "wait_set_activity_labels": ["K_CTX_A", "K_CTX_B"],
+          "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "K_CTX_B"},
+          "validity": "VALID_NONEMPTY",
+          "primary_reason": null,
+          "secondary_reasons": [],
+          "b_status": "B_VALID",
+          "a_relations": ["A_device_wait_ns=35", "A_sync_residual_ns=10"],
+          "b_relations": ["terminal=K_CTX_B"]
+        }
+      ]}
+    },
+    {
+      "case_id": "Q0-EVENT-001",
+      "case_class": "POSITIVE",
+      "required_for_q0": true,
+      "features": ["EVENT_PREFIX", "COMPLETED_BEFORE"],
+      "required_contract_rules": ["MC-S-006", "MC-S-008"],
+      "construction": {
+        "activities": [
+          {"activity_label": "K_BEFORE_RECORD", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 40},
+          {"activity_label": "K_AFTER_RECORD", "activity_type": "KERNEL", "start_ns": 45, "end_ns": 90}
+        ],
+        "syncs": [
+          {"sync_label": "S_EVENT", "sync_kind": "EVENT", "start_ns": 60, "end_ns": 80}
+        ],
+        "dependency_edges": [
+          {"from": "K_BEFORE_RECORD", "to": "EVENT_E1", "edge_type": "EVENT_RECORD_FRONTIER"}
+        ]
+      },
+      "expected": {"syncs": [
+        {
+          "sync_label": "S_EVENT",
+          "wait_set_status": "VALID_NONEMPTY",
+          "wait_set_activity_labels": ["K_BEFORE_RECORD"],
+          "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "K_BEFORE_RECORD"},
+          "validity": "VALID_NONEMPTY",
+          "primary_reason": null,
+          "secondary_reasons": [],
+          "b_status": "B_VALID",
+          "a_relations": ["A_device_wait_ns=0", "A_sync_residual_ns=20", "K_AFTER_RECORD_not_dependency"],
+          "b_relations": ["wait_set_exposed_union_ns=0", "sync_return_tail_ns=20"]
+        }
+      ]}
+    },
+    {
+      "case_id": "Q0-EVENT-XSTREAM-001",
+      "case_class": "POSITIVE",
+      "required_for_q0": true,
+      "features": ["CROSS_STREAM_EVENT", "STREAM"],
+      "required_contract_rules": ["MC-S-003", "MC-S-006", "MC-S-008"],
+      "construction": {
+        "activities": [
+          {"activity_label": "K_PRODUCER", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 45},
+          {"activity_label": "K_CONSUMER", "activity_type": "KERNEL", "start_ns": 50, "end_ns": 90}
+        ],
+        "syncs": [
+          {"sync_label": "S_CONSUMER_STREAM", "sync_kind": "STREAM", "start_ns": 60, "end_ns": 100}
+        ],
+        "dependency_edges": [
+          {"from": "K_PRODUCER", "to": "EVENT_E1", "edge_type": "EVENT_RECORD_FRONTIER"},
+          {"from": "EVENT_E1", "to": "K_CONSUMER", "edge_type": "STREAM_WAIT_EVENT"}
+        ]
+      },
+      "expected": {"syncs": [
+        {
+          "sync_label": "S_CONSUMER_STREAM",
+          "wait_set_status": "VALID_NONEMPTY",
+          "wait_set_activity_labels": ["K_PRODUCER", "K_CONSUMER"],
+          "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "K_CONSUMER"},
+          "validity": "VALID_NONEMPTY",
+          "primary_reason": null,
+          "secondary_reasons": [],
+          "b_status": "B_VALID",
+          "a_relations": ["A_device_wait_ns=30", "A_sync_residual_ns=10"],
+          "b_relations": ["terminal=K_CONSUMER"]
+        }
+      ]}
+    },
+    {
+      "case_id": "Q0-COMPLETED-001",
+      "case_class": "BOUNDARY",
+      "required_for_q0": true,
+      "features": ["COMPLETED_BEFORE", "STREAM"],
+      "required_contract_rules": ["MC-S-007", "MC-B-002"],
+      "construction": {
+        "activities": [
+          {"activity_label": "K_DONE", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 30}
+        ],
+        "syncs": [
+          {"sync_label": "S_STREAM", "sync_kind": "STREAM", "start_ns": 50, "end_ns": 100}
+        ],
+        "dependency_edges": []
+      },
+      "expected": {"syncs": [
+        {
+          "sync_label": "S_STREAM",
+          "wait_set_status": "VALID_NONEMPTY",
+          "wait_set_activity_labels": ["K_DONE"],
+          "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "K_DONE"},
+          "validity": "VALID_NONEMPTY",
+          "primary_reason": null,
+          "secondary_reasons": [],
+          "b_status": "B_VALID",
+          "a_relations": ["A_device_wait_ns=0", "A_sync_residual_ns=50"],
+          "b_relations": ["wait_set_exposed_union_ns=0", "sync_return_tail_ns=50"]
+        }
+      ]}
+    },
+    {
+      "case_id": "Q0-EMPTY-001",
+      "case_class": "BOUNDARY",
+      "required_for_q0": true,
+      "features": ["VALID_EMPTY", "STREAM"],
+      "required_contract_rules": ["MC-S-013", "MC-A-008", "MC-B-005"],
+      "construction": {
+        "activities": [],
+        "syncs": [
+          {"sync_label": "S_EMPTY", "sync_kind": "STREAM", "start_ns": 50, "end_ns": 80}
+        ],
+        "dependency_edges": []
+      },
+      "expected": {"syncs": [
+        {
+          "sync_label": "S_EMPTY",
+          "wait_set_status": "VALID_EMPTY",
+          "wait_set_activity_labels": [],
+          "terminal": {"status": "NOT_APPLICABLE", "kind": "NONE", "activity_label": null},
+          "validity": "VALID_EMPTY",
+          "primary_reason": null,
+          "secondary_reasons": [],
+          "b_status": "B_NOT_APPLICABLE",
+          "a_relations": ["A_device_wait_ns=0", "A_sync_residual_ns=30"],
+          "b_relations": []
+        }
+      ]}
+    },
+    {
+      "case_id": "Q0-KERNEL-MEMOP-001",
+      "case_class": "POSITIVE",
+      "required_for_q0": true,
+      "features": ["KERNEL_MEMOP_MIXED", "DEVICE"],
+      "required_contract_rules": ["MC-A-003", "MC-B-003"],
+      "construction": {
+        "activities": [
+          {"activity_label": "KERNEL_A", "activity_type": "KERNEL", "start_ns": 10, "end_ns": 75},
+          {"activity_label": "MEMCPY_B", "activity_type": "MEMOP", "start_ns": 40, "end_ns": 90}
+        ],
+        "syncs": [
+          {"sync_label": "S_DEVICE", "sync_kind": "DEVICE", "start_ns": 50, "end_ns": 100}
+        ],
+        "dependency_edges": []
+      },
+      "expected": {"syncs": [
+        {
+          "sync_label": "S_DEVICE",
+          "wait_set_status": "VALID_NONEMPTY",
+          "wait_set_activity_labels": ["KERNEL_A", "MEMCPY_B"],
+          "terminal": {"status": "VALID", "kind": "ACTIVITY", "activity_label": "MEMCPY_B"},
+          "validity": "VALID_NONEMPTY",
+          "primary_reason": null,
+          "secondary_reasons": [],
+          "b_status": "B_VALID",
+          "a_relations": ["A_device_wait_ns=40", "A_sync_residual_ns=10", "device_wait_composition=MIXED"],
+          "b_relations": ["terminal=MEMCPY_B", "terminal_kind=MEMOP"]
+        }
+      ]}
+    }
+  ]
+}

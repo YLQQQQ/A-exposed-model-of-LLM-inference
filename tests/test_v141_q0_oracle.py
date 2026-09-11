@@ -9,6 +9,7 @@ import pytest
 from exposedpath_v141.q0_oracle import (
     OracleValidationError,
     calculate_expected_timing,
+    load_oracle_bundle,
     validate_oracle_bundle,
 )
 
@@ -30,12 +31,12 @@ def literal_bundle():
                             "activity_label": "K1",
                             "activity_type": "KERNEL",
                             "start_ns": 10,
-                            "end_ns": 70,
+                            "end_ns": 30,
                         },
                         {
                             "activity_label": "K2",
                             "activity_type": "KERNEL",
-                            "start_ns": 20,
+                            "start_ns": 30,
                             "end_ns": 90,
                         },
                     ],
@@ -121,7 +122,7 @@ def test_expected_timing_uses_written_wait_set_and_interval_union():
     assert timing == {
         "wait_set_hidden_union_ns": 40,
         "wait_set_exposed_union_ns": 40,
-        "terminal_pre_sync_ns": 30,
+        "terminal_pre_sync_ns": 20,
         "terminal_overlap_sync_ns": 40,
         "sync_return_tail_ns": 10,
     }
@@ -141,3 +142,71 @@ def test_completed_before_terminal_tail_does_not_include_pre_sync_gap():
     assert timing["wait_set_hidden_union_ns"] == 20
     assert timing["wait_set_exposed_union_ns"] == 0
     assert timing["sync_return_tail_ns"] == 50
+
+
+def test_core_positive_cases_exist():
+    cases = {case["case_id"]: case for case in load_oracle_bundle()["cases"]}
+
+    assert {
+        "Q0-STREAM-001",
+        "Q0-DEVICE-001",
+        "Q0-CONTEXT-001",
+        "Q0-EVENT-001",
+        "Q0-EVENT-XSTREAM-001",
+        "Q0-COMPLETED-001",
+        "Q0-EMPTY-001",
+        "Q0-KERNEL-MEMOP-001",
+    } <= set(cases)
+
+
+def test_core_cases_cover_required_positive_features():
+    features = {
+        feature
+        for case in load_oracle_bundle()["cases"]
+        for feature in case["features"]
+    }
+
+    assert {
+        "STREAM",
+        "DEVICE",
+        "CONTEXT",
+        "EVENT_PREFIX",
+        "CROSS_STREAM_EVENT",
+        "COMPLETED_BEFORE",
+        "VALID_EMPTY",
+        "UNRELATED_OVERLAP",
+        "KERNEL_MEMOP_MIXED",
+    } <= features
+
+
+@pytest.mark.parametrize(
+    ("case_id", "sync_label", "expected"),
+    [
+        (
+            "Q0-STREAM-001",
+            "S_STREAM",
+            {
+                "wait_set_hidden_union_ns": 40,
+                "wait_set_exposed_union_ns": 40,
+                    "terminal_pre_sync_ns": 20,
+                "terminal_overlap_sync_ns": 40,
+                "sync_return_tail_ns": 10,
+            },
+        ),
+        (
+            "Q0-COMPLETED-001",
+            "S_STREAM",
+            {
+                "wait_set_hidden_union_ns": 20,
+                "wait_set_exposed_union_ns": 0,
+                "terminal_pre_sync_ns": 20,
+                "terminal_overlap_sync_ns": 0,
+                "sync_return_tail_ns": 50,
+            },
+        ),
+    ],
+)
+def test_committed_oracle_has_hand_checkable_timing(case_id, sync_label, expected):
+    cases = {case["case_id"]: case for case in load_oracle_bundle()["cases"]}
+
+    assert calculate_expected_timing(cases[case_id], sync_label) == expected

@@ -90,20 +90,24 @@ def validate_oracle_bundle(bundle: Mapping[str, Any]) -> None:
         activities = _list(construction.get("activities", []), f"{case_id}.activities")
         syncs = _list(construction.get("syncs", []), f"{case_id}.syncs")
         activity_by_label: dict[str, Mapping[str, Any]] = {}
+        activity_labels: list[str] = []
         for raw_activity in activities:
             activity = _mapping(raw_activity, f"{case_id}.activity")
             label = _text(activity.get("activity_label"), f"{case_id}.activity_label")
+            activity_labels.append(label)
             _validate_interval(activity, f"{case_id}.{label}")
             activity_by_label[label] = activity
-        _unique(list(activity_by_label), f"{case_id} activity_label")
+        _unique(activity_labels, f"{case_id} activity_label")
 
         sync_by_label: dict[str, Mapping[str, Any]] = {}
+        sync_labels: list[str] = []
         for raw_sync in syncs:
             sync = _mapping(raw_sync, f"{case_id}.sync")
             label = _text(sync.get("sync_label"), f"{case_id}.sync_label")
+            sync_labels.append(label)
             _validate_interval(sync, f"{case_id}.{label}")
             sync_by_label[label] = sync
-        _unique(list(sync_by_label), f"{case_id} sync_label")
+        _unique(sync_labels, f"{case_id} sync_label")
 
         expected = _mapping(case.get("expected"), f"{case_id}.expected")
         expected_syncs = _list(expected.get("syncs"), f"{case_id}.expected.syncs")
