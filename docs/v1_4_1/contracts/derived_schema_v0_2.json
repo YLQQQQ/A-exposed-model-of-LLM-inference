@@ -350,18 +350,82 @@
                 "additionalProperties": false
               },
               "terminal_kind_counts": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "required": ["terminal_kind", "count"],
-                  "properties": {
-                    "terminal_kind": {"enum": ["ACTIVITY", "COMPLETION_BOUNDARY"]},
-                    "count": {"type": "integer", "minimum": 1}
-                  },
-                  "additionalProperties": false
-                }
+                "type": "object",
+                "required": ["ACTIVITY", "COMPLETION_BOUNDARY"],
+                "properties": {
+                  "ACTIVITY": {"type": "integer", "minimum": 0},
+                  "COMPLETION_BOUNDARY": {"type": "integer", "minimum": 0}
+                },
+                "additionalProperties": false
               }
             },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "status_counts": {
+                      "properties": {"B_VALID": {"minimum": 1}},
+                      "required": ["B_VALID"]
+                    }
+                  },
+                  "required": ["status_counts"]
+                },
+                "then": {
+                  "properties": {
+                    "valid_timing_statistics_ns": {
+                      "properties": {
+                        "wait_set_hidden_union_ns": {
+                          "properties": {
+                            "median": {"type": "number", "minimum": 0},
+                            "p90": {"type": "integer", "minimum": 0}
+                          }
+                        },
+                        "wait_set_exposed_union_ns": {
+                          "properties": {
+                            "median": {"type": "number", "minimum": 0},
+                            "p90": {"type": "integer", "minimum": 0}
+                          }
+                        },
+                        "sync_return_tail_ns": {
+                          "properties": {
+                            "median": {"type": "number", "minimum": 0},
+                            "p90": {"type": "integer", "minimum": 0}
+                          }
+                        }
+                      }
+                    },
+                    "valid_timing_distributions_ns": {
+                      "properties": {
+                        "wait_set_hidden_union_ns": {
+                          "minItems": 1,
+                          "items": {
+                            "properties": {
+                              "value_ns": {"type": "integer", "minimum": 0}
+                            }
+                          }
+                        },
+                        "wait_set_exposed_union_ns": {
+                          "minItems": 1,
+                          "items": {
+                            "properties": {
+                              "value_ns": {"type": "integer", "minimum": 0}
+                            }
+                          }
+                        },
+                        "sync_return_tail_ns": {
+                          "minItems": 1,
+                          "items": {
+                            "properties": {
+                              "value_ns": {"type": "integer", "minimum": 0}
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ],
             "additionalProperties": false
           }
         }

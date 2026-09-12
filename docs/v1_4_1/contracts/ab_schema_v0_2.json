@@ -302,6 +302,49 @@
             "end_ns": {"type": ["integer", "null"], "minimum": 0},
             "clock_domain_id": {"type": ["string", "null"]}
           },
+          "allOf": [
+            {
+              "if": {
+                "properties": {"kind": {"const": "ACTIVITY"}},
+                "required": ["kind"]
+              },
+              "then": {
+                "properties": {
+                  "status": {"const": "VALID"},
+                  "activity_id": {"type": "string", "minLength": 1},
+                  "end_ns": {"type": "integer", "minimum": 0},
+                  "clock_domain_id": {"type": "string", "minLength": 1}
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {"kind": {"const": "COMPLETION_BOUNDARY"}},
+                "required": ["kind"]
+              },
+              "then": {
+                "properties": {
+                  "status": {"const": "VALID"},
+                  "activity_id": {"type": "null"},
+                  "end_ns": {"type": "integer", "minimum": 0},
+                  "clock_domain_id": {"type": "string", "minLength": 1}
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {"kind": {"const": "NONE"}},
+                "required": ["kind"]
+              },
+              "then": {
+                "properties": {
+                  "activity_id": {"type": "null"},
+                  "end_ns": {"type": "null"},
+                  "clock_domain_id": {"type": "null"}
+                }
+              }
+            }
+          ],
           "additionalProperties": false
         },
         "terminal_pre_sync_ns": {"type": ["integer", "null"], "minimum": 0},
@@ -359,6 +402,42 @@
                   "kind": {"const": "NONE"}
                 }
               }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "validity": {"const": "B_VALID"},
+              "terminal": {
+                "properties": {"kind": {"const": "ACTIVITY"}},
+                "required": ["kind"]
+              }
+            },
+            "required": ["validity", "terminal"]
+          },
+          "then": {
+            "properties": {
+              "terminal_pre_sync_ns": {"type": "integer", "minimum": 0},
+              "terminal_overlap_sync_ns": {"type": "integer", "minimum": 0}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "validity": {"const": "B_VALID"},
+              "terminal": {
+                "properties": {"kind": {"const": "COMPLETION_BOUNDARY"}},
+                "required": ["kind"]
+              }
+            },
+            "required": ["validity", "terminal"]
+          },
+          "then": {
+            "properties": {
+              "terminal_pre_sync_ns": {"type": "null"},
+              "terminal_overlap_sync_ns": {"type": "null"}
             }
           }
         },

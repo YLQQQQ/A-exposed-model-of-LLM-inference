@@ -172,6 +172,20 @@ def _b_sync_record(validity: str = "B_VALID") -> dict:
     }
 
 
+def _completion_boundary_b_sync_record() -> dict:
+    record = _b_sync_record()
+    record["terminal"] = {
+        "status": "VALID",
+        "kind": "COMPLETION_BOUNDARY",
+        "activity_id": None,
+        "end_ns": 90,
+        "clock_domain_id": "NSYS_TRACE_RELATIVE_NS",
+    }
+    record["terminal_pre_sync_ns"] = None
+    record["terminal_overlap_sync_ns"] = None
+    return record
+
+
 def _derived_manifest() -> dict:
     return {
         "schema_version": "exposedpath-derived/0.2.0",
@@ -277,9 +291,10 @@ def _exposure_signature_record() -> dict:
                 "valid_timing_distributions_ns": {
                     field: _timing_distribution(0, 1) for field in metric_fields
                 },
-                "terminal_kind_counts": [
-                    {"terminal_kind": "ACTIVITY", "count": 1}
-                ],
+                "terminal_kind_counts": {
+                    "ACTIVITY": 1,
+                    "COMPLETION_BOUNDARY": 0,
+                },
             }
         ],
     }
@@ -323,6 +338,7 @@ def test_ab_schema_accepts_manifest_a_window_and_each_b_state():
         "B_INVALID",
     ):
         _validate(schema, _b_sync_record(validity))
+    _validate(schema, _completion_boundary_b_sync_record())
 
 
 def test_b_record_uses_exact_measurement_contract_fields():
@@ -374,12 +390,112 @@ def test_b_record_rejects_cross_sync_aggregate_field():
         _validate(schema, record)
 
 
+@pytest.mark.parametrize(
+    "terminal_field", ["activity_id", "end_ns", "clock_domain_id"]
+)
+def test_activity_terminal_requires_complete_identity(terminal_field):
+    schema = _load(AB_SCHEMA_PATH)
+    record = _b_sync_record()
+    record["terminal"][terminal_field] = None
+
+    with pytest.raises(ValidationError):
+        _validate(schema, record)
+
+
+@pytest.mark.parametrize(
+    "terminal_timing_field", ["terminal_pre_sync_ns", "terminal_overlap_sync_ns"]
+)
+def test_activity_terminal_requires_numeric_terminal_timing(terminal_timing_field):
+    schema = _load(AB_SCHEMA_PATH)
+    record = _b_sync_record()
+    record[terminal_timing_field] = None
+
+    with pytest.raises(ValidationError):
+        _validate(schema, record)
+
+
+def test_non_valid_terminal_rejects_stale_terminal_evidence():
+    schema = _load(AB_SCHEMA_PATH)
+    record = _b_sync_record("B_INVALID")
+    record["terminal"]["end_ns"] = 90
+
+    with pytest.raises(ValidationError):
+        _validate(schema, record)
+
+
+def test_nested_objects_reject_extra_fields():
+    ab_schema = _load(AB_SCHEMA_PATH)
+    b_record = _b_sync_record()
+    b_record["terminal"]["duration_ns"] = 40
+    with pytest.raises(ValidationError):
+        _validate(ab_schema, b_record)
+
+    derived_schema = _load(DERIVED_SCHEMA_PATH)
+    signature = _exposure_signature_record()
+    signature["b_groups"][0]["wait_set_exposed_total_ns"] = 0
+    with pytest.raises(ValidationError):
+        _validate(derived_schema, signature)
+
+
 def test_derived_schema_accepts_manifest_d_window_and_signature():
     schema = _load(DERIVED_SCHEMA_PATH)
 
     _validate(schema, _derived_manifest())
     _validate(schema, _d_window_record())
     _validate(schema, _exposure_signature_record())
+
+
+@pytest.mark.parametrize(
+    "metric",
+    [
+        "wait_set_hidden_union_ns",
+        "wait_set_exposed_union_ns",
+        "sync_return_tail_ns",
+    ],
+)
+def test_signature_with_valid_b_requires_core_statistics(metric):
+    schema = _load(DERIVED_SCHEMA_PATH)
+    signature = _exposure_signature_record()
+    signature["b_groups"][0]["valid_timing_statistics_ns"][metric] = {
+        "median": None,
+        "p90": None,
+    }
+
+    with pytest.raises(ValidationError):
+        _validate(schema, signature)
+
+
+def test_signature_terminal_counts_reject_unknown_terminal_kind():
+    schema = _load(DERIVED_SCHEMA_PATH)
+    signature = _exposure_signature_record()
+    signature["b_groups"][0]["terminal_kind_counts"]["NONE"] = 0
+
+    with pytest.raises(ValidationError):
+        _validate(schema, signature)
+
+
+@pytest.mark.parametrize(
+    "distribution",
+    [[], [{"value_ns": None, "count": 1}]],
+    ids=["empty", "null-only"],
+)
+@pytest.mark.parametrize(
+    "metric",
+    [
+        "wait_set_hidden_union_ns",
+        "wait_set_exposed_union_ns",
+        "sync_return_tail_ns",
+    ],
+)
+def test_signature_with_valid_b_requires_numeric_core_distribution(
+    metric, distribution
+):
+    schema = _load(DERIVED_SCHEMA_PATH)
+    signature = _exposure_signature_record()
+    signature["b_groups"][0]["valid_timing_distributions_ns"][metric] = distribution
+
+    with pytest.raises(ValidationError):
+        _validate(schema, signature)
 
 
 def test_derived_manifest_rejects_missing_ab_input_lineage():
