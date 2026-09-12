@@ -61,6 +61,17 @@ def _nvtx(window: RequestPhaseWindow, global_tid: int = 101, request_id: str | N
     }
 
 
+def _ownership_marker(
+    window: RequestPhaseWindow, record_id: str, global_tid: int, start: int, end: int,
+    request_id: str | None = None,
+) -> dict[str, object]:
+    """Marker 仅证明 worker-thread invocation ownership，绝不定义 A phase window。"""
+    marker = _nvtx(window, global_tid=global_tid, request_id=request_id)
+    marker.update({"record_id": record_id, "start_ns": start, "end_ns": end})
+    marker["structured_identity"] = {**marker["structured_identity"], "kind": "marker"}
+    return marker
+
+
 def _inputs(*, global_reasons: tuple[str, ...] = (), windows: tuple[RequestPhaseWindow, ...] | None = None, apis: tuple[dict[str, object], ...] | None = None, syncs: tuple[dict[str, object], ...] | None = None, activities: tuple[dict[str, object], ...] | None = None, nvtx: tuple[dict[str, object], ...] | None = None) -> ABInputs:
     activities = activities if activities is not None else (
         _activity("kernel", 30, 50, "KERNEL", 11),
@@ -187,20 +198,103 @@ def test_external_or_threadless_api_is_not_owned_by_current_request_window():
     assert "CUDA_API_THREAD_OWNERSHIP_MISSING" in record["secondary_reasons"]
 
 
-def test_api_is_owned_only_by_its_same_thread_structured_request_window():
+def test_worker_thread_api_uses_same_invocation_marker_not_window_thread():
     first = _window()
-    second = replace(first, window_id="window:second", request_id="request-2", nvtx_record_id="nvtx:2")
-    api = _api("second-thread-query", 10, 20, "cudaEventQuery", None, global_tid=202)
+    api = _api("worker-query", 10, 20, "cudaEventQuery", None, global_tid=202)
     inputs = _inputs(
-        windows=(first, second), apis=(api,), syncs=(), activities=(),
-        nvtx=(_nvtx(first, global_tid=101), _nvtx(second, global_tid=202)),
+        windows=(first,), apis=(api,), syncs=(), activities=(),
+        nvtx=(_nvtx(first, global_tid=101), _ownership_marker(first, "marker:worker", 202, 0, 100)),
     )
-    records = {record["request_id"]: record for record in _accounting_module().calculate_a_windows(inputs)}
+    records = _accounting_module().calculate_a_windows(inputs)
 
-    assert records["request-1"]["A_cuda_api_ns"] == 0
-    assert records["request-1"]["A_unattributed_ns"] == 10
-    assert records["request-2"]["A_cuda_api_ns"] == 10
-    assert records["request-2"]["A_cuda_api_non_submit_ns"] == 10
+    assert len(records) == 1
+    assert records[0]["A_cuda_api_ns"] == 10
+    assert records[0]["A_cuda_api_non_submit_ns"] == 10
+
+
+def test_cross_phase_api_clips_after_worker_marker_proves_same_invocation():
+    prefill = replace(_window("prefill", 0, 50), nvtx_record_id="nvtx:prefill")
+    decode = replace(_window("decode", 50, 100), nvtx_record_id="nvtx:decode")
+    api = _api("cross-phase-query", 40, 60, "cudaEventQuery", None, global_tid=202)
+    inputs = _inputs(
+        windows=(prefill, decode), apis=(api,), syncs=(), activities=(),
+        nvtx=(
+            _nvtx(prefill, global_tid=101), _nvtx(decode, global_tid=101),
+            _ownership_marker(prefill, "marker:worker", 202, 0, 100),
+        ),
+    )
+    records = {record["phase"]: record for record in _accounting_module().calculate_a_windows(inputs)}
+
+    assert set(records) == {"prefill", "decode"}
+    assert records["prefill"]["A_cuda_api_ns"] == 10
+    assert records["decode"]["A_cuda_api_ns"] == 10
+    assert records["prefill"]["A_host_path_ns"] == 40
+    assert records["decode"]["A_host_path_ns"] == 40
+
+
+def test_same_invocation_multithread_api_overlap_uses_union_not_thread_sum():
+    window = _window()
+    apis = (
+        _api("main-query", 10, 20, "cudaEventQuery", None, global_tid=101),
+        _api("worker-query", 15, 25, "cudaEventQuery", None, global_tid=202),
+    )
+    record = _only_record(_inputs(
+        windows=(window,), apis=apis, syncs=(), activities=(),
+        nvtx=(_nvtx(window, global_tid=101), _ownership_marker(window, "marker:worker", 202, 0, 100)),
+    ))
+
+    assert record["A_cuda_api_ns"] == 15
+    assert record["A_cuda_api_non_submit_ns"] == 15
+    assert record["A_host_path_ns"] == 85
+
+
+def test_conflicting_same_thread_invocation_markers_fail_closed():
+    window = _window()
+    api = _api("ambiguous-worker-query", 10, 20, "cudaEventQuery", None, global_tid=202)
+    record = _only_record(_inputs(
+        windows=(window,), apis=(api,), syncs=(), activities=(),
+        nvtx=(
+            _nvtx(window, global_tid=101),
+            _ownership_marker(window, "marker:owner", 202, 0, 100),
+            _ownership_marker(window, "marker:conflict", 202, 0, 100, request_id="request-other"),
+        ),
+    ))
+
+    assert record["A_cuda_api_ns"] == 0
+    assert record["A_unattributed_ns"] == 10
+    assert record["primary_reason"] == "CUDA_API_IDENTITY_CONFLICT"
+
+
+def test_non_enclosing_same_thread_marker_is_missing_ownership_evidence():
+    window = _window()
+    api = _api("unowned-worker-query", 10, 20, "cudaEventQuery", None, global_tid=202)
+    record = _only_record(_inputs(
+        windows=(window,), apis=(api,), syncs=(), activities=(),
+        nvtx=(_nvtx(window, global_tid=101), _ownership_marker(window, "marker:too-short", 202, 0, 5)),
+    ))
+
+    assert record["A_cuda_api_ns"] == 0
+    assert record["A_unattributed_ns"] == 10
+    assert record["primary_reason"] == "CUDA_API_WINDOW_OWNERSHIP_MISSING"
+
+
+def test_incomplete_enclosing_owner_is_not_ignored_when_a_matching_owner_exists():
+    window = _window()
+    api = _api("worker-query", 10, 20, "cudaEventQuery", None, global_tid=202)
+    incomplete = _ownership_marker(window, "marker:incomplete", 202, 0, 100)
+    del incomplete["structured_identity"]["repeat_id"]
+    record = _only_record(_inputs(
+        windows=(window,), apis=(api,), syncs=(), activities=(),
+        nvtx=(
+            _nvtx(window, global_tid=101),
+            _ownership_marker(window, "marker:matching", 202, 0, 100),
+            incomplete,
+        ),
+    ))
+
+    assert record["A_cuda_api_ns"] == 0
+    assert record["A_unattributed_ns"] == 10
+    assert record["primary_reason"] == "CUDA_API_IDENTITY_MISSING"
 
 
 def test_invalid_sync_precedes_overlapping_valid_sync_and_two_nonempty_wait_sets_union():

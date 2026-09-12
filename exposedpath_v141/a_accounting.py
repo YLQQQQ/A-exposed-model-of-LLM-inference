@@ -104,54 +104,47 @@ def _api_ownership_reason(
     window: RequestPhaseWindow,
     nvtx_records: tuple[Mapping[str, object], ...],
 ) -> str | None:
-    """确认 API 属于当前结构化 request/invocation；否则返回 fail-closed 原因。"""
+    """确认 API 属于 window 的 invocation；range 证明 ownership，不定义 phase。"""
 
     api_thread = api.get("global_tid")
     if not isinstance(api_thread, int) or isinstance(api_thread, bool):
         return "CUDA_API_THREAD_OWNERSHIP_MISSING"
 
-    targets = [record for record in nvtx_records if record.get("record_id") == window.nvtx_record_id]
-    if len(targets) != 1:
-        return "CUDA_API_WINDOW_OWNERSHIP_MISSING"
-    target = targets[0]
-    target_thread = target.get("global_tid")
-    if not isinstance(target_thread, int) or isinstance(target_thread, bool):
-        return "CUDA_API_THREAD_OWNERSHIP_MISSING"
-    if target_thread != api_thread:
-        return "CUDA_API_EXTERNAL_THREAD"
-
-    try:
-        target_interval = _interval(target, "start_ns", "end_ns", "window NVTX")
-    except ValueError:
-        return "CUDA_API_WINDOW_OWNERSHIP_MISSING"
-    if not _covers(target_interval, api_interval):
-        return "CUDA_API_WINDOW_OWNERSHIP_MISSING"
-
-    target_identity = target.get("structured_identity")
-    if not isinstance(target_identity, Mapping):
-        return "CUDA_API_IDENTITY_MISSING"
     expected = {field: getattr(window, field) for field in _WINDOW_OWNER_IDENTITY_FIELDS}
-    if (
-        any(target_identity.get(field) != value for field, value in expected.items())
-        or target_identity.get("phase") != window.phase
-    ):
-        return "CUDA_API_IDENTITY_CONFLICT"
-
+    same_thread_structured_seen = False
+    matching_owner_seen = False
+    incomplete_owner_seen = False
+    conflicting_owner_seen = False
     for candidate in nvtx_records:
         if candidate.get("global_tid") != api_thread:
             continue
         identity = candidate.get("structured_identity")
-        if not isinstance(identity, Mapping) or identity.get("kind") not in {"request", "phase"}:
+        if not isinstance(identity, Mapping) or identity.get("kind") not in {"request", "phase", "marker"}:
             continue
+        same_thread_structured_seen = True
         try:
             candidate_interval = _interval(candidate, "start_ns", "end_ns", "structured NVTX")
         except ValueError:
-            return "CUDA_API_IDENTITY_CONFLICT"
-        if _covers(candidate_interval, api_interval) and any(
-            identity.get(field) != value for field, value in expected.items()
-        ):
-            return "CUDA_API_IDENTITY_CONFLICT"
-    return None
+            incomplete_owner_seen = True
+            continue
+        if not _covers(candidate_interval, api_interval):
+            continue
+        if any(field not in identity or not isinstance(identity.get(field), str) or not identity[field] for field in expected):
+            incomplete_owner_seen = True
+        elif any(identity.get(field) != value for field, value in expected.items()):
+            conflicting_owner_seen = True
+        else:
+            matching_owner_seen = True
+
+    if conflicting_owner_seen:
+        return "CUDA_API_IDENTITY_CONFLICT"
+    if incomplete_owner_seen:
+        return "CUDA_API_IDENTITY_MISSING"
+    if matching_owner_seen:
+        return None
+    if not same_thread_structured_seen:
+        return "CUDA_API_EXTERNAL_THREAD"
+    return "CUDA_API_WINDOW_OWNERSHIP_MISSING"
 
 
 def _record_identity(window: RequestPhaseWindow) -> dict[str, object]:
