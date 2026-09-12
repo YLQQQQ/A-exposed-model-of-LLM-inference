@@ -103,7 +103,7 @@
 
 **Gate verdict：`NOT_RUN`。** A/B 与纯派生层 v0.2 机器 schema 已冻结；新语义的 A/B/D/Exposure Signature 代码尚未实现，旧 accounting 不能视为本 Gate 进度。
 
-- [ ] `EP-G5-01`（进行中：机器 schema 已冻结并完成第二轮复审修正，输入联结、窗口发现与 A 实现尚未完成）冻结 A/B 输入联结、窗口、输出 schema，并实现面向 request/phase、互斥且保守的 A。设计与 schema 证据：`docs/superpowers/specs/2026-09-12-gate5-accounting-design.md`、`docs/v1_4_1/contracts/ab_schema_v0_2.json`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_ab_schemas.py`（定向测试 `46 passed`）。
+- [ ] `EP-G5-01`（进行中：机器 schema 已冻结；Canonical/S 严格输入联结、lineage 校验和结构化 request/phase 窗口发现已完成；A 实现尚未开始）冻结 A/B 输入联结、窗口、输出 schema，并实现面向 request/phase、互斥且保守的 A。输入适配证据：`exposedpath_v141/ab_inputs.py`、`tests/test_v141_ab_inputs.py`；设计与 schema 证据：`docs/superpowers/specs/2026-09-12-gate5-accounting-design.md`、`docs/v1_4_1/contracts/ab_schema_v0_2.json`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_ab_schemas.py`（定向测试 `46 passed`）。
 - [ ] `EP-G5-02`（受阻）实现 A 的 residual、守恒容差和 invalid 传播。
 - [ ] `EP-G5-03`（受阻）实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。
 - [ ] `EP-G5-04`（受阻）仅从冻结后的 A/B 派生 D。
