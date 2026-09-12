@@ -79,6 +79,26 @@ def _nvtx(record_id: str, start: int, end: int, phase: str, kind: str) -> dict:
     }
 
 
+def _nvtx_for_request(
+    record_id: str, start: int, end: int, phase: str, kind: str, request_id: str
+) -> dict:
+    record = _nvtx(record_id, start, end, phase, kind)
+    record["structured_identity"]["request_id"] = request_id
+    record["text"] = "EXPOSEDPATH_JSON_V1:" + json.dumps(record["structured_identity"])
+    return record
+
+
+def _replace_nvtx(canonical_manifest: Path, rows: list[dict]) -> None:
+    manifest = json.loads(canonical_manifest.read_text(encoding="utf-8"))
+    nvtx_path = canonical_manifest.parent / manifest["files"]["nvtx"]["filename"]
+    replacement = nvtx_path.with_name("replacement-nvtx.jsonl.gz")
+    entry = _write_gzip_jsonl(replacement, rows)
+    replacement.replace(nvtx_path)
+    entry["filename"] = nvtx_path.name
+    manifest["files"]["nvtx"] = entry
+    canonical_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+
+
 def _cuda_sync() -> dict:
     return {
         "record_id": "cuda_sync:CUPTI_ACTIVITY_KIND_SYNCHRONIZATION:1",
@@ -350,9 +370,9 @@ def test_requires_one_s_record_for_every_canonical_physical_sync(tmp_path, recor
 @pytest.mark.parametrize(
     ("mutate", "reason"),
     [
-        (lambda nvtx: nvtx.pop(), "WINDOW_DISCOVERY_INVALID"),
-        (lambda nvtx: nvtx.append(deepcopy(nvtx[1])), "WINDOW_DISCOVERY_INVALID"),
-        (lambda nvtx: nvtx.__setitem__(2, _nvtx("nvtx:NVTX_EVENTS:3", 59, 100, "decode", "phase")), "WINDOW_DISCOVERY_INVALID"),
+        (lambda nvtx: nvtx.pop(), "WINDOW_PHASE_MISSING_OR_DUPLICATE"),
+        (lambda nvtx: nvtx.append(deepcopy(nvtx[1])), "WINDOW_PHASE_MISSING_OR_DUPLICATE"),
+        (lambda nvtx: nvtx.__setitem__(2, _nvtx("nvtx:NVTX_EVENTS:3", 59, 100, "decode", "phase")), "WINDOW_PHASE_BOUNDARY_INCONSISTENT"),
     ],
 )
 def test_invalid_phase_boundaries_are_recorded_without_timestamp_order_inference(tmp_path, mutate, reason):
@@ -362,16 +382,13 @@ def test_invalid_phase_boundaries_are_recorded_without_timestamp_order_inference
     with gzip.open(nvtx_path, "rt", encoding="utf-8") as handle:
         nvtx = [json.loads(line) for line in handle]
     mutate(nvtx)
-    replacement = nvtx_path.with_name("replacement-nvtx.jsonl.gz")
-    entry = _write_gzip_jsonl(replacement, nvtx)
-    replacement.replace(nvtx_path)
-    entry["filename"] = nvtx_path.name
-    manifest["files"]["nvtx"] = entry
-    canonical_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+    _replace_nvtx(canonical_manifest, nvtx)
     s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
 
-    assert discover_request_phase_windows(load_ab_inputs(canonical_manifest, s_manifest).canonical) == ()
-    assert reason in load_ab_inputs(canonical_manifest, s_manifest).global_quality_reasons
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+    assert discover_request_phase_windows(inputs.canonical) == ()
+    assert inputs.global_quality_reasons == ()
+    assert inputs.window_discovery_issues[0].reasons == (reason,)
 
 
 def test_global_invalid_evidence_is_preserved_as_quality_reason_not_a_loader_error(tmp_path):
@@ -389,3 +406,52 @@ def test_global_invalid_evidence_is_preserved_as_quality_reason_not_a_loader_err
 
     assert "TRACE_DROPPED_RECORDS" in inputs.global_quality_reasons
     assert "INVOCATION_OWNERSHIP_AMBIGUOUS" in inputs.global_quality_reasons
+
+
+def test_text_identity_mismatch_becomes_identity_scoped_issue_without_spoofed_window(tmp_path):
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    manifest = json.loads(canonical_manifest.read_text(encoding="utf-8"))
+    nvtx_path = canonical_manifest.parent / manifest["files"]["nvtx"]["filename"]
+    with gzip.open(nvtx_path, "rt", encoding="utf-8") as handle:
+        nvtx = [json.loads(line) for line in handle]
+    nvtx[1]["structured_identity"]["request_id"] = "spoofed-request"
+    _replace_nvtx(canonical_manifest, nvtx)
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+
+    assert inputs.windows == ()
+    assert inputs.global_quality_reasons == ()
+    assert len(inputs.window_discovery_issues) == 1
+    assert inputs.window_discovery_issues[0].request_id == "request-1"
+    assert inputs.window_discovery_issues[0].reasons == ("STRUCTURED_IDENTITY_TEXT_MISMATCH",)
+
+
+def test_one_bad_logical_identity_does_not_make_other_windows_globally_invalid(tmp_path):
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    manifest = json.loads(canonical_manifest.read_text(encoding="utf-8"))
+    nvtx_path = canonical_manifest.parent / manifest["files"]["nvtx"]["filename"]
+    with gzip.open(nvtx_path, "rt", encoding="utf-8") as handle:
+        nvtx = [json.loads(line) for line in handle]
+    nvtx.pop(0)
+    nvtx.extend(
+        [
+            _nvtx_for_request("nvtx:NVTX_EVENTS:4", 100, 200, "full_request", "request", "request-2"),
+            _nvtx_for_request("nvtx:NVTX_EVENTS:5", 100, 150, "prefill", "phase", "request-2"),
+            _nvtx_for_request("nvtx:NVTX_EVENTS:6", 150, 200, "decode", "phase", "request-2"),
+        ]
+    )
+    _replace_nvtx(canonical_manifest, nvtx)
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+
+    assert [(window.request_id, window.phase) for window in inputs.windows] == [
+        ("request-2", "full_request"),
+        ("request-2", "prefill"),
+        ("request-2", "decode"),
+    ]
+    assert inputs.global_quality_reasons == ()
+    assert len(inputs.window_discovery_issues) == 1
+    assert inputs.window_discovery_issues[0].request_id == "request-1"
+    assert inputs.window_discovery_issues[0].reasons == ("WINDOW_PHASE_MISSING_OR_DUPLICATE",)

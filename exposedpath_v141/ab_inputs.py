@@ -78,12 +78,27 @@ class RequestPhaseWindow:
 
 
 @dataclass(frozen=True)
+class WindowDiscoveryIssue:
+    """单个逻辑 request identity 的窗口发现 fail-closed 记录。"""
+
+    experiment_id: str | None
+    wmpc_id: str | None
+    run_id: str | None
+    run_role: str | None
+    pass_id: str | None
+    request_id: str | None
+    repeat_id: str | None
+    reasons: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ABInputs:
     canonical: CanonicalBundle
     s_manifest: dict[str, object]
     s_records: tuple[dict[str, object], ...]
     windows: tuple[RequestPhaseWindow, ...]
     global_quality_reasons: tuple[str, ...]
+    window_discovery_issues: tuple[WindowDiscoveryIssue, ...]
 
 
 def _sha256(path: Path) -> str:
@@ -285,35 +300,70 @@ def _window_key(identity: Mapping[str, Any]) -> tuple[str, ...]:
     return tuple(_as_text(identity.get(field), f"NVTX structured identity.{field}") for field in _IDENTITY_FIELDS)
 
 
-def _discovery_result(canonical: CanonicalBundle) -> tuple[tuple[RequestPhaseWindow, ...], tuple[str, ...]]:
+def _issue_for_key(
+    key: tuple[str, ...] | None, reasons: list[str] | tuple[str, ...]
+) -> WindowDiscoveryIssue:
+    values = key if key is not None else (None,) * len(_IDENTITY_FIELDS)
+    return WindowDiscoveryIssue(*values, reasons=tuple(dict.fromkeys(reasons)))
+
+
+def _text_identity(nvtx: Mapping[str, Any]) -> tuple[Mapping[str, Any] | None, str | None]:
+    """把 Canonical text 重新解析为窗口身份事实，并拒绝缓存 identity 伪造。"""
+
+    text = nvtx.get("text")
+    if not isinstance(text, str) or not text.startswith(_STRUCTURED_PREFIX):
+        return None, None
+    try:
+        payload = json.loads(text[len(_STRUCTURED_PREFIX) :])
+    except json.JSONDecodeError:
+        return None, "STRUCTURED_IDENTITY_TEXT_INVALID"
+    if not isinstance(payload, Mapping):
+        return None, "STRUCTURED_IDENTITY_TEXT_INVALID"
+    structured_identity = nvtx.get("structured_identity")
+    if not isinstance(structured_identity, Mapping) or dict(payload) != dict(structured_identity):
+        return payload, "STRUCTURED_IDENTITY_TEXT_MISMATCH"
+    return payload, None
+
+
+def _discovery_result(
+    canonical: CanonicalBundle,
+) -> tuple[tuple[RequestPhaseWindow, ...], tuple[WindowDiscoveryIssue, ...]]:
     groups: dict[tuple[str, ...], dict[str, list[tuple[dict[str, Any], Mapping[str, Any]]]]] = {}
-    malformed_seen = False
+    issue_reasons: dict[tuple[str, ...] | None, list[str]] = {}
     for nvtx in canonical.records["nvtx"]:
-        identity = nvtx.get("structured_identity")
-        if not isinstance(identity, Mapping):
+        identity, text_reason = _text_identity(nvtx)
+        if identity is None:
+            if text_reason is not None:
+                issue_reasons.setdefault(None, []).append(text_reason)
             continue
         phase = identity.get("phase")
         if phase not in _WINDOW_PHASES:
             continue
         if identity.get("kind") not in {"request", "phase"}:
-            malformed_seen = True
-            continue
-        if not str(nvtx.get("text", "")).startswith(_STRUCTURED_PREFIX):
-            malformed_seen = True
+            try:
+                issue_reasons.setdefault(_window_key(identity), []).append(
+                    "WINDOW_STRUCTURED_IDENTITY_INVALID"
+                )
+            except ABInputError:
+                issue_reasons.setdefault(None, []).append("WINDOW_STRUCTURED_IDENTITY_INVALID")
             continue
         try:
             key = _window_key(identity)
         except ABInputError:
-            malformed_seen = True
+            issue_reasons.setdefault(None, []).append("WINDOW_STRUCTURED_IDENTITY_INVALID")
+            continue
+        if text_reason is not None:
+            issue_reasons.setdefault(key, []).append(text_reason)
             continue
         groups.setdefault(key, {name: [] for name in _WINDOW_PHASES})[str(phase)].append((nvtx, identity))
 
     windows: list[RequestPhaseWindow] = []
-    reasons: list[str] = []
     for key in sorted(groups):
+        if key in issue_reasons:
+            continue
         ranges = groups[key]
         if any(len(ranges[phase]) != 1 for phase in _WINDOW_PHASES):
-            reasons.extend(("WINDOW_DISCOVERY_INVALID", "WINDOW_PHASE_MISSING_OR_DUPLICATE"))
+            issue_reasons.setdefault(key, []).append("WINDOW_PHASE_MISSING_OR_DUPLICATE")
             continue
         selected = {phase: ranges[phase][0] for phase in _WINDOW_PHASES}
         valid_times = True
@@ -329,7 +379,7 @@ def _discovery_result(canonical: CanonicalBundle) -> tuple[tuple[RequestPhaseWin
             ):
                 valid_times = False
         if not valid_times:
-            reasons.extend(("WINDOW_DISCOVERY_INVALID", "WINDOW_RANGE_INVALID"))
+            issue_reasons.setdefault(key, []).append("WINDOW_RANGE_INVALID")
             continue
         full = selected["full_request"][0]
         prefill = selected["prefill"][0]
@@ -340,7 +390,7 @@ def _discovery_result(canonical: CanonicalBundle) -> tuple[tuple[RequestPhaseWin
             and decode["end_ns"] == full["end_ns"]
             and prefill["end_ns"] <= full["end_ns"]
         ):
-            reasons.extend(("WINDOW_DISCOVERY_INVALID", "WINDOW_PHASE_BOUNDARY_INCONSISTENT"))
+            issue_reasons.setdefault(key, []).append("WINDOW_PHASE_BOUNDARY_INCONSISTENT")
             continue
         for phase in _WINDOW_PHASES:
             nvtx, identity = selected[phase]
@@ -360,9 +410,6 @@ def _discovery_result(canonical: CanonicalBundle) -> tuple[tuple[RequestPhaseWin
                     nvtx_record_id=str(nvtx["record_id"]),
                 )
             )
-    if malformed_seen or not groups:
-        reasons.extend(("WINDOW_DISCOVERY_INVALID", "WINDOW_STRUCTURED_IDENTITY_MISSING_OR_INVALID"))
-    ordered_reasons = tuple(dict.fromkeys(reasons))
     phase_order = {phase: index for index, phase in enumerate(_WINDOW_PHASES)}
     windows.sort(
         key=lambda window: (
@@ -376,7 +423,14 @@ def _discovery_result(canonical: CanonicalBundle) -> tuple[tuple[RequestPhaseWin
             phase_order[window.phase],
         )
     )
-    return tuple(windows), ordered_reasons
+    issues = tuple(
+        _issue_for_key(key, reasons)
+        for key, reasons in sorted(
+            issue_reasons.items(),
+            key=lambda item: (item[0] is None, item[0] or ()),
+        )
+    )
+    return tuple(windows), issues
 
 
 def discover_request_phase_windows(canonical: CanonicalBundle) -> tuple[RequestPhaseWindow, ...]:
@@ -417,12 +471,12 @@ def load_ab_inputs(canonical_manifest: Path, s_manifest: Path) -> ABInputs:
     loaded_s_manifest, s_records = _load_s_records(s_manifest)
     _validate_lineage(canonical_manifest, canonical, loaded_s_manifest)
     _validate_s_join(canonical, s_records)
-    windows, window_reasons = _discovery_result(canonical)
-    reasons = tuple(dict.fromkeys((*_global_quality_reasons(canonical), *window_reasons)))
+    windows, window_issues = _discovery_result(canonical)
     return ABInputs(
         canonical=canonical,
         s_manifest=dict(loaded_s_manifest),
         s_records=tuple(dict(record) for record in s_records),
         windows=windows,
-        global_quality_reasons=reasons,
+        global_quality_reasons=_global_quality_reasons(canonical),
+        window_discovery_issues=window_issues,
     )
