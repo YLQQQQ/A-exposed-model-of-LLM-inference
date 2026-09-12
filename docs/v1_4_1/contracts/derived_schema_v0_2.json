@@ -1,0 +1,386 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exposedpath.dev/schemas/derived_schema_v0_2.json",
+  "title": "ExposedPath Derived Exposure Schema v0.2",
+  "description": "Engineering/Pre-Pilot machine contract for navigation-only D and A/B-only Exposure Signature projections.",
+  "schema_version": "exposedpath-derived/0.2.0",
+  "measurement_contract_version": "exposedpath-measurement-contract-0.2.0",
+  "oneOf": [
+    {"$ref": "#/$defs/manifest"},
+    {"$ref": "#/$defs/d_window_record"},
+    {"$ref": "#/$defs/exposure_signature_record"}
+  ],
+  "$defs": {
+    "manifest": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "measurement_contract_version",
+        "input_schema_version",
+        "analyzer_version",
+        "generated_at_utc",
+        "data_role",
+        "source",
+        "files",
+        "summary",
+        "research_eligibility"
+      ],
+      "properties": {
+        "schema_version": {"const": "exposedpath-derived/0.2.0"},
+        "measurement_contract_version": {
+          "const": "exposedpath-measurement-contract-0.2.0"
+        },
+        "input_schema_version": {"const": "exposedpath-ab/0.2.0"},
+        "analyzer_version": {"type": "string", "minLength": 1},
+        "generated_at_utc": {"type": "string", "format": "date-time"},
+        "data_role": {
+          "type": "string",
+          "enum": ["Prototype", "Engineering", "Pilot", "Formal"]
+        },
+        "source": {
+          "type": "object",
+          "required": [
+            "ab_manifest_name",
+            "ab_manifest_sha256",
+            "a_window_records_sha256",
+            "b_sync_records_sha256"
+          ],
+          "properties": {
+            "ab_manifest_name": {"const": "ab_manifest.json"},
+            "ab_manifest_sha256": {
+              "type": "string",
+              "pattern": "^[0-9A-Fa-f]{64}$"
+            },
+            "a_window_records_sha256": {
+              "type": "string",
+              "pattern": "^[0-9A-Fa-f]{64}$"
+            },
+            "b_sync_records_sha256": {
+              "type": "string",
+              "pattern": "^[0-9A-Fa-f]{64}$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "files": {
+          "type": "object",
+          "required": ["d_window_records", "exposure_signature_records"],
+          "properties": {
+            "d_window_records": {
+              "type": "object",
+              "required": ["filename", "record_count", "sha256", "size_bytes"],
+              "properties": {
+                "filename": {"const": "d_window_records.jsonl.gz"},
+                "record_count": {"type": "integer", "minimum": 0},
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9A-Fa-f]{64}$"
+                },
+                "size_bytes": {"type": "integer", "minimum": 0}
+              },
+              "additionalProperties": false
+            },
+            "exposure_signature_records": {
+              "type": "object",
+              "required": ["filename", "record_count", "sha256", "size_bytes"],
+              "properties": {
+                "filename": {"const": "exposure_signature_records.jsonl.gz"},
+                "record_count": {"type": "integer", "minimum": 0},
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9A-Fa-f]{64}$"
+                },
+                "size_bytes": {"type": "integer", "minimum": 0}
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "summary": {
+          "type": "object",
+          "required": ["d_window_count", "exposure_signature_count"],
+          "properties": {
+            "d_window_count": {"type": "integer", "minimum": 0},
+            "exposure_signature_count": {"type": "integer", "minimum": 0}
+          },
+          "additionalProperties": false
+        },
+        "research_eligibility": {
+          "type": "object",
+          "required": ["formal_evidence", "q0_status", "scope"],
+          "properties": {
+            "formal_evidence": {"type": "boolean"},
+            "q0_status": {"enum": ["PASS", "FAIL", "BLOCKED", "NOT_RUN"]},
+            "scope": {"const": "DERIVED_FROM_A_B_ONLY"}
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "d_window_record": {
+      "type": "object",
+      "required": [
+        "window_id",
+        "experiment_id",
+        "wmpc_id",
+        "run_id",
+        "run_role",
+        "pass_id",
+        "request_id",
+        "repeat_id",
+        "phase",
+        "D_margin_ns",
+        "D_score"
+      ],
+      "properties": {
+        "window_id": {"type": "string", "minLength": 1},
+        "experiment_id": {"type": "string", "minLength": 1},
+        "wmpc_id": {"type": "string", "minLength": 1},
+        "run_id": {"type": "string", "minLength": 1},
+        "run_role": {"type": "string", "minLength": 1},
+        "pass_id": {"type": "string", "minLength": 1},
+        "request_id": {"type": "string", "minLength": 1},
+        "repeat_id": {"type": "string", "minLength": 1},
+        "phase": {"enum": ["full_request", "prefill", "decode"]},
+        "D_margin_ns": {"type": "integer"},
+        "D_score": {
+          "type": ["number", "null"],
+          "minimum": -1,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "exposure_signature_record": {
+      "type": "object",
+      "required": [
+        "window_id",
+        "experiment_id",
+        "wmpc_id",
+        "run_id",
+        "run_role",
+        "pass_id",
+        "request_id",
+        "repeat_id",
+        "phase",
+        "A_vector_ns",
+        "A_window_ratios",
+        "b_groups"
+      ],
+      "properties": {
+        "window_id": {"type": "string", "minLength": 1},
+        "experiment_id": {"type": "string", "minLength": 1},
+        "wmpc_id": {"type": "string", "minLength": 1},
+        "run_id": {"type": "string", "minLength": 1},
+        "run_role": {"type": "string", "minLength": 1},
+        "pass_id": {"type": "string", "minLength": 1},
+        "request_id": {"type": "string", "minLength": 1},
+        "repeat_id": {"type": "string", "minLength": 1},
+        "phase": {"enum": ["full_request", "prefill", "decode"]},
+        "A_vector_ns": {
+          "type": "object",
+          "required": [
+            "A_host_path_ns",
+            "A_cuda_api_ns",
+            "A_device_wait_ns",
+            "A_sync_residual_ns",
+            "A_unattributed_ns",
+            "A_cuda_api_submit_ns",
+            "A_cuda_api_non_submit_ns",
+            "A_device_wait_kernel_only_ns",
+            "A_device_wait_memop_only_ns",
+            "A_device_wait_kernel_memop_mixed_ns"
+          ],
+          "properties": {
+            "A_host_path_ns": {"type": "integer", "minimum": 0},
+            "A_cuda_api_ns": {"type": "integer", "minimum": 0},
+            "A_device_wait_ns": {"type": "integer", "minimum": 0},
+            "A_sync_residual_ns": {"type": "integer", "minimum": 0},
+            "A_unattributed_ns": {"type": "integer", "minimum": 0},
+            "A_cuda_api_submit_ns": {"type": "integer", "minimum": 0},
+            "A_cuda_api_non_submit_ns": {"type": "integer", "minimum": 0},
+            "A_device_wait_kernel_only_ns": {"type": "integer", "minimum": 0},
+            "A_device_wait_memop_only_ns": {"type": "integer", "minimum": 0},
+            "A_device_wait_kernel_memop_mixed_ns": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "A_window_ratios": {
+          "type": "object",
+          "required": [
+            "A_host_path_ratio",
+            "A_cuda_api_ratio",
+            "A_device_wait_ratio",
+            "A_sync_residual_ratio",
+            "A_unattributed_ratio",
+            "A_cuda_api_submit_ratio",
+            "A_cuda_api_non_submit_ratio",
+            "A_device_wait_kernel_only_ratio",
+            "A_device_wait_memop_only_ratio",
+            "A_device_wait_kernel_memop_mixed_ratio"
+          ],
+          "properties": {
+            "A_host_path_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "A_cuda_api_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "A_device_wait_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "A_sync_residual_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "A_unattributed_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "A_cuda_api_submit_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "A_cuda_api_non_submit_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "A_device_wait_kernel_only_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "A_device_wait_memop_only_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+            "A_device_wait_kernel_memop_mixed_ratio": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+          },
+          "additionalProperties": false
+        },
+        "b_groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "phase",
+              "sync_kind",
+              "sync_origin",
+              "callsite_id",
+              "status_counts",
+              "valid_timing_statistics_ns",
+              "valid_timing_distributions_ns",
+              "terminal_kind_counts"
+            ],
+            "properties": {
+              "phase": {"type": ["string", "null"]},
+              "sync_kind": {"type": ["string", "null"]},
+              "sync_origin": {"type": ["string", "null"]},
+              "callsite_id": {"type": ["string", "null"]},
+              "status_counts": {
+                "type": "object",
+                "required": [
+                  "B_VALID",
+                  "B_NOT_APPLICABLE",
+                  "B_AMBIGUOUS",
+                  "B_INVALID"
+                ],
+                "properties": {
+                  "B_VALID": {"type": "integer", "minimum": 0},
+                  "B_NOT_APPLICABLE": {"type": "integer", "minimum": 0},
+                  "B_AMBIGUOUS": {"type": "integer", "minimum": 0},
+                  "B_INVALID": {"type": "integer", "minimum": 0}
+                },
+                "additionalProperties": false
+              },
+              "valid_timing_statistics_ns": {
+                "type": "object",
+                "required": [
+                  "wait_set_hidden_union_ns",
+                  "wait_set_exposed_union_ns",
+                  "terminal_pre_sync_ns",
+                  "terminal_overlap_sync_ns",
+                  "sync_return_tail_ns"
+                ],
+                "properties": {
+                  "wait_set_hidden_union_ns": {
+                    "type": "object",
+                    "required": ["median", "p90"],
+                    "properties": {
+                      "median": {"type": ["number", "null"], "minimum": 0},
+                      "p90": {"type": ["integer", "null"], "minimum": 0}
+                    },
+                    "additionalProperties": false
+                  },
+                  "wait_set_exposed_union_ns": {
+                    "type": "object",
+                    "required": ["median", "p90"],
+                    "properties": {
+                      "median": {"type": ["number", "null"], "minimum": 0},
+                      "p90": {"type": ["integer", "null"], "minimum": 0}
+                    },
+                    "additionalProperties": false
+                  },
+                  "terminal_pre_sync_ns": {
+                    "type": "object",
+                    "required": ["median", "p90"],
+                    "properties": {
+                      "median": {"type": ["number", "null"], "minimum": 0},
+                      "p90": {"type": ["integer", "null"], "minimum": 0}
+                    },
+                    "additionalProperties": false
+                  },
+                  "terminal_overlap_sync_ns": {
+                    "type": "object",
+                    "required": ["median", "p90"],
+                    "properties": {
+                      "median": {"type": ["number", "null"], "minimum": 0},
+                      "p90": {"type": ["integer", "null"], "minimum": 0}
+                    },
+                    "additionalProperties": false
+                  },
+                  "sync_return_tail_ns": {
+                    "type": "object",
+                    "required": ["median", "p90"],
+                    "properties": {
+                      "median": {"type": ["number", "null"], "minimum": 0},
+                      "p90": {"type": ["integer", "null"], "minimum": 0}
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "valid_timing_distributions_ns": {
+                "type": "object",
+                "required": [
+                  "wait_set_hidden_union_ns",
+                  "wait_set_exposed_union_ns",
+                  "terminal_pre_sync_ns",
+                  "terminal_overlap_sync_ns",
+                  "sync_return_tail_ns"
+                ],
+                "properties": {
+                  "wait_set_hidden_union_ns": {"$ref": "#/$defs/exposure_signature_record/$defs/distribution"},
+                  "wait_set_exposed_union_ns": {"$ref": "#/$defs/exposure_signature_record/$defs/distribution"},
+                  "terminal_pre_sync_ns": {"$ref": "#/$defs/exposure_signature_record/$defs/distribution"},
+                  "terminal_overlap_sync_ns": {"$ref": "#/$defs/exposure_signature_record/$defs/distribution"},
+                  "sync_return_tail_ns": {"$ref": "#/$defs/exposure_signature_record/$defs/distribution"}
+                },
+                "additionalProperties": false
+              },
+              "terminal_kind_counts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["terminal_kind", "count"],
+                  "properties": {
+                    "terminal_kind": {"enum": ["ACTIVITY", "COMPLETION_BOUNDARY"]},
+                    "count": {"type": "integer", "minimum": 1}
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "$defs": {
+        "distribution": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["value_ns", "count"],
+            "properties": {
+              "value_ns": {"type": ["integer", "null"], "minimum": 0},
+              "count": {"type": "integer", "minimum": 1}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
