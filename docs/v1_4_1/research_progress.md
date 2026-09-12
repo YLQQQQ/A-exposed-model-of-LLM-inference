@@ -9,8 +9,8 @@
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G5-01`，A/B 与纯派生层 v0.2 机器 schema 已冻结；下一步实现 Canonical Raw + S 严格联结与 request/phase 窗口发现
-- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；Gate 5 机器 schema 已完成第二轮复审修正，但 A/B/D/Exposure Signature 代码与真实 Q0 尚未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
+- 当前最高优先级：`EP-G5-02`，A/B 与纯派生层 v0.2 机器 schema 已冻结，Canonical Raw + S 严格联结与 request/phase 窗口发现已完成，共享半开区间工具已实现；下一步实现 A 互斥墙钟记账
+- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；Gate 5 机器 schema 已完成第二轮复审修正，Task 3 共享整数半开区间原语已通过定向测试，但 A/B/D/Exposure Signature 代码与真实 Q0 尚未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -64,7 +64,7 @@
 - [x] `EP-G1-08` 冻结 A/B 字段、互斥/守恒、B per-sync 生命周期，以及 D/Exposure Signature 的纯派生规则。证据：合同第 10～12 节及机器合同 `a_layer/b_layer/derived`。
 - [x] `EP-G1-09` 为 37 条合同规则建立 25 个验证案例映射并完成内部合同审查。证据：`measurement_contract_test_map_v0_2.json`、`tests/test_v141_contract.py`；`python -m exposedpath_v141 validate-contract` 输出 `37/37 (100%)` 与 `PASS`。
 
-**下一项：**Gate 2～4 已完成；进入 `EP-G5-01`，A/B 只能读取 Canonical Raw 与 S 产物，不得回退到旧 accounting。
+**下一项：**Gate 2～4 已完成；`EP-G5-01` 的输入联结与窗口发现、以及 Gate 5 Task 3 的共享区间原语已完成，继续执行 `EP-G5-02` 的 A 记账实现；A/B 只能读取 Canonical Raw 与 S 产物，不得回退到旧 accounting。
 
 ## Gate 2：设计 Q0 独立标准答案
 
@@ -104,7 +104,7 @@
 **Gate verdict：`NOT_RUN`。** A/B 与纯派生层 v0.2 机器 schema 已冻结；新语义的 A/B/D/Exposure Signature 代码尚未实现，旧 accounting 不能视为本 Gate 进度。
 
 - [ ] `EP-G5-01`（进行中：机器 schema 已冻结；Canonical/S 严格输入联结、lineage 校验和结构化 request/phase 窗口发现已完成；A 实现尚未开始）冻结 A/B 输入联结、窗口、输出 schema，并实现面向 request/phase、互斥且保守的 A。输入适配证据：`exposedpath_v141/ab_inputs.py`、`tests/test_v141_ab_inputs.py`；设计与 schema 证据：`docs/superpowers/specs/2026-09-12-gate5-accounting-design.md`、`docs/v1_4_1/contracts/ab_schema_v0_2.json`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_ab_schemas.py`（定向测试 `46 passed`）。
-- [ ] `EP-G5-02`（受阻）实现 A 的 residual、守恒容差和 invalid 传播。
+- [ ] `EP-G5-02`（进行中：共享区间原语已完成，A 记账尚未实现）实现 A 的 residual、守恒容差和 invalid 传播。证据：`exposedpath_v141/intervals.py`、`tests/test_v141_intervals.py`（16 passed）；A 记账仍未开始。
 - [ ] `EP-G5-03`（受阻）实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。
 - [ ] `EP-G5-04`（受阻）仅从冻结后的 A/B 派生 D。
 - [ ] `EP-G5-05`（受阻）仅从冻结后的 A/B 派生 Exposure Signature。
@@ -209,11 +209,11 @@
 
 最近应执行的五项任务：
 
-1. `EP-G5-01`：A/B v0.2 派生产物 schema 已冻结；继续实现 Canonical Raw + S 的输入联结、身份校验和窗口发现。
-2. `EP-G5-02`：实现 A 的 request/phase 原子区间切分、优先级、互斥和守恒；invalid/ambiguous sync 归 unattributed。
-3. `EP-G5-03`：实现 B 的单同步 hidden/exposed/terminal/return-tail，并从接口和汇总层禁止跨同步相加。
-4. `EP-G5-04`：用 Q0 oracle 的 A/B 关系、重叠 sync 和 phase spill 案例进行离线对照。
-5. `EP-G5-05`：完成 A/B 后再实现纯派生 D/Exposure Signature；不新增研究指标。
+1. `EP-G5-02`：基于已完成的共享半开区间原语，实现 A 的 request/phase 原子区间切分、优先级、互斥和守恒；invalid/ambiguous sync 归 unattributed。
+2. `EP-G5-03`：实现 B 的单同步 hidden/exposed/terminal/return-tail，并从接口和汇总层禁止跨同步相加。
+3. `EP-G5-04`：用 Q0 oracle 的 A/B 关系、重叠 sync 和 phase spill 案例进行离线对照。
+4. `EP-G5-05`：完成 A/B 后再实现纯派生 D/Exposure Signature；不新增研究指标。
+5. `EP-G5-06`：完成互斥、守恒、provenance、版本和 validity 传播测试。
 
 ## 计划调整记录
 
@@ -235,3 +235,4 @@
 | 1.4 | 2026-09-12 | 冻结 A/B 与纯派生层 v0.2 JSON Schema：A 记录携带整数纳秒守恒审计字段，B 严格保持 per-sync 冻结字段并对非 `B_VALID` 时长执行 null-only，D/Signature 仅接受 A/B lineage、向量、比例、状态 count 与非加和统计；后续代码实现顺序不变 | EP-G5-01 至 EP-G5-06 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效 |
 | 1.5 | 2026-09-12 | 修复 Gate 5 schema 首轮复审的重要问题：按 terminal kind/status 强制有效 identity、clock 与 timing nullability；当 `B_VALID>0` 时强制 hidden/exposed/return-tail 具有非空统计和数值分布，并将 terminal-kind count 收紧为固定键对象；跨字段 count 求和仍由后续 Task 7 运行时校验 | EP-G5-01、EP-G5-03、EP-G5-05、EP-G5-06 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效 |
 | 1.6 | 2026-09-12 | 修复 Gate 5 schema 第二轮复审的重要问题：`B_VALID>0` 时至少一个 terminal kind count 为正；`ACTIVITY>0` 时 terminal pre/overlap 的 median、p90 与数值分布必须非空；精确 count 求和仍由后续 Task 7 运行时校验 | EP-G5-01、EP-G5-05、EP-G5-06 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效 |
+| 1.7 | 2026-09-12 | 完成 Gate 5 Task 3 共享整数半开区间原语：交、裁剪、相邻/重叠 union、union 长度和原子切分；覆盖空区间、逆序/负时间拒绝、重复与确定性排序。A/B 研究语义与冻结合同未改变。 | EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步为 A 记账实现与测试 |
