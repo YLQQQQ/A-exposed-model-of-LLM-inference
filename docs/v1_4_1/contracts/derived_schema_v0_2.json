@@ -421,6 +421,71 @@
                           }
                         }
                       }
+                    },
+                    "terminal_kind_counts": {
+                      "anyOf": [
+                        {
+                          "properties": {"ACTIVITY": {"minimum": 1}},
+                          "required": ["ACTIVITY"]
+                        },
+                        {
+                          "properties": {
+                            "COMPLETION_BOUNDARY": {"minimum": 1}
+                          },
+                          "required": ["COMPLETION_BOUNDARY"]
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "terminal_kind_counts": {
+                      "properties": {"ACTIVITY": {"minimum": 1}},
+                      "required": ["ACTIVITY"]
+                    }
+                  },
+                  "required": ["terminal_kind_counts"]
+                },
+                "then": {
+                  "properties": {
+                    "valid_timing_statistics_ns": {
+                      "properties": {
+                        "terminal_pre_sync_ns": {
+                          "properties": {
+                            "median": {"type": "number", "minimum": 0},
+                            "p90": {"type": "integer", "minimum": 0}
+                          }
+                        },
+                        "terminal_overlap_sync_ns": {
+                          "properties": {
+                            "median": {"type": "number", "minimum": 0},
+                            "p90": {"type": "integer", "minimum": 0}
+                          }
+                        }
+                      }
+                    },
+                    "valid_timing_distributions_ns": {
+                      "properties": {
+                        "terminal_pre_sync_ns": {
+                          "minItems": 1,
+                          "items": {
+                            "properties": {
+                              "value_ns": {"type": "integer", "minimum": 0}
+                            }
+                          }
+                        },
+                        "terminal_overlap_sync_ns": {
+                          "minItems": 1,
+                          "items": {
+                            "properties": {
+                              "value_ns": {"type": "integer", "minimum": 0}
+                            }
+                          }
+                        }
+                      }
                     }
                   }
                 }

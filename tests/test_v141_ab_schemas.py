@@ -300,6 +300,22 @@ def _exposure_signature_record() -> dict:
     }
 
 
+def _completion_boundary_signature_record() -> dict:
+    signature = _exposure_signature_record()
+    group = signature["b_groups"][0]
+    group["terminal_kind_counts"] = {
+        "ACTIVITY": 0,
+        "COMPLETION_BOUNDARY": 1,
+    }
+    for metric in ("terminal_pre_sync_ns", "terminal_overlap_sync_ns"):
+        group["valid_timing_statistics_ns"][metric] = {
+            "median": None,
+            "p90": None,
+        }
+        group["valid_timing_distributions_ns"][metric] = []
+    return signature
+
+
 def test_committed_schemas_are_draft_2020_12_and_freeze_expected_defs():
     ab_schema = _load(AB_SCHEMA_PATH)
     derived_schema = _load(DERIVED_SCHEMA_PATH)
@@ -443,6 +459,7 @@ def test_derived_schema_accepts_manifest_d_window_and_signature():
     _validate(schema, _derived_manifest())
     _validate(schema, _d_window_record())
     _validate(schema, _exposure_signature_record())
+    _validate(schema, _completion_boundary_signature_record())
 
 
 @pytest.mark.parametrize(
@@ -469,6 +486,52 @@ def test_signature_terminal_counts_reject_unknown_terminal_kind():
     schema = _load(DERIVED_SCHEMA_PATH)
     signature = _exposure_signature_record()
     signature["b_groups"][0]["terminal_kind_counts"]["NONE"] = 0
+
+    with pytest.raises(ValidationError):
+        _validate(schema, signature)
+
+
+def test_signature_with_valid_b_requires_a_positive_terminal_kind_count():
+    schema = _load(DERIVED_SCHEMA_PATH)
+    signature = _exposure_signature_record()
+    signature["b_groups"][0]["terminal_kind_counts"] = {
+        "ACTIVITY": 0,
+        "COMPLETION_BOUNDARY": 0,
+    }
+
+    with pytest.raises(ValidationError):
+        _validate(schema, signature)
+
+
+@pytest.mark.parametrize(
+    "metric", ["terminal_pre_sync_ns", "terminal_overlap_sync_ns"]
+)
+def test_signature_with_activity_terminal_requires_terminal_statistics(metric):
+    schema = _load(DERIVED_SCHEMA_PATH)
+    signature = _exposure_signature_record()
+    signature["b_groups"][0]["valid_timing_statistics_ns"][metric] = {
+        "median": None,
+        "p90": None,
+    }
+
+    with pytest.raises(ValidationError):
+        _validate(schema, signature)
+
+
+@pytest.mark.parametrize(
+    "distribution",
+    [[], [{"value_ns": None, "count": 1}]],
+    ids=["empty", "null-only"],
+)
+@pytest.mark.parametrize(
+    "metric", ["terminal_pre_sync_ns", "terminal_overlap_sync_ns"]
+)
+def test_signature_with_activity_terminal_requires_terminal_distribution(
+    metric, distribution
+):
+    schema = _load(DERIVED_SCHEMA_PATH)
+    signature = _exposure_signature_record()
+    signature["b_groups"][0]["valid_timing_distributions_ns"][metric] = distribution
 
     with pytest.raises(ValidationError):
         _validate(schema, signature)
