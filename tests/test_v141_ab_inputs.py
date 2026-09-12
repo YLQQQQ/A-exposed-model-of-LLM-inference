@@ -455,3 +455,51 @@ def test_one_bad_logical_identity_does_not_make_other_windows_globally_invalid(t
     assert len(inputs.window_discovery_issues) == 1
     assert inputs.window_discovery_issues[0].request_id == "request-1"
     assert inputs.window_discovery_issues[0].reasons == ("WINDOW_PHASE_MISSING_OR_DUPLICATE",)
+
+
+def test_missing_text_prefix_creates_unkeyed_issue_without_trusting_cached_identity(tmp_path):
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    manifest = json.loads(canonical_manifest.read_text(encoding="utf-8"))
+    nvtx_path = canonical_manifest.parent / manifest["files"]["nvtx"]["filename"]
+    with gzip.open(nvtx_path, "rt", encoding="utf-8") as handle:
+        nvtx = [json.loads(line) for line in handle]
+    nvtx[1]["text"] = "legacy-prefill"
+    _replace_nvtx(canonical_manifest, nvtx)
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+
+    assert inputs.windows == ()
+    assert inputs.global_quality_reasons == ()
+    unkeyed = [issue for issue in inputs.window_discovery_issues if issue.request_id is None]
+    assert len(unkeyed) == 1
+    issue = unkeyed[0]
+    assert issue.request_id is None
+    assert issue.reasons == ("STRUCTURED_IDENTITY_TEXT_PREFIX_MISSING",)
+    assert issue.source_nvtx_record_ids == ("nvtx:NVTX_EVENTS:2",)
+
+
+def test_all_missing_text_prefixes_are_one_unkeyed_machine_readable_issue(tmp_path):
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    manifest = json.loads(canonical_manifest.read_text(encoding="utf-8"))
+    nvtx_path = canonical_manifest.parent / manifest["files"]["nvtx"]["filename"]
+    with gzip.open(nvtx_path, "rt", encoding="utf-8") as handle:
+        nvtx = [json.loads(line) for line in handle]
+    for record in nvtx:
+        record["text"] = "legacy-unstructured-range"
+    _replace_nvtx(canonical_manifest, nvtx)
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+
+    assert inputs.windows == ()
+    assert inputs.global_quality_reasons == ()
+    assert len(inputs.window_discovery_issues) == 1
+    issue = inputs.window_discovery_issues[0]
+    assert issue.request_id is None
+    assert issue.reasons == ("STRUCTURED_IDENTITY_TEXT_PREFIX_MISSING",)
+    assert issue.source_nvtx_record_ids == (
+        "nvtx:NVTX_EVENTS:1",
+        "nvtx:NVTX_EVENTS:2",
+        "nvtx:NVTX_EVENTS:3",
+    )

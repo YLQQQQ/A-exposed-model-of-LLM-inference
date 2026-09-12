@@ -88,6 +88,7 @@ class WindowDiscoveryIssue:
     pass_id: str | None
     request_id: str | None
     repeat_id: str | None
+    source_nvtx_record_ids: tuple[str, ...]
     reasons: tuple[str, ...]
 
 
@@ -301,10 +302,16 @@ def _window_key(identity: Mapping[str, Any]) -> tuple[str, ...]:
 
 
 def _issue_for_key(
-    key: tuple[str, ...] | None, reasons: list[str] | tuple[str, ...]
+    key: tuple[str, ...] | None,
+    reasons: list[str] | tuple[str, ...],
+    source_record_ids: list[str] | tuple[str, ...],
 ) -> WindowDiscoveryIssue:
     values = key if key is not None else (None,) * len(_IDENTITY_FIELDS)
-    return WindowDiscoveryIssue(*values, reasons=tuple(dict.fromkeys(reasons)))
+    return WindowDiscoveryIssue(
+        *values,
+        source_nvtx_record_ids=tuple(sorted(set(source_record_ids))),
+        reasons=tuple(dict.fromkeys(reasons)),
+    )
 
 
 def _text_identity(nvtx: Mapping[str, Any]) -> tuple[Mapping[str, Any] | None, str | None]:
@@ -312,6 +319,9 @@ def _text_identity(nvtx: Mapping[str, Any]) -> tuple[Mapping[str, Any] | None, s
 
     text = nvtx.get("text")
     if not isinstance(text, str) or not text.startswith(_STRUCTURED_PREFIX):
+        cached_identity = nvtx.get("structured_identity")
+        if isinstance(cached_identity, Mapping) and cached_identity.get("phase") in _WINDOW_PHASES:
+            return None, "STRUCTURED_IDENTITY_TEXT_PREFIX_MISSING"
         return None, None
     try:
         payload = json.loads(text[len(_STRUCTURED_PREFIX) :])
@@ -330,30 +340,36 @@ def _discovery_result(
 ) -> tuple[tuple[RequestPhaseWindow, ...], tuple[WindowDiscoveryIssue, ...]]:
     groups: dict[tuple[str, ...], dict[str, list[tuple[dict[str, Any], Mapping[str, Any]]]]] = {}
     issue_reasons: dict[tuple[str, ...] | None, list[str]] = {}
+    issue_sources: dict[tuple[str, ...] | None, list[str]] = {}
+
+    def add_issue(key: tuple[str, ...] | None, reason: str, nvtx: Mapping[str, Any]) -> None:
+        issue_reasons.setdefault(key, []).append(reason)
+        record_id = nvtx.get("record_id")
+        if isinstance(record_id, str) and record_id:
+            issue_sources.setdefault(key, []).append(record_id)
+
     for nvtx in canonical.records["nvtx"]:
         identity, text_reason = _text_identity(nvtx)
         if identity is None:
             if text_reason is not None:
-                issue_reasons.setdefault(None, []).append(text_reason)
+                add_issue(None, text_reason, nvtx)
             continue
         phase = identity.get("phase")
         if phase not in _WINDOW_PHASES:
             continue
         if identity.get("kind") not in {"request", "phase"}:
             try:
-                issue_reasons.setdefault(_window_key(identity), []).append(
-                    "WINDOW_STRUCTURED_IDENTITY_INVALID"
-                )
+                add_issue(_window_key(identity), "WINDOW_STRUCTURED_IDENTITY_INVALID", nvtx)
             except ABInputError:
-                issue_reasons.setdefault(None, []).append("WINDOW_STRUCTURED_IDENTITY_INVALID")
+                add_issue(None, "WINDOW_STRUCTURED_IDENTITY_INVALID", nvtx)
             continue
         try:
             key = _window_key(identity)
         except ABInputError:
-            issue_reasons.setdefault(None, []).append("WINDOW_STRUCTURED_IDENTITY_INVALID")
+            add_issue(None, "WINDOW_STRUCTURED_IDENTITY_INVALID", nvtx)
             continue
         if text_reason is not None:
-            issue_reasons.setdefault(key, []).append(text_reason)
+            add_issue(key, text_reason, nvtx)
             continue
         groups.setdefault(key, {name: [] for name in _WINDOW_PHASES})[str(phase)].append((nvtx, identity))
 
@@ -363,7 +379,9 @@ def _discovery_result(
             continue
         ranges = groups[key]
         if any(len(ranges[phase]) != 1 for phase in _WINDOW_PHASES):
-            issue_reasons.setdefault(key, []).append("WINDOW_PHASE_MISSING_OR_DUPLICATE")
+            for phase in _WINDOW_PHASES:
+                for nvtx, _ in ranges[phase]:
+                    add_issue(key, "WINDOW_PHASE_MISSING_OR_DUPLICATE", nvtx)
             continue
         selected = {phase: ranges[phase][0] for phase in _WINDOW_PHASES}
         valid_times = True
@@ -379,7 +397,8 @@ def _discovery_result(
             ):
                 valid_times = False
         if not valid_times:
-            issue_reasons.setdefault(key, []).append("WINDOW_RANGE_INVALID")
+            for nvtx, _ in selected.values():
+                add_issue(key, "WINDOW_RANGE_INVALID", nvtx)
             continue
         full = selected["full_request"][0]
         prefill = selected["prefill"][0]
@@ -390,7 +409,8 @@ def _discovery_result(
             and decode["end_ns"] == full["end_ns"]
             and prefill["end_ns"] <= full["end_ns"]
         ):
-            issue_reasons.setdefault(key, []).append("WINDOW_PHASE_BOUNDARY_INCONSISTENT")
+            for nvtx, _ in selected.values():
+                add_issue(key, "WINDOW_PHASE_BOUNDARY_INCONSISTENT", nvtx)
             continue
         for phase in _WINDOW_PHASES:
             nvtx, identity = selected[phase]
@@ -424,7 +444,7 @@ def _discovery_result(
         )
     )
     issues = tuple(
-        _issue_for_key(key, reasons)
+        _issue_for_key(key, reasons, issue_sources.get(key, []))
         for key, reasons in sorted(
             issue_reasons.items(),
             key=lambda item: (item[0] is None, item[0] or ()),
