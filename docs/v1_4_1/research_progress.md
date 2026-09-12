@@ -2,7 +2,7 @@
 
 ## 当前快照
 
-- 清单版本：`1.6`
+- 清单版本：`1.7`
 - 最近更新：`2026-09-12`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
