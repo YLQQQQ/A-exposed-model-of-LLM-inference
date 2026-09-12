@@ -101,10 +101,10 @@
 
 ## Gate 5：A/B，再到 D/Exposure Signature
 
-**Gate verdict：`NOT_RUN`。** A/B 与纯派生层 v0.2 机器 schema 已冻结；新语义的 A/B/D/Exposure Signature 代码尚未实现，旧 accounting 不能视为本 Gate 进度。
+**Gate verdict：`NOT_RUN`。** A/B 与纯派生层 v0.2 机器 schema 已冻结；保守互斥的 A 已实现并经合成 Engineering 测试验证，但 B、A/B bundle、D 与 Exposure Signature 尚未实现或集成。旧 accounting 不能视为本 Gate 进度。
 
 - [x] `EP-G5-01` 冻结 A/B 输入联结、窗口、输出 schema，并实现面向 request/phase、互斥且保守的 A。输入适配证据：`exposedpath_v141/ab_inputs.py`、`tests/test_v141_ab_inputs.py`；设计与 schema 证据：`docs/superpowers/specs/2026-09-12-gate5-accounting-design.md`、`docs/v1_4_1/contracts/ab_schema_v0_2.json`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_ab_schemas.py`；A 证据：`exposedpath_v141/a_accounting.py`、`tests/test_v141_a_accounting.py`。
-- [x] `EP-G5-02` 实现 A 的 residual、整数纳秒守恒和 invalid/ambiguous 传播。证据：`exposedpath_v141/intervals.py`、`exposedpath_v141/a_accounting.py`、`tests/test_v141_intervals.py`、`tests/test_v141_a_accounting.py`（定向验证 `20 passed`）。
+- [x] `EP-G5-02` 实现 A 的 residual、整数纳秒守恒和 invalid/ambiguous 传播。证据：`exposedpath_v141/intervals.py`、`exposedpath_v141/a_accounting.py`、`tests/test_v141_intervals.py`、`tests/test_v141_a_accounting.py`（定向验证 `26 passed`）。
 - [ ] `EP-G5-03`（受阻）实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。
 - [ ] `EP-G5-04`（受阻）仅从冻结后的 A/B 派生 D。
 - [ ] `EP-G5-05`（受阻）仅从冻结后的 A/B 派生 Exposure Signature。
@@ -237,3 +237,4 @@
 | 1.6 | 2026-09-12 | 修复 Gate 5 schema 第二轮复审的重要问题：`B_VALID>0` 时至少一个 terminal kind count 为正；`ACTIVITY>0` 时 terminal pre/overlap 的 median、p90 与数值分布必须非空；精确 count 求和仍由后续 Task 7 运行时校验 | EP-G5-01、EP-G5-05、EP-G5-06 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效 |
 | 1.7 | 2026-09-12 | 完成 Gate 5 Task 3 共享整数半开区间原语：交、裁剪、相邻/重叠 union、union 长度和原子切分；覆盖空区间、逆序/负时间拒绝、重复与确定性排序。A/B 研究语义与冻结合同未改变。 | EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步为 A 记账实现与测试 |
 | 1.8 | 2026-09-12 | 完成 Gate 5 Task 4 的 A 墙钟记账：按窗口/API/sync/`W(s)` 边界原子切分，以固定优先级互斥分配顶层与二级字段；全局质量失败、局部 invalid/ambiguous sync、未知 API 语义及未知 wait activity kind 均 fail-closed 到 unattributed。加入手算 100 ns、API union/冲突、重叠 sync、phase clipping 与 0 ns Decode 定向测试。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步为 B provenance、D/Signature 与 Gate 5 集成验证 |
+| 1.9 | 2026-09-12 | Gate 5 Task 4 复审修复：A 仅在 CUDA API 与当前结构化 request/invocation 具有同线程、完整窗口包含且 identity 唯一一致的 Canonical NVTX ownership 时归为 CUDA API；外部线程、无线程、缺失窗口或 identity 冲突均归 unattributed。补充多线程 ownership、invalid-over-valid、双非空 wait-set union、正常 0 ns 窗口与运行时数值校验测试。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；B、bundle、D/Signature 与 Gate 5 集成验证仍未完成 |

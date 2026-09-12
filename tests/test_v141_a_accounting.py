@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+from dataclasses import replace
 
 import pytest
 
@@ -38,20 +39,34 @@ def _sync(sync_id: str, start: int, end: int, validity: str, wait_set: list[str]
     }
 
 
-def _api(record_id: str, start: int, end: int, name: str, correlation: int | None) -> dict[str, object]:
-    return {"record_id": record_id, "start_ns": start, "end_ns": end, "api_name": name, "correlation_id": correlation}
+def _api(record_id: str, start: int, end: int, name: str, correlation: int | None, global_tid: int | None = 101) -> dict[str, object]:
+    return {"record_id": record_id, "start_ns": start, "end_ns": end, "api_name": name, "correlation_id": correlation, "global_tid": global_tid}
 
 
 def _activity(record_id: str, start: int, end: int, kind: str, correlation: int | None) -> dict[str, object]:
     return {"record_id": record_id, "start_ns": start, "end_ns": end, "activity_kind": kind, "correlation_id": correlation}
 
 
-def _inputs(*, global_reasons: tuple[str, ...] = (), windows: tuple[RequestPhaseWindow, ...] | None = None, apis: tuple[dict[str, object], ...] | None = None, syncs: tuple[dict[str, object], ...] | None = None, activities: tuple[dict[str, object], ...] | None = None) -> ABInputs:
-    activities = activities or (
+def _nvtx(window: RequestPhaseWindow, global_tid: int = 101, request_id: str | None = None) -> dict[str, object]:
+    return {
+        "record_id": window.nvtx_record_id, "start_ns": window.start_ns, "end_ns": window.end_ns,
+        "global_tid": global_tid,
+        "structured_identity": {
+            "kind": "request" if window.phase == "full_request" else "phase",
+            "experiment_id": window.experiment_id, "wmpc_id": window.wmpc_id,
+            "run_id": window.run_id, "run_role": window.run_role, "pass_id": window.pass_id,
+            "request_id": request_id or window.request_id, "repeat_id": window.repeat_id,
+            "phase": window.phase,
+        },
+    }
+
+
+def _inputs(*, global_reasons: tuple[str, ...] = (), windows: tuple[RequestPhaseWindow, ...] | None = None, apis: tuple[dict[str, object], ...] | None = None, syncs: tuple[dict[str, object], ...] | None = None, activities: tuple[dict[str, object], ...] | None = None, nvtx: tuple[dict[str, object], ...] | None = None) -> ABInputs:
+    activities = activities if activities is not None else (
         _activity("kernel", 30, 50, "KERNEL", 11),
         _activity("memop", 45, 55, "MEMCPY", 12),
     )
-    apis = apis or (
+    apis = apis if apis is not None else (
         _api("submit", 10, 12, "cudaLaunchKernel", 11),
         _api("event-record", 12, 16, "cudaEventRecord", None),
         _api("stream-wait", 16, 20, "cudaStreamWaitEvent", None),
@@ -60,19 +75,21 @@ def _inputs(*, global_reasons: tuple[str, ...] = (), windows: tuple[RequestPhase
         _api("submit-during-sync", 50, 60, "cudaEventRecord", None),
         _api("unknown", 70, 75, "cudaMystery", None),
     )
-    syncs = syncs or (
+    syncs = syncs if syncs is not None else (
         _sync("valid", 30, 60, "VALID_NONEMPTY", ["kernel", "memop"]),
         _sync("overlap-empty", 40, 58, "VALID_EMPTY", []),
         _sync("invalid", 60, 70, "INVALID", [], "MISSING_CORRELATION"),
     )
+    windows = windows if windows is not None else (_window(),)
+    nvtx = nvtx if nvtx is not None else tuple(_nvtx(window) for window in windows)
     canonical = CanonicalBundle(
-        manifest={}, records={"cuda_api": apis, "device_activity": activities}, schema={},
+        manifest={}, records={"cuda_api": apis, "device_activity": activities, "nvtx": nvtx}, schema={},
         cuda_api_by_id={str(row["record_id"]): row for row in apis},
         activity_by_id={str(row["record_id"]): row for row in activities},
         physical_sync_by_id={},
     )
     return ABInputs(canonical=canonical, s_manifest={}, s_records=syncs,
-                    windows=windows or (_window(),), global_quality_reasons=global_reasons,
+                    windows=windows, global_quality_reasons=global_reasons,
                     window_discovery_issues=())
 
 
@@ -153,4 +170,78 @@ def test_phase_clipping_and_runtime_validation_reject_nonconserving_record():
     invalid = dict(record)
     invalid["not_in_frozen_schema"] = 1
     with pytest.raises(ValueError, match="字段集合"):
+        _accounting_module().validate_a_record(invalid)
+
+
+def test_external_or_threadless_api_is_not_owned_by_current_request_window():
+    apis = (
+        _api("external-thread", 10, 20, "cudaEventQuery", None, global_tid=202),
+        _api("threadless", 20, 30, "cudaEventQuery", None, global_tid=None),
+    )
+    record = _only_record(_inputs(apis=apis, syncs=(), activities=()))
+
+    assert record["A_cuda_api_ns"] == 0
+    assert record["A_unattributed_ns"] == 20
+    assert record["A_host_path_ns"] == 80
+    assert record["primary_reason"] == "CUDA_API_EXTERNAL_THREAD"
+    assert "CUDA_API_THREAD_OWNERSHIP_MISSING" in record["secondary_reasons"]
+
+
+def test_api_is_owned_only_by_its_same_thread_structured_request_window():
+    first = _window()
+    second = replace(first, window_id="window:second", request_id="request-2", nvtx_record_id="nvtx:2")
+    api = _api("second-thread-query", 10, 20, "cudaEventQuery", None, global_tid=202)
+    inputs = _inputs(
+        windows=(first, second), apis=(api,), syncs=(), activities=(),
+        nvtx=(_nvtx(first, global_tid=101), _nvtx(second, global_tid=202)),
+    )
+    records = {record["request_id"]: record for record in _accounting_module().calculate_a_windows(inputs)}
+
+    assert records["request-1"]["A_cuda_api_ns"] == 0
+    assert records["request-1"]["A_unattributed_ns"] == 10
+    assert records["request-2"]["A_cuda_api_ns"] == 10
+    assert records["request-2"]["A_cuda_api_non_submit_ns"] == 10
+
+
+def test_invalid_sync_precedes_overlapping_valid_sync_and_two_nonempty_wait_sets_union():
+    activities = (
+        _activity("kernel", 10, 30, "KERNEL", 1),
+        _activity("memop", 20, 40, "MEMCPY", 2),
+    )
+    syncs = (
+        _sync("valid-kernel", 10, 30, "VALID_NONEMPTY", ["kernel"]),
+        _sync("invalid", 20, 25, "INVALID", [], "MISSING_CORRELATION"),
+        _sync("valid-memop", 20, 40, "VALID_NONEMPTY", ["memop"]),
+    )
+    record = _only_record(_inputs(apis=(), syncs=syncs, activities=activities))
+
+    assert record["A_device_wait_ns"] == 25
+    assert record["A_device_wait_kernel_only_ns"] == 10
+    assert record["A_device_wait_kernel_memop_mixed_ns"] == 5
+    assert record["A_device_wait_memop_only_ns"] == 10
+    assert record["A_unattributed_ns"] == 5
+    assert record["A_host_path_ns"] == 70
+
+
+def test_zero_ns_window_without_global_failure_preserves_both_conservations():
+    inputs = _inputs(windows=(_window("decode", 60, 60),), apis=(), syncs=(), activities=())
+    record = _only_record(inputs)
+
+    assert record["T_window_ns"] == 0
+    assert all(record[field] == 0 for field in (
+        "A_host_path_ns", "A_cuda_api_ns", "A_device_wait_ns", "A_sync_residual_ns",
+        "A_unattributed_ns", "A_cuda_api_submit_ns", "A_cuda_api_non_submit_ns",
+        "A_device_wait_kernel_only_ns", "A_device_wait_memop_only_ns",
+        "A_device_wait_kernel_memop_mixed_ns",
+    ))
+    _accounting_module().validate_a_record(record)
+
+
+@pytest.mark.parametrize(("field", "value"), (("T_window_ns", 1.5), ("A_host_path_ns", -1)))
+def test_runtime_validation_rejects_noninteger_and_negative_ns(field: str, value: object):
+    record = _only_record(_inputs(apis=(), syncs=(), activities=()))
+    invalid = dict(record)
+    invalid[field] = value
+
+    with pytest.raises(ValueError, match="非负整数|长度"):
         _accounting_module().validate_a_record(invalid)

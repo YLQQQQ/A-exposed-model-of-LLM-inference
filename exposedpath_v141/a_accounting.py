@@ -42,6 +42,9 @@ _RECORD_FIELDS = frozenset((*_IDENTITY_FIELDS, "T_window_ns", *_TOP_LEVEL, *_CUD
 _KNOWN_WAIT_KINDS = {"KERNEL", "MEMCPY", "MEMSET"}
 _VALID_SYNC = {"VALID_NONEMPTY", "VALID_EMPTY"}
 _INVALID_SYNC = {"AMBIGUOUS", "INVALID"}
+_WINDOW_OWNER_IDENTITY_FIELDS = (
+    "experiment_id", "wmpc_id", "run_id", "run_role", "pass_id", "request_id", "repeat_id",
+)
 
 
 def _integer(value: object, label: str) -> int:
@@ -92,6 +95,62 @@ def _api_category(api: Mapping[str, object], api_by_correlation: Mapping[object,
     matching_apis = api_by_correlation.get(correlation, ())
     if len(matching_apis) == 1 and correlation in activity_correlations:
         return "submit"
+    return None
+
+
+def _api_ownership_reason(
+    api: Mapping[str, object],
+    api_interval: tuple[int, int],
+    window: RequestPhaseWindow,
+    nvtx_records: tuple[Mapping[str, object], ...],
+) -> str | None:
+    """确认 API 属于当前结构化 request/invocation；否则返回 fail-closed 原因。"""
+
+    api_thread = api.get("global_tid")
+    if not isinstance(api_thread, int) or isinstance(api_thread, bool):
+        return "CUDA_API_THREAD_OWNERSHIP_MISSING"
+
+    targets = [record for record in nvtx_records if record.get("record_id") == window.nvtx_record_id]
+    if len(targets) != 1:
+        return "CUDA_API_WINDOW_OWNERSHIP_MISSING"
+    target = targets[0]
+    target_thread = target.get("global_tid")
+    if not isinstance(target_thread, int) or isinstance(target_thread, bool):
+        return "CUDA_API_THREAD_OWNERSHIP_MISSING"
+    if target_thread != api_thread:
+        return "CUDA_API_EXTERNAL_THREAD"
+
+    try:
+        target_interval = _interval(target, "start_ns", "end_ns", "window NVTX")
+    except ValueError:
+        return "CUDA_API_WINDOW_OWNERSHIP_MISSING"
+    if not _covers(target_interval, api_interval):
+        return "CUDA_API_WINDOW_OWNERSHIP_MISSING"
+
+    target_identity = target.get("structured_identity")
+    if not isinstance(target_identity, Mapping):
+        return "CUDA_API_IDENTITY_MISSING"
+    expected = {field: getattr(window, field) for field in _WINDOW_OWNER_IDENTITY_FIELDS}
+    if (
+        any(target_identity.get(field) != value for field, value in expected.items())
+        or target_identity.get("phase") != window.phase
+    ):
+        return "CUDA_API_IDENTITY_CONFLICT"
+
+    for candidate in nvtx_records:
+        if candidate.get("global_tid") != api_thread:
+            continue
+        identity = candidate.get("structured_identity")
+        if not isinstance(identity, Mapping) or identity.get("kind") not in {"request", "phase"}:
+            continue
+        try:
+            candidate_interval = _interval(candidate, "start_ns", "end_ns", "structured NVTX")
+        except ValueError:
+            return "CUDA_API_IDENTITY_CONFLICT"
+        if _covers(candidate_interval, api_interval) and any(
+            identity.get(field) != value for field, value in expected.items()
+        ):
+            return "CUDA_API_IDENTITY_CONFLICT"
     return None
 
 
@@ -156,6 +215,9 @@ def _window_record(inputs: ABInputs, window: RequestPhaseWindow) -> dict[str, ob
         syncs.append((sync, interval, status))
 
     apis: list[tuple[Mapping[str, object], tuple[int, int]]] = []
+    nvtx_records = tuple(
+        record for record in inputs.canonical.records.get("nvtx", ()) if isinstance(record, Mapping)
+    )
     api_by_correlation: dict[object, list[Mapping[str, object]]] = {}
     for api in inputs.canonical.records.get("cuda_api", ()):
         interval = _interval(api, "start_ns", "end_ns", f"cuda_api {api.get('record_id')}")
@@ -227,6 +289,15 @@ def _window_record(inputs: ABInputs, window: RequestPhaseWindow) -> dict[str, ob
 
         covering_apis = [api for api, interval in apis if _covers(interval, segment)]
         if covering_apis:
+            ownership_reasons = [
+                _api_ownership_reason(api, interval, window, nvtx_records)
+                for api, interval in apis
+                if _covers(interval, segment)
+            ]
+            if any(reason is not None for reason in ownership_reasons):
+                totals["A_unattributed_ns"] += duration
+                reasons.extend(reason for reason in ownership_reasons if reason is not None)
+                continue
             categories = {
                 _api_category(api, api_by_correlation_frozen, activity_correlations)
                 for api in covering_apis
