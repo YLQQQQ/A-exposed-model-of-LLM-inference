@@ -2,15 +2,15 @@
 
 ## 当前快照
 
-- 清单版本：`1.2`
-- 最近更新：`2026-09-11`
+- 清单版本：`1.3`
+- 最近更新：`2026-09-12`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G5-01`，只读取 Canonical Raw 与 S v0.2，实现面向 request/phase、互斥守恒且 fail-closed 的 A
-- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；A/B 与真实 Q0 尚未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
+- 当前最高优先级：`EP-G5-01`，Gate 5 A/B 设计已形成书面规范，待用户复核后编写测试先行实施计划
+- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；Gate 5 仅完成设计，A/B 代码与真实 Q0 尚未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -103,7 +103,7 @@
 
 **Gate verdict：`NOT_RUN`。** 新语义的 A/B/D/Exposure Signature 尚未实现；旧 accounting 不能视为本 Gate 进度。
 
-- [ ] `EP-G5-01`（未开始；Gate 4 已解除阻塞）实现面向 request/phase、互斥且保守的 A。
+- [ ] `EP-G5-01`（进行中：设计待复核）冻结 A/B 输入联结、窗口、输出 schema，并实现面向 request/phase、互斥且保守的 A。设计证据：`docs/superpowers/specs/2026-09-12-gate5-accounting-design.md`。
 - [ ] `EP-G5-02`（受阻）实现 A 的 residual、守恒容差和 invalid 传播。
 - [ ] `EP-G5-03`（受阻）实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。
 - [ ] `EP-G5-04`（受阻）仅从冻结后的 A/B 派生 D。
@@ -231,3 +231,4 @@
 | 1.0 | 2026-09-11 | Gate 4 独立代码复审后修正三项语义缺陷：missing correlation 不再被降级、wait-event 末端节点不再漏 producer、外部 invocation 不再于建图前静默删除；同时补齐 default-stream 冲突/歧义、submission 审计信息、registry lineage 与重复 scope 建图缓存 | EP-G4-01 至 EP-G4-05 | 未改变 Measurement Contract 或 Protocol Freeze；原 Gate 4 实现结论经修正后重新验证，真实 Q0 状态不变 |
 | 1.1 | 2026-09-11 | Gate 4 第二轮独立复审后要求 eventSyncId 唯一映射并校验 event/context/device；修正缺失 correlation 与提交顺序不明并存时的 invalid 传播，以及未来 default-stream overlap 对较早同步的污染；补充 event/wait 查找索引和 9 个回归案例 | EP-G4-01 至 EP-G4-05、EP-ISSUE-03、EP-ISSUE-06 | 未改变 Measurement Contract、Q0 状态或 Protocol Freeze；当前仍无 Formal 数据，不产生失效 |
 | 1.2 | 2026-09-11 | Gate 4 第三轮独立复审发现缺失 correlation 的强 invalid 在 event 捕获和 legacy default-stream 路径仍可能被顺序歧义覆盖；补齐三条路径的统一 fail-closed 传播和 3 个回归案例 | EP-G4-02、EP-G4-05、EP-ISSUE-03 | 未改变 Measurement Contract、Q0 状态或 Protocol Freeze；当前仍无 Formal 数据，不产生失效 |
+| 1.3 | 2026-09-12 | Gate 4 独立复审无 Critical/Important 后正式进入 Gate 5；书面冻结 A/B 双输入联结、窗口发现、原子区间分类、B 状态投影、D/Signature 纯派生及无 GPU 验证方法，等待用户复核 | EP-G5-01 至 EP-G5-06 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；仅形成 Gate 5 设计，尚未实现或产生新实验数据 |
