@@ -15,6 +15,7 @@ from .canonical_raw import (
 from .observation import inspect_sqlite, write_report_new
 from .q0_oracle import OracleValidationError, load_oracle_bundle
 from .s_bundle import SBundleError, analyze_canonical_to_s
+from .ab_bundle import ABBundleError, analyze_ab
 
 
 def _configure_stdio() -> None:
@@ -71,6 +72,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     s_parser.add_argument("--canonical-manifest", required=True, type=Path)
     s_parser.add_argument("--output-dir", required=True, type=Path)
+    ab_parser = subparsers.add_parser(
+        "analyze-ab", help="只读投影 Canonical Raw + S 为版本化 A/B bundle"
+    )
+    ab_parser.add_argument("--canonical-manifest", required=True, type=Path)
+    ab_parser.add_argument("--s-manifest", required=True, type=Path)
+    ab_parser.add_argument("--output-dir", required=True, type=Path)
     return parser
 
 
@@ -187,6 +194,28 @@ def main(argv: list[str] | None = None) -> int:
         if summary["invalid_count"]:
             return 3
         if summary["ambiguous_count"] or manifest["input_validity"]["status"] != "VALID":
+            return 2
+        return 0
+
+    if args.command == "analyze-ab":
+        try:
+            manifest_path = analyze_ab(
+                args.canonical_manifest, args.s_manifest, args.output_dir
+            )
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (ABBundleError, FileExistsError, OSError, ValueError, json.JSONDecodeError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        summary = manifest["summary"]
+        print(f"ab_manifest: {manifest_path}")
+        print(f"ab_schema_version: {manifest['schema_version']}")
+        print(f"window_count: {summary['window_count']}")
+        print(f"physical_sync_count: {summary['physical_sync_count']}")
+        print(f"quality_status: {manifest['quality']['status']}")
+        print(f"q0_status: {manifest['research_eligibility']['q0_status']}")
+        if summary["b_invalid_count"]:
+            return 3
+        if summary["b_ambiguous_count"] or manifest["quality"]["status"] != "VALID":
             return 2
         return 0
 

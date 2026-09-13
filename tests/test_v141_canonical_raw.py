@@ -554,6 +554,14 @@ def recover_wait_set(connection):
     assert any("CUPTI_ACTIVITY_KIND_" in problem for problem in problems)
 
 
+def test_downstream_boundary_rejects_old_accounting_import():
+    """A/B modules must not reuse the archived prototype accounting implementation."""
+
+    problems = check_downstream_source("from analysis.exposed_accounting import summarize")
+
+    assert "下游模块禁止导入旧 accounting" in problems
+
+
 def test_historical_regression_report_preserves_frozen_raw_identity():
     root = Path(__file__).resolve().parents[1]
     frozen = json.loads(
@@ -594,3 +602,19 @@ def test_repository_downstream_modules_obey_canonical_raw_boundary():
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
     assert "canonical_raw_boundary: PASS" in completed.stdout
+
+
+def test_repository_boundary_checks_each_frozen_ab_downstream_module():
+    """Dropping any A/B input, accounting, provenance, or bundle module must fail the boundary audit."""
+
+    root = Path(__file__).resolve().parents[1]
+    completed = subprocess.run(
+        [sys.executable, str(root / "scripts" / "verify_canonical_raw_boundary.py")],
+        cwd=root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert "downstream_modules_checked: 6" in completed.stdout

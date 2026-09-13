@@ -2,15 +2,15 @@
 
 ## 当前快照
 
-- 清单版本：`2.4`
+- 清单版本：`2.5`
 - 最近更新：`2026-09-13`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G5-04`，A/B 与纯派生层 v0.2 机器 schema 已冻结；Canonical Raw + S 严格联结、request/phase 窗口发现、共享半开区间工具、A 互斥墙钟记账和 B 单同步 provenance 已完成；下一步仅从冻结 A/B 派生 D
-- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；Gate 5 机器 schema 已完成第二轮复审修正，A 和 B 已有合成 Engineering 覆盖，但 A/B bundle、D/Exposure Signature 代码与真实 Q0 尚未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
+- 当前最高优先级：`EP-G5-04`，A/B 与纯派生层 v0.2 机器 schema 已冻结；Canonical Raw + S 严格联结、request/phase 窗口发现、共享半开区间工具、A 互斥墙钟记账、B 单同步 provenance 和不可覆盖 A/B bundle 已完成；下一步仅从冻结 A/B 派生 D
+- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；Gate 5 机器 schema 已完成第二轮复审修正，A/B bundle 已有合成 Engineering 覆盖和严格重载校验，但 D/Exposure Signature 与真实 Q0 尚未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -101,14 +101,14 @@
 
 ## Gate 5：A/B，再到 D/Exposure Signature
 
-**Gate verdict：`NOT_RUN`。** A/B 与纯派生层 v0.2 机器 schema 已冻结；保守互斥的 A 和 per-sync B 已实现并经合成 Engineering 测试验证，但 A/B bundle、D 与 Exposure Signature 尚未实现或集成。旧 accounting 不能视为本 Gate 进度。
+**Gate verdict：`NOT_RUN`。** A/B 与纯派生层 v0.2 机器 schema 已冻结；保守互斥的 A、per-sync B 与不可覆盖 A/B bundle 已实现并经合成 Engineering 测试验证，但 D 与 Exposure Signature 尚未实现或集成。旧 accounting 不能视为本 Gate 进度。
 
 - [x] `EP-G5-01` 冻结 A/B 输入联结、窗口、输出 schema，并实现面向 request/phase、互斥且保守的 A。输入适配证据：`exposedpath_v141/ab_inputs.py`、`tests/test_v141_ab_inputs.py`；设计与 schema 证据：`docs/superpowers/specs/2026-09-12-gate5-accounting-design.md`、`docs/v1_4_1/contracts/ab_schema_v0_2.json`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_ab_schemas.py`；A 证据：`exposedpath_v141/a_accounting.py`、`tests/test_v141_a_accounting.py`。非窗口 structured marker 不创建或否定 A 窗口；其作为 worker API invocation ownership 证据时，必须由完整一致的 NVTX text payload 与缓存 identity 共同证明。
 - [x] `EP-G5-02` 实现 A 的 residual、整数纳秒守恒和 invalid/ambiguous 传播。证据：`exposedpath_v141/intervals.py`、`exposedpath_v141/a_accounting.py`、`tests/test_v141_intervals.py`、`tests/test_v141_a_accounting.py`，以及真实 `ABInputs` discovery 到 A 多线程 API union 与伪造 worker marker fail-closed 的回归 `tests/test_v141_ab_inputs.py`（定向验证 `53 passed`）。
 - [x] `EP-G5-03` 实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。证据：`exposedpath_v141/b_provenance.py`、`tests/test_v141_b_provenance.py`；逐条投影 S 的 `W(s)`、terminal、validity 和 provenance，仅对 `B_VALID` 以 Canonical 半开区间 union 计算 hidden/exposed/terminal/return-tail，其他状态时长均为 `null`；定向验证 `29 passed`（含独立 Q0 oracle、overlapping wait-set union 和 completion-boundary terminal 回归）。
 - [ ] `EP-G5-04`（受阻）仅从冻结后的 A/B 派生 D。
 - [ ] `EP-G5-05`（受阻）仅从冻结后的 A/B 派生 Exposure Signature。
-- [ ] `EP-G5-06`（受阻）完成互斥、守恒、provenance、版本和 validity 传播测试。
+- [ ] `EP-G5-06`（进行中）完成互斥、守恒、provenance、版本和 validity 传播测试。A/B bundle 已严格校验 manifest/记录 schema、gzip 哈希/大小/计数与可选外部 lineage，使用确定性 `mtime=0` gzip 和临时目录原子改名，CLI 为 `analyze-ab`；局部窗口发现问题仅记录 bundle quality 而不污染其他有效窗口，全局质量问题仍使既有窗口归入 `A_unattributed`。证据：`exposedpath_v141/ab_bundle.py`、`exposedpath_v141/cli.py`、`tests/test_v141_ab_bundle.py`、`scripts/verify_canonical_raw_boundary.py`。
 
 ## Gate 6：Q0 资格验证
 
@@ -243,3 +243,4 @@
 | 2.2 | 2026-09-12 | Gate 5 Task 4 第二轮集成复审收紧 worker API ownership：A 在采用任一 structured request/phase/marker range 前重新解析其 NVTX text，并要求与缓存 identity 完整一致；缺前缀、解析/对象失败或字段冲突一律不是 ownership evidence。窗口发现继续忽略非窗口 marker，因此伪造 marker 不会否定正常三窗口，但其 API 片段 fail-closed 至 unattributed。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；该检查仅为合成 Engineering 证据，B、bundle、D/Signature 与完整 Gate 5 集成仍未完成 |
 | 2.3 | 2026-09-13 | 完成 Gate 5 Task 5 的 B 单同步 provenance：B 逐条投影 S 的 sync identity、wait-set、terminal、validity、origin 和 cross-phase 字段；仅在 `B_VALID` 时按 Canonical 活动区间 union 计算 hidden/exposed、terminal pre/overlap 与 return-tail，其他状态保持 null-only。输出不含跨同步 total/sum 接口；新增 Q0 oracle 独立 expected 的合成回归。 | EP-G5-03 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步为 bundle/纯派生层与 Gate 5 集成验证 |
 | 2.4 | 2026-09-13 | Approved review 后补齐两条 B 回归：同一有效 wait-set 的重叠活动按区间 union 而非 duration sum，及 `COMPLETION_BOUNDARY` terminal 的 activity timing 为 null、return-tail 仍按可观察 completion boundary 计算。现有实现已满足，未修改生产代码。 | EP-G5-03 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效 |
+| 2.5 | 2026-09-13 | 完成 Gate 5 A/B bundle 与 `analyze-ab` CLI：Canonical+S 先严格联结，A/B 只调用既有冻结计算模块；输出逐条 schema 校验、确定性 gzip、拒绝覆盖、临时目录原子改名，loader 校验 schema/hash/size/count 和可选外部 lineage。边界审计显式覆盖 S 与四个 A/B 下游模块，并拒绝 sqlite3、Nsight 私有表名和旧 accounting import。 | EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；D/Signature 仍未实现。 |

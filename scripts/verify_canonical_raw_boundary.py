@@ -14,9 +14,15 @@ FORBIDDEN_TEXT = (
     "TARGET_INFO_CUDA_",
     "DIAGNOSTIC_EVENT",
 )
-DOWNSTREAM_PATTERNS = (
-    "sync*.py", "s_*.py", "accounting*.py", "derived*.py", "signature*.py"
+DOWNSTREAM_MODULES = (
+    "sync_semantics.py",
+    "s_bundle.py",
+    "ab_inputs.py",
+    "a_accounting.py",
+    "b_provenance.py",
+    "ab_bundle.py",
 )
+_FORBIDDEN_OLD_ACCOUNTING_MODULE = "analysis.exposed_accounting"
 
 
 def check_source(source: str) -> list[str]:
@@ -27,6 +33,12 @@ def check_source(source: str) -> list[str]:
             problems.append("下游模块禁止导入 sqlite3")
         if isinstance(node, ast.ImportFrom) and node.module == "sqlite3":
             problems.append("下游模块禁止导入 sqlite3")
+        if isinstance(node, ast.Import) and any(
+            alias.name == _FORBIDDEN_OLD_ACCOUNTING_MODULE for alias in node.names
+        ):
+            problems.append("下游模块禁止导入旧 accounting")
+        if isinstance(node, ast.ImportFrom) and node.module == _FORBIDDEN_OLD_ACCOUNTING_MODULE:
+            problems.append("下游模块禁止导入旧 accounting")
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             for token in FORBIDDEN_TEXT:
                 if token in node.value:
@@ -41,9 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         paths = [Path(value) for value in args]
     else:
         package = root / "exposedpath_v141"
-        paths = sorted(
-            {path for pattern in DOWNSTREAM_PATTERNS for path in package.glob(pattern)}
-        )
+        paths = [package / name for name in DOWNSTREAM_MODULES]
     failures: list[str] = []
     for path in paths:
         for problem in check_source(path.read_text(encoding="utf-8")):
