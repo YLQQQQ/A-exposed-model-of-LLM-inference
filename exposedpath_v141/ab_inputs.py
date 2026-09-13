@@ -357,11 +357,11 @@ def _discovery_result(
         phase = identity.get("phase")
         if phase not in _WINDOW_PHASES:
             continue
+        # Structured marker/sync ranges can carry the same invocation identity
+        # for provenance or worker-thread ownership, but they never define A
+        # request/phase windows.  Only request/phase ranges enter the strict
+        # window-validation path below.
         if identity.get("kind") not in {"request", "phase"}:
-            try:
-                add_issue(_window_key(identity), "WINDOW_STRUCTURED_IDENTITY_INVALID", nvtx)
-            except ABInputError:
-                add_issue(None, "WINDOW_STRUCTURED_IDENTITY_INVALID", nvtx)
             continue
         try:
             key = _window_key(identity)

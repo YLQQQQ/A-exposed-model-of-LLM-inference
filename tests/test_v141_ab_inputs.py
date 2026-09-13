@@ -15,6 +15,7 @@ from exposedpath_v141.ab_inputs import (
     discover_request_phase_windows,
     load_ab_inputs,
 )
+from exposedpath_v141.a_accounting import calculate_a_windows
 from exposedpath_v141.canonical_raw import load_canonical_raw_schema
 from exposedpath_v141.s_bundle import load_s_layer_schema
 from exposedpath_v141.sync_semantics import classify_cuda_api, load_sync_registry
@@ -96,6 +97,17 @@ def _replace_nvtx(canonical_manifest: Path, rows: list[dict]) -> None:
     replacement.replace(nvtx_path)
     entry["filename"] = nvtx_path.name
     manifest["files"]["nvtx"] = entry
+    canonical_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def _replace_cuda_api(canonical_manifest: Path, rows: list[dict]) -> None:
+    manifest = json.loads(canonical_manifest.read_text(encoding="utf-8"))
+    api_path = canonical_manifest.parent / manifest["files"]["cuda_api"]["filename"]
+    replacement = api_path.with_name("replacement-cuda-api.jsonl.gz")
+    entry = _write_gzip_jsonl(replacement, rows)
+    replacement.replace(api_path)
+    entry["filename"] = api_path.name
+    manifest["files"]["cuda_api"] = entry
     canonical_manifest.write_text(json.dumps(manifest), encoding="utf-8")
 
 
@@ -311,6 +323,60 @@ def test_loads_strict_dual_input_and_discovers_three_structured_windows(tmp_path
         "device_activity:CUPTI_ACTIVITY_KIND_KERNEL:1"
     ]
     assert inputs.global_quality_reasons == ()
+
+
+def test_worker_marker_does_not_define_windows_but_proves_multithread_api_union_after_real_discovery(tmp_path):
+    """A marker proves worker ownership only; request/phase ranges remain the sole A windows."""
+
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    manifest = json.loads(canonical_manifest.read_text(encoding="utf-8"))
+    nvtx_path = canonical_manifest.parent / manifest["files"]["nvtx"]["filename"]
+    with gzip.open(nvtx_path, "rt", encoding="utf-8") as handle:
+        nvtx_rows = [json.loads(line) for line in handle]
+    worker_marker = _nvtx("nvtx:NVTX_EVENTS:4", 0, 100, "full_request", "marker")
+    worker_marker["global_tid"] = 202
+    nvtx_rows.append(worker_marker)
+    _replace_nvtx(canonical_manifest, nvtx_rows)
+
+    api_path = canonical_manifest.parent / manifest["files"]["cuda_api"]["filename"]
+    with gzip.open(api_path, "rt", encoding="utf-8") as handle:
+        api_rows = [json.loads(line) for line in handle]
+    main_query = deepcopy(api_rows[0])
+    main_query.update({
+        "record_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:2",
+        "source_rowid": 2,
+        "start_ns": 10,
+        "end_ns": 30,
+        "api_name": "cudaEventQuery",
+        "global_tid": 101,
+        "thread_id": 1,
+        "correlation_id": None,
+    })
+    worker_query = deepcopy(main_query)
+    worker_query.update({
+        "record_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:3",
+        "source_rowid": 3,
+        "start_ns": 20,
+        "end_ns": 40,
+        "global_tid": 202,
+        "thread_id": 2,
+    })
+    _replace_cuda_api(canonical_manifest, [*api_rows, main_query, worker_query])
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+    records = {record["phase"]: record for record in calculate_a_windows(inputs)}
+
+    assert [(window.phase, window.start_ns, window.end_ns) for window in inputs.windows] == [
+        ("full_request", 0, 100),
+        ("prefill", 0, 60),
+        ("decode", 60, 100),
+    ]
+    assert inputs.window_discovery_issues == ()
+    assert records["full_request"]["A_cuda_api_ns"] == 30
+    assert records["full_request"]["A_cuda_api_non_submit_ns"] == 30
+    assert records["prefill"]["A_cuda_api_ns"] == 30
+    assert records["decode"]["A_cuda_api_ns"] == 0
 
 
 @pytest.mark.parametrize(

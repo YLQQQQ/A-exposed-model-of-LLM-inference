@@ -9,8 +9,8 @@
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G5-02`，A/B 与纯派生层 v0.2 机器 schema 已冻结，Canonical Raw + S 严格联结与 request/phase 窗口发现已完成，共享半开区间工具已实现；下一步实现 A 互斥墙钟记账
-- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；Gate 5 机器 schema 已完成第二轮复审修正，Task 3 共享整数半开区间原语已通过定向测试，但 A/B/D/Exposure Signature 代码与真实 Q0 尚未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
+- 当前最高优先级：`EP-G5-03`，A/B 与纯派生层 v0.2 机器 schema 已冻结，Canonical Raw + S 严格联结、request/phase 窗口发现、共享半开区间工具和 A 互斥墙钟记账已完成；下一步实现 B 的 per-sync provenance
+- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；Gate 5 机器 schema 已完成第二轮复审修正，A 已含真实 ABInputs 窗口发现到多线程 API union 的合成集成回归，但 B、bundle、D/Exposure Signature 代码与真实 Q0 尚未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -103,8 +103,8 @@
 
 **Gate verdict：`NOT_RUN`。** A/B 与纯派生层 v0.2 机器 schema 已冻结；保守互斥的 A 已实现并经合成 Engineering 测试验证，但 B、A/B bundle、D 与 Exposure Signature 尚未实现或集成。旧 accounting 不能视为本 Gate 进度。
 
-- [x] `EP-G5-01` 冻结 A/B 输入联结、窗口、输出 schema，并实现面向 request/phase、互斥且保守的 A。输入适配证据：`exposedpath_v141/ab_inputs.py`、`tests/test_v141_ab_inputs.py`；设计与 schema 证据：`docs/superpowers/specs/2026-09-12-gate5-accounting-design.md`、`docs/v1_4_1/contracts/ab_schema_v0_2.json`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_ab_schemas.py`；A 证据：`exposedpath_v141/a_accounting.py`、`tests/test_v141_a_accounting.py`。
-- [x] `EP-G5-02` 实现 A 的 residual、整数纳秒守恒和 invalid/ambiguous 传播。证据：`exposedpath_v141/intervals.py`、`exposedpath_v141/a_accounting.py`、`tests/test_v141_intervals.py`、`tests/test_v141_a_accounting.py`（定向验证 `31 passed`）。
+- [x] `EP-G5-01` 冻结 A/B 输入联结、窗口、输出 schema，并实现面向 request/phase、互斥且保守的 A。输入适配证据：`exposedpath_v141/ab_inputs.py`、`tests/test_v141_ab_inputs.py`；设计与 schema 证据：`docs/superpowers/specs/2026-09-12-gate5-accounting-design.md`、`docs/v1_4_1/contracts/ab_schema_v0_2.json`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_ab_schemas.py`；A 证据：`exposedpath_v141/a_accounting.py`、`tests/test_v141_a_accounting.py`。非窗口 structured marker 不创建或否定 A 窗口，但可为 worker API invocation ownership 提供证据。
+- [x] `EP-G5-02` 实现 A 的 residual、整数纳秒守恒和 invalid/ambiguous 传播。证据：`exposedpath_v141/intervals.py`、`exposedpath_v141/a_accounting.py`、`tests/test_v141_intervals.py`、`tests/test_v141_a_accounting.py`，以及真实 `ABInputs` discovery 到 A 多线程 API union 的回归 `tests/test_v141_ab_inputs.py`（定向验证 `52 passed`）。
 - [ ] `EP-G5-03`（受阻）实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。
 - [ ] `EP-G5-04`（受阻）仅从冻结后的 A/B 派生 D。
 - [ ] `EP-G5-05`（受阻）仅从冻结后的 A/B 派生 Exposure Signature。
@@ -239,3 +239,4 @@
 | 1.8 | 2026-09-12 | 完成 Gate 5 Task 4 的 A 墙钟记账：按窗口/API/sync/`W(s)` 边界原子切分，以固定优先级互斥分配顶层与二级字段；全局质量失败、局部 invalid/ambiguous sync、未知 API 语义及未知 wait activity kind 均 fail-closed 到 unattributed。加入手算 100 ns、API union/冲突、重叠 sync、phase clipping 与 0 ns Decode 定向测试。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步为 B provenance、D/Signature 与 Gate 5 集成验证 |
 | 1.9 | 2026-09-12 | Gate 5 Task 4 第一轮复审引入 CUDA API 的结构化 NVTX ownership gate，并覆盖外部线程、无线程、invalid-over-valid、双非空 wait-set union、正常 0 ns 窗口与运行时数值校验；其中把 ownership 与当前 phase/thread 绑定的过严规则已在 2.0 修正。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；B、bundle、D/Signature 与 Gate 5 集成验证仍未完成 |
 | 2.0 | 2026-09-12 | Gate 5 Task 4 第二轮复审澄清 API ownership 与 phase clipping：同 API 线程、完整 identity 且包含 API 的 Canonical structured request/phase/marker range 仅证明同一 invocation；它不定义 A 窗口。A 仍只由结构化 request/phase windows 定义，跨 phase API 由原子区间分别裁剪；允许同 invocation 的 worker-thread marker，拒绝冲突或不完整的 enclosing ownership。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；B、bundle、D/Signature 与 Gate 5 集成验证仍未完成 |
+| 2.1 | 2026-09-12 | Gate 5 Task 4 集成复审修正窗口发现：完整 structured 非窗口 kind（含 worker ownership marker）不参与 A window creation，也不否定同一 invocation 的 request/prefill/decode 三个有效窗口；request/phase 的文本伪造、字段缺失和边界冲突仍按原有规则 fail-closed。新增真实 ABInputs discovery 到 A 的多线程 query union 回归。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；该检查仅为合成 Engineering 证据，B、bundle、D/Signature 与完整 Gate 5 集成仍未完成 |
