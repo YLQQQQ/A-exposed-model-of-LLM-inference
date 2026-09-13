@@ -379,6 +379,51 @@ def test_worker_marker_does_not_define_windows_but_proves_multithread_api_union_
     assert records["decode"]["A_cuda_api_ns"] == 0
 
 
+def test_spoofed_worker_marker_text_cannot_prove_api_ownership_after_real_discovery(tmp_path):
+    """A marker text/cache conflict cannot turn an external worker API into current-request time."""
+
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    manifest = json.loads(canonical_manifest.read_text(encoding="utf-8"))
+    nvtx_path = canonical_manifest.parent / manifest["files"]["nvtx"]["filename"]
+    with gzip.open(nvtx_path, "rt", encoding="utf-8") as handle:
+        nvtx_rows = [json.loads(line) for line in handle]
+    worker_marker = _nvtx("nvtx:NVTX_EVENTS:4", 0, 100, "full_request", "marker")
+    worker_marker["global_tid"] = 202
+    external_marker_identity = _identity("full_request", "marker")
+    external_marker_identity["request_id"] = "external-request"
+    worker_marker["text"] = "EXPOSEDPATH_JSON_V1:" + json.dumps(external_marker_identity)
+    nvtx_rows.append(worker_marker)
+    _replace_nvtx(canonical_manifest, nvtx_rows)
+
+    api_path = canonical_manifest.parent / manifest["files"]["cuda_api"]["filename"]
+    with gzip.open(api_path, "rt", encoding="utf-8") as handle:
+        api_rows = [json.loads(line) for line in handle]
+    worker_query = deepcopy(api_rows[0])
+    worker_query.update({
+        "record_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:2",
+        "source_rowid": 2,
+        "start_ns": 20,
+        "end_ns": 40,
+        "api_name": "cudaEventQuery",
+        "global_tid": 202,
+        "thread_id": 2,
+        "correlation_id": None,
+    })
+    _replace_cuda_api(canonical_manifest, [*api_rows, worker_query])
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+    records = {record["phase"]: record for record in calculate_a_windows(inputs)}
+
+    assert [window.phase for window in inputs.windows] == ["full_request", "prefill", "decode"]
+    assert inputs.window_discovery_issues == ()
+    assert records["full_request"]["A_cuda_api_ns"] == 0
+    assert records["full_request"]["A_unattributed_ns"] == 20
+    assert records["full_request"]["primary_reason"] == "CUDA_API_OWNERSHIP_EVIDENCE_INVALID"
+    assert records["prefill"]["A_cuda_api_ns"] == 0
+    assert records["prefill"]["A_unattributed_ns"] == 20
+
+
 @pytest.mark.parametrize(
     ("path", "mutate", "message"),
     [

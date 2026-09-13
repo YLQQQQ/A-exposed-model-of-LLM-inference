@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 from dataclasses import replace
 
 import pytest
@@ -48,16 +49,18 @@ def _activity(record_id: str, start: int, end: int, kind: str, correlation: int 
 
 
 def _nvtx(window: RequestPhaseWindow, global_tid: int = 101, request_id: str | None = None) -> dict[str, object]:
+    identity = {
+        "kind": "request" if window.phase == "full_request" else "phase",
+        "experiment_id": window.experiment_id, "wmpc_id": window.wmpc_id,
+        "run_id": window.run_id, "run_role": window.run_role, "pass_id": window.pass_id,
+        "request_id": request_id or window.request_id, "repeat_id": window.repeat_id,
+        "phase": window.phase,
+    }
     return {
         "record_id": window.nvtx_record_id, "start_ns": window.start_ns, "end_ns": window.end_ns,
         "global_tid": global_tid,
-        "structured_identity": {
-            "kind": "request" if window.phase == "full_request" else "phase",
-            "experiment_id": window.experiment_id, "wmpc_id": window.wmpc_id,
-            "run_id": window.run_id, "run_role": window.run_role, "pass_id": window.pass_id,
-            "request_id": request_id or window.request_id, "repeat_id": window.repeat_id,
-            "phase": window.phase,
-        },
+        "text": "EXPOSEDPATH_JSON_V1:" + json.dumps(identity),
+        "structured_identity": identity,
     }
 
 
@@ -69,6 +72,7 @@ def _ownership_marker(
     marker = _nvtx(window, global_tid=global_tid, request_id=request_id)
     marker.update({"record_id": record_id, "start_ns": start, "end_ns": end})
     marker["structured_identity"] = {**marker["structured_identity"], "kind": "marker"}
+    marker["text"] = "EXPOSEDPATH_JSON_V1:" + json.dumps(marker["structured_identity"])
     return marker
 
 
@@ -283,6 +287,7 @@ def test_incomplete_enclosing_owner_is_not_ignored_when_a_matching_owner_exists(
     api = _api("worker-query", 10, 20, "cudaEventQuery", None, global_tid=202)
     incomplete = _ownership_marker(window, "marker:incomplete", 202, 0, 100)
     del incomplete["structured_identity"]["repeat_id"]
+    incomplete["text"] = "EXPOSEDPATH_JSON_V1:" + json.dumps(incomplete["structured_identity"])
     record = _only_record(_inputs(
         windows=(window,), apis=(api,), syncs=(), activities=(),
         nvtx=(

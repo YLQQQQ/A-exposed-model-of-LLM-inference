@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from typing import Any
 
@@ -45,6 +46,7 @@ _INVALID_SYNC = {"AMBIGUOUS", "INVALID"}
 _WINDOW_OWNER_IDENTITY_FIELDS = (
     "experiment_id", "wmpc_id", "run_id", "run_role", "pass_id", "request_id", "repeat_id",
 )
+_STRUCTURED_PREFIX = "EXPOSEDPATH_JSON_V1:"
 
 
 def _integer(value: object, label: str) -> int:
@@ -98,6 +100,24 @@ def _api_category(api: Mapping[str, object], api_by_correlation: Mapping[object,
     return None
 
 
+def _trusted_owner_identity(candidate: Mapping[str, object]) -> Mapping[str, object] | None:
+    """仅返回与 Canonical 缓存完整一致的结构化 NVTX text identity。"""
+
+    text = candidate.get("text")
+    if not isinstance(text, str) or not text.startswith(_STRUCTURED_PREFIX):
+        return None
+    try:
+        payload = json.loads(text[len(_STRUCTURED_PREFIX) :])
+    except json.JSONDecodeError:
+        return None
+    cached_identity = candidate.get("structured_identity")
+    if not isinstance(payload, Mapping) or not isinstance(cached_identity, Mapping):
+        return None
+    if dict(payload) != dict(cached_identity):
+        return None
+    return payload
+
+
 def _api_ownership_reason(
     api: Mapping[str, object],
     api_interval: tuple[int, int],
@@ -115,13 +135,23 @@ def _api_ownership_reason(
     matching_owner_seen = False
     incomplete_owner_seen = False
     conflicting_owner_seen = False
+    invalid_owner_evidence_seen = False
     for candidate in nvtx_records:
         if candidate.get("global_tid") != api_thread:
             continue
-        identity = candidate.get("structured_identity")
-        if not isinstance(identity, Mapping) or identity.get("kind") not in {"request", "phase", "marker"}:
+        cached_identity = candidate.get("structured_identity")
+        text = candidate.get("text")
+        is_structured_claim = (
+            isinstance(cached_identity, Mapping)
+            and cached_identity.get("kind") in {"request", "phase", "marker"}
+        ) or (isinstance(text, str) and text.startswith(_STRUCTURED_PREFIX))
+        if not is_structured_claim:
             continue
         same_thread_structured_seen = True
+        identity = _trusted_owner_identity(candidate)
+        if identity is None or identity.get("kind") not in {"request", "phase", "marker"}:
+            invalid_owner_evidence_seen = True
+            continue
         try:
             candidate_interval = _interval(candidate, "start_ns", "end_ns", "structured NVTX")
         except ValueError:
@@ -142,6 +172,8 @@ def _api_ownership_reason(
         return "CUDA_API_IDENTITY_MISSING"
     if matching_owner_seen:
         return None
+    if invalid_owner_evidence_seen:
+        return "CUDA_API_OWNERSHIP_EVIDENCE_INVALID"
     if not same_thread_structured_seen:
         return "CUDA_API_EXTERNAL_THREAD"
     return "CUDA_API_WINDOW_OWNERSHIP_MISSING"
