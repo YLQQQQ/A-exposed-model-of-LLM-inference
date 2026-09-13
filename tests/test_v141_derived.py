@@ -252,3 +252,25 @@ def test_derive_exposure_cli_and_ast_boundary(tmp_path, capsys):
     assert check_derived_source("import sqlite3\n")
     assert check_derived_source("value = 'CUPTI_ACTIVITY_KIND_KERNEL'\n")
     assert check_derived_source((Path(__file__).parents[1] / "exposedpath_v141" / "derived.py").read_text(encoding="utf-8")) == []
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from exposedpath_v141.canonical_raw import load as upstream\n",
+        "from exposedpath_v141 import s_bundle as upstream\n",
+        "from .sync_semantics import classify as upstream\n",
+        "value = record.sync_start_ns\n",
+    ],
+)
+def test_derived_ast_boundary_rejects_absolute_package_member_relative_and_attribute_bypasses(source):
+    """Would fail if an equivalent spelling bypassed the A/B-only import or field boundary."""
+
+    assert check_derived_source(source)
+
+
+def test_derived_ast_boundary_keeps_exact_allowed_imports_and_attributes():
+    """Would fail if the hardening rejected the validated interface or unrelated attributes."""
+
+    assert check_derived_source("from exposedpath_v141 import ab_bundle as interface\n") == []
+    assert check_derived_source("value = record.sync_kind\n") == []

@@ -70,10 +70,21 @@ def check_derived_source(source: str) -> list[str]:
             problems.append("Derived 禁止导入 sqlite3")
         if isinstance(node, ast.ImportFrom) and node.module == "sqlite3":
             problems.append("Derived 禁止导入 sqlite3")
-        if isinstance(node, ast.ImportFrom) and node.level and node.module not in {"ab_bundle"}:
-            problems.append("Derived 只能从 A/B bundle 接口导入项目模块")
-        if isinstance(node, ast.ImportFrom) and node.module in _DERIVED_FORBIDDEN_MODULES:
-            problems.append("Derived 禁止导入 Canonical/S/A/B 计算模块")
+        if isinstance(node, ast.ImportFrom):
+            imported_names = {alias.name for alias in node.names}
+            relative_ab_bundle = (
+                node.level
+                and (node.module == "ab_bundle" or (node.module is None and imported_names == {"ab_bundle"}))
+            )
+            absolute_ab_bundle = (
+                node.module == "exposedpath_v141.ab_bundle"
+                or (node.module == "exposedpath_v141" and imported_names == {"ab_bundle"})
+            )
+            project_module = node.module in _DERIVED_FORBIDDEN_MODULES or (
+                isinstance(node.module, str) and node.module.startswith("exposedpath_v141")
+            )
+            if (node.level and not relative_ab_bundle) or (project_module and not absolute_ab_bundle):
+                problems.append("Derived 只能从 A/B bundle 接口导入项目模块")
         if isinstance(node, ast.Import):
             for alias in node.names:
                 if alias.name.startswith("exposedpath_v141.") and alias.name.rsplit(".", 1)[-1] != "ab_bundle":
@@ -83,6 +94,8 @@ def check_derived_source(source: str) -> list[str]:
                 problems.append("Derived 禁止读取 Raw/S 时间字段")
             if any(token in node.value for token in FORBIDDEN_TEXT):
                 problems.append("Derived 禁止出现 Nsight 私有表名")
+        if isinstance(node, ast.Attribute) and node.attr in _DERIVED_FORBIDDEN_TIME_FIELDS:
+            problems.append("Derived 禁止读取 Raw/S 时间字段")
     return sorted(set(problems))
 
 
