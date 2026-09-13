@@ -140,6 +140,38 @@ def test_cross_phase_provenance_is_preserved_without_clipping_b_lifecycle():
     assert {field: record[field] for field in expected} == expected
 
 
+def test_overlapping_wait_set_activities_use_union_not_duration_sum():
+    """Would fail if overlapping hidden/exposed activity time were double counted."""
+    inputs, _ = _inputs("Q0-STREAM-001")
+    first_id, second_id = inputs.s_records[0]["wait_set_activity_ids"]
+    inputs.canonical.activity_by_id[str(first_id)]["end_ns"] = 70
+    inputs.canonical.activity_by_id[str(second_id)]["start_ns"] = 30
+
+    record = _b_module().calculate_b_syncs(inputs)[0]
+
+    assert record["wait_set_hidden_union_ns"] == 40  # [10, 50), not 40 + 20.
+    assert record["wait_set_exposed_union_ns"] == 40  # [50, 90), not 20 + 40.
+
+
+def test_completion_boundary_terminal_nulls_activity_timing_but_keeps_return_tail():
+    """Would fail if a boundary terminal gained activity duration or lost its observable tail."""
+    inputs, _ = _inputs("Q0-STREAM-001")
+    inputs.s_records[0]["terminal"] = {
+        "status": "VALID",
+        "kind": "COMPLETION_BOUNDARY",
+        "activity_id": None,
+        "end_ns": 70,
+        "clock_domain_id": "OBSERVED_BOUNDARY",
+    }
+
+    record = _b_module().calculate_b_syncs(inputs)[0]
+
+    assert record["terminal_pre_sync_ns"] is None
+    assert record["terminal_overlap_sync_ns"] is None
+    assert record["sync_return_tail_ns"] == 30
+    _b_module().validate_b_record(record)
+
+
 def test_validation_rejects_extra_aggregate_field_and_zero_for_nonvalid_state():
     """Would fail if the public record admitted an aggregate or fabricated unknown timing."""
     inputs, _ = _inputs("Q0-EMPTY-001")
