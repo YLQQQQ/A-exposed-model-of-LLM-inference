@@ -21,8 +21,16 @@ DOWNSTREAM_MODULES = (
     "a_accounting.py",
     "b_provenance.py",
     "ab_bundle.py",
+    "derived.py",
 )
 _FORBIDDEN_OLD_ACCOUNTING_MODULE = "analysis.exposed_accounting"
+_DERIVED_FORBIDDEN_MODULES = {
+    "canonical_raw", "s_bundle", "sync_semantics", "ab_inputs", "a_accounting", "b_provenance",
+}
+_DERIVED_FORBIDDEN_TIME_FIELDS = {
+    "start_ns", "end_ns", "sync_start_ns", "sync_end_ns", "host_start_ns", "host_end_ns",
+    "window_start_ns", "window_end_ns", "runtime_start_ns", "runtime_end_ns",
+}
 
 
 def check_source(source: str) -> list[str]:
@@ -52,6 +60,32 @@ def check_source(source: str) -> list[str]:
     return sorted(set(problems))
 
 
+def check_derived_source(source: str) -> list[str]:
+    """Reject a derived module that reaches below the validated A/B interface."""
+
+    tree = ast.parse(source)
+    problems: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import) and any(alias.name == "sqlite3" for alias in node.names):
+            problems.append("Derived 禁止导入 sqlite3")
+        if isinstance(node, ast.ImportFrom) and node.module == "sqlite3":
+            problems.append("Derived 禁止导入 sqlite3")
+        if isinstance(node, ast.ImportFrom) and node.level and node.module not in {"ab_bundle"}:
+            problems.append("Derived 只能从 A/B bundle 接口导入项目模块")
+        if isinstance(node, ast.ImportFrom) and node.module in _DERIVED_FORBIDDEN_MODULES:
+            problems.append("Derived 禁止导入 Canonical/S/A/B 计算模块")
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.startswith("exposedpath_v141.") and alias.name.rsplit(".", 1)[-1] != "ab_bundle":
+                    problems.append("Derived 只能导入 A/B bundle 接口")
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if node.value in _DERIVED_FORBIDDEN_TIME_FIELDS:
+                problems.append("Derived 禁止读取 Raw/S 时间字段")
+            if any(token in node.value for token in FORBIDDEN_TEXT):
+                problems.append("Derived 禁止出现 Nsight 私有表名")
+    return sorted(set(problems))
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     root = Path(__file__).resolve().parents[1]
@@ -64,6 +98,9 @@ def main(argv: list[str] | None = None) -> int:
     for path in paths:
         for problem in check_source(path.read_text(encoding="utf-8")):
             failures.append(f"{path}: {problem}")
+        if path.name == "derived.py":
+            for problem in check_derived_source(path.read_text(encoding="utf-8")):
+                failures.append(f"{path}: {problem}")
     if failures:
         print("canonical_raw_boundary: FAIL")
         for failure in failures:

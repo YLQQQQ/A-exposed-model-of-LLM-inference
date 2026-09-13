@@ -16,6 +16,7 @@ from .observation import inspect_sqlite, write_report_new
 from .q0_oracle import OracleValidationError, load_oracle_bundle
 from .s_bundle import SBundleError, analyze_canonical_to_s
 from .ab_bundle import ABBundleError, analyze_ab
+from .derived import DerivedBundleError, derive_exposure
 
 
 def _configure_stdio() -> None:
@@ -78,6 +79,11 @@ def _build_parser() -> argparse.ArgumentParser:
     ab_parser.add_argument("--canonical-manifest", required=True, type=Path)
     ab_parser.add_argument("--s-manifest", required=True, type=Path)
     ab_parser.add_argument("--output-dir", required=True, type=Path)
+    derived_parser = subparsers.add_parser(
+        "derive-exposure", help="仅从已验证 A/B bundle 派生 D 与 Exposure Signature"
+    )
+    derived_parser.add_argument("--ab-manifest", required=True, type=Path)
+    derived_parser.add_argument("--output-dir", required=True, type=Path)
     return parser
 
 
@@ -217,6 +223,21 @@ def main(argv: list[str] | None = None) -> int:
             return 3
         if summary["b_ambiguous_count"] or manifest["quality"]["status"] != "VALID":
             return 2
+        return 0
+
+    if args.command == "derive-exposure":
+        try:
+            manifest_path = derive_exposure(args.ab_manifest, args.output_dir)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (DerivedBundleError, FileExistsError, OSError, ValueError, json.JSONDecodeError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        summary = manifest["summary"]
+        print(f"derived_manifest: {manifest_path}")
+        print(f"derived_schema_version: {manifest['schema_version']}")
+        print(f"d_window_count: {summary['d_window_count']}")
+        print(f"exposure_signature_count: {summary['exposure_signature_count']}")
+        print(f"q0_status: {manifest['research_eligibility']['q0_status']}")
         return 0
 
     if args.command != "inspect-sqlite":

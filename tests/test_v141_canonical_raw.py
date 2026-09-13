@@ -631,4 +631,4 @@ def test_repository_boundary_checks_each_frozen_ab_downstream_module():
     )
 
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "downstream_modules_checked: 6" in completed.stdout
+    assert "downstream_modules_checked: 7" in completed.stdout

@@ -9,8 +9,8 @@
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G5-04`，A/B 与纯派生层 v0.2 机器 schema 已冻结；Canonical Raw + S 严格联结、request/phase 窗口发现、共享半开区间工具、A 互斥墙钟记账、B 单同步 provenance 和不可覆盖 A/B bundle 已完成；下一步仅从冻结 A/B 派生 D
-- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；Gate 5 机器 schema 已完成第二轮复审修正，A/B bundle 已有合成 Engineering 覆盖和严格重载校验，但 D/Exposure Signature 与真实 Q0 尚未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
+- 当前最高优先级：`EP-G5-06`，A/B 与纯派生层 v0.2 机器 schema 已冻结；Canonical Raw + S 严格联结、request/phase 窗口发现、共享半开区间工具、A 互斥墙钟记账、B 单同步 provenance、不可覆盖 A/B bundle 与 A/B-only D/Exposure Signature 已完成；下一步为 Gate 5 历史 Engineering 回归和完整复审
+- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；Gate 5 机器 schema 已完成第二轮复审修正，A/B 与纯派生 bundle 已有合成 Engineering 覆盖和严格重载校验，但历史回归、全量验证与独立复审尚未完成；真实 Q0、Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -101,14 +101,14 @@
 
 ## Gate 5：A/B，再到 D/Exposure Signature
 
-**Gate verdict：`NOT_RUN`。** A/B 与纯派生层 v0.2 机器 schema 已冻结；保守互斥的 A、per-sync B 与不可覆盖 A/B bundle 已实现并经合成 Engineering 测试验证，但 D 与 Exposure Signature 尚未实现或集成。旧 accounting 不能视为本 Gate 进度。
+**Gate verdict：`NOT_RUN`。** A/B 与纯派生层 v0.2 机器 schema 已冻结；保守互斥的 A、per-sync B、不可覆盖 A/B bundle 以及只读 A/B 的 D/Exposure Signature 均已实现并经合成 Engineering 测试验证。历史 Engineering 回归、全量验证和独立复审仍未完成；旧 accounting 不能视为本 Gate 进度。
 
 - [x] `EP-G5-01` 冻结 A/B 输入联结、窗口、输出 schema，并实现面向 request/phase、互斥且保守的 A。输入适配证据：`exposedpath_v141/ab_inputs.py`、`tests/test_v141_ab_inputs.py`；设计与 schema 证据：`docs/superpowers/specs/2026-09-12-gate5-accounting-design.md`、`docs/v1_4_1/contracts/ab_schema_v0_2.json`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_ab_schemas.py`；A 证据：`exposedpath_v141/a_accounting.py`、`tests/test_v141_a_accounting.py`。非窗口 structured marker 不创建或否定 A 窗口；其作为 worker API invocation ownership 证据时，必须由完整一致的 NVTX text payload 与缓存 identity 共同证明。
 - [x] `EP-G5-02` 实现 A 的 residual、整数纳秒守恒和 invalid/ambiguous 传播。证据：`exposedpath_v141/intervals.py`、`exposedpath_v141/a_accounting.py`、`tests/test_v141_intervals.py`、`tests/test_v141_a_accounting.py`，以及真实 `ABInputs` discovery 到 A 多线程 API union 与伪造 worker marker fail-closed 的回归 `tests/test_v141_ab_inputs.py`（定向验证 `53 passed`）。
 - [x] `EP-G5-03` 实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。证据：`exposedpath_v141/b_provenance.py`、`tests/test_v141_b_provenance.py`；逐条投影 S 的 `W(s)`、terminal、validity 和 provenance，仅对 `B_VALID` 以 Canonical 半开区间 union 计算 hidden/exposed/terminal/return-tail，其他状态时长均为 `null`；定向验证 `29 passed`（含独立 Q0 oracle、overlapping wait-set union 和 completion-boundary terminal 回归）。
-- [ ] `EP-G5-04`（受阻）仅从冻结后的 A/B 派生 D。
-- [ ] `EP-G5-05`（受阻）仅从冻结后的 A/B 派生 Exposure Signature。
-- [ ] `EP-G5-06`（进行中）完成互斥、守恒、provenance、版本和 validity 传播测试。A/B bundle 已严格校验 manifest/记录 schema、gzip 哈希/大小/计数与可选外部 lineage，使用确定性 `mtime=0` gzip 和临时目录原子改名，CLI 为 `analyze-ab`；局部窗口发现问题仅记录 bundle quality 而不污染其他有效窗口，全局质量问题仍使既有窗口归入 `A_unattributed`。证据：`exposedpath_v141/ab_bundle.py`、`exposedpath_v141/cli.py`、`tests/test_v141_ab_bundle.py`、`scripts/verify_canonical_raw_boundary.py`。
+- [x] `EP-G5-04` 仅从冻结后的 A/B 派生 D。`derive-exposure` 通过既有严格 A/B loader 读取唯一输入，按冻结公式生成每个窗口的 `D_margin/D_score`；零分母严格输出 `null`。证据：`exposedpath_v141/derived.py`、`tests/test_v141_derived.py`。
+- [x] `EP-G5-05` 仅从冻结后的 A/B 派生 Exposure Signature。输出冻结 A 向量/窗口比例及按 `(phase, sync_kind, sync_origin, callsite_id)` 的 B 状态 count、仅 `B_VALID` 数值的 median/nearest-rank p90、终端类型与离散分布；不输出 B total 或根因/瓶颈/速度上界标签。证据：`exposedpath_v141/derived.py`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_derived.py`。
+- [ ] `EP-G5-06`（进行中）完成互斥、守恒、provenance、版本和 validity 传播测试。A/B 及 Derived bundle 均严格校验 manifest/记录 schema、gzip 哈希/大小/计数与可选外部 lineage，使用确定性 `mtime=0` gzip 和临时目录原子改名；Derived loader 额外校验 terminal-kind 对 `B_VALID` 的精确 count 与每项统计分布的有效数值样本数。CLI 为 `analyze-ab` 和 `derive-exposure`；静态边界拒绝 Derived 导入 Canonical/S/A/B 计算模块、Raw/S 时间字段、SQLite 或 Nsight 表名。证据：`exposedpath_v141/ab_bundle.py`、`exposedpath_v141/derived.py`、`exposedpath_v141/cli.py`、`tests/test_v141_ab_bundle.py`、`tests/test_v141_derived.py`、`scripts/verify_canonical_raw_boundary.py`。
 
 ## Gate 6：Q0 资格验证
 
@@ -245,3 +245,4 @@
 | 2.4 | 2026-09-13 | Approved review 后补齐两条 B 回归：同一有效 wait-set 的重叠活动按区间 union 而非 duration sum，及 `COMPLETION_BOUNDARY` terminal 的 activity timing 为 null、return-tail 仍按可观察 completion boundary 计算。现有实现已满足，未修改生产代码。 | EP-G5-03 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效 |
 | 2.5 | 2026-09-13 | 完成 Gate 5 A/B bundle 与 `analyze-ab` CLI：Canonical+S 先严格联结，A/B 只调用既有冻结计算模块；输出逐条 schema 校验、确定性 gzip、拒绝覆盖、临时目录原子改名，loader 校验 schema/hash/size/count 和可选外部 lineage。边界审计显式覆盖 S 与四个 A/B 下游模块，并拒绝 sqlite3、Nsight 私有表名和旧 accounting import。 | EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；D/Signature 仍未实现。 |
 | 2.6 | 2026-09-13 | Gate 5 Task 6 复审修正：A/B loader 在 schema 允许未来资格值时仍执行当前 Engineering 资格策略（`formal_evidence=false`、`q0_status=NOT_RUN`、`scope=A_B_LAYER_ONLY`），该策略只在 Gate 6 尚无独立哈希资格证明期间适用；外部 S lineage 额外逐项核对 sync registry version/SHA-256；静态边界检查覆盖 `from analysis import exposed_accounting` 及 alias，保留无关 `analysis` import。 | EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；该 loader policy 不是对未来 Formal bundle 的永久否定。 |
+| 2.7 | 2026-09-13 | 完成 Gate 5 Task 7：`derive-exposure` 仅消费已验证 A/B bundle，确定性、不可覆盖地输出 D 和 Exposure Signature；D 使用冻结三项 A 公式与零分母 null，Signature 只摘要 A 向量/比例和 B 状态、有效数值统计、终端类型/分布。派生 loader 复查 schema/hash/可选 A/B lineage、资格不升级，以及 terminal/distribution 的运行时 count 一致性；边界审计禁止其回读 Canonical/S 或 Raw/S 时间字段。 | EP-G5-04 至 EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 仍为 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步是 Task 8 的历史 Engineering 回归、全量验证与独立复审。 |
