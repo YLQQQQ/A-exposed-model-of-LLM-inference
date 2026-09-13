@@ -100,6 +100,25 @@ def test_ab_loader_rechecks_a_runtime_conservation_after_metadata_matched_tamper
         load_ab_bundle(manifest_path)
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("formal_evidence", True), ("q0_status", "PASS"), ("q0_status", "BLOCKED")],
+)
+def test_ab_loader_rejects_schema_valid_unsupported_qualification_upgrade(
+    tmp_path, field, value
+):
+    """Current Engineering bundles cannot assert a qualification absent hashed Gate 6 proof."""
+
+    canonical, s_manifest = _make_inputs(tmp_path)
+    manifest_path = analyze_ab(canonical, s_manifest, tmp_path / "ab")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["research_eligibility"][field] = value
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ABBundleError, match="current qualification policy"):
+        load_ab_bundle(manifest_path)
+
+
 def test_ab_loader_rejects_s_lineage_conflict_when_only_s_source_is_available(tmp_path):
     """Would fail if an S manifest could point at another Canonical bundle after its hash changed."""
 
@@ -115,6 +134,30 @@ def test_ab_loader_rejects_s_lineage_conflict_when_only_s_source_is_available(tm
     manifest_path.write_text(json.dumps(ab_manifest), encoding="utf-8")
 
     with pytest.raises(ABBundleError, match="S-to-Canonical lineage"):
+        load_ab_bundle(manifest_path, s_manifest=s_manifest)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("version", "unsupported-registry-version"), ("sha256", "B" * 64)],
+)
+def test_ab_loader_rejects_external_s_sync_registry_lineage_conflict(
+    tmp_path, field, value
+):
+    """An S manifest must retain the registry identity recorded by its A/B projection."""
+
+    canonical, s_manifest = _make_inputs(tmp_path)
+    manifest_path = analyze_ab(canonical, s_manifest, tmp_path / "ab")
+    s = json.loads(s_manifest.read_text(encoding="utf-8"))
+    s["source"]["sync_registry"][field] = value
+    s_manifest.write_text(json.dumps(s), encoding="utf-8")
+    ab_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    ab_manifest["source"]["s_manifest_sha256"] = hashlib.sha256(
+        s_manifest.read_bytes()
+    ).hexdigest().upper()
+    manifest_path.write_text(json.dumps(ab_manifest), encoding="utf-8")
+
+    with pytest.raises(ABBundleError, match="sync registry lineage"):
         load_ab_bundle(manifest_path, s_manifest=s_manifest)
 
 

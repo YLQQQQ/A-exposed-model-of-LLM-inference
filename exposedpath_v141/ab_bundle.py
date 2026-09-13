@@ -31,6 +31,11 @@ _RECORD_FILES = {
     "a_window_records": "a_window_records.jsonl.gz",
     "b_sync_records": "b_sync_records.jsonl.gz",
 }
+_CURRENT_QUALIFICATION = {
+    "formal_evidence": False,
+    "q0_status": "NOT_RUN",
+    "scope": "A_B_LAYER_ONLY",
+}
 
 
 def _sha256(path: Path) -> str:
@@ -58,6 +63,14 @@ def _validate_schema(schema: Mapping[str, Any], definition: str, record: Mapping
         Draft202012Validator(schema["$defs"][definition]).validate(dict(record))
     except (KeyError, ValidationError) as exc:
         raise ABBundleError(f"{label} 不符合冻结 A/B schema: {exc.message if isinstance(exc, ValidationError) else exc}") from exc
+
+
+def _validate_current_qualification(manifest: Mapping[str, Any]) -> None:
+    """Reject unsupported qualification claims until Gate 6 supplies hashed proof."""
+
+    eligibility = _mapping(manifest.get("research_eligibility"), "A/B research_eligibility")
+    if any(eligibility.get(field) != value for field, value in _CURRENT_QUALIFICATION.items()):
+        raise ABBundleError("A/B current qualification policy rejects unsupported qualification claims")
 
 
 def _validate_record_semantics(definition: str, record: Mapping[str, Any], label: str) -> None:
@@ -184,6 +197,15 @@ def _validate_external_lineage(
             raise ABBundleError("A/B S-to-Canonical lineage 不匹配")
         if s_source.get("source_sqlite_sha256") != source.get("source_sqlite_sha256"):
             raise ABBundleError("A/B S source SQLite lineage 不匹配")
+        s_registry = _mapping(s_source.get("sync_registry"), "S source.sync_registry")
+        ab_registry = _mapping(source.get("sync_registry"), "A/B source.sync_registry")
+        if (
+            s_registry.get("version") != ab_registry.get("version")
+            or s_registry.get("sha256") != ab_registry.get("sha256")
+        ):
+            raise ABBundleError("A/B sync registry lineage 不匹配")
+
+
 def load_ab_bundle(
     manifest_path: Path,
     *,
@@ -201,6 +223,7 @@ def load_ab_bundle(
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ABBundleError("A/B manifest 无法读取") from exc
     _validate_schema(schema, "manifest", manifest, "A/B manifest")
+    _validate_current_qualification(manifest)
     files = _mapping(manifest.get("files"), "A/B files")
     if set(files) != set(_RECORD_FILES):
         raise ABBundleError("A/B files 集合不匹配")

@@ -554,12 +554,26 @@ def recover_wait_set(connection):
     assert any("CUPTI_ACTIVITY_KIND_" in problem for problem in problems)
 
 
-def test_downstream_boundary_rejects_old_accounting_import():
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import analysis.exposed_accounting as archived",
+        "from analysis.exposed_accounting import summarize as archived_summary",
+        "from analysis import exposed_accounting as archived",
+    ],
+)
+def test_downstream_boundary_rejects_old_accounting_import(source):
     """A/B modules must not reuse the archived prototype accounting implementation."""
 
-    problems = check_downstream_source("from analysis.exposed_accounting import summarize")
+    problems = check_downstream_source(source)
 
     assert "下游模块禁止导入旧 accounting" in problems
+
+
+def test_downstream_boundary_allows_unrelated_analysis_import():
+    """The archived accounting ban must not block unrelated analysis package imports."""
+
+    assert check_downstream_source("from analysis import report_helpers as helpers") == []
 
 
 def test_historical_regression_report_preserves_frozen_raw_identity():

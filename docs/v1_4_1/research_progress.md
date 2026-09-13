@@ -2,7 +2,7 @@
 
 ## 当前快照
 
-- 清单版本：`2.5`
+- 清单版本：`2.6`
 - 最近更新：`2026-09-13`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
@@ -244,3 +244,4 @@
 | 2.3 | 2026-09-13 | 完成 Gate 5 Task 5 的 B 单同步 provenance：B 逐条投影 S 的 sync identity、wait-set、terminal、validity、origin 和 cross-phase 字段；仅在 `B_VALID` 时按 Canonical 活动区间 union 计算 hidden/exposed、terminal pre/overlap 与 return-tail，其他状态保持 null-only。输出不含跨同步 total/sum 接口；新增 Q0 oracle 独立 expected 的合成回归。 | EP-G5-03 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步为 bundle/纯派生层与 Gate 5 集成验证 |
 | 2.4 | 2026-09-13 | Approved review 后补齐两条 B 回归：同一有效 wait-set 的重叠活动按区间 union 而非 duration sum，及 `COMPLETION_BOUNDARY` terminal 的 activity timing 为 null、return-tail 仍按可观察 completion boundary 计算。现有实现已满足，未修改生产代码。 | EP-G5-03 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效 |
 | 2.5 | 2026-09-13 | 完成 Gate 5 A/B bundle 与 `analyze-ab` CLI：Canonical+S 先严格联结，A/B 只调用既有冻结计算模块；输出逐条 schema 校验、确定性 gzip、拒绝覆盖、临时目录原子改名，loader 校验 schema/hash/size/count 和可选外部 lineage。边界审计显式覆盖 S 与四个 A/B 下游模块，并拒绝 sqlite3、Nsight 私有表名和旧 accounting import。 | EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；D/Signature 仍未实现。 |
+| 2.6 | 2026-09-13 | Gate 5 Task 6 复审修正：A/B loader 在 schema 允许未来资格值时仍执行当前 Engineering 资格策略（`formal_evidence=false`、`q0_status=NOT_RUN`、`scope=A_B_LAYER_ONLY`），该策略只在 Gate 6 尚无独立哈希资格证明期间适用；外部 S lineage 额外逐项核对 sync registry version/SHA-256；静态边界检查覆盖 `from analysis import exposed_accounting` 及 alias，保留无关 `analysis` import。 | EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；该 loader policy 不是对未来 Formal bundle 的永久否定。 |

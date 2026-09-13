@@ -39,6 +39,12 @@ def check_source(source: str) -> list[str]:
             problems.append("下游模块禁止导入旧 accounting")
         if isinstance(node, ast.ImportFrom) and node.module == _FORBIDDEN_OLD_ACCOUNTING_MODULE:
             problems.append("下游模块禁止导入旧 accounting")
+        if (
+            isinstance(node, ast.ImportFrom)
+            and node.module == "analysis"
+            and any(alias.name == "exposed_accounting" for alias in node.names)
+        ):
+            problems.append("下游模块禁止导入旧 accounting")
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             for token in FORBIDDEN_TEXT:
                 if token in node.value:
