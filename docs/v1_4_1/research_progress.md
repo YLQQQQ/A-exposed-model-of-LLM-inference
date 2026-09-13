@@ -2,15 +2,15 @@
 
 ## 当前快照
 
-- 清单版本：`1.7`
-- 最近更新：`2026-09-12`
+- 清单版本：`2.3`
+- 最近更新：`2026-09-13`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G5-03`，A/B 与纯派生层 v0.2 机器 schema 已冻结，Canonical Raw + S 严格联结、request/phase 窗口发现、共享半开区间工具和 A 互斥墙钟记账已完成；下一步实现 B 的 per-sync provenance
-- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；Gate 5 机器 schema 已完成第二轮复审修正，A 已含真实 ABInputs 窗口发现到多线程 API union 的合成集成回归，但 B、bundle、D/Exposure Signature 代码与真实 Q0 尚未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
+- 当前最高优先级：`EP-G5-04`，A/B 与纯派生层 v0.2 机器 schema 已冻结；Canonical Raw + S 严格联结、request/phase 窗口发现、共享半开区间工具、A 互斥墙钟记账和 B 单同步 provenance 已完成；下一步仅从冻结 A/B 派生 D
+- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；Gate 5 机器 schema 已完成第二轮复审修正，A 和 B 已有合成 Engineering 覆盖，但 A/B bundle、D/Exposure Signature 代码与真实 Q0 尚未完成，Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -101,11 +101,11 @@
 
 ## Gate 5：A/B，再到 D/Exposure Signature
 
-**Gate verdict：`NOT_RUN`。** A/B 与纯派生层 v0.2 机器 schema 已冻结；保守互斥的 A 已实现并经合成 Engineering 测试验证，但 B、A/B bundle、D 与 Exposure Signature 尚未实现或集成。旧 accounting 不能视为本 Gate 进度。
+**Gate verdict：`NOT_RUN`。** A/B 与纯派生层 v0.2 机器 schema 已冻结；保守互斥的 A 和 per-sync B 已实现并经合成 Engineering 测试验证，但 A/B bundle、D 与 Exposure Signature 尚未实现或集成。旧 accounting 不能视为本 Gate 进度。
 
 - [x] `EP-G5-01` 冻结 A/B 输入联结、窗口、输出 schema，并实现面向 request/phase、互斥且保守的 A。输入适配证据：`exposedpath_v141/ab_inputs.py`、`tests/test_v141_ab_inputs.py`；设计与 schema 证据：`docs/superpowers/specs/2026-09-12-gate5-accounting-design.md`、`docs/v1_4_1/contracts/ab_schema_v0_2.json`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_ab_schemas.py`；A 证据：`exposedpath_v141/a_accounting.py`、`tests/test_v141_a_accounting.py`。非窗口 structured marker 不创建或否定 A 窗口；其作为 worker API invocation ownership 证据时，必须由完整一致的 NVTX text payload 与缓存 identity 共同证明。
 - [x] `EP-G5-02` 实现 A 的 residual、整数纳秒守恒和 invalid/ambiguous 传播。证据：`exposedpath_v141/intervals.py`、`exposedpath_v141/a_accounting.py`、`tests/test_v141_intervals.py`、`tests/test_v141_a_accounting.py`，以及真实 `ABInputs` discovery 到 A 多线程 API union 与伪造 worker marker fail-closed 的回归 `tests/test_v141_ab_inputs.py`（定向验证 `53 passed`）。
-- [ ] `EP-G5-03`（受阻）实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。
+- [x] `EP-G5-03` 实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。证据：`exposedpath_v141/b_provenance.py`、`tests/test_v141_b_provenance.py`；逐条投影 S 的 `W(s)`、terminal、validity 和 provenance，仅对 `B_VALID` 以 Canonical 半开区间 union 计算 hidden/exposed/terminal/return-tail，其他状态时长均为 `null`；定向验证 `27 passed`（含独立 Q0 oracle）。
 - [ ] `EP-G5-04`（受阻）仅从冻结后的 A/B 派生 D。
 - [ ] `EP-G5-05`（受阻）仅从冻结后的 A/B 派生 Exposure Signature。
 - [ ] `EP-G5-06`（受阻）完成互斥、守恒、provenance、版本和 validity 传播测试。
@@ -209,11 +209,11 @@
 
 最近应执行的五项任务：
 
-1. `EP-G5-02`：基于已完成的共享半开区间原语，实现 A 的 request/phase 原子区间切分、优先级、互斥和守恒；invalid/ambiguous sync 归 unattributed。
-2. `EP-G5-03`：实现 B 的单同步 hidden/exposed/terminal/return-tail，并从接口和汇总层禁止跨同步相加。
-3. `EP-G5-04`：用 Q0 oracle 的 A/B 关系、重叠 sync 和 phase spill 案例进行离线对照。
-4. `EP-G5-05`：完成 A/B 后再实现纯派生 D/Exposure Signature；不新增研究指标。
-5. `EP-G5-06`：完成互斥、守恒、provenance、版本和 validity 传播测试。
+1. `EP-G5-04`：仅从冻结后的 A/B 派生 D，并用 Q0 oracle 的 A/B 关系、重叠 sync 和 phase spill 案例进行离线对照。
+2. `EP-G5-05`：完成 A/B 后再实现纯派生 Exposure Signature；不新增研究指标。
+3. `EP-G5-06`：完成互斥、守恒、provenance、版本和 validity 传播测试。
+4. `EP-G6-01`：设计受控 CUDA Q0 微程序和机器可读 manifest，仍不得将合成测试写成 Q0 PASS。
+5. `EP-G6-02`：在合成 trace 上对照独立 oracle，真实 observation stack 验证仍受 GPU 平台阻塞。
 
 ## 计划调整记录
 
@@ -241,3 +241,4 @@
 | 2.0 | 2026-09-12 | Gate 5 Task 4 第二轮复审澄清 API ownership 与 phase clipping：同 API 线程、完整 identity 且包含 API 的 Canonical structured request/phase/marker range 仅证明同一 invocation；它不定义 A 窗口。A 仍只由结构化 request/phase windows 定义，跨 phase API 由原子区间分别裁剪；允许同 invocation 的 worker-thread marker，拒绝冲突或不完整的 enclosing ownership。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；B、bundle、D/Signature 与 Gate 5 集成验证仍未完成 |
 | 2.1 | 2026-09-12 | Gate 5 Task 4 集成复审修正窗口发现：完整 structured 非窗口 kind（含 worker ownership marker）不参与 A window creation，也不否定同一 invocation 的 request/prefill/decode 三个有效窗口；request/phase 的文本伪造、字段缺失和边界冲突仍按原有规则 fail-closed。新增真实 ABInputs discovery 到 A 的多线程 query union 回归。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；该检查仅为合成 Engineering 证据，B、bundle、D/Signature 与完整 Gate 5 集成仍未完成 |
 | 2.2 | 2026-09-12 | Gate 5 Task 4 第二轮集成复审收紧 worker API ownership：A 在采用任一 structured request/phase/marker range 前重新解析其 NVTX text，并要求与缓存 identity 完整一致；缺前缀、解析/对象失败或字段冲突一律不是 ownership evidence。窗口发现继续忽略非窗口 marker，因此伪造 marker 不会否定正常三窗口，但其 API 片段 fail-closed 至 unattributed。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；该检查仅为合成 Engineering 证据，B、bundle、D/Signature 与完整 Gate 5 集成仍未完成 |
+| 2.3 | 2026-09-13 | 完成 Gate 5 Task 5 的 B 单同步 provenance：B 逐条投影 S 的 sync identity、wait-set、terminal、validity、origin 和 cross-phase 字段；仅在 `B_VALID` 时按 Canonical 活动区间 union 计算 hidden/exposed、terminal pre/overlap 与 return-tail，其他状态保持 null-only。输出不含跨同步 total/sum 接口；新增 Q0 oracle 独立 expected 的合成回归。 | EP-G5-03 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步为 bundle/纯派生层与 Gate 5 集成验证 |
