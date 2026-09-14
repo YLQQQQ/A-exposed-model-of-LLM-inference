@@ -88,6 +88,8 @@ def test_fault_mutates_exactly_one_derived_activity_and_preserves_source(
     assert derived["records"]["device_activity"][0][field] is expected
     assert derived["manifest"]["source"]["q0_fault"]["case_id"] == case_id
     assert derived["manifest"]["source"]["q0_fault"]["mutation_count"] == 1
+    assert derived["manifest"]["source"]["q0_fault"]["target_record_id"] == "device_activity:test:1"
+    assert derived["manifest"]["source"]["q0_fault"]["target_activity_label"]
     assert source_hashes == {path.name: _sha(path) for path in source.parent.iterdir()}
 
 

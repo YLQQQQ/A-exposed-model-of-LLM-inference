@@ -62,12 +62,17 @@ def apply_q0_fault(
     records = copy.deepcopy(bundle["records"])
     manifest = copy.deepcopy(bundle["manifest"])
     mutation_count = 0
+    target_record_id = None
+    target_activity_label = None
     if fault == "REMOVE_ACTIVITY_CORRELATION":
         targets = [
             record for record in records["device_activity"]
             if record.get("correlation_id") is not None
         ]
         if len(targets) == 1:
+            target_record_id = targets[0]["record_id"]
+            labels = case.get("activity_labels", [])
+            target_activity_label = labels[0] if len(labels) == 1 else None
             targets[0]["correlation_id"] = None
             mutation_count = 1
     elif fault == "REMOVE_GRAPH_NODE_MAPPING":
@@ -76,6 +81,9 @@ def apply_q0_fault(
             if record.get("graph_id") is not None and record.get("graph_node_id") is not None
         ]
         if len(targets) == 1:
+            target_record_id = targets[0]["record_id"]
+            labels = case.get("activity_labels", [])
+            target_activity_label = labels[0] if len(labels) == 1 else None
             targets[0]["graph_node_id"] = None
             mutation_count = 1
     elif fault == "MARK_TRACE_DROPPED":
@@ -92,12 +100,16 @@ def apply_q0_fault(
         raise Q0FaultError(f"未实现的 Q0 fault: {fault}")
     if mutation_count != 1:
         raise Q0FaultError(f"{fault} 必须恰好命中一个受控目标")
+    if target_record_id is not None and not target_activity_label:
+        raise Q0FaultError(f"{fault} 的受控目标没有唯一预写 activity label")
 
     manifest["generated_at_utc"] = datetime.now(timezone.utc).isoformat()
     manifest.setdefault("source", {})["q0_fault"] = {
         "case_id": case_id,
         "fault_injection": fault,
         "mutation_count": mutation_count,
+        "target_record_id": target_record_id,
+        "target_activity_label": target_activity_label,
         "source_canonical_manifest_sha256": _sha256(source_path),
     }
     manifest["research_eligibility"] = {

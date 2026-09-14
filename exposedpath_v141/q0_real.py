@@ -6,10 +6,12 @@ from collections.abc import Mapping, Sequence
 import hashlib
 import json
 from pathlib import Path
+import tempfile
 from typing import Any
 
 from .ab_bundle import load_ab_bundle
 from .ab_inputs import ABInputs, load_ab_inputs
+from .q0_oracle import load_oracle_bundle
 
 
 class Q0RealObservedError(ValueError):
@@ -25,15 +27,20 @@ def _marker_identity(record: Mapping[str, Any]) -> Mapping[str, Any] | None:
     return identity if isinstance(identity, Mapping) and identity.get("kind") == "marker" else None
 
 
-def map_real_activity_labels(records: Mapping[str, Sequence[Mapping[str, Any]]]) -> dict[str, str]:
+def map_real_activity_labels(
+    records: Mapping[str, Sequence[Mapping[str, Any]]],
+    *, controlled_overrides: Mapping[str, str] | None = None,
+) -> dict[str, str]:
     """用 correlation 找 launch API，再用同线程包围 marker 恢复稳定活动标签。"""
 
     apis = list(records.get("cuda_api", ()))
     markers = [row for row in records.get("nvtx", ()) if _marker_identity(row) is not None]
-    result: dict[str, str] = {}
-    used: set[str] = set()
+    result: dict[str, str] = dict(controlled_overrides or {})
+    used: set[str] = set(result.values())
     for activity in records.get("device_activity", ()):
         activity_id = str(activity.get("record_id", ""))
+        if activity_id in result:
+            continue
         correlation = activity.get("correlation_id")
         candidates = [api for api in apis if correlation is not None and api.get("correlation_id") == correlation]
         if len(candidates) != 1:
@@ -87,7 +94,16 @@ def build_real_q0_case(
 ) -> dict[str, Any]:
     """从已严格加载的事实构造一个真实 case；不读取 oracle expected。"""
 
-    activity_labels = map_real_activity_labels(inputs.canonical.records)
+    fault = inputs.canonical.manifest.get("source", {}).get("q0_fault", {})
+    overrides: dict[str, str] = {}
+    if isinstance(fault, Mapping) and fault.get("fault_injection") == "REMOVE_ACTIVITY_CORRELATION":
+        record_id, label = fault.get("target_record_id"), fault.get("target_activity_label")
+        if not isinstance(record_id, str) or not isinstance(label, str) or not record_id or not label:
+            raise Q0RealObservedError("缺 correlation 故障没有预先记录稳定活动标签")
+        overrides[record_id] = label
+    activity_labels = map_real_activity_labels(
+        inputs.canonical.records, controlled_overrides=overrides
+    )
     relevant_s = [row for row in inputs.s_records if row.get("request_id") == case_id]
     sync_labels = [row.get("callsite_id") for row in relevant_s]
     if any(not isinstance(label, str) or not label for label in sync_labels):
@@ -181,9 +197,12 @@ def build_real_q0_observed(
     inputs = load_ab_inputs(Path(canonical_manifest), Path(s_manifest))
     source = inputs.canonical.manifest.get("source", {})
     canonical_source_manifest = source.get("source_manifest", {}) if isinstance(source, Mapping) else {}
+    canonical_raw = source.get("raw", {}) if isinstance(source, Mapping) else {}
     receipt_source = receipt.get("source_manifest", {})
     if canonical_source_manifest.get("sha256") != receipt_source.get("sha256"):
         raise Q0RealObservedError("Canonical 与 collection source manifest lineage 不匹配")
+    if canonical_raw.get("sha256") != receipt.get("raw_trace", {}).get("sha256"):
+        raise Q0RealObservedError("Canonical 与 collection Raw trace lineage 不匹配")
     bundle = load_ab_bundle(
         Path(ab_manifest), canonical_manifest=Path(canonical_manifest), s_manifest=Path(s_manifest)
     )
@@ -201,3 +220,63 @@ def build_real_q0_observed(
         },
         "cases": [case],
     }
+
+
+def run_real_q0_case(
+    case_id: str,
+    canonical_manifest: Path,
+    s_manifest: Path,
+    ab_manifest: Path,
+    collection_receipt: Path,
+    output_dir: Path,
+) -> Path:
+    """不可覆盖地写出单 case observed、comparison 与可聚合 evidence manifest。"""
+
+    from .q0_evaluator import evaluate_q0_observed
+
+    output = Path(output_dir).resolve()
+    if output.exists():
+        raise FileExistsError(f"拒绝覆盖真实 Q0 输出: {output}")
+    paths = {
+        "canonical_manifest": Path(canonical_manifest).resolve(),
+        "s_manifest": Path(s_manifest).resolve(),
+        "ab_manifest": Path(ab_manifest).resolve(),
+        "collection_receipt": Path(collection_receipt).resolve(),
+    }
+    observed = build_real_q0_observed(case_id, **paths)
+    oracle = load_oracle_bundle()
+    oracle["cases"] = [case for case in oracle["cases"] if case["case_id"] == case_id]
+    if len(oracle["cases"]) != 1:
+        raise Q0RealObservedError(f"oracle case 不唯一或不存在: {case_id}")
+    report = evaluate_q0_observed(oracle, observed)
+    receipt = json.loads(paths["collection_receipt"].read_text(encoding="utf-8"))
+    output.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=f".{output.name}.tmp-", dir=output.parent))
+    try:
+        observed_path = staging / "real_observed.json"
+        observed_path.write_text(json.dumps(observed, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        report["observed_file"] = observed_path.name
+        report["observed_sha256"] = _sha256(observed_path)
+        report_path = staging / "q0_real_report.json"
+        report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        evidence = {
+            "schema_version": "exposedpath-q0-real-evidence/0.2.0",
+            "case_id": case_id,
+            "run_id": receipt["run_id"],
+            "data_role": "Engineering",
+            "q0_status": "NOT_RUN",
+            "verdict": report["verdict"],
+            "environment": receipt["environment"],
+            "inputs": {name: {"path": str(path), "sha256": _sha256(path)} for name, path in paths.items()},
+            "observed": {"name": observed_path.name, "sha256": _sha256(observed_path)},
+            "report": {"name": report_path.name, "sha256": _sha256(report_path)},
+            "research_eligibility": {"formal_evidence": False, "scope": "Q0_REAL_CASE_ONLY"},
+        }
+        evidence_path = staging / "q0_real_evidence.json"
+        evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        staging.replace(output)
+        return output / evidence_path.name
+    except Exception:
+        import shutil
+        shutil.rmtree(staging, ignore_errors=True)
+        raise

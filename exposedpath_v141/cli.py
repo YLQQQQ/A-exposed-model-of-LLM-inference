@@ -17,6 +17,8 @@ from .q0_oracle import OracleValidationError, load_oracle_bundle
 from .q0_execution import Q0ExecutionError, compile_q0_microbench, prepare_q0_run
 from .q0_collection import Q0CollectionError, execute_q0_case
 from .q0_faults import Q0FaultError, apply_q0_fault
+from .q0_real import Q0RealObservedError, run_real_q0_case
+from .q0_gate import Q0GateError, write_q0_gate
 from .q0_synthetic import run_synthetic_q0
 from .s_bundle import SBundleError, analyze_canonical_to_s
 from .ab_bundle import ABBundleError, analyze_ab
@@ -102,6 +104,21 @@ def _build_parser() -> argparse.ArgumentParser:
     fault_q0_parser.add_argument("--canonical-manifest", required=True, type=Path)
     fault_q0_parser.add_argument("--case", required=True)
     fault_q0_parser.add_argument("--output-dir", required=True, type=Path)
+    real_q0_parser = subparsers.add_parser(
+        "evaluate-q0-real-case", help="将一个真实 case 的 Canonical/S/A/B 与 oracle 独立对照"
+    )
+    real_q0_parser.add_argument("--case", required=True)
+    real_q0_parser.add_argument("--canonical-manifest", required=True, type=Path)
+    real_q0_parser.add_argument("--s-manifest", required=True, type=Path)
+    real_q0_parser.add_argument("--ab-manifest", required=True, type=Path)
+    real_q0_parser.add_argument("--collection-receipt", required=True, type=Path)
+    real_q0_parser.add_argument("--output-dir", required=True, type=Path)
+    gate_q0_parser = subparsers.add_parser(
+        "aggregate-q0-gate", help="按 execution strategy 聚合全部必需 Q0 case"
+    )
+    gate_q0_parser.add_argument("--real-evidence-dir", required=True, type=Path)
+    gate_q0_parser.add_argument("--synthetic-report", required=True, type=Path)
+    gate_q0_parser.add_argument("--output-dir", required=True, type=Path)
     synthetic_q0_parser = subparsers.add_parser(
         "run-q0-synthetic", help="运行合成 Canonical 的 S/A/B 回归，不执行真实 Q0"
     )
@@ -256,6 +273,43 @@ def main(argv: list[str] | None = None) -> int:
         print("fault_status: APPLIED")
         print("q0_execution_status: NOT_RUN")
         return 0
+
+    if args.command == "evaluate-q0-real-case":
+        try:
+            evidence_path = run_real_q0_case(
+                args.case,
+                args.canonical_manifest,
+                args.s_manifest,
+                args.ab_manifest,
+                args.collection_receipt,
+                args.output_dir,
+            )
+            evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+        except (OSError, Q0RealObservedError, FileExistsError, ValueError, json.JSONDecodeError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        print(f"q0_real_evidence: {evidence_path}")
+        print(f"case_id: {evidence['case_id']}")
+        print(f"verdict: {evidence['verdict']}")
+        print("q0_execution_status: NOT_RUN")
+        return 0 if evidence["verdict"] == "REAL_CASE_PASS" else 3
+
+    if args.command == "aggregate-q0-gate":
+        try:
+            evidence_paths = sorted(args.real_evidence_dir.rglob("q0_real_evidence.json"))
+            report_path = write_q0_gate(
+                evidence_paths, args.synthetic_report, args.output_dir
+            )
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+        except (OSError, Q0GateError, FileExistsError, ValueError, json.JSONDecodeError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        print(f"q0_gate_report: {report_path}")
+        print(f"required_cases: {report['summary']['required_case_count']}")
+        print(f"passed_cases: {report['summary']['passed_case_count']}")
+        print(f"q0_status: {report['q0_status']}")
+        print(f"verdict: {report['verdict']}")
+        return 0 if report["verdict"] == "PASS" else 3
 
     if args.command == "convert-sqlite":
         try:
