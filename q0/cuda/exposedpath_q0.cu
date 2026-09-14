@@ -8,9 +8,11 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <iomanip>
 #include <iostream>
 #include <map>
 #include <regex>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -409,6 +411,29 @@ bool safe_identifier(const std::string& value) {
   return std::regex_match(value, pattern);
 }
 
+std::string cuda_uuid(const cudaUUID_t& uuid) {
+  std::ostringstream out;
+  out << "GPU-" << std::hex << std::setfill('0');
+  for (unsigned char byte : uuid.bytes) out << std::setw(2) << static_cast<int>(byte);
+  return out.str();
+}
+
+int print_environment_json() {
+  cudaDeviceProp properties{};
+  int driver_version = 0;
+  int runtime_version = 0;
+  CUDA_CHECK(cudaGetDeviceProperties(&properties, 0));
+  CUDA_CHECK(cudaDriverGetVersion(&driver_version));
+  CUDA_CHECK(cudaRuntimeGetVersion(&runtime_version));
+  std::cout << "{\"logical_device_id\":0,\"name\":\"" << properties.name
+            << "\",\"uuid\":\"" << cuda_uuid(properties.uuid)
+            << "\",\"memory_total_mib\":" << (properties.totalGlobalMem / (1024 * 1024))
+            << ",\"driver_version\":" << driver_version
+            << ",\"cuda_driver_version\":" << driver_version
+            << ",\"cuda_runtime_version\":" << runtime_version << "}\n";
+  return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -416,6 +441,14 @@ int main(int argc, char** argv) {
   if (argc == 2 && std::string(argv[1]) == "--list-cases") {
     for (const auto& item : registry) std::cout << item.first << '\n';
     return 0;
+  }
+  if (argc == 2 && std::string(argv[1]) == "--environment-json") {
+    try {
+      return print_environment_json();
+    } catch (const std::exception& error) {
+      std::cerr << "CUDA environment probe failed: " << error.what() << '\n';
+      return 1;
+    }
   }
   if (argc != 5 || std::string(argv[1]) != "--case" ||
       std::string(argv[3]) != "--run-id") {

@@ -15,6 +15,7 @@ from .canonical_raw import (
 from .observation import inspect_sqlite, write_report_new
 from .q0_oracle import OracleValidationError, load_oracle_bundle
 from .q0_execution import Q0ExecutionError, compile_q0_microbench, prepare_q0_run
+from .q0_collection import Q0CollectionError, execute_q0_case
 from .q0_synthetic import run_synthetic_q0
 from .s_bundle import SBundleError, analyze_canonical_to_s
 from .ab_bundle import ABBundleError, analyze_ab
@@ -89,6 +90,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     prepare_q0_parser.add_argument("--run-id", required=True)
     prepare_q0_parser.add_argument("--cuda-visible-device", required=True)
+    execute_q0_parser = subparsers.add_parser(
+        "execute-q0-case", help="按预备 manifest 采集一个真实 Q0 native case"
+    )
+    execute_q0_parser.add_argument("--run-manifest", required=True, type=Path)
+    execute_q0_parser.add_argument("--case", required=True)
     synthetic_q0_parser = subparsers.add_parser(
         "run-q0-synthetic", help="运行合成 Canonical 的 S/A/B 回归，不执行真实 Q0"
     )
@@ -219,6 +225,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"q0_execution_status: {report['q0_status']}")
         print(f"verdict: {report['verdict']}")
         return 0 if report["verdict"] == "SYNTHETIC_PASS" else 1
+
+    if args.command == "execute-q0-case":
+        try:
+            receipt_path = execute_q0_case(args.run_manifest, args.case)
+        except (OSError, Q0CollectionError, ValueError, json.JSONDecodeError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        print(f"collection_receipt: {receipt_path}")
+        print("collection_status: COLLECTED")
+        print("q0_execution_status: NOT_RUN")
+        return 0
 
     if args.command == "convert-sqlite":
         try:

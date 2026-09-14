@@ -38,11 +38,11 @@
 
 **Interfaces:** `execute_q0_case(run_manifest: Path, case_id: str) -> Path`；CLI `execute-q0-case`。
 
-- [ ] 先写假 nsys/binary 的失败测试，覆盖成功 receipt、工具哈希变化、已有 Raw/receipt、非 native case 和非零退出码。
-- [ ] 运行测试确认缺接口失败。
-- [ ] 实现严格 manifest 重载、GPU 环境、结构化 subprocess、日志、Raw 发现/哈希与原子 receipt。
-- [ ] 运行测试和 CLI smoke。
-- [ ] 提交 `feat: execute q0 cases with immutable receipts`。
+- [x] 先写假 nsys/binary 的失败测试，覆盖成功 receipt、工具哈希变化、已有 Raw/receipt、非 native case 和非零退出码。
+- [x] 运行测试确认缺接口失败。
+- [x] 实现严格 manifest 重载、GPU 环境、结构化 subprocess、日志、Raw 发现/哈希与原子 receipt。
+- [x] 运行测试和 CLI smoke。
+- [x] 提交 `feat: execute q0 cases with immutable receipts`。
 
 ### Task 3: Canonical 故障副本
 

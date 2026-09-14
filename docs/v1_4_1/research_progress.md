@@ -2,7 +2,7 @@
 
 ## 当前快照
 
-- 清单版本：`3.7`
+- 清单版本：`3.8`
 - 最近更新：`2026-09-14`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
@@ -121,7 +121,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - [x] `EP-G6-01` 实现受控 CUDA Q0 微程序和机器可读 manifest。23 个 oracle case 严格一一映射，其中 21 个具有 native CUDA seed，terminal tie 与 submission race 明确保持纯合成；缺 correlation、dropped records 与 graph mapping 缺失使用真实 seed 后受控 Canonical 故障注入。CUDA 13.0 在无 GPU 执行条件下成功编译，binary `--list-cases` 与 21 个 seed 集合一致，未知 case 在 CUDA 初始化前失败。证据：`q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json`、`tests/test_v141_q0_cuda_source.py`。
 - [x] `EP-G6-02` 完成 GPU 前 Q0 执行准备：Windows/Linux 结构化 `nsys` argv、每 case source manifest、输入哈希、不可覆盖输出和 `PREPARED_NOT_EXECUTED/NOT_RUN` dry-run；23 个显式合成 Canonical profile 均经正式 S/A/B 与独立 evaluator 对照通过。observed 使用严格 schema，evaluator 静态禁止导入被测 S/A/B，错误字段、重复 identity、缺失/额外 case 和资格升级均 fail closed。证据：`exposedpath_v141/q0_execution.py`、`exposedpath_v141/q0_synthetic.py`、`exposedpath_v141/q0_evaluator.py`、`docs/v1_4_1/contracts/q0_observed_schema_v0_2.json`、`tests/test_v141_q0_execution.py`、`tests/test_v141_q0_synthetic.py`、`tests/test_v141_q0_evaluator.py`。
 - [x] `EP-G6-02A` 完成 GPU 前集成验收。CUDA 13.0 编译和 21-seed 清单、Nsight 2026.1.1 Windows dry-run、23/23 合成对照、oracle/evaluator 独立性、Canonical 边界和 Python compileall 通过；Gate4/5/Q0 定向 `200 passed`，CUDA source `5 passed`，全仓 `570 passed, 2 failed`，仅为既有 PowerShell smoke 基线失败。证据：`engineering_evidence/q0_pre_gpu_v0_2/readiness_report.json`。
-- [ ] `EP-G6-02B`（进行中）补齐真实 Q0 执行适配。已完成第一步：改用 `cudaProfilerStart/cudaProfilerStop` 与 `--capture-range=cudaProfilerApi`，避免缺少 `--nvtx-capture` 及动态未注册 NVTX 字符串导致的不确定触发；每次 dry-run 必须显式记录单个 `CUDA_VISIBLE_DEVICES` 选择并映射至逻辑设备 0。定向编译/合同测试 `19 passed`。
+- [ ] `EP-G6-02B`（进行中）补齐真实 Q0 执行适配。已完成 capture/显式 GPU 身份，以及单 native case executor：执行前复核 binary、nsys、source manifest 与 argv，探测 GPU UUID、逻辑设备、CUDA driver/runtime、Nsight 和 OS；以结构化 subprocess 运行，保留 stdout/stderr，成功后写 Raw SHA-256 与不可覆盖 receipt，失败只写失败证据且不生成成功 receipt。定向测试 `24 passed`。
 - [ ] `EP-G6-03`（受阻于 GPU）在目标 observation stack 上采集真实受控 trace。
 - [ ] `EP-G6-04`（受阻）真实 trace 全部必需用例对照 oracle，并验证 fail-closed。
 - [ ] `EP-G6-05`（受阻）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
@@ -261,3 +261,4 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 | 3.5 | 2026-09-14 | 完成 Gate 6 的 GPU 前合成对照：23 个显式 Canonical profile 进入正式 S/A/B，独立 evaluator 按冻结 oracle 对照且静态禁止导入被测模块；严格 observed schema 与重复/缺失/额外 identity 检查 fail closed。该回归发现并修正 graph mapping unsupported 时 S 仍保留未证明 wait-set 的缺口。 | EP-G4-01 至 EP-G4-05、EP-G6-02 | 合成结果仅为 Engineering/SYNTHETIC_ONLY，Q0 仍为 NOT_RUN，Gate 6 保持 BLOCKED；不改变 Measurement Contract、Protocol Freeze 或 Formal 数据。 |
 | 3.6 | 2026-09-14 | 完成 Gate 6 GPU 前集成验收并固化机器可读证据：实际执行 CUDA 编译/list、Nsight Windows dry-run、23-case 合成 S/A/B 对照、静态边界与全仓非 GPU 回归。全仓为 `570 passed, 2 failed`，无新增失败。 | EP-G6-02A、EP-G6-03 | GPU 前准备判定 PASS 不等于 Gate 6 PASS；Q0 仍为 NOT_RUN，EP-G6-03 至 05 继续受 GPU 阻塞，不改变任何实验数据资格。 |
 | 3.7 | 2026-09-14 | 真实执行复审发现 NVTX capture 缺少明确触发 range、真实 receipt/fault/observed/gate 尚未实现，因此在服务器采集前新增 EP-G6-02B。第一步改用 CUDA Profiler API 控制 capture，并冻结显式单 GPU 选择。 | EP-G6-02B、EP-G6-03 | 修正此前“可直接真实采集”的过早推断；不否定合成就绪证据，不改变 Q0 NOT_RUN、Gate6 BLOCKED 或任何 Formal 资格。 |
+| 3.8 | 2026-09-14 | 完成真实 Q0 单 case executor 与不可覆盖 receipt：执行前检查工具和 source manifest 哈希，显式传递单 GPU 选择，采集环境身份、命令日志与 Raw 哈希；失败现场与成功收据严格分开。 | EP-G6-02B | 仅新增 Engineering 采集能力，尚无真实 GPU 产物；Q0 保持 NOT_RUN，Gate6 保持 BLOCKED。 |
