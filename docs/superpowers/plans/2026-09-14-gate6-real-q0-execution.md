@@ -50,11 +50,11 @@
 
 **Interfaces:** `apply_q0_fault(canonical_manifest: Path, case_id: str, output_dir: Path) -> Path`。
 
-- [ ] 先写三个 mutation 和源 bundle 不变的失败测试。
-- [ ] 运行测试确认缺接口失败。
-- [ ] 实现确定性 bundle 重写、schema 校验、lineage/hash 与不可覆盖。
-- [ ] 运行 fault、Canonical loader 和 S 传播测试。
-- [ ] 提交 `feat: add controlled q0 canonical faults`。
+- [x] 先写三个 mutation 和源 bundle 不变的失败测试。
+- [x] 运行测试确认缺接口失败。
+- [x] 实现确定性 bundle 重写、schema 校验、lineage/hash 与不可覆盖。
+- [x] 运行 fault、Canonical loader 和 S 传播测试。
+- [x] 提交 `feat: add controlled q0 canonical faults`。
 
 ### Task 4: 真实 observed 与独立 evaluator
 

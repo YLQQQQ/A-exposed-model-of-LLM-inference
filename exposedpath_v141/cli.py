@@ -16,6 +16,7 @@ from .observation import inspect_sqlite, write_report_new
 from .q0_oracle import OracleValidationError, load_oracle_bundle
 from .q0_execution import Q0ExecutionError, compile_q0_microbench, prepare_q0_run
 from .q0_collection import Q0CollectionError, execute_q0_case
+from .q0_faults import Q0FaultError, apply_q0_fault
 from .q0_synthetic import run_synthetic_q0
 from .s_bundle import SBundleError, analyze_canonical_to_s
 from .ab_bundle import ABBundleError, analyze_ab
@@ -95,6 +96,12 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     execute_q0_parser.add_argument("--run-manifest", required=True, type=Path)
     execute_q0_parser.add_argument("--case", required=True)
+    fault_q0_parser = subparsers.add_parser(
+        "apply-q0-fault", help="对 Canonical 派生副本应用预定义 Q0 故障"
+    )
+    fault_q0_parser.add_argument("--canonical-manifest", required=True, type=Path)
+    fault_q0_parser.add_argument("--case", required=True)
+    fault_q0_parser.add_argument("--output-dir", required=True, type=Path)
     synthetic_q0_parser = subparsers.add_parser(
         "run-q0-synthetic", help="运行合成 Canonical 的 S/A/B 回归，不执行真实 Q0"
     )
@@ -234,6 +241,19 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(f"collection_receipt: {receipt_path}")
         print("collection_status: COLLECTED")
+        print("q0_execution_status: NOT_RUN")
+        return 0
+
+    if args.command == "apply-q0-fault":
+        try:
+            manifest_path = apply_q0_fault(
+                args.canonical_manifest, args.case, args.output_dir
+            )
+        except (OSError, Q0FaultError, ValueError, json.JSONDecodeError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        print(f"fault_canonical_manifest: {manifest_path}")
+        print("fault_status: APPLIED")
         print("q0_execution_status: NOT_RUN")
         return 0
 
