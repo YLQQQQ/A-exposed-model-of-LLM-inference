@@ -1,0 +1,66 @@
+{
+  "evidence_version": "exposedpath-ab-historical-regression/0.2.0",
+  "executed_at": "2026-09-13",
+  "data_role": "Engineering",
+  "measurement_contract_version": "exposedpath-measurement-contract-0.2.0",
+  "analyzer_version": "0.2.0",
+  "input": {
+    "trace_path": "nsys_results/w01_p128_b1_o16.nsys-rep",
+    "trace_sha256_before": "4CE938EC5B44C657BF90FD732D23A2F92E2D546ADF3F00758BBCA8784C1210C4",
+    "trace_sha256_after": "4CE938EC5B44C657BF90FD732D23A2F92E2D546ADF3F00758BBCA8784C1210C4",
+    "raw_immutability_verdict": "PASS",
+    "exporter": "NVIDIA Nsight Systems 2026.1.1.204-261137176666v0",
+    "export_command": "nsys export --type sqlite --lazy=false --force-overwrite=false --output <temporary.sqlite> <immutable.nsys-rep>",
+    "sqlite_sha256": "6F5CAEDAB5CCD023D5C5FC758B5979C60643EFD05E9D00EE1ABD5CCB2EFBB33E"
+  },
+  "commands": {
+    "canonical": "python -m exposedpath_v141 convert-sqlite --sqlite <temporary.sqlite> --output-dir <temporary/canonical> --data-role Engineering --raw-sha256 <trace-sha256> --collector-version 2025.6.3.541-256337736014v0",
+    "s": "python -m exposedpath_v141 analyze-s --canonical-manifest <temporary/canonical/canonical_manifest.json> --output-dir <temporary/s>",
+    "ab": "python -m exposedpath_v141 analyze-ab --canonical-manifest <temporary/canonical/canonical_manifest.json> --s-manifest <temporary/s/s_manifest.json> --output-dir <temporary/ab>"
+  },
+  "outputs": {
+    "canonical": {
+      "manifest_sha256": "8C54398D0324E72E8FAB4BACF359AB3C7F4C98699F7B68C1D939BDF170DDF22C",
+      "observation_validity": "ambiguous",
+      "identity_validity": "AMBIGUOUS",
+      "record_counts": {
+        "nvtx": 95,
+        "cuda_api": 211780,
+        "cuda_sync": 446,
+        "device_activity": 209848,
+        "cuda_event": 0,
+        "context": 1,
+        "stream": 10,
+        "diagnostic": 22
+      }
+    },
+    "s": {
+      "manifest_sha256": "B230F62ACC07CD6EA2A047F3A4F408D305FC22A81D5E815673D2D1383B5DB6DC",
+      "records_sha256": "50B377D45C070C50A35C84F0FBBAC04C1A14C167EB027AAAF77270AE541BFAF9",
+      "physical_sync_count": 446,
+      "invalid_count": 446
+    },
+    "ab": {
+      "manifest_sha256": "173EFECEAF36A22C92BA6D11C49D57852D4F63A1946D62020A51A894461FECA5",
+      "a_records_sha256": "9CEFFB7310338057CFE71A4AE1E2C98D2C485D81CDEF906532A801F457A38D64",
+      "b_records_sha256": "8087C641CF542413B32F157994688BDA7655EB43B3A6BD41DC038A452FBEBAF0",
+      "cli_exit": 3,
+      "quality_status": "FAIL_CLOSED",
+      "qualified_a_window_count": 0,
+      "physical_sync_count": 446,
+      "b_invalid_count": 446
+    }
+  },
+  "research_eligibility": {
+    "q0_status": "NOT_RUN",
+    "pilot_evidence": false,
+    "formal_evidence": false,
+    "conclusion": "缺失 source manifest 与结构化 request identity；本产物仅证明 Engineering 回归链路的 fail-closed 行为。"
+  },
+  "limitations": [
+    "历史 NVTX 含旧式 phase label，不能恢复合格 request/phase A window。",
+    "CLI 的非零退出码 3 是 446 条 B_INVALID 的预期 fail-closed 信号，不是 Q0 结果。",
+    "临时 SQLite 与派生 bundle 已在生成本紧凑证据后清理，未纳入版本控制。"
+  ],
+  "verdict": "ENGINEERING_REGRESSION_PASS"
+}
