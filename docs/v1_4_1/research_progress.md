@@ -2,7 +2,7 @@
 
 ## 当前快照
 
-- 清单版本：`3.3`
+- 清单版本：`3.4`
 - 最近更新：`2026-09-14`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
@@ -117,7 +117,7 @@
 **Gate verdict：`BLOCKED`。** Gate 5 已完成；Q0 微程序、manifest 与合成 oracle 对照可继续开发，但当前没有可执行真实 CUDA/Nsight 受控 trace 的 GPU，因此本 Gate 整体仍不能运行或通过。
 
 - [x] `EP-G6-01` 实现受控 CUDA Q0 微程序和机器可读 manifest。23 个 oracle case 严格一一映射，其中 21 个具有 native CUDA seed，terminal tie 与 submission race 明确保持纯合成；缺 correlation、dropped records 与 graph mapping 缺失使用真实 seed 后受控 Canonical 故障注入。CUDA 13.0 在无 GPU 执行条件下成功编译，binary `--list-cases` 与 21 个 seed 集合一致，未知 case 在 CUDA 初始化前失败。证据：`q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json`、`tests/test_v141_q0_cuda_source.py`。
-- [ ] `EP-G6-02`（未开始）在合成 trace 上对照独立 oracle。
+- [ ] `EP-G6-02`（进行中）已实现 Windows/Linux 结构化 `nsys` argv、每 case source manifest、输入哈希、不可覆盖输出和 `PREPARED_NOT_EXECUTED/NOT_RUN` dry-run；尚待完成正式 S/A/B 合成执行及独立 evaluator。证据：`exposedpath_v141/q0_execution.py`、`docs/v1_4_1/q0_execution_package_v0_2.md`、`tests/test_v141_q0_execution.py`。
 - [ ] `EP-G6-03`（受阻于 GPU）在目标 observation stack 上采集真实受控 trace。
 - [ ] `EP-G6-04`（受阻）真实 trace 全部必需用例对照 oracle，并验证 fail-closed。
 - [ ] `EP-G6-05`（受阻）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
@@ -253,3 +253,4 @@
 | 3.1 | 2026-09-14 | 冻结 Gate 6 GPU 前实施计划：23 个 oracle case 一一映射到原生 CUDA、真实 seed 后故障注入或纯合成 Canonical；新增 CUDA compile/list、Windows/Linux argv dry-run、正式 S/A/B 合成执行和独立 evaluator 的测试先行顺序。 | EP-G6-01、EP-G6-02 | 不改变 Measurement Contract 或 Gate 2 expected；Gate 6 继续 `BLOCKED`，不产生真实 Q0、Pilot 或 Formal 证据。 |
 | 3.2 | 2026-09-14 | 完成 Q0 执行合同第一步：23 个 oracle case 与执行 case 严格一一对应，稳定 activity/sync/API label 不得改写；区分原生 CUDA、真实 seed 后 Canonical 故障注入和纯合成 Canonical，缺失/额外/重复 case、资格升级及策略字段冲突均 fail closed。 | EP-G6-01 | 不改变 Gate 2 expected；只是 Engineering 执行规划证据，Gate 6 与真实 Q0 保持 `BLOCKED/NOT_RUN`。 |
 | 3.3 | 2026-09-14 | 完成受控 Q0 CUDA 微程序：覆盖 21 个 native seed，使用结构化 NVTX request/phase/activity/sync label，支持 stream、device、driver context、event/cross-stream、completed-before、empty、kernel+MemOp、default stream、multithread、overlapping host sync、phase spill、invocation bleed、graph、同步 D2H 与 query。CUDA 13.0 可在不运行 case 时编译并核对 seed 集合；本机污染性的 `CL` 环境变量只在编译子进程中移除。 | EP-G6-01、EP-ISSUE-07 | 仅证明源码可构建及身份注册一致，不证明 GPU 行为或 Nsight 可观测性；Gate 6 继续 `BLOCKED`，Q0 `NOT_RUN`。 |
+| 3.4 | 2026-09-14 | 完成 Q0 跨平台 dry-run：Windows/Linux 均生成无 shell 引号拼接的 `nsys` argv、23 份 source manifest、逐文件哈希和不可覆盖 run manifest；21 个 native seed 有采集命令，2 个 synthetic-only case 明确无 GPU 命令。 | EP-G6-02 | dry-run 不执行 CUDA、Nsight 或 analyzer，不产生 `.nsys-rep`；Gate 6 继续 `BLOCKED`，Q0 `NOT_RUN`。 |

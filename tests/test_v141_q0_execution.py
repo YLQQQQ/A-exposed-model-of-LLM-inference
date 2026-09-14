@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import hashlib
+import json
+from pathlib import Path
 
 import pytest
 
 from exposedpath_v141.q0_execution import (
     Q0ExecutionError,
     load_q0_execution_manifest,
+    prepare_q0_run,
     validate_q0_execution_manifest,
 )
+from exposedpath_v141.cli import main
 from exposedpath_v141.q0_oracle import load_oracle_bundle
 
 
@@ -96,3 +101,85 @@ def test_each_case_has_explicit_synthetic_profile():
     with pytest.raises(Q0ExecutionError, match="synthetic_profile"):
         validate_q0_execution_manifest(manifest, oracle)
 
+
+def _fake_tools(tmp_path: Path) -> tuple[Path, Path]:
+    tool_dir = tmp_path / "tools with spaces"
+    tool_dir.mkdir()
+    binary = tool_dir / "exposedpath q0.exe"
+    nsys = tool_dir / "nsys.exe"
+    binary.write_bytes(b"q0-binary")
+    nsys.write_bytes(b"nsys-binary")
+    return binary, nsys
+
+
+@pytest.mark.parametrize("platform", ["windows", "linux"])
+def test_prepare_q0_run_writes_complete_nonexecuted_plan_with_structured_argv(
+    tmp_path, platform
+):
+    binary, nsys = _fake_tools(tmp_path)
+    output_dir = tmp_path / f"prepared {platform}"
+
+    manifest_path = prepare_q0_run(
+        output_dir, binary, nsys, platform=platform, run_id="q0-dry-run-001"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["status"] == "PREPARED_NOT_EXECUTED"
+    assert manifest["research_eligibility"]["q0_status"] == "NOT_RUN"
+    assert manifest["research_eligibility"]["formal_evidence"] is False
+    assert len(manifest["cases"]) == 23
+    native = [case for case in manifest["cases"] if case["command_argv"] is not None]
+    assert len(native) == 21
+    for case in native:
+        argv = case["command_argv"]
+        assert argv[0] == str(nsys.resolve())
+        assert str(binary.resolve()) in argv
+        assert all('"' not in argument for argument in argv)
+        assert "--capture-range=nvtx" in argv
+        assert "--capture-range-end=stop" in argv
+    assert not list(output_dir.rglob("*.nsys-rep"))
+    for case in manifest["cases"]:
+        source_manifest = output_dir / case["source_manifest"]
+        assert source_manifest.is_file()
+        assert hashlib.sha256(source_manifest.read_bytes()).hexdigest().upper() == case[
+            "source_manifest_sha256"
+        ]
+        source_identity = json.loads(source_manifest.read_text(encoding="utf-8"))
+        assert source_identity["q0_case_id"] == case["case_id"]
+        assert source_identity["q0_status"] == "NOT_RUN"
+
+
+def test_prepare_q0_run_rejects_missing_tools_and_existing_output(tmp_path):
+    binary, nsys = _fake_tools(tmp_path)
+    output_dir = tmp_path / "prepared"
+    prepare_q0_run(output_dir, binary, nsys, platform="windows", run_id="run-1")
+
+    with pytest.raises(Q0ExecutionError, match="拒绝覆盖"):
+        prepare_q0_run(output_dir, binary, nsys, platform="windows", run_id="run-2")
+    with pytest.raises(Q0ExecutionError, match="binary"):
+        prepare_q0_run(
+            tmp_path / "missing-binary", tmp_path / "none.exe", nsys,
+            platform="windows", run_id="run-3"
+        )
+    with pytest.raises(Q0ExecutionError, match="nsys"):
+        prepare_q0_run(
+            tmp_path / "missing-nsys", binary, tmp_path / "none-nsys.exe",
+            platform="windows", run_id="run-4"
+        )
+
+
+def test_prepare_q0_cli_is_explicitly_dry_run(tmp_path, capsys):
+    binary, nsys = _fake_tools(tmp_path)
+    output_dir = tmp_path / "cli-plan"
+
+    status = main([
+        "prepare-q0-run", "--output-dir", str(output_dir),
+        "--binary", str(binary), "--nsys", str(nsys),
+        "--platform", "windows", "--run-id", "cli-run-1",
+    ])
+
+    output = capsys.readouterr().out
+    assert status == 0
+    assert "run_status: PREPARED_NOT_EXECUTED" in output
+    assert "q0_execution_status: NOT_RUN" in output
+    assert "verdict: DRY_RUN_ONLY" in output

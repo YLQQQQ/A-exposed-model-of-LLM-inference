@@ -14,7 +14,7 @@ from .canonical_raw import (
 )
 from .observation import inspect_sqlite, write_report_new
 from .q0_oracle import OracleValidationError, load_oracle_bundle
-from .q0_execution import Q0ExecutionError, compile_q0_microbench
+from .q0_execution import Q0ExecutionError, compile_q0_microbench, prepare_q0_run
 from .s_bundle import SBundleError, analyze_canonical_to_s
 from .ab_bundle import ABBundleError, analyze_ab
 from .derived import DerivedBundleError, derive_exposure
@@ -77,6 +77,16 @@ def _build_parser() -> argparse.ArgumentParser:
     build_q0_parser.add_argument(
         "--platform", required=True, choices=("windows", "linux")
     )
+    prepare_q0_parser = subparsers.add_parser(
+        "prepare-q0-run", help="生成 Gate 6 Q0 dry-run，不执行 GPU 或 Nsight"
+    )
+    prepare_q0_parser.add_argument("--output-dir", required=True, type=Path)
+    prepare_q0_parser.add_argument("--binary", required=True, type=Path)
+    prepare_q0_parser.add_argument("--nsys", required=True, type=Path)
+    prepare_q0_parser.add_argument(
+        "--platform", required=True, choices=("windows", "linux")
+    )
+    prepare_q0_parser.add_argument("--run-id", required=True)
     s_parser = subparsers.add_parser(
         "analyze-s", help="只读分析 Canonical Raw 并生成 S 层 bundle"
     )
@@ -170,6 +180,24 @@ def main(argv: list[str] | None = None) -> int:
         print(f"q0_binary: {output_path}")
         print("compile_status: PASS")
         print("q0_execution_status: NOT_RUN")
+        return 0
+
+    if args.command == "prepare-q0-run":
+        try:
+            manifest_path = prepare_q0_run(
+                args.output_dir,
+                args.binary,
+                args.nsys,
+                platform=args.platform,
+                run_id=args.run_id,
+            )
+        except (OSError, Q0ExecutionError, ValueError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        print(f"q0_run_manifest: {manifest_path}")
+        print("run_status: PREPARED_NOT_EXECUTED")
+        print("q0_execution_status: NOT_RUN")
+        print("verdict: DRY_RUN_ONLY")
         return 0
 
     if args.command == "convert-sqlite":
