@@ -27,6 +27,7 @@ _FORBIDDEN_OLD_ACCOUNTING_MODULE = "analysis.exposed_accounting"
 _DERIVED_FORBIDDEN_MODULES = {
     "canonical_raw", "s_bundle", "sync_semantics", "ab_inputs", "a_accounting", "b_provenance",
 }
+_DERIVED_AB_SYMBOLS = {"ABBundleError", "load_ab_bundle"}
 _DERIVED_FORBIDDEN_TIME_FIELDS = {
     "start_ns", "end_ns", "sync_start_ns", "sync_end_ns", "host_start_ns", "host_end_ns",
     "window_start_ns", "window_end_ns", "runtime_start_ns", "runtime_end_ns",
@@ -72,22 +73,19 @@ def check_derived_source(source: str) -> list[str]:
             problems.append("Derived 禁止导入 sqlite3")
         if isinstance(node, ast.ImportFrom):
             imported_names = {alias.name for alias in node.names}
-            relative_ab_bundle = (
-                node.level
-                and (node.module == "ab_bundle" or (node.module is None and imported_names == {"ab_bundle"}))
-            )
-            absolute_ab_bundle = (
-                node.module == "exposedpath_v141.ab_bundle"
-                or (node.module == "exposedpath_v141" and imported_names == {"ab_bundle"})
-            )
+            allowed_ab_import = (
+                (node.level == 1 and node.module == "ab_bundle")
+                or (node.level == 0 and node.module == "exposedpath_v141.ab_bundle")
+            ) and imported_names.issubset(_DERIVED_AB_SYMBOLS)
             project_module = node.module in _DERIVED_FORBIDDEN_MODULES or (
-                isinstance(node.module, str) and node.module.startswith("exposedpath_v141")
+                isinstance(node.module, str)
+                and (node.module == "exposedpath_v141" or node.module.startswith("exposedpath_v141."))
             )
-            if (node.level and not relative_ab_bundle) or (project_module and not absolute_ab_bundle):
+            if (node.level or project_module) and not allowed_ab_import:
                 problems.append("Derived 只能从 A/B bundle 接口导入项目模块")
         if isinstance(node, ast.Import):
             for alias in node.names:
-                if alias.name.startswith("exposedpath_v141.") and alias.name.rsplit(".", 1)[-1] != "ab_bundle":
+                if alias.name == "exposedpath_v141" or alias.name.startswith("exposedpath_v141."):
                     problems.append("Derived 只能导入 A/B bundle 接口")
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             if node.value in _DERIVED_FORBIDDEN_TIME_FIELDS:

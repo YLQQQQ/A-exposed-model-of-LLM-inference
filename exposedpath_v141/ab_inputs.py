@@ -274,10 +274,61 @@ def _validate_s_record_identity(canonical: CanonicalBundle, record: Mapping[str,
     if missing_wait:
         raise ABInputError(f"S sync {sync_id} 的 wait_set activity 不在 Canonical: {missing_wait}")
     terminal = _as_mapping(record.get("terminal"), f"S sync {sync_id} terminal")
+    if set(terminal) != {"status", "kind", "activity_id", "end_ns", "clock_domain_id"}:
+        raise ABInputError(f"S sync {sync_id} 的 terminal 字段非法")
+    validity = record.get("validity")
+    if validity not in {"VALID_NONEMPTY", "VALID_EMPTY", "INVALID", "AMBIGUOUS"}:
+        raise ABInputError(f"S sync {sync_id} 的 validity 非法")
+    if record.get("wait_set_status") != validity:
+        raise ABInputError(f"S sync {sync_id} 的 wait_set_status 与 validity 不一致")
+    frontier = record.get("semantic_frontier_activity_ids")
+    if not isinstance(frontier, list) or any(not isinstance(item, str) for item in frontier):
+        raise ABInputError(f"S sync {sync_id} 的 semantic frontier 非法")
+    if len(frontier) != len(set(frontier)) or not set(frontier).issubset(wait_set):
+        raise ABInputError(f"S sync {sync_id} 的 semantic frontier 不属于 wait_set")
+    if validity in {"VALID_NONEMPTY", "VALID_EMPTY"}:
+        if (
+            record.get("dependency_closure_status") != "COMPLETE"
+            or record.get("primary_reason") is not None
+            or record.get("secondary_reasons") != []
+            or record.get("invocation_bleed") is not False
+        ):
+            raise ABInputError(f"S sync {sync_id} 的 valid 状态与 closure/reasons/ownership 不一致")
+    elif not isinstance(record.get("primary_reason"), str) or not record["primary_reason"]:
+        raise ABInputError(f"S sync {sync_id} 的 invalid/ambiguous 缺少 primary_reason")
+    if validity == "VALID_NONEMPTY":
+        if not wait_set or terminal.get("status") != "VALID":
+            raise ABInputError(f"S sync {sync_id} 的 VALID_NONEMPTY 必须有 wait_set 和 valid terminal")
+        if terminal.get("kind") not in {"ACTIVITY", "COMPLETION_BOUNDARY"}:
+            raise ABInputError(f"S sync {sync_id} 的 valid terminal kind 非法")
+        end, clock = terminal.get("end_ns"), terminal.get("clock_domain_id")
+        if not isinstance(end, int) or isinstance(end, bool) or end < 0:
+            raise ABInputError(f"S sync {sync_id} 的 terminal end_ns 非法")
+        if not isinstance(clock, str) or not clock:
+            raise ABInputError(f"S sync {sync_id} 的 terminal clock_domain_id 非法")
+        if end > record["host_end_ns"]:
+            raise ABInputError(f"S sync {sync_id} 的 terminal 晚于 sync end")
+        if terminal["kind"] == "COMPLETION_BOUNDARY" and terminal.get("activity_id") is not None:
+            raise ABInputError(f"S sync {sync_id} 的 completion boundary 不得带 activity_id")
+    else:
+        expected_status = "NOT_APPLICABLE" if validity == "VALID_EMPTY" else validity
+        if (
+            terminal.get("status") != expected_status
+            or terminal.get("kind") != "NONE"
+            or any(terminal.get(field) is not None for field in ("activity_id", "end_ns", "clock_domain_id"))
+        ):
+            raise ABInputError(f"S sync {sync_id} 的 terminal 与 validity 不一致")
+        if validity == "VALID_EMPTY" and wait_set:
+            raise ABInputError(f"S sync {sync_id} 的 VALID_EMPTY 必须是空 wait_set")
     if terminal.get("kind") == "ACTIVITY":
         activity_id = terminal.get("activity_id")
         if activity_id not in canonical.activity_by_id:
             raise ABInputError(f"S sync {sync_id} 的 terminal activity 不在 Canonical: {activity_id}")
+        if activity_id not in wait_set or activity_id not in frontier:
+            raise ABInputError(f"S sync {sync_id} 的 terminal 不属于 wait_set/semantic frontier")
+        activity = canonical.activity_by_id[activity_id]
+        if any(terminal[field] != activity[field] for field in ("end_ns", "clock_domain_id")):
+            raise ABInputError(f"S sync {sync_id} 的 terminal end_ns/clock_domain_id 与 Canonical 不匹配")
 
 
 def _validate_s_join(canonical: CanonicalBundle, records: tuple[dict[str, Any], ...]) -> None:
@@ -430,6 +481,41 @@ def _discovery_result(
                     nvtx_record_id=str(nvtx["record_id"]),
                 )
             )
+    # Compare invocation windows only within their shared experiment/run/pass.
+    # Never assign concurrent invocation ownership from timestamp overlap.
+    # A trustworthy full_request is concurrency evidence even if its phase
+    # ranges are missing.  Such a request cannot leave its neighbour valid.
+    full_ranges = [
+        (key, nvtx) for key, ranges in groups.items()
+        for nvtx, _ in ranges["full_request"]
+        if all(isinstance(nvtx.get(field), int) and not isinstance(nvtx[field], bool)
+               for field in ("start_ns", "end_ns"))
+        and 0 <= nvtx["start_ns"] < nvtx["end_ns"]
+    ]
+    full_ranges.sort(key=lambda item: (item[1]["start_ns"], item[1]["end_ns"], item[0]))
+    active: dict[tuple[str, ...], list[tuple[tuple[str, ...], dict[str, Any]]]] = {}
+    for key, nvtx in full_ranges:
+        context = key[:5]
+        previous = [other for other in active.get(context, []) if other[1]["end_ns"] > nvtx["start_ns"]]
+        for other_key, other in previous:
+            if other_key != key:
+                for affected_key in (key, other_key):
+                    for source in (nvtx, other):
+                        add_issue(affected_key, "WINDOW_CROSS_INVOCATION_OVERLAP", source)
+        previous.append((key, nvtx))
+        active[context] = previous
+    windows = [
+        window for window in windows
+        if tuple(getattr(window, field) for field in _IDENTITY_FIELDS) not in issue_reasons
+    ]
+    if not windows and not issue_reasons:
+        # Marker-only or absent NVTX has no usable window identity, even when
+        # the Canonical manifest and all B rows otherwise look valid.
+        issue_reasons[None] = ["WINDOW_DISCOVERY_INVALID"]
+        issue_sources[None] = [
+            str(nvtx["record_id"]) for nvtx in canonical.records["nvtx"]
+            if nvtx.get("record_id")
+        ]
     phase_order = {phase: index for index, phase in enumerate(_WINDOW_PHASES)}
     windows.sort(
         key=lambda window: (

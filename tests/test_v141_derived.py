@@ -261,6 +261,14 @@ def test_derive_exposure_cli_and_ast_boundary(tmp_path, capsys):
         "from exposedpath_v141 import s_bundle as upstream\n",
         "from .sync_semantics import classify as upstream\n",
         "value = record.sync_start_ns\n",
+        "from .ab_bundle import load_ab_inputs\n",
+        "from .ab_bundle import calculate_a_windows as load_ab_bundle\n",
+        "from exposedpath_v141.ab_bundle import load_ab_inputs as interface\n",
+        "from exposedpath_v141.ab_bundle import *\n",
+        "from exposedpath_v141 import ab_bundle as interface\nvalue = interface.load_ab_inputs\n",
+        "from . import ab_bundle\nvalue = ab_bundle.calculate_a_windows\n",
+        "import exposedpath_v141.ab_bundle as interface\nvalue = interface.load_ab_inputs\n",
+        "import exposedpath_v141\nvalue = exposedpath_v141.ab_bundle.load_ab_inputs\n",
     ],
 )
 def test_derived_ast_boundary_rejects_absolute_package_member_relative_and_attribute_bypasses(source):
@@ -272,5 +280,7 @@ def test_derived_ast_boundary_rejects_absolute_package_member_relative_and_attri
 def test_derived_ast_boundary_keeps_exact_allowed_imports_and_attributes():
     """Would fail if the hardening rejected the validated interface or unrelated attributes."""
 
-    assert check_derived_source("from exposedpath_v141 import ab_bundle as interface\n") == []
+    assert check_derived_source("from exposedpath_v141.ab_bundle import load_ab_bundle as interface, ABBundleError\n") == []
+    assert check_derived_source("from .ab_bundle import ABBundleError as Error, load_ab_bundle\n") == []
+    assert check_derived_source("from unrelated.ab_bundle import helper\nimport exposedpath_v141_helpers\n") == []
     assert check_derived_source("value = record.sync_kind\n") == []

@@ -11,7 +11,7 @@ import pytest
 
 from exposedpath_v141.ab_bundle import ABBundleError, analyze_ab, load_ab_bundle
 from exposedpath_v141.cli import main
-from tests.test_v141_ab_inputs import _write_canonical, _write_s_bundle
+from tests.test_v141_ab_inputs import _nvtx, _replace_nvtx, _write_canonical, _write_s_bundle
 
 
 def _make_inputs(tmp_path: Path) -> tuple[Path, Path]:
@@ -205,3 +205,18 @@ def test_analyze_ab_cli_preserves_not_run_qualification(tmp_path, capsys):
 
     assert status == 0
     assert "q0_status: NOT_RUN" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("marker_only", [False, True])
+def test_no_windows_fail_close_bundle_and_cli_despite_valid_b(tmp_path, capsys, marker_only):
+    canonical = _write_canonical(tmp_path / "canonical")
+    _replace_nvtx(canonical, [_nvtx("nvtx:NVTX_EVENTS:1", 0, 100, "full_request", "marker")] if marker_only else [])
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical)
+    output_dir = tmp_path / "ab"
+    status = main(["analyze-ab", "--canonical-manifest", str(canonical), "--s-manifest", str(s_manifest), "--output-dir", str(output_dir)])
+    bundle = load_ab_bundle(output_dir / "ab_manifest.json")
+    assert status == 2
+    assert bundle["a_window_records"] == ()
+    assert bundle["manifest"]["summary"]["b_valid_count"] == 1
+    assert bundle["manifest"]["quality"] == {"status": "FAIL_CLOSED", "reasons": ["WINDOW_DISCOVERY_INVALID"]}
+    assert "quality_status: FAIL_CLOSED" in capsys.readouterr().out

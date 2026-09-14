@@ -249,7 +249,7 @@ def _s_record() -> dict:
         "event_id": None,
         "completion_scope": rule["completion_scope"],
         "submission_evidence": [],
-        "dependency_closure_status": "VALID",
+        "dependency_closure_status": "COMPLETE",
         "dependency_edges": [],
         "event_record_id": None,
         "wait_set_status": "VALID_NONEMPTY",
@@ -323,6 +323,146 @@ def test_loads_strict_dual_input_and_discovers_three_structured_windows(tmp_path
         "device_activity:CUPTI_ACTIVITY_KIND_KERNEL:1"
     ]
     assert inputs.global_quality_reasons == ()
+
+
+@pytest.mark.parametrize("mutation", [
+    "terminal_time", "terminal_clock", "terminal_not_in_wait_set", "empty_wait_set",
+    "terminal_not_in_frontier", "wait_status", "closure_status", "valid_reason",
+    "invalid_valid_terminal", "ambiguous_valid_terminal", "empty_nonempty_wait_set",
+    "empty_valid_terminal", "boundary_after_sync", "boundary_no_clock",
+    "boundary_with_activity", "valid_terminal_status", "invocation_bleed",
+])
+def test_strict_join_rejects_inconsistent_s_state_before_accounting(tmp_path, mutation):
+    canonical = _write_canonical(tmp_path / "canonical")
+    record = _s_record()
+    if mutation == "terminal_time":
+        record["terminal"]["end_ns"] = 74
+    elif mutation == "terminal_clock":
+        record["terminal"]["clock_domain_id"] = "other-clock"
+    elif mutation in {"terminal_not_in_wait_set", "empty_wait_set"}:
+        record["wait_set_activity_ids"] = []
+        if mutation == "empty_wait_set":
+            record["terminal"].update(kind="COMPLETION_BOUNDARY", activity_id=None)
+        else:
+            other = _activity()
+            other["record_id"] = "device_activity:CUPTI_ACTIVITY_KIND_KERNEL:2"
+            other["source_rowid"] = 2
+            manifest = json.loads(canonical.read_text(encoding="utf-8"))
+            activity_path = canonical.parent / manifest["files"]["device_activity"]["filename"]
+            replacement = activity_path.with_name("replacement-activities.jsonl.gz")
+            entry = _write_gzip_jsonl(replacement, [_activity(), other])
+            replacement.replace(activity_path)
+            entry["filename"] = activity_path.name
+            manifest["files"]["device_activity"] = entry
+            canonical.write_text(json.dumps(manifest), encoding="utf-8")
+            record["wait_set_activity_ids"] = [other["record_id"]]
+            record["semantic_frontier_activity_ids"] = [other["record_id"]]
+    elif mutation == "terminal_not_in_frontier":
+        record["semantic_frontier_activity_ids"] = []
+    elif mutation == "wait_status":
+        record["wait_set_status"] = "INVALID"
+    elif mutation == "closure_status":
+        record["dependency_closure_status"] = "AMBIGUOUS"
+    elif mutation == "valid_reason":
+        record["primary_reason"] = "TERMINAL_TIE"
+    elif mutation in {"invalid_valid_terminal", "ambiguous_valid_terminal"}:
+        record["validity"] = record["wait_set_status"] = mutation.split("_")[0].upper()
+        record["primary_reason"] = "TERMINAL_TIE"
+    elif mutation.startswith("empty_"):
+        record["validity"] = record["wait_set_status"] = "VALID_EMPTY"
+        if mutation == "empty_nonempty_wait_set":
+            record["terminal"] = dict(status="NOT_APPLICABLE", kind="NONE", activity_id=None, end_ns=None, clock_domain_id=None)
+        else:
+            record["wait_set_activity_ids"] = []
+            record["semantic_frontier_activity_ids"] = []
+    elif mutation.startswith("boundary_"):
+        record["terminal"].update(kind="COMPLETION_BOUNDARY", activity_id=None)
+        if mutation == "boundary_after_sync":
+            record["terminal"]["end_ns"] = 81
+        elif mutation == "boundary_no_clock":
+            record["terminal"]["clock_domain_id"] = None
+        else:
+            record["terminal"]["activity_id"] = _activity()["record_id"]
+    elif mutation == "valid_terminal_status":
+        record["terminal"]["status"] = "INVALID"
+    else:
+        record["invocation_bleed"] = True
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical, [record])
+    with pytest.raises(ABInputError):
+        load_ab_inputs(canonical, s_manifest)
+
+
+@pytest.mark.parametrize("validity", ["VALID_NONEMPTY", "VALID_EMPTY", "INVALID", "AMBIGUOUS"])
+def test_strict_join_preserves_consistent_boundary_and_nonvalid_states(tmp_path, validity):
+    canonical = _write_canonical(tmp_path / "canonical")
+    record = _s_record()
+    record["validity"] = record["wait_set_status"] = validity
+    if validity == "VALID_NONEMPTY":
+        record["terminal"].update(kind="COMPLETION_BOUNDARY", activity_id=None)
+    else:
+        status = "NOT_APPLICABLE" if validity == "VALID_EMPTY" else validity
+        record["terminal"] = dict(status=status, kind="NONE", activity_id=None, end_ns=None, clock_domain_id=None)
+        if validity == "VALID_EMPTY":
+            record["wait_set_activity_ids"] = []
+            record["semantic_frontier_activity_ids"] = []
+        else:
+            record["primary_reason"] = "TERMINAL_TIE" if validity == "AMBIGUOUS" else "TERMINAL_AFTER_SYNC_END"
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical, [record])
+    assert load_ab_inputs(canonical, s_manifest).s_records[0] == record
+
+
+@pytest.mark.parametrize("second_start,expected_requests", [(50, ["request-3"]), (100, ["request-1", "request-2", "request-3"])])
+def test_cross_invocation_overlap_rejects_only_affected_windows_and_allows_adjacency(tmp_path, second_start, expected_requests):
+    canonical = _write_canonical(tmp_path / "canonical")
+    rows = []
+    for index, (request, start) in enumerate([("request-1", 0), ("request-2", second_start), ("request-3", 300)]):
+        for offset, (phase, kind, begin, end) in enumerate([
+            ("full_request", "request", start, start + 100),
+            ("prefill", "phase", start, start + 60),
+            ("decode", "phase", start + 60, start + 100),
+        ]):
+            rows.append(_nvtx_for_request(f"nvtx:NVTX_EVENTS:{index * 3 + offset + 1}", begin, end, phase, kind, request))
+    _replace_nvtx(canonical, rows)
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical)
+    inputs = load_ab_inputs(canonical, s_manifest)
+    assert sorted({w.request_id for w in inputs.windows}) == expected_requests
+    assert sorted({row["request_id"] for row in calculate_a_windows(inputs)}) == expected_requests
+    assert inputs.global_quality_reasons == ()
+    if second_start == 50:
+        assert {issue.request_id for issue in inputs.window_discovery_issues} == {"request-1", "request-2"}
+        assert all("WINDOW_CROSS_INVOCATION_OVERLAP" in issue.reasons for issue in inputs.window_discovery_issues)
+    else:
+        assert inputs.window_discovery_issues == ()
+
+
+@pytest.mark.parametrize("marker_only", [False, True])
+def test_zero_window_discovery_has_machine_readable_issue(tmp_path, marker_only):
+    canonical = _write_canonical(tmp_path / "canonical")
+    rows = [_nvtx("nvtx:NVTX_EVENTS:1", 0, 100, "full_request", "marker")] if marker_only else []
+    _replace_nvtx(canonical, rows)
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical)
+    inputs = load_ab_inputs(canonical, s_manifest)
+    assert inputs.windows == ()
+    assert len(inputs.window_discovery_issues) == 1
+    issue = inputs.window_discovery_issues[0]
+    assert "WINDOW_DISCOVERY_INVALID" in issue.reasons
+    assert issue.source_nvtx_record_ids == (("nvtx:NVTX_EVENTS:1",) if marker_only else ())
+
+
+def test_overlapping_full_request_with_missing_phase_still_invalidates_other_invocation(tmp_path):
+    canonical = _write_canonical(tmp_path / "canonical")
+    rows = [
+        _nvtx("nvtx:NVTX_EVENTS:1", 0, 100, "full_request", "request"),
+        _nvtx("nvtx:NVTX_EVENTS:2", 0, 60, "prefill", "phase"),
+        _nvtx("nvtx:NVTX_EVENTS:3", 60, 100, "decode", "phase"),
+        _nvtx_for_request("nvtx:NVTX_EVENTS:4", 50, 150, "full_request", "request", "request-2"),
+    ]
+    _replace_nvtx(canonical, rows)
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical)
+    inputs = load_ab_inputs(canonical, s_manifest)
+    assert inputs.windows == ()
+    assert {issue.request_id for issue in inputs.window_discovery_issues} == {"request-1", "request-2"}
+    assert all("WINDOW_CROSS_INVOCATION_OVERLAP" in issue.reasons for issue in inputs.window_discovery_issues)
 
 
 def test_worker_marker_does_not_define_windows_but_proves_multithread_api_union_after_real_discovery(tmp_path):
