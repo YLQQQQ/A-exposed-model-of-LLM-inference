@@ -2,7 +2,7 @@
 
 ## 当前快照
 
-- 清单版本：`3.1`
+- 清单版本：`3.2`
 - 最近更新：`2026-09-14`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
@@ -116,7 +116,7 @@
 
 **Gate verdict：`BLOCKED`。** Gate 5 已完成；Q0 微程序、manifest 与合成 oracle 对照可继续开发，但当前没有可执行真实 CUDA/Nsight 受控 trace 的 GPU，因此本 Gate 整体仍不能运行或通过。
 
-- [ ] `EP-G6-01`（未开始）实现受控 CUDA Q0 微程序和机器可读 manifest。
+- [ ] `EP-G6-01`（进行中）23-case 机器可读执行 manifest 与严格 schema/loader 已完成；受控 CUDA 微程序尚待实现。证据：`q0/execution_manifest_v0_2.json`、`docs/v1_4_1/contracts/q0_execution_schema_v0_2.json`、`tests/test_v141_q0_execution.py`（`10 passed`）。
 - [ ] `EP-G6-02`（未开始）在合成 trace 上对照独立 oracle。
 - [ ] `EP-G6-03`（受阻于 GPU）在目标 observation stack 上采集真实受控 trace。
 - [ ] `EP-G6-04`（受阻）真实 trace 全部必需用例对照 oracle，并验证 fail-closed。
@@ -250,3 +250,4 @@
 | 2.9 | 2026-09-14 | 完整分支复审后的最终修复：严格校验 S 状态、wait-set/frontier 和 Canonical terminal 一致性；跨 invocation Full Request 正重叠按 identity fail closed；零窗口必须有质量 issue；Derived 改为精确 A/B loader/error 符号白名单。首轮 RED 30 项复现，另补缺 phase 的重叠请求 RED→GREEN；最终 Gate 5 `170 passed`，全量 `540 passed, 2 failed`（仅既有 PowerShell smoke）。 | EP-G5-01、EP-G5-03、EP-G5-05、EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；未重新采集历史 trace 或产生 Formal 数据。Gate 5 保持 `NOT_RUN`，awaiting independent re-review。 |
 | 3.0 | 2026-09-14 | 独立再复审确认三项问题闭合，并发现 completion boundary 尚未核对 Canonical sync 时钟域；新增反例先失败后修复，最终定向复核 `Approved`。Gate 5 新鲜验证为 `171 passed`，全量为 `541 passed, 2 failed`（仅既有 PowerShell smoke），据此将 Gate 5 判为 `PASS`，当前优先级切换至 Gate 6 的 GPU 前可执行工作。 | EP-G5-03、EP-G5-06、EP-G6-01、EP-G6-02 | 不改变 Measurement Contract、真实 Q0、Pilot 或 Protocol Freeze；历史数据仍仅为 Engineering，当前无 Formal 数据。 |
 | 3.1 | 2026-09-14 | 冻结 Gate 6 GPU 前实施计划：23 个 oracle case 一一映射到原生 CUDA、真实 seed 后故障注入或纯合成 Canonical；新增 CUDA compile/list、Windows/Linux argv dry-run、正式 S/A/B 合成执行和独立 evaluator 的测试先行顺序。 | EP-G6-01、EP-G6-02 | 不改变 Measurement Contract 或 Gate 2 expected；Gate 6 继续 `BLOCKED`，不产生真实 Q0、Pilot 或 Formal 证据。 |
+| 3.2 | 2026-09-14 | 完成 Q0 执行合同第一步：23 个 oracle case 与执行 case 严格一一对应，稳定 activity/sync/API label 不得改写；区分原生 CUDA、真实 seed 后 Canonical 故障注入和纯合成 Canonical，缺失/额外/重复 case、资格升级及策略字段冲突均 fail closed。 | EP-G6-01 | 不改变 Gate 2 expected；只是 Engineering 执行规划证据，Gate 6 与真实 Q0 保持 `BLOCKED/NOT_RUN`。 |
