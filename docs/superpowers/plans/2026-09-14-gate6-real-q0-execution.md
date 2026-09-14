@@ -26,11 +26,11 @@
 
 **Interfaces:** `prepare_q0_run(..., cuda_visible_device: str) -> Path`；命令使用 `--capture-range=cudaProfilerApi`。
 
-- [ ] 先写失败测试，要求 CUDA source 调用 Profiler Start/Stop、argv 禁止 NVTX capture、source manifest 记录显式 GPU 选择。
-- [ ] 运行定向测试确认因当前行为失败。
-- [ ] 最小实现 CUDA capture 和 manifest/CLI 参数。
-- [ ] 编译微程序并运行定向测试。
-- [ ] 提交 `fix: make q0 capture deterministic`。
+- [x] 先写失败测试，要求 CUDA source 调用 Profiler Start/Stop、argv 禁止 NVTX capture、source manifest 记录显式 GPU 选择。
+- [x] 运行定向测试确认因当前行为失败。
+- [x] 最小实现 CUDA capture 和 manifest/CLI 参数。
+- [x] 编译微程序并运行定向测试。
+- [x] 提交 `fix: make q0 capture deterministic`。
 
 ### Task 2: 单 case 真实采集与 receipt
 

@@ -120,7 +120,8 @@ def test_prepare_q0_run_writes_complete_nonexecuted_plan_with_structured_argv(
     output_dir = tmp_path / f"prepared {platform}"
 
     manifest_path = prepare_q0_run(
-        output_dir, binary, nsys, platform=platform, run_id="q0-dry-run-001"
+        output_dir, binary, nsys, platform=platform, run_id="q0-dry-run-001",
+        cuda_visible_device="GPU-TEST-0001",
     )
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
@@ -135,8 +136,9 @@ def test_prepare_q0_run_writes_complete_nonexecuted_plan_with_structured_argv(
         assert argv[0] == str(nsys.resolve())
         assert str(binary.resolve()) in argv
         assert all('"' not in argument for argument in argv)
-        assert "--capture-range=nvtx" in argv
+        assert "--capture-range=cudaProfilerApi" in argv
         assert "--capture-range-end=stop" in argv
+        assert not any(argument.startswith("--nvtx-capture") for argument in argv)
     assert not list(output_dir.rglob("*.nsys-rep"))
     for case in manifest["cases"]:
         source_manifest = output_dir / case["source_manifest"]
@@ -147,24 +149,42 @@ def test_prepare_q0_run_writes_complete_nonexecuted_plan_with_structured_argv(
         source_identity = json.loads(source_manifest.read_text(encoding="utf-8"))
         assert source_identity["q0_case_id"] == case["case_id"]
         assert source_identity["q0_status"] == "NOT_RUN"
+        assert source_identity["cuda_visible_device"] == "GPU-TEST-0001"
+        assert source_identity["selected_device_id"] == 0
+    assert manifest["gpu_selection"] == {
+        "cuda_visible_device": "GPU-TEST-0001",
+        "logical_device_id": 0,
+    }
 
 
 def test_prepare_q0_run_rejects_missing_tools_and_existing_output(tmp_path):
     binary, nsys = _fake_tools(tmp_path)
     output_dir = tmp_path / "prepared"
-    prepare_q0_run(output_dir, binary, nsys, platform="windows", run_id="run-1")
+    prepare_q0_run(
+        output_dir, binary, nsys, platform="windows", run_id="run-1",
+        cuda_visible_device="0",
+    )
 
     with pytest.raises(Q0ExecutionError, match="拒绝覆盖"):
-        prepare_q0_run(output_dir, binary, nsys, platform="windows", run_id="run-2")
+        prepare_q0_run(
+            output_dir, binary, nsys, platform="windows", run_id="run-2",
+            cuda_visible_device="0",
+        )
     with pytest.raises(Q0ExecutionError, match="binary"):
         prepare_q0_run(
             tmp_path / "missing-binary", tmp_path / "none.exe", nsys,
-            platform="windows", run_id="run-3"
+            platform="windows", run_id="run-3", cuda_visible_device="0"
         )
     with pytest.raises(Q0ExecutionError, match="nsys"):
         prepare_q0_run(
             tmp_path / "missing-nsys", binary, tmp_path / "none-nsys.exe",
-            platform="windows", run_id="run-4"
+            platform="windows", run_id="run-4", cuda_visible_device="0"
+        )
+
+    with pytest.raises(Q0ExecutionError, match="CUDA_VISIBLE_DEVICES"):
+        prepare_q0_run(
+            tmp_path / "multiple-gpus", binary, nsys,
+            platform="windows", run_id="run-5", cuda_visible_device="0,1"
         )
 
 
@@ -176,6 +196,7 @@ def test_prepare_q0_cli_is_explicitly_dry_run(tmp_path, capsys):
         "prepare-q0-run", "--output-dir", str(output_dir),
         "--binary", str(binary), "--nsys", str(nsys),
         "--platform", "windows", "--run-id", "cli-run-1",
+        "--cuda-visible-device", "GPU-TEST-0001",
     ])
 
     output = capsys.readouterr().out

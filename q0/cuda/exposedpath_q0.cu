@@ -1,4 +1,5 @@
 #include <cuda.h>
+#include <cuda_profiler_api.h>
 #include <cuda_runtime.h>
 #include <nvtx3/nvToolsExt.h>
 
@@ -46,6 +47,14 @@ class NvtxRange {
   NvtxRange(const NvtxRange&) = delete;
   NvtxRange& operator=(const NvtxRange&) = delete;
   ~NvtxRange() { nvtxRangePop(); }
+};
+
+class CudaProfilerRange {
+ public:
+  CudaProfilerRange() { CUDA_CHECK(cudaProfilerStart()); }
+  CudaProfilerRange(const CudaProfilerRange&) = delete;
+  CudaProfilerRange& operator=(const CudaProfilerRange&) = delete;
+  ~CudaProfilerRange() { cudaProfilerStop(); }
 };
 
 std::string identity_json(const std::string& kind, const std::string& case_id,
@@ -428,7 +437,7 @@ int main(int argc, char** argv) {
   try {
     Resources resources;
     {
-      NvtxRange capture("EXPOSEDPATH_Q0_CAPTURE");
+      CudaProfilerRange capture;
       selected->second(resources, case_id, run_id);
     }
     return 0;

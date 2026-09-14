@@ -36,10 +36,10 @@ Linux 将 `--platform` 改为 `linux`。该命令只编译，不运行 CUDA case
 生成 dry-run：
 
 ```powershell
-python -m exposedpath_v141 prepare-q0-run --output-dir "<新目录>" --binary "<Q0 binary>" --nsys "<nsys路径>" --platform windows --run-id q0-engineering-001
+python -m exposedpath_v141 prepare-q0-run --output-dir "<新目录>" --binary "<Q0 binary>" --nsys "<nsys路径>" --platform windows --run-id q0-engineering-001 --cuda-visible-device "<GPU序号或UUID>"
 ```
 
-dry-run 为每个 case 生成独立的 source manifest 和结构化 `argv`。它不执行 binary、Nsight 或 analyzer，不创建 `.nsys-rep`，并拒绝覆盖已有目录。
+dry-run 为每个 case 生成独立的 source manifest 和结构化 `argv`。每次必须显式选择一个物理 GPU，程序通过 `CUDA_VISIBLE_DEVICES` 将其映射为逻辑设备 0。采集范围由微程序中的 `cudaProfilerStart/cudaProfilerStop` 控制，Nsight 使用 `--capture-range=cudaProfilerApi`，不依赖动态 NVTX 字符串触发。dry-run 不执行 binary、Nsight 或 analyzer，不创建 `.nsys-rep`，并拒绝覆盖已有目录。
 
 运行合成语义回归：
 

@@ -88,6 +88,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--platform", required=True, choices=("windows", "linux")
     )
     prepare_q0_parser.add_argument("--run-id", required=True)
+    prepare_q0_parser.add_argument("--cuda-visible-device", required=True)
     synthetic_q0_parser = subparsers.add_parser(
         "run-q0-synthetic", help="运行合成 Canonical 的 S/A/B 回归，不执行真实 Q0"
     )
@@ -195,6 +196,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.nsys,
                 platform=args.platform,
                 run_id=args.run_id,
+                cuda_visible_device=args.cuda_visible_device,
             )
         except (OSError, Q0ExecutionError, ValueError) as exc:
             print(f"ERROR: {exc}", file=sys.stderr)

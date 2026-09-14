@@ -42,6 +42,7 @@ _FAULTS = {
     "REMOVE_GRAPH_NODE_MAPPING",
 }
 _RUN_ID = re.compile(r"^[A-Za-z0-9._-]+$")
+_CUDA_VISIBLE_DEVICE = re.compile(r"^[A-Za-z0-9._:-]+$")
 
 
 def _root(root: Path | None) -> Path:
@@ -232,7 +233,9 @@ def compile_q0_microbench(
     return output_path
 
 
-def _source_manifest(case_id: str, case_run_id: str) -> dict[str, Any]:
+def _source_manifest(
+    case_id: str, case_run_id: str, cuda_visible_device: str
+) -> dict[str, Any]:
     return {
         "experiment_id": "exposedpath-q0",
         "wmpc_id": "q0-controlled",
@@ -244,6 +247,8 @@ def _source_manifest(case_id: str, case_run_id: str) -> dict[str, Any]:
             "LEGACY" if case_id == "Q0-DEFAULT-LEGACY-001" else "PER_THREAD"
         ),
         "gpu_index": 0,
+        "selected_device_id": 0,
+        "cuda_visible_device": cuda_visible_device,
         "q0_case_id": case_id,
         "q0_status": "NOT_RUN",
     }
@@ -256,6 +261,7 @@ def prepare_q0_run(
     *,
     platform: str,
     run_id: str,
+    cuda_visible_device: str,
 ) -> Path:
     """生成 Q0 Engineering dry-run；不执行二进制或 Nsight。"""
 
@@ -263,6 +269,10 @@ def prepare_q0_run(
         raise Q0ExecutionError("platform 必须是 windows 或 linux")
     if not _RUN_ID.fullmatch(run_id):
         raise Q0ExecutionError("run_id 只能包含字母、数字、点、下划线和连字符")
+    if not _CUDA_VISIBLE_DEVICE.fullmatch(cuda_visible_device):
+        raise Q0ExecutionError(
+            "CUDA_VISIBLE_DEVICES 必须显式选择单个 GPU index 或 UUID"
+        )
     output_path = Path(output_dir).resolve()
     binary_path = Path(binary).resolve()
     nsys_path = Path(nsys).resolve()
@@ -292,7 +302,7 @@ def prepare_q0_run(
                 str(nsys_path),
                 "profile",
                 "--trace=cuda,nvtx",
-                "--capture-range=nvtx",
+                "--capture-range=cudaProfilerApi",
                 "--capture-range-end=stop",
                 "--force-overwrite=false",
                 "-o",
@@ -305,7 +315,9 @@ def prepare_q0_run(
             ]
         source_content = (
             json.dumps(
-                _source_manifest(case_id, case_run_id), indent=2, sort_keys=True
+                _source_manifest(case_id, case_run_id, cuda_visible_device),
+                indent=2,
+                sort_keys=True,
             )
             + "\n"
         ).encode("utf-8")
@@ -332,6 +344,10 @@ def prepare_q0_run(
         "run_id": run_id,
         "data_role": "Engineering",
         "platform": platform,
+        "gpu_selection": {
+            "cuda_visible_device": cuda_visible_device,
+            "logical_device_id": 0,
+        },
         "source": {
             "binary": {"path": str(binary_path), "sha256": _sha256(binary_path)},
             "nsys": {"path": str(nsys_path), "sha256": _sha256(nsys_path)},
