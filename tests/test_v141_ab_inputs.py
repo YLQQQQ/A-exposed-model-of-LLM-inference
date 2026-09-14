@@ -329,7 +329,7 @@ def test_loads_strict_dual_input_and_discovers_three_structured_windows(tmp_path
     "terminal_time", "terminal_clock", "terminal_not_in_wait_set", "empty_wait_set",
     "terminal_not_in_frontier", "wait_status", "closure_status", "valid_reason",
     "invalid_valid_terminal", "ambiguous_valid_terminal", "empty_nonempty_wait_set",
-    "empty_valid_terminal", "boundary_after_sync", "boundary_no_clock",
+    "empty_valid_terminal", "boundary_after_sync", "boundary_no_clock", "boundary_wrong_clock",
     "boundary_with_activity", "valid_terminal_status", "invocation_bleed",
 ])
 def test_strict_join_rejects_inconsistent_s_state_before_accounting(tmp_path, mutation):
@@ -381,6 +381,8 @@ def test_strict_join_rejects_inconsistent_s_state_before_accounting(tmp_path, mu
             record["terminal"]["end_ns"] = 81
         elif mutation == "boundary_no_clock":
             record["terminal"]["clock_domain_id"] = None
+        elif mutation == "boundary_wrong_clock":
+            record["terminal"]["clock_domain_id"] = "other-clock"
         else:
             record["terminal"]["activity_id"] = _activity()["record_id"]
     elif mutation == "valid_terminal_status":

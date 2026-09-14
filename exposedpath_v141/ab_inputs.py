@@ -308,8 +308,13 @@ def _validate_s_record_identity(canonical: CanonicalBundle, record: Mapping[str,
             raise ABInputError(f"S sync {sync_id} 的 terminal clock_domain_id 非法")
         if end > record["host_end_ns"]:
             raise ABInputError(f"S sync {sync_id} 的 terminal 晚于 sync end")
-        if terminal["kind"] == "COMPLETION_BOUNDARY" and terminal.get("activity_id") is not None:
-            raise ABInputError(f"S sync {sync_id} 的 completion boundary 不得带 activity_id")
+        if terminal["kind"] == "COMPLETION_BOUNDARY":
+            if terminal.get("activity_id") is not None:
+                raise ABInputError(f"S sync {sync_id} 的 completion boundary 不得带 activity_id")
+            if clock != raw_sync.get("clock_domain_id"):
+                raise ABInputError(
+                    f"S sync {sync_id} 的 completion boundary clock_domain_id 与 Canonical 不匹配"
+                )
     else:
         expected_status = "NOT_APPLICABLE" if validity == "VALID_EMPTY" else validity
         if (

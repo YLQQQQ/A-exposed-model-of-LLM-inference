@@ -2,15 +2,15 @@
 
 ## 当前快照
 
-- 清单版本：`2.9`
+- 清单版本：`3.0`
 - 最近更新：`2026-09-14`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G5-06`，完整分支复审发现的 S/Canonical 一致性、跨 invocation 重叠窗口、零窗口质量和 Derived re-export 越界问题已修复；最终 Gate 5 定向 `170 passed`，全量 `540 passed, 2 failed`（仅既有 PowerShell smoke）；Gate verdict 仍为 `NOT_RUN`，等待独立完整 diff 再复审后由 controller 决定是否改变
-- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 和 S v0.2 已通过离线/Engineering 审查；Gate 5 的 schema、严格联结、A/B/D/Signature 合成覆盖、边界检查和历史 fail-closed 回归已有证据，但尚未完成独立完整 diff 复审，不能升级 Gate verdict；真实 Q0、Engineering Pilot、Protocol Freeze 和正式实验仍未开始
+- 当前最高优先级：`EP-G6-01`，实现受控 CUDA Q0 微程序与机器可读 manifest；同时推进不依赖 GPU 的 `EP-G6-02` 合成 trace/oracle 自动对照，但真实 Q0 仍受 GPU 阻塞
+- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2、S v0.2 与 Gate 5 的 A/B/D/Exposure Signature 已通过离线/Engineering 审查；历史 trace 回归保持 fail-closed，不能升级为 Q0 或正式证据；真实 Q0、Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -64,7 +64,7 @@
 - [x] `EP-G1-08` 冻结 A/B 字段、互斥/守恒、B per-sync 生命周期，以及 D/Exposure Signature 的纯派生规则。证据：合同第 10～12 节及机器合同 `a_layer/b_layer/derived`。
 - [x] `EP-G1-09` 为 37 条合同规则建立 25 个验证案例映射并完成内部合同审查。证据：`measurement_contract_test_map_v0_2.json`、`tests/test_v141_contract.py`；`python -m exposedpath_v141 validate-contract` 输出 `37/37 (100%)` 与 `PASS`。
 
-**下一项：**Gate 2～4 已完成；`EP-G5-01` 的输入联结与窗口发现、以及 Gate 5 Task 3 的共享区间原语已完成，继续执行 `EP-G5-02` 的 A 记账实现；A/B 只能读取 Canonical Raw 与 S 产物，不得回退到旧 accounting。
+**下一项：**Gate 2～5 已完成；继续执行 `EP-G6-01` 的受控 CUDA Q0 微程序与机器可读 manifest，并并行准备 `EP-G6-02` 的合成 trace/oracle 自动对照；真实 Q0 仍须等待 GPU。
 
 ## Gate 2：设计 Q0 独立标准答案
 
@@ -101,20 +101,20 @@
 
 ## Gate 5：A/B，再到 D/Exposure Signature
 
-**Gate verdict：`NOT_RUN`。** A/B 与纯派生层 v0.2 机器 schema 已冻结；保守互斥的 A、per-sync B、不可覆盖 A/B bundle 以及只读 A/B 的 D/Exposure Signature 均已实现并经合成 Engineering 测试验证。历史 Engineering 回归和全量验证已完成；**awaiting independent review**，在 controller 完成完整 Gate 5 diff 的独立审查前不得改为 `PASS`；旧 accounting 不能视为本 Gate 进度。
+**Gate verdict：`PASS`。** 只表示 A/B 与纯派生层 v0.2 的离线语义实现、严格输入联结、版本化输出、合成测试、边界检查、历史 Engineering fail-closed 回归和完整分支独立复审通过；不表示真实 Q0、GPU 端到端链路、Pilot 或 Formal 已通过。旧 accounting 不能视为本 Gate 证据。
 
-2026-09-14 完整分支复审修复后的验证：S 联结在 A/B 计算前拒绝 validity/wait-set/frontier/terminal/closure 不一致，以及 terminal 时间/clock 与 Canonical 冲突或晚于 sync return；合法 completion boundary 和非 valid 状态仍保留。相同 run/pass 中正长度重叠的 invocation 全部停止生成 A 窗口，包括具有可信 Full Request 但缺 phase 的相邻 invocation；半开相邻及无关请求不受污染。marker-only/无 NVTX 的零窗口输入产生 `WINDOW_DISCOVERY_INVALID`，bundle 与 CLI fail closed。Derived 只准直接导入 `ABBundleError`、`load_ab_bundle`（支持 alias），禁止模块 namespace、package-member 和其他 re-export。证据：`tests/test_v141_ab_inputs.py`、`tests/test_v141_ab_bundle.py`、`tests/test_v141_derived.py`；最终 Gate 5 定向 `170 passed`，全量 `540 passed, 2 failed`（仅 `test_dry_run`、`test_spaces` 基线）；合同、oracle 设计/独立性、下游边界和 compile 检查通过。当前仍 **awaiting independent re-review**，未改变 Measurement Contract、Q0 或 Protocol Freeze。
+2026-09-14 完整分支复审与收尾修复后的验证：S 联结在 A/B 计算前拒绝 validity/wait-set/frontier/terminal/closure 不一致，以及 terminal 时间/clock 与 Canonical 冲突或晚于 sync return；`COMPLETION_BOUNDARY` 还必须与对应 Canonical physical sync 使用同一时钟域，合法 completion boundary 和非 valid 状态仍保留。相同 run/pass 中正长度重叠的 invocation 全部停止生成 A 窗口，包括具有可信 Full Request 但缺 phase 的相邻 invocation；半开相邻及无关请求不受污染。marker-only/无 NVTX 的零窗口输入产生 `WINDOW_DISCOVERY_INVALID`，bundle 与 CLI fail closed。Derived 只准直接导入 `ABBundleError`、`load_ab_bundle`（支持 alias），禁止模块 namespace、package-member 和其他 re-export。证据：`tests/test_v141_ab_inputs.py`、`tests/test_v141_ab_bundle.py`、`tests/test_v141_derived.py`；最终 Gate 5 定向 `171 passed`，全量 `541 passed, 2 failed`（仅 `test_dry_run`、`test_spaces` 基线）；合同、oracle 设计/独立性、下游边界、compile 与 diff 检查通过。独立复审结论为 `Approved`，未改变 Measurement Contract、Q0 或 Protocol Freeze。
 
 - [x] `EP-G5-01` 冻结 A/B 输入联结、窗口、输出 schema，并实现面向 request/phase、互斥且保守的 A。输入适配证据：`exposedpath_v141/ab_inputs.py`、`tests/test_v141_ab_inputs.py`；设计与 schema 证据：`docs/superpowers/specs/2026-09-12-gate5-accounting-design.md`、`docs/v1_4_1/contracts/ab_schema_v0_2.json`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_ab_schemas.py`；A 证据：`exposedpath_v141/a_accounting.py`、`tests/test_v141_a_accounting.py`。非窗口 structured marker 不创建或否定 A 窗口；其作为 worker API invocation ownership 证据时，必须由完整一致的 NVTX text payload 与缓存 identity 共同证明。
 - [x] `EP-G5-02` 实现 A 的 residual、整数纳秒守恒和 invalid/ambiguous 传播。证据：`exposedpath_v141/intervals.py`、`exposedpath_v141/a_accounting.py`、`tests/test_v141_intervals.py`、`tests/test_v141_a_accounting.py`，以及真实 `ABInputs` discovery 到 A 多线程 API union 与伪造 worker marker fail-closed 的回归 `tests/test_v141_ab_inputs.py`（定向验证 `53 passed`）。
 - [x] `EP-G5-03` 实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。证据：`exposedpath_v141/b_provenance.py`、`tests/test_v141_b_provenance.py`；逐条投影 S 的 `W(s)`、terminal、validity 和 provenance，仅对 `B_VALID` 以 Canonical 半开区间 union 计算 hidden/exposed/terminal/return-tail，其他状态时长均为 `null`；定向验证 `29 passed`（含独立 Q0 oracle、overlapping wait-set union 和 completion-boundary terminal 回归）。
 - [x] `EP-G5-04` 仅从冻结后的 A/B 派生 D。`derive-exposure` 通过既有严格 A/B loader 读取唯一输入，按冻结公式生成每个窗口的 `D_margin/D_score`；零分母严格输出 `null`。证据：`exposedpath_v141/derived.py`、`tests/test_v141_derived.py`。
 - [x] `EP-G5-05` 仅从冻结后的 A/B 派生 Exposure Signature。输出冻结 A 向量/窗口比例及按 `(phase, sync_kind, sync_origin, callsite_id)` 的 B 状态 count、仅 `B_VALID` 数值的 median/nearest-rank p90、终端类型与离散分布；不输出 B total 或根因/瓶颈/速度上界标签。证据：`exposedpath_v141/derived.py`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_derived.py`。
-- [x] `EP-G5-06` 完成互斥、守恒、provenance、版本和 validity 传播的离线验收。A/B 及 Derived bundle 均严格校验 manifest/记录 schema、gzip 哈希/大小/计数与可选外部 lineage，使用确定性 `mtime=0` gzip 和临时目录原子改名；Derived loader 额外校验 terminal-kind 对 `B_VALID` 的精确 count 与每项统计分布的有效数值样本数。CLI 为 `analyze-ab` 和 `derive-exposure`；静态边界拒绝 Derived 导入 Canonical/S/A/B 计算模块、Raw/S 时间字段、SQLite 或 Nsight 表名。定向 Gate 5 测试 `134 passed`，合同/Oracle/边界/compile 检查通过；全量 pytest 仅保留基线 PowerShell smoke `tests/test_server_smoke_script.py::test_dry_run`、`::test_spaces` 两项失败。历史链路无合格 A window、S 446 invalid 且 B 446 `B_INVALID`；证据：`engineering_evidence/ab_v0_2/historical_regression.json`。Gate 5 verdict 仍为 `NOT_RUN`，**awaiting independent review**。
+- [x] `EP-G5-06` 完成互斥、守恒、provenance、版本和 validity 传播的离线验收。A/B 及 Derived bundle 均严格校验 manifest/记录 schema、gzip 哈希/大小/计数与可选外部 lineage，使用确定性 `mtime=0` gzip 和临时目录原子改名；Derived loader 额外校验 terminal-kind 对 `B_VALID` 的精确 count 与每项统计分布的有效数值样本数。CLI 为 `analyze-ab` 和 `derive-exposure`；静态边界拒绝 Derived 导入 Canonical/S/A/B 计算模块、Raw/S 时间字段、SQLite 或 Nsight 表名。最终定向 Gate 5 测试 `171 passed`，合同/Oracle/边界/compile/diff 检查通过；全量 pytest 为 `541 passed, 2 failed`，仅保留基线 PowerShell smoke `tests/test_server_smoke_script.py::test_dry_run`、`::test_spaces` 两项失败。历史链路无合格 A window、S 446 invalid 且 B 446 `B_INVALID`；证据：`engineering_evidence/ab_v0_2/historical_regression.json`。完整分支独立复审及最后一处 completion-boundary 时钟域定向复核均为 `Approved`。
 
 ## Gate 6：Q0 资格验证
 
-**Gate verdict：`BLOCKED`。** 前置 Gate 未完成，且当前没有可执行真实 CUDA/Nsight 受控 trace 的 GPU。
+**Gate verdict：`BLOCKED`。** Gate 5 已完成；Q0 微程序、manifest 与合成 oracle 对照可继续开发，但当前没有可执行真实 CUDA/Nsight 受控 trace 的 GPU，因此本 Gate 整体仍不能运行或通过。
 
 - [ ] `EP-G6-01`（未开始）实现受控 CUDA Q0 微程序和机器可读 manifest。
 - [ ] `EP-G6-02`（未开始）在合成 trace 上对照独立 oracle。
@@ -211,9 +211,9 @@
 
 最近应执行的任务：
 
-1. `EP-G5-06`：对最终修复后的完整 Gate 5 diff 独立再复审；controller 依据可复查结论决定 verdict，目前保持 `NOT_RUN`。
-2. `EP-G6-01`：仅在 Gate 5 通过后设计受控 CUDA Q0 微程序和机器可读 manifest，仍不得将合成测试写成 Q0 PASS。
-3. `EP-G6-02`：在合成 trace 上对照独立 oracle，真实 observation stack 验证仍受 GPU 平台阻塞。
+1. `EP-G6-01`：实现受控 CUDA Q0 微程序和机器可读 manifest，仍不得将编译检查或合成测试写成 Q0 PASS。
+2. `EP-G6-02`：在合成 trace 上建立独立 oracle 自动对照，验证错误路径和 fail-closed。
+3. `EP-G6-03`：获得 GPU 后，在目标 observation stack 上采集真实受控 trace；此前 Gate 6 保持 `BLOCKED`。
 
 ## 计划调整记录
 
@@ -248,3 +248,4 @@
 | 2.7 | 2026-09-13 | 完成 Gate 5 Task 7：`derive-exposure` 仅消费已验证 A/B bundle，确定性、不可覆盖地输出 D 和 Exposure Signature；D 使用冻结三项 A 公式与零分母 null，Signature 只摘要 A 向量/比例和 B 状态、有效数值统计、终端类型/分布。派生 loader 复查 schema/hash/可选 A/B lineage、资格不升级，以及 terminal/distribution 的运行时 count 一致性；边界审计禁止其回读 Canonical/S 或 Raw/S 时间字段。 | EP-G5-04 至 EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 仍为 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步是 Task 8 的历史 Engineering 回归、全量验证与独立复审。 |
 | 2.8 | 2026-09-13 | 完成 Gate 5 Task 8 离线工程验证：以 `nsys export --lazy=false` 只读导出历史 `w01` trace，Raw SHA-256 前后相同；Canonical identity 保持 ambiguous，S 的 446 条 physical sync 均 invalid，A 无合格 window，B 一一投影为 446 条 `B_INVALID`，Q0 保持 `NOT_RUN`。完成 A/B 定向、合同、oracle/边界、compile 和全量 pytest；全量仅保留已记录的两项 PowerShell smoke 失败。 | EP-G5-06、EP-ISSUE-02、EP-ISSUE-03 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；历史结果仍仅为 Engineering，当前无 Formal 数据。Gate 5 明确保持 `NOT_RUN`，awaiting independent review；controller 在独立完整 diff 复审后决定 verdict。 |
 | 2.9 | 2026-09-14 | 完整分支复审后的最终修复：严格校验 S 状态、wait-set/frontier 和 Canonical terminal 一致性；跨 invocation Full Request 正重叠按 identity fail closed；零窗口必须有质量 issue；Derived 改为精确 A/B loader/error 符号白名单。首轮 RED 30 项复现，另补缺 phase 的重叠请求 RED→GREEN；最终 Gate 5 `170 passed`，全量 `540 passed, 2 failed`（仅既有 PowerShell smoke）。 | EP-G5-01、EP-G5-03、EP-G5-05、EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；未重新采集历史 trace 或产生 Formal 数据。Gate 5 保持 `NOT_RUN`，awaiting independent re-review。 |
+| 3.0 | 2026-09-14 | 独立再复审确认三项问题闭合，并发现 completion boundary 尚未核对 Canonical sync 时钟域；新增反例先失败后修复，最终定向复核 `Approved`。Gate 5 新鲜验证为 `171 passed`，全量为 `541 passed, 2 failed`（仅既有 PowerShell smoke），据此将 Gate 5 判为 `PASS`，当前优先级切换至 Gate 6 的 GPU 前可执行工作。 | EP-G5-03、EP-G5-06、EP-G6-01、EP-G6-02 | 不改变 Measurement Contract、真实 Q0、Pilot 或 Protocol Freeze；历史数据仍仅为 Engineering，当前无 Formal 数据。 |
