@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -23,6 +25,7 @@ _MANIFEST_PATH = Path("q0") / "execution_manifest_v0_2.json"
 _SCHEMA_PATH = (
     Path("docs") / "v1_4_1" / "contracts" / "q0_execution_schema_v0_2.json"
 )
+_CUDA_SOURCE_PATH = Path("q0") / "cuda" / "exposedpath_q0.cu"
 _STRATEGIES = {
     "NATIVE_CUDA",
     "NATIVE_WITH_CANONICAL_FAULT",
@@ -152,3 +155,68 @@ def load_q0_execution_manifest(root: Path | None = None) -> dict[str, Any]:
     oracle = load_oracle_bundle(repository_root)
     validate_q0_execution_manifest(manifest, oracle)
     return manifest
+
+
+def build_q0_compile_command(
+    nvcc: Path, source: Path, output: Path, *, platform: str
+) -> tuple[str, ...]:
+    """构造不经 shell 的 Q0 CUDA 编译参数。"""
+
+    if platform not in {"windows", "linux"}:
+        raise ValueError("platform 必须是 windows 或 linux")
+    command = [
+        str(Path(nvcc)),
+        "-std=c++17",
+        "-O2",
+        "-lineinfo",
+        str(Path(source)),
+    ]
+    if platform == "windows":
+        command.append("-Xcompiler=/EHsc")
+    else:
+        command.append("-Xcompiler=-pthread")
+    command.append("-lcuda")
+    command.extend(("-o", str(Path(output))))
+    return tuple(command)
+
+
+def compile_q0_microbench(
+    nvcc: Path,
+    output: Path,
+    *,
+    platform: str,
+    source: Path | None = None,
+) -> Path:
+    """编译 Q0 微程序；只构建，不运行任何 CUDA case。"""
+
+    source_path = _root(None) / _CUDA_SOURCE_PATH if source is None else Path(source)
+    output_path = Path(output)
+    nvcc_path = Path(nvcc)
+    if not nvcc_path.is_file():
+        raise Q0ExecutionError(f"nvcc 不存在: {nvcc_path}")
+    if not source_path.is_file():
+        raise Q0ExecutionError(f"Q0 CUDA 源文件不存在: {source_path}")
+    if output_path.exists():
+        raise Q0ExecutionError(f"拒绝覆盖已有 Q0 binary: {output_path}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    environment = os.environ.copy()
+    environment.pop("CL", None)
+    environment.pop("_CL_", None)
+    completed = subprocess.run(
+        build_q0_compile_command(
+            nvcc_path, source_path, output_path, platform=platform
+        ),
+        cwd=_root(None),
+        env=environment,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if completed.returncode != 0:
+        detail = (completed.stdout + completed.stderr).strip()
+        raise Q0ExecutionError(f"Q0 CUDA 编译失败 ({completed.returncode}): {detail}")
+    if not output_path.is_file():
+        raise Q0ExecutionError("nvcc 返回成功但未生成 Q0 binary")
+    return output_path

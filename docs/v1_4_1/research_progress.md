@@ -2,14 +2,14 @@
 
 ## 当前快照
 
-- 清单版本：`3.2`
+- 清单版本：`3.3`
 - 最近更新：`2026-09-14`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G6-01`，Gate 6 GPU 前执行计划已冻结，依次实现 23-case 执行合同、受控 CUDA 微程序、跨平台 dry-run、合成 Canonical/S/A/B 与独立 oracle 自动对照；真实 Q0 仍受 GPU 阻塞
+- 当前最高优先级：`EP-G6-02`，实现跨平台 Q0 dry-run、不可覆盖 run manifest、合成 Canonical/S/A/B 与独立 oracle 自动对照；真实 Q0 仍受 GPU 阻塞
 - 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2、S v0.2 与 Gate 5 的 A/B/D/Exposure Signature 已通过离线/Engineering 审查；历史 trace 回归保持 fail-closed，不能升级为 Q0 或正式证据；真实 Q0、Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
@@ -116,7 +116,7 @@
 
 **Gate verdict：`BLOCKED`。** Gate 5 已完成；Q0 微程序、manifest 与合成 oracle 对照可继续开发，但当前没有可执行真实 CUDA/Nsight 受控 trace 的 GPU，因此本 Gate 整体仍不能运行或通过。
 
-- [ ] `EP-G6-01`（进行中）23-case 机器可读执行 manifest 与严格 schema/loader 已完成；受控 CUDA 微程序尚待实现。证据：`q0/execution_manifest_v0_2.json`、`docs/v1_4_1/contracts/q0_execution_schema_v0_2.json`、`tests/test_v141_q0_execution.py`（`10 passed`）。
+- [x] `EP-G6-01` 实现受控 CUDA Q0 微程序和机器可读 manifest。23 个 oracle case 严格一一映射，其中 21 个具有 native CUDA seed，terminal tie 与 submission race 明确保持纯合成；缺 correlation、dropped records 与 graph mapping 缺失使用真实 seed 后受控 Canonical 故障注入。CUDA 13.0 在无 GPU 执行条件下成功编译，binary `--list-cases` 与 21 个 seed 集合一致，未知 case 在 CUDA 初始化前失败。证据：`q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json`、`tests/test_v141_q0_cuda_source.py`。
 - [ ] `EP-G6-02`（未开始）在合成 trace 上对照独立 oracle。
 - [ ] `EP-G6-03`（受阻于 GPU）在目标 observation stack 上采集真实受控 trace。
 - [ ] `EP-G6-04`（受阻）真实 trace 全部必需用例对照 oracle，并验证 fail-closed。
@@ -204,6 +204,7 @@
 - `EP-ISSUE-04`：当前无 GPU。影响：Q0 真实 trace、跨平台 GPU smoke、Engineering Pilot 及后续实验保持 `BLOCKED`；不影响 Gate 1 至 Gate 5 的离线设计和确定性测试工作。
 - `EP-ISSUE-05`（已解决）：使用校验过哈希的 LibreOffice 临时解包版本完成本地全页渲染；研究主体 40 页、实验协议 27 页均已检查。渲染器仅用于文档 QA，不改变研究 Gate。
 - `EP-ISSUE-06`：S 层已对 event/wait 的 context/stream 活动查找建立索引，并缓存重复 scope 建图；event/default-stream 密集型大 trace 的规模性能尚未在真实 Engineering 数据上验收。影响：需在 Engineering Pilot 记录耗时与峰值内存；当前不改变 S 语义正确性或数据资格。
+- `EP-ISSUE-07`：本机环境变量 `CL` 被配置为 MSVC 目录，但该名称会被 `cl.exe`/`nvcc` 解释为隐式编译参数，导致 CUDA 编译失败。Q0 编译入口只在子进程环境中移除 `CL/_CL_`，不修改用户系统环境；后续 GPU 平台资格检查仍需记录并复核实际编译环境。
 
 ## 固定执行顺序与最近任务
 
@@ -251,3 +252,4 @@
 | 3.0 | 2026-09-14 | 独立再复审确认三项问题闭合，并发现 completion boundary 尚未核对 Canonical sync 时钟域；新增反例先失败后修复，最终定向复核 `Approved`。Gate 5 新鲜验证为 `171 passed`，全量为 `541 passed, 2 failed`（仅既有 PowerShell smoke），据此将 Gate 5 判为 `PASS`，当前优先级切换至 Gate 6 的 GPU 前可执行工作。 | EP-G5-03、EP-G5-06、EP-G6-01、EP-G6-02 | 不改变 Measurement Contract、真实 Q0、Pilot 或 Protocol Freeze；历史数据仍仅为 Engineering，当前无 Formal 数据。 |
 | 3.1 | 2026-09-14 | 冻结 Gate 6 GPU 前实施计划：23 个 oracle case 一一映射到原生 CUDA、真实 seed 后故障注入或纯合成 Canonical；新增 CUDA compile/list、Windows/Linux argv dry-run、正式 S/A/B 合成执行和独立 evaluator 的测试先行顺序。 | EP-G6-01、EP-G6-02 | 不改变 Measurement Contract 或 Gate 2 expected；Gate 6 继续 `BLOCKED`，不产生真实 Q0、Pilot 或 Formal 证据。 |
 | 3.2 | 2026-09-14 | 完成 Q0 执行合同第一步：23 个 oracle case 与执行 case 严格一一对应，稳定 activity/sync/API label 不得改写；区分原生 CUDA、真实 seed 后 Canonical 故障注入和纯合成 Canonical，缺失/额外/重复 case、资格升级及策略字段冲突均 fail closed。 | EP-G6-01 | 不改变 Gate 2 expected；只是 Engineering 执行规划证据，Gate 6 与真实 Q0 保持 `BLOCKED/NOT_RUN`。 |
+| 3.3 | 2026-09-14 | 完成受控 Q0 CUDA 微程序：覆盖 21 个 native seed，使用结构化 NVTX request/phase/activity/sync label，支持 stream、device、driver context、event/cross-stream、completed-before、empty、kernel+MemOp、default stream、multithread、overlapping host sync、phase spill、invocation bleed、graph、同步 D2H 与 query。CUDA 13.0 可在不运行 case 时编译并核对 seed 集合；本机污染性的 `CL` 环境变量只在编译子进程中移除。 | EP-G6-01、EP-ISSUE-07 | 仅证明源码可构建及身份注册一致，不证明 GPU 行为或 Nsight 可观测性；Gate 6 继续 `BLOCKED`，Q0 `NOT_RUN`。 |

@@ -14,6 +14,7 @@ from .canonical_raw import (
 )
 from .observation import inspect_sqlite, write_report_new
 from .q0_oracle import OracleValidationError, load_oracle_bundle
+from .q0_execution import Q0ExecutionError, compile_q0_microbench
 from .s_bundle import SBundleError, analyze_canonical_to_s
 from .ab_bundle import ABBundleError, analyze_ab
 from .derived import DerivedBundleError, derive_exposure
@@ -67,6 +68,14 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     subparsers.add_parser(
         "validate-q0-oracle", help="校验 Q0 独立标准答案的设计与覆盖"
+    )
+    build_q0_parser = subparsers.add_parser(
+        "build-q0-microbench", help="只编译 Gate 6 Q0 CUDA 微程序，不执行 GPU"
+    )
+    build_q0_parser.add_argument("--nvcc", required=True, type=Path)
+    build_q0_parser.add_argument("--output", required=True, type=Path)
+    build_q0_parser.add_argument(
+        "--platform", required=True, choices=("windows", "linux")
     )
     s_parser = subparsers.add_parser(
         "analyze-s", help="只读分析 Canonical Raw 并生成 S 层 bundle"
@@ -148,6 +157,19 @@ def main(argv: list[str] | None = None) -> int:
         print("independence_scope: STATIC_EXPECTED_AND_INTERVAL_ARITHMETIC_ONLY")
         print("q0_execution_status: NOT_RUN")
         print("verdict: DESIGN_ONLY_PASS")
+        return 0
+
+    if args.command == "build-q0-microbench":
+        try:
+            output_path = compile_q0_microbench(
+                args.nvcc, args.output, platform=args.platform
+            )
+        except (OSError, Q0ExecutionError, ValueError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        print(f"q0_binary: {output_path}")
+        print("compile_status: PASS")
+        print("q0_execution_status: NOT_RUN")
         return 0
 
     if args.command == "convert-sqlite":
