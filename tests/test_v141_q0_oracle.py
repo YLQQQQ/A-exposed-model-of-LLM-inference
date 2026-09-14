@@ -17,7 +17,7 @@ from exposedpath_v141.q0_oracle import (
     validate_oracle_bundle,
 )
 from exposedpath_v141.cli import main
-from scripts.verify_q0_oracle_independence import check_source
+from scripts.verify_q0_oracle_independence import check_evaluator_source, check_source
 
 
 def literal_bundle():
@@ -332,6 +332,16 @@ def calculate_expected_timing(case, sync_label):
     assert "禁止导入: analysis" in problems
     assert "区间函数禁止读取 dependency_edges" in problems
     assert "区间函数禁止调用被测逻辑: recover_wait_set" in problems
+
+
+def test_evaluator_independence_checker_rejects_production_semantics_imports():
+    safe = "from .q0_oracle import calculate_expected_timing\n"
+    unsafe = "from .sync_semantics import analyze_sync_semantics\n"
+
+    assert check_evaluator_source(safe) == []
+    assert check_evaluator_source(unsafe) == [
+        "evaluator 禁止导入被测模块: sync_semantics"
+    ]
 
 
 def test_validate_q0_oracle_cli_is_scope_limited(capsys):

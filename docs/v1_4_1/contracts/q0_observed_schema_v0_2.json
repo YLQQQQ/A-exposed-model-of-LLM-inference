@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exposedpath.local/schema/q0-observed-0.2.0.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_kind", "data_role", "research_eligibility", "cases"],
+  "properties": {
+    "schema_version": {"const": "exposedpath-q0-observed/0.2.0"},
+    "source_kind": {"const": "SYNTHETIC_CANONICAL"},
+    "data_role": {"const": "Engineering"},
+    "research_eligibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formal_evidence", "q0_status", "scope"],
+      "properties": {
+        "formal_evidence": {"const": false},
+        "q0_status": {"const": "NOT_RUN"},
+        "scope": {"const": "Q0_SYNTHETIC_ONLY"}
+      }
+    },
+    "cases": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/case"}
+    }
+  },
+  "$defs": {
+    "stringList": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "terminal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "kind", "activity_label"],
+      "properties": {
+        "status": {"enum": ["VALID", "NOT_APPLICABLE", "AMBIGUOUS", "INVALID"]},
+        "kind": {"enum": ["ACTIVITY", "COMPLETION_BOUNDARY", "NONE"]},
+        "activity_label": {"type": ["string", "null"]}
+      }
+    },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wait_set_hidden_union_ns", "wait_set_exposed_union_ns",
+        "terminal_pre_sync_ns", "terminal_overlap_sync_ns", "sync_return_tail_ns"
+      ],
+      "properties": {
+        "wait_set_hidden_union_ns": {"type": ["integer", "null"], "minimum": 0},
+        "wait_set_exposed_union_ns": {"type": ["integer", "null"], "minimum": 0},
+        "terminal_pre_sync_ns": {"type": ["integer", "null"], "minimum": 0},
+        "terminal_overlap_sync_ns": {"type": ["integer", "null"], "minimum": 0},
+        "sync_return_tail_ns": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "sync": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sync_label", "sync_start_ns", "sync_end_ns", "wait_set_status",
+        "wait_set_activity_labels", "terminal", "validity", "primary_reason",
+        "secondary_reasons", "b_status", "b_timing", "terminal_activity_kind",
+        "activity_origin_phases", "sync_owner_phase", "cross_phase_dependency", "a_window"
+      ],
+      "properties": {
+        "sync_label": {"type": "string", "minLength": 1},
+        "sync_start_ns": {"type": "integer", "minimum": 0},
+        "sync_end_ns": {"type": "integer", "minimum": 0},
+        "wait_set_status": {"enum": ["VALID_NONEMPTY", "VALID_EMPTY", "AMBIGUOUS", "INVALID"]},
+        "wait_set_activity_labels": {"$ref": "#/$defs/stringList"},
+        "terminal": {"$ref": "#/$defs/terminal"},
+        "validity": {"enum": ["VALID_NONEMPTY", "VALID_EMPTY", "AMBIGUOUS", "INVALID"]},
+        "primary_reason": {"type": ["string", "null"]},
+        "secondary_reasons": {"$ref": "#/$defs/stringList"},
+        "b_status": {"enum": ["B_VALID", "B_NOT_APPLICABLE", "B_AMBIGUOUS", "B_INVALID"]},
+        "b_timing": {"$ref": "#/$defs/timing"},
+        "terminal_activity_kind": {"type": ["string", "null"]},
+        "activity_origin_phases": {"$ref": "#/$defs/stringList"},
+        "sync_owner_phase": {"type": ["string", "null"]},
+        "cross_phase_dependency": {"type": "boolean"},
+        "a_window": {"type": ["object", "null"]}
+      }
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_id", "syncs", "non_sync_api_labels"],
+      "properties": {
+        "case_id": {"type": "string", "minLength": 1},
+        "syncs": {"type": "array", "items": {"$ref": "#/$defs/sync"}},
+        "non_sync_api_labels": {"$ref": "#/$defs/stringList"}
+      }
+    }
+  }
+}

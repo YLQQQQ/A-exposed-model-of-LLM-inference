@@ -10,6 +10,9 @@
 - `q0/execution_manifest_v0_2.json`：23 个 case 的执行策略、稳定 label 和故障注入身份。
 - `q0/cuda/exposedpath_q0.cu`：21 个 native seed 的最小 CUDA/NVTX 程序。
 - `exposedpath_v141/q0_execution.py`：执行合同校验、编译命令和 dry-run manifest。
+- `docs/v1_4_1/contracts/q0_observed_schema_v0_2.json`：合成 observed 的严格输入合同。
+- `exposedpath_v141/q0_synthetic.py`：从显式 case profile 构造 Canonical 事实，并调用正式 S/A/B。
+- `exposedpath_v141/q0_evaluator.py`：不调用 S/A/B 的独立逐 case 对照器。
 - `q0_run_manifest.json`：一次 GPU 执行计划，状态固定为 `PREPARED_NOT_EXECUTED`。
 
 ## 三类执行策略
@@ -38,6 +41,14 @@ python -m exposedpath_v141 prepare-q0-run --output-dir "<新目录>" --binary "<
 
 dry-run 为每个 case 生成独立的 source manifest 和结构化 `argv`。它不执行 binary、Nsight 或 analyzer，不创建 `.nsys-rep`，并拒绝覆盖已有目录。
 
+运行合成语义回归：
+
+```powershell
+python -m exposedpath_v141 run-q0-synthetic --output-dir "<新目录>"
+```
+
+该命令覆盖 23 个 case，经正式 `S -> A/B` 后交给独立 evaluator；输出只能是 `SYNTHETIC_ONLY`，Q0 状态固定为 `NOT_RUN`。它可提前发现语义实现错误，但不能验证真实 CUDA/Nsight 的可观察性、关联字段或时钟行为。
+
 ## 获得 GPU 后的固定顺序
 
 1. 记录 GPU、driver、CUDA runtime、Nsight、OS、编译器和 git commit；先执行 observation preflight。
@@ -50,4 +61,3 @@ dry-run 为每个 case 生成独立的 source manifest 和结构化 `argv`。它
 ## 已知环境边界
 
 Windows 的 `CL` 和 `_CL_` 是 MSVC 保留的隐式参数变量。本机 `CL` 当前被外部环境误设为编译器目录，因此编译入口只在 nvcc 子进程中移除这两个变量，不修改系统配置。正式平台资格检查必须重新记录该环境。
-

@@ -1103,11 +1103,15 @@ def analyze_sync_semantics(
         for activity_id in recovery["wait_set_activity_ids"]
         if activity_id in activity_by_id
     ]
-    if any(
+    graph_mapping_unsupported = any(
         activity.get("graph_id") is not None and activity.get("graph_node_id") is None
         for activity in wait_activities
-    ):
+    )
+    if graph_mapping_unsupported:
         reasons.append("GRAPH_MAPPING_UNSUPPORTED")
+        recovery["wait_set_activity_ids"] = []
+        recovery["activity_origin_phases"] = {}
+        recovery["cross_phase_dependency"] = False
 
     frontier = _semantic_frontier(
         recovery["wait_set_activity_ids"], recovery["dependency_edges"]

@@ -15,6 +15,7 @@ from .canonical_raw import (
 from .observation import inspect_sqlite, write_report_new
 from .q0_oracle import OracleValidationError, load_oracle_bundle
 from .q0_execution import Q0ExecutionError, compile_q0_microbench, prepare_q0_run
+from .q0_synthetic import run_synthetic_q0
 from .s_bundle import SBundleError, analyze_canonical_to_s
 from .ab_bundle import ABBundleError, analyze_ab
 from .derived import DerivedBundleError, derive_exposure
@@ -87,6 +88,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "--platform", required=True, choices=("windows", "linux")
     )
     prepare_q0_parser.add_argument("--run-id", required=True)
+    synthetic_q0_parser = subparsers.add_parser(
+        "run-q0-synthetic", help="运行合成 Canonical 的 S/A/B 回归，不执行真实 Q0"
+    )
+    synthetic_q0_parser.add_argument("--output-dir", required=True, type=Path)
     s_parser = subparsers.add_parser(
         "analyze-s", help="只读分析 Canonical Raw 并生成 S 层 bundle"
     )
@@ -199,6 +204,19 @@ def main(argv: list[str] | None = None) -> int:
         print("q0_execution_status: NOT_RUN")
         print("verdict: DRY_RUN_ONLY")
         return 0
+
+    if args.command == "run-q0-synthetic":
+        try:
+            report_path = run_synthetic_q0(args.output_dir)
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+        except (FileExistsError, OSError, ValueError, json.JSONDecodeError) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        print(f"q0_synthetic_report: {report_path}")
+        print(f"evidence_scope: {report['evidence_scope']}")
+        print(f"q0_execution_status: {report['q0_status']}")
+        print(f"verdict: {report['verdict']}")
+        return 0 if report["verdict"] == "SYNTHETIC_PASS" else 1
 
     if args.command == "convert-sqlite":
         try:

@@ -1,0 +1,71 @@
+{
+  "schema_version": "exposedpath-q0-pre-gpu-readiness/0.2.0",
+  "generated_at": "2026-09-14",
+  "data_role": "Engineering",
+  "base_git_commit": "1c34ce390b6a9b5d1efb70237164db39e26885b5",
+  "verification_includes_uncommitted_candidate_changes": true,
+  "pre_gpu_readiness": "PASS",
+  "gate_6_verdict": "BLOCKED",
+  "q0_execution_status": "NOT_RUN",
+  "research_eligibility": {
+    "formal_evidence": false,
+    "pilot_evidence": false,
+    "scope": "Q0_PRE_GPU_ENGINEERING_ONLY"
+  },
+  "environment": {
+    "os": "Windows",
+    "cuda_compiler": "CUDA 13.0 / nvcc 13.0.88",
+    "nsight_systems": "2026.1.1.204-261137176666v0",
+    "gpu_execution": "NOT_RUN"
+  },
+  "artifacts": {
+    "oracle_cases_v0_2.json": "DB481EC5445675B08DC43F8B3AD0254BC21429A888A772FB9940C48A92218277",
+    "execution_manifest_v0_2.json": "F66DE45193B564E3DDFEC1964BA7CCFCC2E82A7C94E8A6A1E77F08F37251AE21",
+    "exposedpath_q0.cu": "5651BCFAD775C136E89B6C0E73F5B1F1B0D8CEE80CC0152809702993BFEE45DB",
+    "q0_execution_schema_v0_2.json": "A1E25566378238E8D7327628A40E41FCC02ABC47034B5384967DF306D600DAB0",
+    "q0_observed_schema_v0_2.json": "10B7AECC6F1480F6E93EC99AF0AB9F6DC2273F96C632AFCA1B0A6C7202E98D9E",
+    "q0_synthetic.py": "D9B5E1693C86A398E0CB37EB68BACE26B56D14BB6332CF657625062C36F01E3A",
+    "q0_evaluator.py": "4EB72557A7F404F42041D41F66232A0D66FA66D5F0464D1EBDB7A7B8DC83FB16",
+    "sync_semantics.py": "3C8A99CB01F4519EA82B71AEFEA96AE37093C00E17C5D393A21027953C8C56C5"
+  },
+  "execution_checks": {
+    "cuda_compile": "PASS",
+    "native_seed_list": {
+      "status": "PASS",
+      "case_count": 21
+    },
+    "windows_dry_run": {
+      "status": "PASS",
+      "case_count": 23,
+      "native_command_count": 21,
+      "synthetic_only_count": 2,
+      "output_status": "PREPARED_NOT_EXECUTED"
+    },
+    "synthetic_canonical_to_s_ab": {
+      "status": "SYNTHETIC_PASS",
+      "required_case_count": 23,
+      "passed_case_count": 23,
+      "failed_case_count": 0,
+      "q0_status": "NOT_RUN"
+    },
+    "oracle_and_evaluator_independence": "PASS",
+    "canonical_raw_boundary": "PASS",
+    "python_compileall": "PASS",
+    "focused_semantic_tests": "200 passed",
+    "cuda_source_tests": "5 passed",
+    "full_non_gpu_suite": "570 passed, 2 failed"
+  },
+  "known_failures": [
+    "tests/test_server_smoke_script.py::test_dry_run",
+    "tests/test_server_smoke_script.py::test_spaces"
+  ],
+  "known_failure_classification": "两项均为 Gate 6 工作开始前已记录的 PowerShell smoke 基线失败；本次没有新增全仓失败。",
+  "raw_trace_handling": "本隔离 worktree 不含三份封存的 .nsys-rep；本次未读取、导出、覆盖或重新定级任何 Raw trace。",
+  "blocking_conditions": [
+    "尚未在真实 GPU 上运行 21 个 native seed",
+    "尚未由 Nsight 采集并验证真实 observation stack",
+    "尚未执行真实 trace 的受控 Canonical 故障注入与逐 case oracle 对照",
+    "因此不得生成 Q0 PASS、Pilot 或 Formal 资格"
+  ],
+  "next_task": "EP-G6-03：获得 GPU 后按 q0_run_manifest.json 逐 case 采集真实受控 trace。"
+}
