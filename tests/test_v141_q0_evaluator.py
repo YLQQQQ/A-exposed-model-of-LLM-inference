@@ -94,3 +94,64 @@ def test_synthetic_builder_does_not_read_oracle_expected():
 
     assert len(observed["cases"]) == 23
     assert all("syncs" in case for case in observed["cases"])
+
+
+def _real_stream_case():
+    oracle = load_oracle_bundle()
+    observed = build_synthetic_observed()
+    oracle["cases"] = [case for case in oracle["cases"] if case["case_id"] == "Q0-STREAM-001"]
+    observed["cases"] = [case for case in observed["cases"] if case["case_id"] == "Q0-STREAM-001"]
+    observed["source_kind"] = "REAL_CONTROLLED_TRACE"
+    observed["research_eligibility"]["scope"] = "Q0_REAL_CANDIDATE_ONLY"
+    case = observed["cases"][0]
+    case["activity_intervals"] = [
+        {"activity_label": "K_S1_A", "activity_kind": "KERNEL", "start_ns": 100, "end_ns": 300},
+        {"activity_label": "K_S1_B", "activity_kind": "KERNEL", "start_ns": 300, "end_ns": 900},
+        {"activity_label": "K_OTHER", "activity_kind": "KERNEL", "start_ns": 550, "end_ns": 950},
+    ]
+    sync = case["syncs"][0]
+    sync["sync_start_ns"] = 500
+    sync["sync_end_ns"] = 1000
+    sync["b_timing"] = {
+        "wait_set_hidden_union_ns": 400,
+        "wait_set_exposed_union_ns": 400,
+        "terminal_pre_sync_ns": 200,
+        "terminal_overlap_sync_ns": 400,
+        "sync_return_tail_ns": 100,
+    }
+    sync["a_window"]["A_device_wait_ns"] = 400
+    sync["a_window"]["A_sync_residual_ns"] = 100
+    return oracle, observed
+
+
+def test_real_observed_uses_actual_intervals_not_synthetic_literals():
+    oracle, observed = _real_stream_case()
+
+    report = evaluate_q0_observed(oracle, observed)
+
+    assert report["verdict"] == "REAL_CASE_PASS"
+    assert report["evidence_scope"] == "REAL_CASE_ONLY"
+    assert report["q0_status"] == "NOT_RUN"
+
+
+def test_real_observed_wrong_timing_fails_closed():
+    oracle, observed = _real_stream_case()
+    observed["cases"][0]["syncs"][0]["b_timing"]["wait_set_exposed_union_ns"] += 1
+
+    report = evaluate_q0_observed(oracle, observed)
+
+    assert report["verdict"] == "FAIL"
+    assert any(
+        "wait_set_exposed_union_ns" in mismatch
+        for mismatch in report["cases"][0]["mismatches"]
+    )
+
+
+def test_real_observed_requires_activity_intervals():
+    oracle, observed = _real_stream_case()
+    del observed["cases"][0]["activity_intervals"]
+
+    report = evaluate_q0_observed(oracle, observed)
+
+    assert report["verdict"] == "FAIL"
+    assert any("schema" in mismatch for mismatch in report["global_mismatches"])

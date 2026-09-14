@@ -2,14 +2,14 @@
 
 ## 当前快照
 
-- 清单版本：`3.9`
+- 清单版本：`4.0`
 - 最近更新：`2026-09-14`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G6-02B`，补齐真实 Q0 单 case executor、receipt、Canonical 故障副本、真实 observed/evaluator 与唯一 Gate 聚合；完成后才进入 `EP-G6-03` 服务器采集
+- 当前最高优先级：`EP-G6-02B`，补齐唯一 Gate 聚合、CLI 与服务器运行手册；完成后才进入 `EP-G6-03` 服务器采集
 - 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2、S v0.2 与 Gate 5 的 A/B/D/Exposure Signature 已通过离线/Engineering 审查；历史 trace 回归保持 fail-closed，不能升级为 Q0 或正式证据；真实 Q0、Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
@@ -121,7 +121,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - [x] `EP-G6-01` 实现受控 CUDA Q0 微程序和机器可读 manifest。23 个 oracle case 严格一一映射，其中 21 个具有 native CUDA seed，terminal tie 与 submission race 明确保持纯合成；缺 correlation、dropped records 与 graph mapping 缺失使用真实 seed 后受控 Canonical 故障注入。CUDA 13.0 在无 GPU 执行条件下成功编译，binary `--list-cases` 与 21 个 seed 集合一致，未知 case 在 CUDA 初始化前失败。证据：`q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json`、`tests/test_v141_q0_cuda_source.py`。
 - [x] `EP-G6-02` 完成 GPU 前 Q0 执行准备：Windows/Linux 结构化 `nsys` argv、每 case source manifest、输入哈希、不可覆盖输出和 `PREPARED_NOT_EXECUTED/NOT_RUN` dry-run；23 个显式合成 Canonical profile 均经正式 S/A/B 与独立 evaluator 对照通过。observed 使用严格 schema，evaluator 静态禁止导入被测 S/A/B，错误字段、重复 identity、缺失/额外 case 和资格升级均 fail closed。证据：`exposedpath_v141/q0_execution.py`、`exposedpath_v141/q0_synthetic.py`、`exposedpath_v141/q0_evaluator.py`、`docs/v1_4_1/contracts/q0_observed_schema_v0_2.json`、`tests/test_v141_q0_execution.py`、`tests/test_v141_q0_synthetic.py`、`tests/test_v141_q0_evaluator.py`。
 - [x] `EP-G6-02A` 完成 GPU 前集成验收。CUDA 13.0 编译和 21-seed 清单、Nsight 2026.1.1 Windows dry-run、23/23 合成对照、oracle/evaluator 独立性、Canonical 边界和 Python compileall 通过；Gate4/5/Q0 定向 `200 passed`，CUDA source `5 passed`，全仓 `570 passed, 2 failed`，仅为既有 PowerShell smoke 基线失败。证据：`engineering_evidence/q0_pre_gpu_v0_2/readiness_report.json`。
-- [ ] `EP-G6-02B`（进行中）补齐真实 Q0 执行适配。已完成 capture/显式 GPU 身份、单 native case executor，以及三种受控 Canonical fault：缺 activity correlation、dropped-record 标记和缺 graph node mapping 均只写不可覆盖派生副本，要求恰好命中一个目标并记录源 manifest 哈希、变换身份和 mutation count；源 Canonical 不变。采集定向 `24 passed`，fault/S 定向 `78 passed`。
+- [ ] `EP-G6-02B`（进行中）补齐真实 Q0 执行适配。已完成 capture/显式 GPU 身份、单 native case executor、三种受控 Canonical fault，以及真实 observed/evaluator：活动标签必须经 `activity correlation -> launch API -> 同线程唯一 marker` 恢复；真实 A/B 预期使用人工 wait-set/terminal 与实际区间独立重算，不比较合成固定纳秒值。Q0 聚焦回归 `58 passed`，独立性检查 `PASS`；尚缺唯一 Gate 聚合、CLI 与服务器手册。
 - [ ] `EP-G6-03`（受阻于 GPU）在目标 observation stack 上采集真实受控 trace。
 - [ ] `EP-G6-04`（受阻）真实 trace 全部必需用例对照 oracle，并验证 fail-closed。
 - [ ] `EP-G6-05`（受阻）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
@@ -263,3 +263,4 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 | 3.7 | 2026-09-14 | 真实执行复审发现 NVTX capture 缺少明确触发 range、真实 receipt/fault/observed/gate 尚未实现，因此在服务器采集前新增 EP-G6-02B。第一步改用 CUDA Profiler API 控制 capture，并冻结显式单 GPU 选择。 | EP-G6-02B、EP-G6-03 | 修正此前“可直接真实采集”的过早推断；不否定合成就绪证据，不改变 Q0 NOT_RUN、Gate6 BLOCKED 或任何 Formal 资格。 |
 | 3.8 | 2026-09-14 | 完成真实 Q0 单 case executor 与不可覆盖 receipt：执行前检查工具和 source manifest 哈希，显式传递单 GPU 选择，采集环境身份、命令日志与 Raw 哈希；失败现场与成功收据严格分开。 | EP-G6-02B | 仅新增 Engineering 采集能力，尚无真实 GPU 产物；Q0 保持 NOT_RUN，Gate6 保持 BLOCKED。 |
 | 3.9 | 2026-09-14 | 完成三种 Q0 Canonical 故障副本：只在新 bundle 中移除唯一 activity correlation、标记 dropped records 或移除唯一 graph node mapping，并重写确定性文件哈希和 lineage。 | EP-G6-02B | Raw 与源 Canonical 保持不可变；故障副本只用于 Q0 Engineering，不能升级数据资格。 |
+| 4.0 | 2026-09-14 | 完成真实 Q0 observed/evaluator：稳定活动标签由 correlation、launch API 与唯一结构化 marker 联结；真实数值预期只使用 oracle 预写的 wait-set/terminal 标签和本次真实区间独立重算，避免拿合成固定纳秒值评判 GPU。缺区间、缺映射和歧义映射均 fail closed。 | EP-G6-02B | 单 case 通过仅标记 `REAL_CASE_PASS/REAL_CASE_ONLY`，Q0 仍为 `NOT_RUN`；尚未聚合全部必需 case，Gate 6 保持 `BLOCKED`。 |

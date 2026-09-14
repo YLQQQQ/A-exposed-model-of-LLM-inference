@@ -12,11 +12,7 @@ from jsonschema import Draft202012Validator
 from .q0_oracle import calculate_expected_timing
 
 
-_ELIGIBILITY = {
-    "formal_evidence": False,
-    "q0_status": "NOT_RUN",
-    "scope": "Q0_SYNTHETIC_ONLY",
-}
+_ELIGIBILITY_BASE = {"formal_evidence": False, "q0_status": "NOT_RUN"}
 _B_TIMING = (
     "wait_set_hidden_union_ns",
     "wait_set_exposed_union_ns",
@@ -62,10 +58,87 @@ def _compare_field(
         )
 
 
+def _intersection(interval: tuple[int, int], window: tuple[int, int]) -> tuple[int, int] | None:
+    start, end = max(interval[0], window[0]), min(interval[1], window[1])
+    return (start, end) if end > start else None
+
+
+def _union_length(intervals: Sequence[tuple[int, int]]) -> int:
+    if not intervals:
+        return 0
+    ordered = sorted(intervals)
+    start, end = ordered[0]
+    total = 0
+    for next_start, next_end in ordered[1:]:
+        if next_start <= end:
+            end = max(end, next_end)
+        else:
+            total += end - start
+            start, end = next_start, next_end
+    return total + end - start
+
+
+def _real_expected_timing(
+    expected_sync: Mapping[str, Any], observed_case: Mapping[str, Any], observed_sync: Mapping[str, Any]
+) -> dict[str, int]:
+    """用人工 wait-set/terminal 标签和真实区间独立计算，不读取 analyzer 数值。"""
+
+    intervals, problems = _by_unique_id(
+        observed_case.get("activity_intervals"), "activity_label", "activity_intervals"
+    )
+    if problems:
+        raise ValueError("；".join(problems))
+    wait_labels = expected_sync.get("wait_set_activity_labels", [])
+    missing = sorted(set(wait_labels) - set(intervals))
+    if missing:
+        raise ValueError(f"真实活动区间缺少 oracle wait-set 标签: {missing}")
+    sync_start = int(observed_sync["sync_start_ns"])
+    sync_end = int(observed_sync["sync_end_ns"])
+    if sync_end < sync_start:
+        raise ValueError("真实 sync 区间非法")
+    hidden: list[tuple[int, int]] = []
+    exposed: list[tuple[int, int]] = []
+    for label in wait_labels:
+        activity = intervals[label]
+        interval = (int(activity["start_ns"]), int(activity["end_ns"]))
+        if interval[1] < interval[0]:
+            raise ValueError(f"真实活动区间非法: {label}")
+        before = _intersection(interval, (0, sync_start))
+        during = _intersection(interval, (sync_start, sync_end))
+        if before:
+            hidden.append(before)
+        if during:
+            exposed.append(during)
+    terminal = expected_sync.get("terminal", {})
+    terminal_pre = terminal_overlap = 0
+    terminal_end = sync_start
+    if terminal.get("status") == "VALID":
+        label = terminal.get("activity_label")
+        if label not in intervals:
+            raise ValueError(f"真实活动区间缺少 oracle terminal 标签: {label}")
+        activity = intervals[label]
+        activity_start, terminal_end = int(activity["start_ns"]), int(activity["end_ns"])
+        terminal_pre = max(0, min(terminal_end, sync_start) - activity_start)
+        terminal_overlap = max(
+            0, min(terminal_end, sync_end) - max(activity_start, sync_start)
+        )
+    exposed_union = _union_length(exposed)
+    return {
+        "wait_set_hidden_union_ns": _union_length(hidden),
+        "wait_set_exposed_union_ns": exposed_union,
+        "terminal_pre_sync_ns": terminal_pre,
+        "terminal_overlap_sync_ns": terminal_overlap,
+        "sync_return_tail_ns": max(0, sync_end - max(sync_start, terminal_end)),
+        "A_device_wait_ns": exposed_union,
+        "A_sync_residual_ns": max(0, sync_end - sync_start - exposed_union),
+    }
+
+
 def _check_relation(
     relation: str,
     observed_sync: Mapping[str, Any],
     mismatches: list[str],
+    real_expected: Mapping[str, int] | None = None,
 ) -> None:
     sync_label = str(observed_sync.get("sync_label"))
     a_window = observed_sync.get("a_window")
@@ -77,10 +150,12 @@ def _check_relation(
 
     if relation.startswith("A_") and "_ns=" in relation:
         field, literal = relation.split("=", 1)
-        _compare_field(mismatches, sync_label, field, int(literal), a_window.get(field))
+        expected = real_expected.get(field) if real_expected is not None else int(literal)
+        _compare_field(mismatches, sync_label, field, expected, a_window.get(field))
     elif relation.startswith(("wait_set_", "sync_return_tail_ns=")) and "=" in relation:
         field, literal = relation.split("=", 1)
-        _compare_field(mismatches, sync_label, field, int(literal), b_timing.get(field))
+        expected = real_expected.get(field) if real_expected is not None else int(literal)
+        _compare_field(mismatches, sync_label, field, expected, b_timing.get(field))
     elif relation.startswith("terminal="):
         expected = relation.split("=", 1)[1]
         terminal = observed_sync.get("terminal")
@@ -146,11 +221,18 @@ def evaluate_q0_observed(
         global_mismatches.append(f"observed schema 失败 {location}: {first.message}")
     if observed.get("schema_version") != "exposedpath-q0-observed/0.2.0":
         global_mismatches.append("observed schema_version 不匹配")
-    if observed.get("source_kind") != "SYNTHETIC_CANONICAL":
+    source_kind = observed.get("source_kind")
+    if source_kind not in {"SYNTHETIC_CANONICAL", "REAL_CONTROLLED_TRACE"}:
         global_mismatches.append("observed source_kind 非法")
     if observed.get("data_role") != "Engineering":
         global_mismatches.append("observed data_role 必须是 Engineering")
-    if observed.get("research_eligibility") != _ELIGIBILITY:
+    expected_scope = (
+        "Q0_REAL_CANDIDATE_ONLY"
+        if source_kind == "REAL_CONTROLLED_TRACE"
+        else "Q0_SYNTHETIC_ONLY"
+    )
+    expected_eligibility = {**_ELIGIBILITY_BASE, "scope": expected_scope}
+    if observed.get("research_eligibility") != expected_eligibility:
         global_mismatches.append("observed 资格不得升级")
 
     oracle_cases, oracle_problems = _by_unique_id(oracle.get("cases"), "case_id", "oracle.cases")
@@ -211,20 +293,31 @@ def evaluate_q0_observed(
                 mismatches, sync_label, "terminal", expected_sync.get("terminal"), actual.get("terminal")
             )
             timing = actual.get("b_timing")
+            real_expected: Mapping[str, int] | None = None
             if expected_sync.get("b_status") == "B_VALID":
-                expected_timing = calculate_expected_timing(oracle_case, sync_label)
+                try:
+                    expected_timing = (
+                        _real_expected_timing(expected_sync, observed_case, actual)
+                        if source_kind == "REAL_CONTROLLED_TRACE"
+                        else calculate_expected_timing(oracle_case, sync_label)
+                    )
+                    if source_kind == "REAL_CONTROLLED_TRACE":
+                        real_expected = expected_timing
+                except (KeyError, TypeError, ValueError) as exc:
+                    mismatches.append(f"{sync_label}.真实区间预期无法计算: {exc}")
+                    expected_timing = {}
                 for field in _B_TIMING:
                     _compare_field(
                         mismatches,
                         sync_label,
                         field,
-                        expected_timing[field],
+                        expected_timing.get(field),
                         timing.get(field) if isinstance(timing, Mapping) else None,
                     )
             elif not isinstance(timing, Mapping) or any(timing.get(field) is not None for field in _B_TIMING):
                 mismatches.append(f"{sync_label}.非 B_VALID timing 必须全为 null")
             for relation in [*expected_sync.get("a_relations", []), *expected_sync.get("b_relations", [])]:
-                _check_relation(str(relation), actual, mismatches)
+                _check_relation(str(relation), actual, mismatches, real_expected)
         case_reports.append(
             {
                 "case_id": case_id,
@@ -237,12 +330,14 @@ def evaluate_q0_observed(
     required = [case for case in case_reports if case["required_for_q0"]]
     passed = sum(case["status"] == "PASS" for case in required)
     failed = len(required) - passed
-    verdict = "SYNTHETIC_PASS" if not global_mismatches and failed == 0 else "FAIL"
+    pass_verdict = "REAL_CASE_PASS" if source_kind == "REAL_CONTROLLED_TRACE" else "SYNTHETIC_PASS"
+    verdict = pass_verdict if not global_mismatches and failed == 0 else "FAIL"
+    evidence_scope = "REAL_CASE_ONLY" if source_kind == "REAL_CONTROLLED_TRACE" else "SYNTHETIC_ONLY"
     return {
         "schema_version": "exposedpath-q0-comparison/0.2.0",
-        "evidence_scope": "SYNTHETIC_ONLY",
+        "evidence_scope": evidence_scope,
         "q0_status": "NOT_RUN",
-        "research_eligibility": dict(_ELIGIBILITY),
+        "research_eligibility": expected_eligibility,
         "verdict": verdict,
         "global_mismatches": global_mismatches,
         "summary": {

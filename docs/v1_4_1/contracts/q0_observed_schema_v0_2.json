@@ -6,7 +6,7 @@
   "required": ["schema_version", "source_kind", "data_role", "research_eligibility", "cases"],
   "properties": {
     "schema_version": {"const": "exposedpath-q0-observed/0.2.0"},
-    "source_kind": {"const": "SYNTHETIC_CANONICAL"},
+    "source_kind": {"enum": ["SYNTHETIC_CANONICAL", "REAL_CONTROLLED_TRACE"]},
     "data_role": {"const": "Engineering"},
     "research_eligibility": {
       "type": "object",
@@ -15,7 +15,7 @@
       "properties": {
         "formal_evidence": {"const": false},
         "q0_status": {"const": "NOT_RUN"},
-        "scope": {"const": "Q0_SYNTHETIC_ONLY"}
+        "scope": {"enum": ["Q0_SYNTHETIC_ONLY", "Q0_REAL_CANDIDATE_ONLY"]}
       }
     },
     "cases": {
@@ -78,6 +78,17 @@
         "a_window": {"type": ["object", "null"]}
       }
     },
+    "activityInterval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["activity_label", "activity_kind", "start_ns", "end_ns"],
+      "properties": {
+        "activity_label": {"type": "string", "minLength": 1},
+        "activity_kind": {"enum": ["KERNEL", "MEMCPY", "MEMSET"]},
+        "start_ns": {"type": "integer", "minimum": 0},
+        "end_ns": {"type": "integer", "minimum": 0}
+      }
+    },
     "case": {
       "type": "object",
       "additionalProperties": false,
@@ -85,8 +96,28 @@
       "properties": {
         "case_id": {"type": "string", "minLength": 1},
         "syncs": {"type": "array", "items": {"$ref": "#/$defs/sync"}},
-        "non_sync_api_labels": {"$ref": "#/$defs/stringList"}
+        "non_sync_api_labels": {"$ref": "#/$defs/stringList"},
+        "activity_intervals": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/activityInterval"}
+        }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"source_kind": {"const": "REAL_CONTROLLED_TRACE"}}},
+      "then": {
+        "properties": {
+          "research_eligibility": {"properties": {"scope": {"const": "Q0_REAL_CANDIDATE_ONLY"}}},
+          "cases": {"items": {"required": ["activity_intervals"]}}
+        }
+      },
+      "else": {
+        "properties": {
+          "research_eligibility": {"properties": {"scope": {"const": "Q0_SYNTHETIC_ONLY"}}}
+        }
+      }
+    }
+  ]
 }
