@@ -2,14 +2,14 @@
 
 ## 当前快照
 
-- 清单版本：`3.0`
+- 清单版本：`3.1`
 - 最近更新：`2026-09-14`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G6-01`，实现受控 CUDA Q0 微程序与机器可读 manifest；同时推进不依赖 GPU 的 `EP-G6-02` 合成 trace/oracle 自动对照，但真实 Q0 仍受 GPU 阻塞
+- 当前最高优先级：`EP-G6-01`，Gate 6 GPU 前执行计划已冻结，依次实现 23-case 执行合同、受控 CUDA 微程序、跨平台 dry-run、合成 Canonical/S/A/B 与独立 oracle 自动对照；真实 Q0 仍受 GPU 阻塞
 - 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2、S v0.2 与 Gate 5 的 A/B/D/Exposure Signature 已通过离线/Engineering 审查；历史 trace 回归保持 fail-closed，不能升级为 Q0 或正式证据；真实 Q0、Engineering Pilot、Protocol Freeze 和正式实验仍未开始
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
@@ -249,3 +249,4 @@
 | 2.8 | 2026-09-13 | 完成 Gate 5 Task 8 离线工程验证：以 `nsys export --lazy=false` 只读导出历史 `w01` trace，Raw SHA-256 前后相同；Canonical identity 保持 ambiguous，S 的 446 条 physical sync 均 invalid，A 无合格 window，B 一一投影为 446 条 `B_INVALID`，Q0 保持 `NOT_RUN`。完成 A/B 定向、合同、oracle/边界、compile 和全量 pytest；全量仅保留已记录的两项 PowerShell smoke 失败。 | EP-G5-06、EP-ISSUE-02、EP-ISSUE-03 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；历史结果仍仅为 Engineering，当前无 Formal 数据。Gate 5 明确保持 `NOT_RUN`，awaiting independent review；controller 在独立完整 diff 复审后决定 verdict。 |
 | 2.9 | 2026-09-14 | 完整分支复审后的最终修复：严格校验 S 状态、wait-set/frontier 和 Canonical terminal 一致性；跨 invocation Full Request 正重叠按 identity fail closed；零窗口必须有质量 issue；Derived 改为精确 A/B loader/error 符号白名单。首轮 RED 30 项复现，另补缺 phase 的重叠请求 RED→GREEN；最终 Gate 5 `170 passed`，全量 `540 passed, 2 failed`（仅既有 PowerShell smoke）。 | EP-G5-01、EP-G5-03、EP-G5-05、EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；未重新采集历史 trace 或产生 Formal 数据。Gate 5 保持 `NOT_RUN`，awaiting independent re-review。 |
 | 3.0 | 2026-09-14 | 独立再复审确认三项问题闭合，并发现 completion boundary 尚未核对 Canonical sync 时钟域；新增反例先失败后修复，最终定向复核 `Approved`。Gate 5 新鲜验证为 `171 passed`，全量为 `541 passed, 2 failed`（仅既有 PowerShell smoke），据此将 Gate 5 判为 `PASS`，当前优先级切换至 Gate 6 的 GPU 前可执行工作。 | EP-G5-03、EP-G5-06、EP-G6-01、EP-G6-02 | 不改变 Measurement Contract、真实 Q0、Pilot 或 Protocol Freeze；历史数据仍仅为 Engineering，当前无 Formal 数据。 |
+| 3.1 | 2026-09-14 | 冻结 Gate 6 GPU 前实施计划：23 个 oracle case 一一映射到原生 CUDA、真实 seed 后故障注入或纯合成 Canonical；新增 CUDA compile/list、Windows/Linux argv dry-run、正式 S/A/B 合成执行和独立 evaluator 的测试先行顺序。 | EP-G6-01、EP-G6-02 | 不改变 Measurement Contract 或 Gate 2 expected；Gate 6 继续 `BLOCKED`，不产生真实 Q0、Pilot 或 Formal 证据。 |
