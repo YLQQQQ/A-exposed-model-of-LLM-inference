@@ -2,8 +2,8 @@
 
 ## 当前快照
 
-- 清单版本：`4.1`
-- 最近更新：`2026-09-14`
+- 清单版本：`4.2`
+- 最近更新：`2026-09-15`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
@@ -265,3 +265,4 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 | 3.9 | 2026-09-14 | 完成三种 Q0 Canonical 故障副本：只在新 bundle 中移除唯一 activity correlation、标记 dropped records 或移除唯一 graph node mapping，并重写确定性文件哈希和 lineage。 | EP-G6-02B | Raw 与源 Canonical 保持不可变；故障副本只用于 Q0 Engineering，不能升级数据资格。 |
 | 4.0 | 2026-09-14 | 完成真实 Q0 observed/evaluator：稳定活动标签由 correlation、launch API 与唯一结构化 marker 联结；真实数值预期只使用 oracle 预写的 wait-set/terminal 标签和本次真实区间独立重算，避免拿合成固定纳秒值评判 GPU。缺区间、缺映射和歧义映射均 fail closed。 | EP-G6-02B | 单 case 通过仅标记 `REAL_CASE_PASS/REAL_CASE_ONLY`，Q0 仍为 `NOT_RUN`；尚未聚合全部必需 case，Gate 6 保持 `BLOCKED`。 |
 | 4.1 | 2026-09-14 | 完成本地全部真实 Q0 执行缺口：故障注入前记录唯一目标/预写标签；单 case 证据绑定 receipt、Raw/source manifest、Canonical/S/A/B 哈希与环境；唯一聚合器强制 21 个真实 case、2 个合成边界例、单 run 和单环境，完整合成报告不得替代真实案例；补齐 CLI 与 Windows 服务器手册。 | EP-G6-02B、EP-G6-03 至 EP-G6-05 | 本地准备完成不等于真实 Q0 已运行。Gate 6 仍 `BLOCKED`、Q0 仍 `NOT_RUN`；下一步必须在固定 GPU/软件栈执行服务器采集。 |
+| 4.2 | 2026-09-15 | 根据服务器已有旧 `YLQ_test` 环境补充部署与回传流程：旧项目/虚拟环境/历史结果保持不动；新版由 Git bundle 在同级目录 clone，使用轻量独立虚拟环境并记录 commit/dirty state；先跑单例再批量，最终回传完整 `$Out`。 | EP-G6-03 | 只完善 Engineering 执行与 provenance，不改变 Measurement Contract、Q0 verdict、Protocol Freeze 或 Formal 数据资格。 |

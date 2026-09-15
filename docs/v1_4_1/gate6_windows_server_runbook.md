@@ -1,5 +1,41 @@
 # Gate 6 Windows GPU 服务器操作手册
 
+## 0. 从本机部署到已有服务器
+
+服务器中原有的 `YLQ_test` 包含旧项目、旧虚拟环境和历史 `nsys_*`、`pilot_*` 结果，应完整保留，不得覆盖、删除或把它改名冒充新版。新版使用 Git bundle 在同级目录并排部署，不要求经过 GitHub。
+
+本机已经生成的交付文件位于仓库根目录的 `transfer` 文件夹，名称以最终交付消息为准。把这一份 `.bundle` 文件通过 RDP、共享盘或移动介质复制到服务器原 `YLQ_test` 的同级目录。服务器目录建议为：
+
+```text
+Wsn1
+├── YLQ_test                 # 旧项目和旧结果，保持不动
+├── ExposedPath_Q0_*.bundle  # 本机交付包
+└── YLQ_test_q0_v141         # 从 bundle 新建的 Q0 工作目录
+```
+
+在服务器 PowerShell 中进入上述父目录并执行：
+
+```powershell
+git clone -b codex/v141-analyzer ".\ExposedPath_Q0_实际文件名.bundle" ".\YLQ_test_q0_v141"
+Set-Location ".\YLQ_test_q0_v141"
+git status --short --branch
+git rev-parse HEAD
+```
+
+不得直接复制本机 `.worktrees\v141-analyzer` 目录，因为其中的 `.git` 指向本机主仓库，换机器后会失效。clone 完成后，以最终交付消息记录的 commit 为核对值。
+
+Q0 不加载模型，因此不用复制旧 `models`。服务器已有 GPU driver、CUDA Toolkit、`nvcc` 和 Nsight Systems 可以复用，但必须重新记录版本。旧 `.venv` 不必删除，也不要向其中追加依赖；在新版目录建立轻量独立环境：
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install pytest jsonschema
+$Python = (Resolve-Path ".\.venv\Scripts\python.exe").Path
+& $Python -m pytest tests/test_v141_q0_execution.py tests/test_v141_q0_collection.py tests/test_v141_q0_faults.py tests/test_v141_q0_real.py tests/test_v141_q0_gate.py -q -p no:cacheprovider
+```
+
+后续命令统一把文中的 `python` 替换为 `& $Python`，避免意外调用旧环境。先完成环境检查和 `Q0-STREAM-001` 单例；单例失败时停止并回传该次输出，不要直接批量运行。
+
 ## 1. 本轮目标与边界
 
 本轮在 **一张固定 GPU、一个固定软件栈** 上运行 Q0。输出只用于证明 analyzer 的 Correctness 资格，不是 N1/G1/G2 性能结果，也不是 Formal 数据。RTX 4090 或 RTX 6000 Ada 均可先做 Windows Engineering/Q0；同一轮不得混用两张卡。若论文正式平台改为 Linux，必须在 Linux 目标栈重新执行平台资格检查和 Q0，不能直接沿用 Windows Q0。
@@ -8,15 +44,15 @@
 
 ## 2. 一次性环境检查
 
-在仓库根目录打开 PowerShell：
+在新版仓库根目录打开 PowerShell：
 
 ```powershell
 git status --short --branch
 nvidia-smi -L
-python --version
+& $Python --version
 & "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.4.1\target-windows-x64\nsys.exe" --version
 nvcc --version
-python -m pytest tests/test_v141_q0_execution.py tests/test_v141_q0_collection.py tests/test_v141_q0_faults.py tests/test_v141_q0_real.py tests/test_v141_q0_gate.py -q -p no:cacheprovider
+& $Python -m pytest tests/test_v141_q0_execution.py tests/test_v141_q0_collection.py tests/test_v141_q0_faults.py tests/test_v141_q0_real.py tests/test_v141_q0_gate.py -q -p no:cacheprovider
 ```
 
 建议用 `nvidia-smi -L` 显示的 GPU UUID 作为 `CUDA_VISIBLE_DEVICES` 选择器。若 Nsight 安装路径不同，以服务器实际路径为准，不要复制本机绝对路径。
@@ -31,8 +67,11 @@ $Binary = Join-Path $Out "bin\exposedpath_q0.exe"
 $Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.4.1\target-windows-x64\nsys.exe"
 $GpuSelector = "GPU-替换为nvidia-smi显示的完整UUID"
 
-python -m exposedpath_v141 build-q0-microbench --nvcc (Get-Command nvcc).Source --output $Binary --platform windows
-python -m exposedpath_v141 prepare-q0-run --output-dir (Join-Path $Out "run") --binary $Binary --nsys $Nsys --platform windows --run-id $RunId --cuda-visible-device $GpuSelector
+& $Python -m exposedpath_v141 build-q0-microbench --nvcc (Get-Command nvcc).Source --output $Binary --platform windows
+& $Python -m exposedpath_v141 prepare-q0-run --output-dir (Join-Path $Out "run") --binary $Binary --nsys $Nsys --platform windows --run-id $RunId --cuda-visible-device $GpuSelector
+
+git rev-parse HEAD | Set-Content (Join-Path $Out "code_commit.txt")
+git status --porcelain=v1 | Set-Content (Join-Path $Out "git_status.txt")
 ```
 
 验收：编译输出为 `PASS`；run manifest 为 `PREPARED_NOT_EXECUTED`；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定。
@@ -44,7 +83,7 @@ $RunManifest = Join-Path $Out "run\q0_run_manifest.json"
 $Run = Get-Content -LiteralPath $RunManifest -Raw | ConvertFrom-Json
 $NativeCases = @($Run.cases | Where-Object { $null -ne $_.command_argv })
 foreach ($Case in $NativeCases) {
-    python -m exposedpath_v141 execute-q0-case --run-manifest $RunManifest --case $Case.case_id
+    & $Python -m exposedpath_v141 execute-q0-case --run-manifest $RunManifest --case $Case.case_id
     if ($LASTEXITCODE -ne 0) { throw "采集失败：$($Case.case_id)，保留现场并停止" }
 }
 ```
@@ -67,7 +106,7 @@ $CollectorVersion = [string]$Receipt.environment.nsight_systems
 
 & $Nsys export --type sqlite --force-overwrite=false --output $Sqlite $Raw
 if ($LASTEXITCODE -ne 0) { throw "SQLite 导出失败：$CaseId" }
-python -m exposedpath_v141 convert-sqlite --sqlite $Sqlite --output-dir (Join-Path $CaseDir "canonical") --data-role Engineering --raw-sha256 $RawSha --collector-version $CollectorVersion --source-manifest $SourceManifest
+& $Python -m exposedpath_v141 convert-sqlite --sqlite $Sqlite --output-dir (Join-Path $CaseDir "canonical") --data-role Engineering --raw-sha256 $RawSha --collector-version $CollectorVersion --source-manifest $SourceManifest
 if ($LASTEXITCODE -notin 0,2,3) { throw "Canonical 转换异常：$CaseId" }
 ```
 
@@ -81,7 +120,7 @@ if ($LASTEXITCODE -notin 0,2,3) { throw "Canonical 转换异常：$CaseId" }
 $FaultCases = @("Q0-MISSING-CORR-001", "Q0-DROPPED-001", "Q0-GRAPH-UNSUPPORTED-001")
 foreach ($CaseId in $FaultCases) {
     $CaseDir = Join-Path $Out "run\cases\$CaseId"
-    python -m exposedpath_v141 apply-q0-fault --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --case $CaseId --output-dir (Join-Path $CaseDir "canonical_fault")
+    & $Python -m exposedpath_v141 apply-q0-fault --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --case $CaseId --output-dir (Join-Path $CaseDir "canonical_fault")
     if ($LASTEXITCODE -ne 0) { throw "故障副本生成失败：$CaseId" }
 }
 ```
@@ -102,11 +141,11 @@ foreach ($Case in $NativeCases) {
     $ABDir = Join-Path $CaseDir "ab"
     $EvidenceDir = Join-Path $Out "real_evidence\$CaseId"
 
-    python -m exposedpath_v141 analyze-s --canonical-manifest $CanonicalManifest --output-dir $SDir
+    & $Python -m exposedpath_v141 analyze-s --canonical-manifest $CanonicalManifest --output-dir $SDir
     if ($LASTEXITCODE -notin 0,2,3) { throw "S 执行异常：$CaseId" }
-    python -m exposedpath_v141 analyze-ab --canonical-manifest $CanonicalManifest --s-manifest (Join-Path $SDir "s_manifest.json") --output-dir $ABDir
+    & $Python -m exposedpath_v141 analyze-ab --canonical-manifest $CanonicalManifest --s-manifest (Join-Path $SDir "s_manifest.json") --output-dir $ABDir
     if ($LASTEXITCODE -notin 0,2,3) { throw "A/B 执行异常：$CaseId" }
-    python -m exposedpath_v141 evaluate-q0-real-case --case $CaseId --canonical-manifest $CanonicalManifest --s-manifest (Join-Path $SDir "s_manifest.json") --ab-manifest (Join-Path $ABDir "ab_manifest.json") --collection-receipt (Join-Path $CaseDir "collection_receipt.json") --output-dir $EvidenceDir
+    & $Python -m exposedpath_v141 evaluate-q0-real-case --case $CaseId --canonical-manifest $CanonicalManifest --s-manifest (Join-Path $SDir "s_manifest.json") --ab-manifest (Join-Path $ABDir "ab_manifest.json") --collection-receipt (Join-Path $CaseDir "collection_receipt.json") --output-dir $EvidenceDir
     if ($LASTEXITCODE -ne 0) { throw "真实 Q0 case 未通过：$CaseId" }
 }
 ```
@@ -117,10 +156,10 @@ foreach ($Case in $NativeCases) {
 
 ```powershell
 $SyntheticDir = Join-Path $Out "synthetic"
-python -m exposedpath_v141 run-q0-synthetic --output-dir $SyntheticDir
+& $Python -m exposedpath_v141 run-q0-synthetic --output-dir $SyntheticDir
 if ($LASTEXITCODE -ne 0) { throw "合成 Q0 回归失败" }
 
-python -m exposedpath_v141 aggregate-q0-gate --real-evidence-dir (Join-Path $Out "real_evidence") --synthetic-report (Join-Path $SyntheticDir "q0_synthetic_report.json") --output-dir (Join-Path $Out "gate")
+& $Python -m exposedpath_v141 aggregate-q0-gate --real-evidence-dir (Join-Path $Out "real_evidence") --synthetic-report (Join-Path $SyntheticDir "q0_synthetic_report.json") --output-dir (Join-Path $Out "gate")
 if ($LASTEXITCODE -ne 0) { throw "Gate 6 未通过" }
 ```
 
@@ -128,4 +167,4 @@ if ($LASTEXITCODE -ne 0) { throw "Gate 6 未通过" }
 
 ## 9. 完成后需要带回本地的内容
 
-保留整个 `$Out` 目录，至少包括 run manifest、21 份 Raw/SQLite/receipt、Canonical（含 3 个故障副本）、S、A/B、real evidence、synthetic 和唯一 gate report。不要只复制最后一张表。返回本地后先核对 Raw 哈希和 Gate report，再更新科研进度清单。
+保留并回传整个 `$Out` 目录，至少包括 `code_commit.txt`、`git_status.txt`、run manifest、21 份 Raw/SQLite/receipt、Canonical（含 3 个故障副本）、S、A/B、real evidence、synthetic 和唯一 gate report。不要只复制最后一张表。返回本地后先核对代码版本、Raw 哈希和 Gate report，再更新科研进度清单。
