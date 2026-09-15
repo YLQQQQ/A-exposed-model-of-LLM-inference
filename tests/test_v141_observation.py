@@ -103,6 +103,42 @@ def _make_manifest(path: Path) -> None:
     path.write_text('{"run_id":"synthetic"}\n', encoding="utf-8")
 
 
+def _replace_with_q0_target_request(
+    database: Path, manifest: Path, *, start_ns: int = 1, end_ns: int = 100
+) -> None:
+    identity = {
+        "experiment_id": "exposedpath-q0",
+        "wmpc_id": "q0-controlled",
+        "run_id": "q0-test.q0-stream-001",
+        "run_role": "Engineering",
+        "pass_id": "Pass1",
+        "request_id": "Q0-STREAM-001",
+        "repeat_id": "repeat-0",
+    }
+    manifest.write_text(
+        json.dumps(
+            {
+                **{key: value for key, value in identity.items() if key != "request_id"},
+                "q0_case_id": identity["request_id"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    label = "EXPOSEDPATH_JSON_V1:" + json.dumps(
+        {"kind": "request", **identity, "phase": "full_request"},
+        separators=(",", ":"),
+    )
+    connection = sqlite3.connect(database)
+    connection.execute("DELETE FROM NVTX_EVENTS")
+    connection.execute(
+        "INSERT INTO NVTX_EVENTS(start,end,eventType,text,textId,globalTid) "
+        "VALUES (?,?,?,?,?,?)",
+        (start_ns, end_ns, 59, label, None, 1),
+    )
+    connection.commit()
+    connection.close()
+
+
 def test_valid_fixture_and_input_is_unchanged(tmp_path):
     database = tmp_path / "trace.sqlite"
     manifest = tmp_path / "manifest.json"
@@ -378,3 +414,224 @@ def test_non_unique_sync_runtime_mapping_keeps_fail_closed_details(tmp_path):
         "cudaDeviceSynchronize",
     }
     assert all("source_rowid" in row for row in offending["runtime_candidates"])
+
+
+def test_q0_target_request_unmatched_sync_remains_invalid(tmp_path):
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _replace_with_q0_target_request(database, manifest)
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES "
+        "(50,60,0,1,NULL,2,99,1,3,4294967295,4294967295)"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        "Engineering",
+        raw_sha256="A" * 64,
+        collector_version="synthetic",
+        source_manifest=manifest,
+    )
+
+    issue = next(
+        item for item in report["validity"]["issues"]
+        if item["code"] == "SYNC_RUNTIME_MAPPING_NOT_UNIQUE"
+    )
+    assert report["validity"]["status"] == "invalid"
+    assert issue["detail"]["offending"][0]["scope"] == "TARGET_REQUEST"
+
+
+def test_q0_post_request_unmatched_sync_is_harness_warning(tmp_path):
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _replace_with_q0_target_request(database, manifest)
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES "
+        "(110,120,0,1,NULL,4294967295,99,1,4,4294967295,4294967295)"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        "Engineering",
+        raw_sha256="A" * 64,
+        collector_version="synthetic",
+        source_manifest=manifest,
+    )
+
+    warning = next(
+        item for item in report["validity"]["issues"]
+        if item["code"] == "HARNESS_SYNC_RUNTIME_MAPPING_NOT_UNIQUE"
+    )
+    assert report["validity"]["status"] == "valid"
+    assert warning["level"] == "warning"
+    assert warning["detail"]["offending"][0]["scope"] == "HARNESS_OUTSIDE_REQUEST"
+    assert report["schema_version"] == "exposedpath.observation-report/0.3.0"
+    assert report["derived_checks"]["target_request_scope"] == {
+        "status": "RESOLVED",
+        "request_id": "Q0-STREAM-001",
+        "start_ns": 1,
+        "end_ns": 100,
+        "nvtx_source_rowid": 1,
+    }
+
+
+def test_q0_target_request_with_mapped_sync_is_valid(tmp_path):
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _replace_with_q0_target_request(database, manifest)
+
+    report = inspect_sqlite(
+        database,
+        "Engineering",
+        raw_sha256="A" * 64,
+        collector_version="synthetic",
+        source_manifest=manifest,
+    )
+
+    assert report["validity"]["status"] == "valid"
+    assert report["derived_checks"]["sync_correlation"][
+        "non_unique_runtime_mapping"
+    ] == 0
+
+
+def test_q0_target_request_sync_without_correlation_remains_invalid(tmp_path):
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _replace_with_q0_target_request(database, manifest)
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES "
+        "(50,60,0,1,NULL,2,NULL,1,3,4294967295,4294967295)"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        "Engineering",
+        raw_sha256="A" * 64,
+        collector_version="synthetic",
+        source_manifest=manifest,
+    )
+
+    issue = next(
+        item for item in report["validity"]["issues"]
+        if item["code"] == "SYNC_CORRELATION_MISSING"
+    )
+    assert report["validity"]["status"] == "invalid"
+    assert issue["detail"]["offending"][0]["scope"] == "TARGET_REQUEST"
+
+
+def test_q0_post_request_sync_without_correlation_is_harness_warning(tmp_path):
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _replace_with_q0_target_request(database, manifest)
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES "
+        "(110,120,0,1,NULL,4294967295,NULL,1,4,4294967295,4294967295)"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        "Engineering",
+        raw_sha256="A" * 64,
+        collector_version="synthetic",
+        source_manifest=manifest,
+    )
+
+    warning = next(
+        item for item in report["validity"]["issues"]
+        if item["code"] == "HARNESS_SYNC_CORRELATION_MISSING"
+    )
+    assert report["validity"]["status"] == "valid"
+    assert warning["detail"]["offending"][0]["scope"] == "HARNESS_OUTSIDE_REQUEST"
+
+
+def test_q0_ambiguous_target_request_keeps_global_fail_closed(tmp_path):
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _replace_with_q0_target_request(database, manifest)
+    connection = sqlite3.connect(database)
+    duplicate = connection.execute(
+        "SELECT start,end,eventType,text,textId,globalTid FROM NVTX_EVENTS"
+    ).fetchone()
+    connection.execute(
+        "INSERT INTO NVTX_EVENTS(start,end,eventType,text,textId,globalTid) "
+        "VALUES (?,?,?,?,?,?)",
+        duplicate,
+    )
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES "
+        "(110,120,0,1,NULL,4294967295,99,1,4,4294967295,4294967295)"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        "Engineering",
+        raw_sha256="A" * 64,
+        collector_version="synthetic",
+        source_manifest=manifest,
+    )
+
+    codes = {item["code"] for item in report["validity"]["issues"]}
+    issue = next(
+        item for item in report["validity"]["issues"]
+        if item["code"] == "SYNC_RUNTIME_MAPPING_NOT_UNIQUE"
+    )
+    assert report["validity"]["status"] == "invalid"
+    assert "TARGET_REQUEST_SCOPE_UNRESOLVED" in codes
+    assert issue["detail"]["offending"][0]["scope"] == "GLOBAL_TRACE"
+
+
+def test_q0_malformed_structured_nvtx_prevents_scope_exemption(tmp_path):
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _replace_with_q0_target_request(database, manifest)
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "INSERT INTO NVTX_EVENTS(start,end,eventType,text,textId,globalTid) "
+        "VALUES (?,?,?,?,?,?)",
+        (1, 100, 59, "EXPOSEDPATH_JSON_V1:{broken", None, 1),
+    )
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES "
+        "(110,120,0,1,NULL,4294967295,99,1,4,4294967295,4294967295)"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        "Engineering",
+        raw_sha256="A" * 64,
+        collector_version="synthetic",
+        source_manifest=manifest,
+    )
+
+    scope = report["derived_checks"]["target_request_scope"]
+    mapping_issue = next(
+        item for item in report["validity"]["issues"]
+        if item["code"] == "SYNC_RUNTIME_MAPPING_NOT_UNIQUE"
+    )
+    assert report["validity"]["status"] == "invalid"
+    assert scope["status"] == "UNRESOLVED"
+    assert scope["reason"] == "STRUCTURED_NVTX_MALFORMED"
+    assert mapping_issue["detail"]["offending"][0]["scope"] == "GLOBAL_TRACE"

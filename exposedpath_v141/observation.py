@@ -15,8 +15,9 @@ from typing import Any
 from . import __version__
 
 
-REPORT_SCHEMA_VERSION = "exposedpath.observation-report/0.2.0"
+REPORT_SCHEMA_VERSION = "exposedpath.observation-report/0.3.0"
 CONTRACT_VERSION = "exposedpath-v1.4.1-draft-0.1"
+STRUCTURED_NVTX_PREFIX = "EXPOSEDPATH_JSON_V1:"
 SUPPORTED_EXPORT_SCHEMAS = {
     ("2026.1.1.204", "3.24.14"),
     ("2026.2.1.210", "3.25.0"),
@@ -148,6 +149,106 @@ def _global_parts(global_id: int | None) -> tuple[int | None, int | None]:
     return (value >> 24) & 0xFFFFFF, value & 0xFFFFFF
 
 
+def _resolve_q0_target_request_scope(
+    connection: sqlite3.Connection,
+    table_usable: dict[str, bool],
+    source_manifest: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not source_manifest or source_manifest.get("experiment_id") != "exposedpath-q0":
+        return None
+    request_id = source_manifest.get("q0_case_id")
+    if not isinstance(request_id, str) or not request_id:
+        return {"status": "UNRESOLVED", "reason": "MISSING_Q0_CASE_ID"}
+    if not (
+        table_usable.get("NVTX_EVENTS") and table_usable.get("StringIds")
+    ):
+        return {
+            "status": "UNRESOLVED",
+            "request_id": request_id,
+            "reason": "NVTX_TABLE_UNUSABLE",
+        }
+
+    request_rows: list[dict[str, Any]] = []
+    malformed_structured_count = 0
+    for rowid, start, end, text in connection.execute(
+        """
+        SELECT n.rowid, n.start, n.end, COALESCE(n.text, s.value, '')
+        FROM NVTX_EVENTS AS n
+        LEFT JOIN StringIds AS s ON s.id = n.textId
+        ORDER BY n.start, n.rowid
+        """
+    ):
+        label = str(text)
+        if not label.startswith(STRUCTURED_NVTX_PREFIX):
+            continue
+        try:
+            payload = json.loads(label[len(STRUCTURED_NVTX_PREFIX) :])
+        except (json.JSONDecodeError, TypeError):
+            malformed_structured_count += 1
+            continue
+        if not isinstance(payload, dict):
+            malformed_structured_count += 1
+            continue
+        if payload.get("kind") != "request":
+            continue
+        request_rows.append(
+            {"source_rowid": rowid, "start_ns": start, "end_ns": end, "identity": payload}
+        )
+
+    identity_fields = (
+        "experiment_id", "wmpc_id", "run_id", "run_role", "pass_id", "repeat_id"
+    )
+    matching = [
+        row
+        for row in request_rows
+        if row["identity"].get("request_id") == request_id
+        and row["identity"].get("phase") == "full_request"
+        and all(
+            source_manifest.get(field) is not None
+            and row["identity"].get(field) == source_manifest.get(field)
+            for field in identity_fields
+        )
+        and isinstance(row["start_ns"], int)
+        and isinstance(row["end_ns"], int)
+        and row["end_ns"] >= row["start_ns"]
+    ]
+    if malformed_structured_count:
+        return {
+            "status": "UNRESOLVED",
+            "request_id": request_id,
+            "reason": "STRUCTURED_NVTX_MALFORMED",
+            "malformed_structured_count": malformed_structured_count,
+            "structured_request_count": len(request_rows),
+            "matching_request_count": len(matching),
+        }
+    if len(request_rows) != 1 or len(matching) != 1:
+        return {
+            "status": "UNRESOLVED",
+            "request_id": request_id,
+            "reason": "TARGET_REQUEST_NOT_UNIQUE",
+            "structured_request_count": len(request_rows),
+            "matching_request_count": len(matching),
+        }
+    target = matching[0]
+    return {
+        "status": "RESOLVED",
+        "request_id": request_id,
+        "start_ns": target["start_ns"],
+        "end_ns": target["end_ns"],
+        "nvtx_source_rowid": target["source_rowid"],
+    }
+
+
+def _sync_observation_scope(
+    sync_start_ns: int, target_request_scope: dict[str, Any] | None
+) -> str:
+    if target_request_scope and target_request_scope.get("status") == "RESOLVED":
+        if sync_start_ns >= target_request_scope["end_ns"]:
+            return "HARNESS_OUTSIDE_REQUEST"
+        return "TARGET_REQUEST"
+    return "GLOBAL_TRACE"
+
+
 def inspect_sqlite(
     sqlite_path: Path,
     data_role: str,
@@ -164,11 +265,15 @@ def inspect_sqlite(
     raw_sha256 = _validate_sha256(raw_sha256, "raw_sha256")
     manifest_sha256 = None
     manifest_name = None
+    source_manifest_data: dict[str, Any] | None = None
     if source_manifest is not None:
         source_manifest = source_manifest.resolve()
         if not source_manifest.is_file():
             raise ValueError(f"source manifest 不存在: {source_manifest}")
-        json.loads(source_manifest.read_text(encoding="utf-8"))
+        loaded_manifest = json.loads(source_manifest.read_text(encoding="utf-8"))
+        if not isinstance(loaded_manifest, dict):
+            raise ValueError("source manifest 必须是 JSON 对象")
+        source_manifest_data = loaded_manifest
         manifest_sha256 = _sha256(source_manifest)
         manifest_name = source_manifest.name
 
@@ -284,35 +389,55 @@ def inspect_sqlite(
             """
             phase_counts = {str(name): int(count) for name, count in connection.execute(query)}
 
+        target_request_scope = _resolve_q0_target_request_scope(
+            connection, table_usable, source_manifest_data
+        )
+        if target_request_scope and target_request_scope.get("status") != "RESOLVED":
+            issues.append(
+                _issue("invalid", "TARGET_REQUEST_SCOPE_UNRESOLVED", target_request_scope)
+            )
+
         sync_check: dict[str, Any] = {
             "total": counts.get("CUPTI_ACTIVITY_KIND_SYNCHRONIZATION"),
             "missing_correlation": None,
             "non_unique_runtime_mapping": None,
             "non_unique_runtime_mapping_details": [],
+            "harness_outside_request_issue_count": 0,
         }
         if (
             table_usable.get("CUPTI_ACTIVITY_KIND_SYNCHRONIZATION")
             and table_usable.get("CUPTI_ACTIVITY_KIND_RUNTIME")
             and table_usable.get("StringIds")
         ):
-            missing_correlation = int(
-                connection.execute(
-                    "SELECT COUNT(*) FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION "
-                    "WHERE correlationId IS NULL"
-                ).fetchone()[0]
-            )
+            missing_details: list[dict[str, Any]] = []
             offending: list[dict[str, Any]] = []
             sync_rows = connection.execute(
                 """
                 SELECT rowid, start, end, deviceId, contextId, streamId,
                        correlationId, globalPid, syncType, eventId, eventSyncId
                 FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION
-                WHERE correlationId IS NOT NULL
                 ORDER BY start, end, rowid
                 """
             )
             for sync_row in sync_rows:
                 correlation_id = sync_row[6]
+                sync_detail = {
+                    "sync_source_rowid": sync_row[0],
+                    "start_ns": sync_row[1],
+                    "end_ns": sync_row[2],
+                    "device_id": sync_row[3],
+                    "context_id": sync_row[4],
+                    "stream_id": sync_row[5],
+                    "correlation_id": correlation_id,
+                    "global_pid": sync_row[7],
+                    "sync_type": sync_row[8],
+                    "event_id": sync_row[9],
+                    "event_sync_id": sync_row[10],
+                    "scope": _sync_observation_scope(sync_row[1], target_request_scope),
+                }
+                if correlation_id is None:
+                    missing_details.append(sync_detail)
+                    continue
                 runtime_rows = list(
                     connection.execute(
                         """
@@ -350,35 +475,65 @@ def inspect_sqlite(
                     )
                 offending.append(
                     {
-                        "sync_source_rowid": sync_row[0],
-                        "start_ns": sync_row[1],
-                        "end_ns": sync_row[2],
-                        "device_id": sync_row[3],
-                        "context_id": sync_row[4],
-                        "stream_id": sync_row[5],
-                        "correlation_id": correlation_id,
-                        "global_pid": sync_row[7],
-                        "sync_type": sync_row[8],
-                        "event_id": sync_row[9],
-                        "event_sync_id": sync_row[10],
+                        **sync_detail,
                         "runtime_match_count": len(runtime_rows),
                         "runtime_candidates": candidates,
                     }
                 )
+            missing_correlation = len(missing_details)
             non_unique = len(offending)
+            target_missing = [
+                row for row in missing_details
+                if row["scope"] != "HARNESS_OUTSIDE_REQUEST"
+            ]
+            harness_missing = [
+                row for row in missing_details
+                if row["scope"] == "HARNESS_OUTSIDE_REQUEST"
+            ]
+            target_non_unique = [
+                row for row in offending
+                if row["scope"] != "HARNESS_OUTSIDE_REQUEST"
+            ]
+            harness_non_unique = [
+                row for row in offending
+                if row["scope"] == "HARNESS_OUTSIDE_REQUEST"
+            ]
             sync_check["missing_correlation"] = missing_correlation
             sync_check["non_unique_runtime_mapping"] = non_unique
             sync_check["non_unique_runtime_mapping_details"] = offending
-            if missing_correlation:
+            sync_check["harness_outside_request_issue_count"] = (
+                len(harness_missing) + len(harness_non_unique)
+            )
+            if target_missing:
                 issues.append(
-                    _issue("invalid", "SYNC_CORRELATION_MISSING", missing_correlation)
+                    _issue(
+                        "invalid",
+                        "SYNC_CORRELATION_MISSING",
+                        {"count": len(target_missing), "offending": target_missing},
+                    )
                 )
-            if non_unique:
+            if harness_missing:
+                issues.append(
+                    _issue(
+                        "warning",
+                        "HARNESS_SYNC_CORRELATION_MISSING",
+                        {"count": len(harness_missing), "offending": harness_missing},
+                    )
+                )
+            if target_non_unique:
                 issues.append(
                     _issue(
                         "invalid",
                         "SYNC_RUNTIME_MAPPING_NOT_UNIQUE",
-                        {"count": non_unique, "offending": offending},
+                        {"count": len(target_non_unique), "offending": target_non_unique},
+                    )
+                )
+            if harness_non_unique:
+                issues.append(
+                    _issue(
+                        "warning",
+                        "HARNESS_SYNC_RUNTIME_MAPPING_NOT_UNIQUE",
+                        {"count": len(harness_non_unique), "offending": harness_non_unique},
                     )
                 )
 
@@ -470,6 +625,7 @@ def inspect_sqlite(
             ],
             "required_tables": required_table_checks,
             "optional_activity_tables": optional_table_checks,
+            "target_request_scope": target_request_scope,
             "sync_correlation": sync_check,
             "dropped_record_evidence": dropped_evidence,
         },

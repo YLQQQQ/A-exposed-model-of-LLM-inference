@@ -41,14 +41,14 @@ python -m exposedpath_v141 inspect-sqlite \
 - `TARGET_INFO_CUDA_CONTEXT_INFO`、`TARGET_INFO_CUDA_STREAM`、`TARGET_INFO_GPU`：context/stream/process/device 映射；
 - `DIAGNOSTIC_EVENT`：dropped/missing record 与采集诊断证据。
 
-`CUPTI_ACTIVITY_KIND_MEMCPY`、`CUPTI_ACTIVITY_KIND_MEMSET` 与 `CUPTI_ACTIVITY_KIND_CUDA_EVENT` 是按活动出现的可选表：表不存在表示该类源记录为 0；表一旦存在，缺少 Canonical 提取所需任一字段仍必须 fail closed。核心表缺失、sync 到 CUDA API 的 correlation 缺失或不唯一、明确的 dropped/missing record 诊断，同样必须 fail closed。
+`CUPTI_ACTIVITY_KIND_MEMCPY`、`CUPTI_ACTIVITY_KIND_MEMSET` 与 `CUPTI_ACTIVITY_KIND_CUDA_EVENT` 是按活动出现的可选表：表不存在表示该类源记录为 0；表一旦存在，缺少 Canonical 提取所需任一字段仍必须 fail closed。核心表缺失、目标受控 observation 内 sync 到 CUDA API 的 correlation 缺失或不唯一、明确的 dropped/missing record 诊断，同样必须 fail closed。唯一例外只适用于 Q0：当 source manifest 与唯一结构化 `kind=request, phase=full_request` 范围完整匹配时，起点不早于该 request 结束的 synchronization 被显式标记为 `HARNESS_OUTSIDE_REQUEST`。这类记录仍原样保留并产生 warning，但不影响目标 request 的 observation validity。目标范围无法唯一恢复、request 内同步证据缺失，以及非 Q0 trace 均继续全局 fail closed。
 
 ## 输出合同
 
-唯一输出文件为 `observation_report.json`，schema 为 `exposedpath.observation-report/0.2.0`。内容分层保存：
+唯一输出文件为 `observation_report.json`，schema 为 `exposedpath.observation-report/0.3.0`。内容分层保存：
 
 - `observed_facts`：输入哈希、导出元数据、表/字段、行数、GPU、sync/phase 计数；
-- `derived_checks`：表合同检查、sync correlation 检查、dropped-record 扫描；
+- `derived_checks`：表合同检查、Q0 目标 request 范围、带 `TARGET_REQUEST` / `HARNESS_OUTSIDE_REQUEST` / `GLOBAL_TRACE` 分类的 sync correlation 检查、dropped-record 扫描；
 - `validity`：`valid`、`ambiguous` 或 `invalid`，以及机器可读原因；
 - `research_eligibility`：当前产物是否可用于 Formal 证据。
 

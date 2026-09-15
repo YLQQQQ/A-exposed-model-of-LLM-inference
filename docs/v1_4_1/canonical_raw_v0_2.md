@@ -26,7 +26,7 @@ bundle manifest 还保留 S 层必需但不属于事件行的执行上下文：`
 |---|---|---|
 | `nvtx.jsonl.gz` | `NVTX_EVENTS` + `StringIds` | 原始范围/标记、文本、线程和可选结构化身份 |
 | `cuda_api.jsonl.gz` | `CUPTI_ACTIVITY_KIND_RUNTIME` + `StringIds` | Host API 区间、名称、线程、correlation、返回值 |
-| `cuda_sync.jsonl.gz` | `...SYNCHRONIZATION` + runtime + sync enum | 中性的 CUPTI synchronization activity 及唯一 runtime API 映射；两套名称均保留，尚未判定是否为 Host blocking sync |
+| `cuda_sync.jsonl.gz` | `...SYNCHRONIZATION` + runtime + sync enum | 中性的 CUPTI synchronization activity 及 runtime API 映射计数；唯一映射时保存 runtime 行，Q0 request 外的 harness 尾部记录允许保留空映射；两套名称均保留，尚未判定是否为 Host blocking sync |
 | `device_activity.jsonl.gz` | kernel/memcpy/memset | 活动区间、device/context/stream、correlation、名称与类型属性 |
 | `cuda_event.jsonl.gz` | `...CUDA_EVENT` | event record 的时间、eventId/eventSyncId、context/stream |
 | `context/stream.jsonl.gz` | `TARGET_INFO_CUDA_*` | context、null stream 与 stream 元数据 |
@@ -42,7 +42,9 @@ Raw 中的 CUDA synchronization activity 既可能对应 Host blocking sync，�
 
 ## 6. fail-closed
 
-核心表/字段缺失、可选活动表存在但字段不完整、未知导出 schema、sync correlation 缺失或不唯一、dropped records 证据、必需非空字段为空、逆序时间区间都会拒绝转换。可选活动表不存在只表示该类记录为 0。缺 source manifest 的 Prototype/Engineering trace 可以生成派生 bundle，但 observation/identity 问题必须传播，研究资格仍为 false；Pilot/Formal 缺 manifest 时直接 invalid。
+核心表/字段缺失、可选活动表存在但字段不完整、未知导出 schema、目标受控 observation 内 sync correlation 缺失或不唯一、dropped records 证据、必需非空字段为空、逆序时间区间都会拒绝转换。可选活动表不存在只表示该类记录为 0。
+
+Q0 有一条范围严格受限的保留规则：只有 source manifest 与唯一、可解析的结构化 request identity 完整匹配后，起点不早于 request 结束的同步才能标记为 harness 尾部证据。此类记录不能被删除或伪造 runtime 映射，Canonical 中保留 `runtime_mapping_count`，缺 correlation 时 `correlation_id` 为 `null`，无唯一候选时 `runtime_api_name` 等 runtime 字段为 `null`。目标 request 内、目标范围无法唯一确定、存在无法解析的结构化 NVTX，或非 Q0 trace 的 correlation 问题仍 fail closed。缺 source manifest 的 Prototype/Engineering trace 可以生成派生 bundle，但 observation/identity 问题必须传播，研究资格仍为 false；Pilot/Formal 缺 manifest 时直接 invalid。
 
 ## 7. 历史 trace 工程回归
 

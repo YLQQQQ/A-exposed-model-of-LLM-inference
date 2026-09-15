@@ -102,7 +102,13 @@ def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path) -> Path:
     bundle = load_canonical_bundle(canonical_manifest)
     inventory = build_semantic_inventory(bundle)
     records = [analyze_sync_semantics(inventory, sync) for sync in inventory["syncs"]]
-    records.sort(key=lambda record: (record["host_start_ns"], record["sync_id"]))
+    records.sort(
+        key=lambda record: (
+            record["host_start_ns"] is None,
+            record["host_start_ns"] if record["host_start_ns"] is not None else 0,
+            record["sync_id"],
+        )
+    )
     expected_fields = set(schema["sync_record_fields"])
     for record in records:
         if set(record) != expected_fields:

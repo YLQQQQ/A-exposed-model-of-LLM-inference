@@ -20,6 +20,8 @@ from exposedpath_v141.canonical_raw import (
     validate_canonical_raw_schema,
 )
 from exposedpath_v141.cli import main
+from exposedpath_v141.ab_bundle import analyze_ab, load_ab_bundle
+from exposedpath_v141.s_bundle import analyze_canonical_to_s
 from scripts.verify_canonical_raw_boundary import check_source as check_downstream_source
 
 
@@ -155,6 +157,51 @@ def _make_manifest(path: Path) -> None:
         ),
         encoding="utf-8",
     )
+
+
+def _replace_with_q0_target_and_post_request_unmatched_sync(
+    database: Path, manifest: Path
+) -> None:
+    identity = {
+        "experiment_id": "exposedpath-q0",
+        "wmpc_id": "q0-controlled",
+        "run_id": "q0-test.q0-stream-001",
+        "run_role": "Engineering",
+        "pass_id": "Pass1",
+        "request_id": "Q0-STREAM-001",
+        "repeat_id": "repeat-0",
+    }
+    manifest.write_text(
+        json.dumps(
+            {
+                **{key: value for key, value in identity.items() if key != "request_id"},
+                "q0_case_id": identity["request_id"],
+                "default_stream_mode": "PER_THREAD",
+                "selected_device_id": 0,
+            }
+        ),
+        encoding="utf-8",
+    )
+    label = "EXPOSEDPATH_JSON_V1:" + json.dumps(
+        {"kind": "request", **identity, "phase": "full_request"},
+        separators=(",", ":"),
+    )
+    connection = sqlite3.connect(database)
+    connection.execute("DELETE FROM NVTX_EVENTS")
+    connection.execute(
+        "INSERT INTO NVTX_EVENTS VALUES (10,90,59,NULL,NULL,NULL,?, ?,NULL,NULL,NULL,NULL)",
+        (label, (1 << 56) | (2 << 48) | (3 << 24) | 4),
+    )
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES "
+        "(100,110,0,1,NULL,4294967295,99,?,NULL,4,4294967295,NULL)",
+        ((1 << 56) | (2 << 48) | (3 << 24),),
+    )
+    connection.execute(
+        "INSERT INTO ENUM_CUPTI_SYNC_TYPE VALUES (4,'CONTEXT_SYNCHRONIZE','Context sync')"
+    )
+    connection.commit()
+    connection.close()
 
 
 def _read_jsonl(path: Path) -> list[dict]:
@@ -364,6 +411,102 @@ def test_converter_preserves_signed_trace_relative_control_timestamps(tmp_path):
     diagnostic = _read_jsonl(manifest_path.parent / "diagnostic.jsonl.gz")
     assert next(row for row in cuda_api if row["correlation_id"] == 99)["start_ns"] == -200
     assert diagnostic[0]["timestamp_ns"] == -500
+
+
+def test_converter_preserves_post_request_unmatched_harness_sync(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    _replace_with_q0_target_and_post_request_unmatched_sync(
+        database, source_manifest
+    )
+
+    manifest_path = convert_sqlite_to_canonical(
+        database,
+        tmp_path / "canonical",
+        data_role="Engineering",
+        raw_sha256="8" * 64,
+        collector_version="synthetic",
+        source_manifest=source_manifest,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    syncs = _read_jsonl(manifest_path.parent / "cuda_sync.jsonl.gz")
+
+    assert manifest["observation_validity"]["status"] == "valid"
+    assert len(syncs) == 2
+    harness_sync = next(row for row in syncs if row["correlation_id"] == 99)
+    assert harness_sync["runtime_mapping_count"] == 0
+    assert harness_sync["runtime_api_name"] is None
+
+
+def test_converter_preserves_post_request_harness_sync_without_correlation(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    _replace_with_q0_target_and_post_request_unmatched_sync(
+        database, source_manifest
+    )
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "UPDATE CUPTI_ACTIVITY_KIND_SYNCHRONIZATION "
+        "SET correlationId=NULL WHERE correlationId=99"
+    )
+    connection.commit()
+    connection.close()
+
+    manifest_path = convert_sqlite_to_canonical(
+        database,
+        tmp_path / "canonical",
+        data_role="Engineering",
+        raw_sha256="8" * 64,
+        collector_version="synthetic",
+        source_manifest=source_manifest,
+    )
+    syncs = _read_jsonl(manifest_path.parent / "cuda_sync.jsonl.gz")
+    harness_sync = next(row for row in syncs if row["runtime_mapping_count"] == 0)
+
+    assert harness_sync["correlation_id"] is None
+    assert harness_sync["runtime_api_name"] is None
+
+
+def test_post_request_unmapped_harness_sync_survives_s_and_ab(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    _replace_with_q0_target_and_post_request_unmatched_sync(
+        database, source_manifest
+    )
+    canonical_manifest = convert_sqlite_to_canonical(
+        database,
+        tmp_path / "canonical",
+        data_role="Engineering",
+        raw_sha256="8" * 64,
+        collector_version="synthetic",
+        source_manifest=source_manifest,
+    )
+
+    s_manifest = analyze_canonical_to_s(canonical_manifest, tmp_path / "s")
+    ab_manifest = analyze_ab(canonical_manifest, s_manifest, tmp_path / "ab")
+    s_summary = json.loads(s_manifest.read_text(encoding="utf-8"))["summary"]
+    ab = load_ab_bundle(
+        ab_manifest,
+        canonical_manifest=canonical_manifest,
+        s_manifest=s_manifest,
+    )
+    harness = next(
+        row for row in ab["b_sync_records"]
+        if row["sync_id"].endswith(":2")
+    )
+
+    assert s_summary["physical_sync_count"] == 2
+    assert harness["validity"] == "B_INVALID"
+    assert harness["sync_start_ns"] is None
+    assert harness["sync_end_ns"] is None
+    assert harness["primary_reason"] == "INVOCATION_BOUNDARY_INVALID"
+    assert "UNCLASSIFIED_CUDA_API" in harness["secondary_reasons"]
 
 
 def test_converter_resolves_names_ids_and_source_rows(tmp_path):

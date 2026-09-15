@@ -184,10 +184,20 @@ def validate_b_record(record: Mapping[str, object]) -> None:
         "repeat_id", "sync_owner_phase", "terminal_origin_phase", "primary_reason",
     ):
         _optional_text(record[field], field)
-    start = _nonnegative_integer(record["sync_start_ns"], "sync_start_ns")
-    end = _nonnegative_integer(record["sync_end_ns"], "sync_end_ns")
-    if start > end:
-        raise BProvenanceError("B sync 时间区间逆序")
+    if record["validity"] in {"B_VALID", "B_NOT_APPLICABLE"}:
+        start = _nonnegative_integer(record["sync_start_ns"], "sync_start_ns")
+        end = _nonnegative_integer(record["sync_end_ns"], "sync_end_ns")
+        if start > end:
+            raise BProvenanceError("B sync 时间区间逆序")
+    else:
+        start, end = record["sync_start_ns"], record["sync_end_ns"]
+        if (start is None) != (end is None):
+            raise BProvenanceError("B invalid/ambiguous sync 时间必须同时存在或同时为空")
+        if start is not None:
+            start = _nonnegative_integer(start, "sync_start_ns")
+            end = _nonnegative_integer(end, "sync_end_ns")
+            if start > end:
+                raise BProvenanceError("B sync 时间区间逆序")
     if not isinstance(record["cross_phase_dependency"], bool):
         raise BProvenanceError("cross_phase_dependency 必须是布尔值")
     origins = record["activity_origin_phases"]

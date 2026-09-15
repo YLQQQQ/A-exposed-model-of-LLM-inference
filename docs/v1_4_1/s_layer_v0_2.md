@@ -31,6 +31,8 @@ terminal 先从 `W(s)` 的语义最大节点求 frontier。frontier 唯一时直
 
 原因按 Measurement Contract 的冻结优先级输出 primary/secondary；任何必需事实缺失产生的 `INVALID` 证据都不能被通用 ownership 或 submission 歧义降级。这一规则同时适用于同步直接 scope、event record 捕获前缀和 legacy default-stream 传递路径，而不是只在最终 `W(s)` 成员上检查。依赖图先保留完整可观察前驱，再检查 ownership，不能预先删除外部 invocation。输入 identity/observation 已 ambiguous 时不尝试生成“看似合理”的 `W(s)`；旧 trace 可以生成 S 派生产物以验证链路，但记录保持 fail closed，不能升级为 Q0、Pilot 或 Formal 证据。
 
+Q0 observation 已唯一恢复目标 request 时，Canonical 仍会保留 request 结束后的 harness 尾部同步。若这类记录没有唯一 runtime 映射，S 不补造 Host API 时间或 ownership，而是输出 `INVALID` 行、空 `W(s)` 和空 terminal；无 Host 时间的行按稳定 sync identity 排在有时间记录之后。A 只忽略同时满足“无 Host 时间、无 request ownership、S=INVALID”的行，B 则保留一一对应的 `B_INVALID` 行并令时间字段为 `null`。该规则只保证目标 request 不被外部 harness 污染，不会放宽 request 内同步的 fail-closed 条件。
+
 ## 5. 当前验证边界
 
 离线测试覆盖 stream/device/context/event、event record 唯一性与 scope 冲突、跨流 wait-event、completed-before、无关重叠、legacy/PTDS、nonblocking stream、提交竞态、缺失 correlation、跨 phase、invocation bleed、terminal frontier/tie/after-return、valid-empty、原因优先级和 Q0 核心 expected 对照。事件和 wait 前缀查找已经按 context/stream 建立索引，同 scope 结果带缓存；event/default-stream 密集型真实 trace 的规模性能仍需在 Engineering Pilot 单独验收，不能由合成测试推断。上述离线测试证明实现符合当前合成语义合同，不替代真实 CUDA/Nsight Q0；Gate 6 在获得 GPU 前仍为 `BLOCKED`。

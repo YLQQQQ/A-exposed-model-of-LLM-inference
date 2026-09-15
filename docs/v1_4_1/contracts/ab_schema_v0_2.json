@@ -281,8 +281,8 @@
         },
         "terminal_origin_phase": {"type": ["string", "null"]},
         "cross_phase_dependency": {"type": "boolean"},
-        "sync_start_ns": {"type": "integer", "minimum": 0},
-        "sync_end_ns": {"type": "integer", "minimum": 0},
+        "sync_start_ns": {"type": ["integer", "null"], "minimum": 0},
+        "sync_end_ns": {"type": ["integer", "null"], "minimum": 0},
         "wait_set_activity_ids": {
           "type": "array",
           "items": {"type": "string", "minLength": 1},
@@ -368,6 +368,8 @@
           },
           "then": {
             "properties": {
+              "sync_start_ns": {"type": "integer", "minimum": 0},
+              "sync_end_ns": {"type": "integer", "minimum": 0},
               "wait_set_hidden_union_ns": {"type": "integer", "minimum": 0},
               "wait_set_exposed_union_ns": {"type": "integer", "minimum": 0},
               "terminal_pre_sync_ns": {"type": ["integer", "null"], "minimum": 0},
@@ -390,6 +392,8 @@
           },
           "then": {
             "properties": {
+              "sync_start_ns": {"type": "integer", "minimum": 0},
+              "sync_end_ns": {"type": "integer", "minimum": 0},
               "wait_set_hidden_union_ns": {"type": "null"},
               "wait_set_exposed_union_ns": {"type": "null"},
               "terminal_pre_sync_ns": {"type": "null"},

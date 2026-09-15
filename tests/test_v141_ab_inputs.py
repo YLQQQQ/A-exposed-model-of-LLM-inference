@@ -325,6 +325,31 @@ def test_loads_strict_dual_input_and_discovers_three_structured_windows(tmp_path
     assert inputs.global_quality_reasons == ()
 
 
+def test_q0_one_phase_trace_discovers_full_request_and_decode_windows(tmp_path):
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    rows = [
+        _nvtx("nvtx:NVTX_EVENTS:1", 0, 100, "full_request", "request"),
+        _nvtx("nvtx:NVTX_EVENTS:2", 1, 99, "decode", "phase"),
+    ]
+    for row in rows:
+        row["structured_identity"]["experiment_id"] = "exposedpath-q0"
+        row["text"] = "EXPOSEDPATH_JSON_V1:" + json.dumps(
+            row["structured_identity"]
+        )
+    _replace_nvtx(canonical_manifest, rows)
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+
+    assert [window.phase for window in inputs.windows] == [
+        "full_request", "decode"
+    ]
+    assert [(window.start_ns, window.end_ns) for window in inputs.windows] == [
+        (0, 100), (1, 99)
+    ]
+    assert inputs.window_discovery_issues == ()
+
+
 @pytest.mark.parametrize("mutation", [
     "terminal_time", "terminal_clock", "terminal_not_in_wait_set", "empty_wait_set",
     "terminal_not_in_frontier", "wait_status", "closure_status", "valid_reason",

@@ -63,6 +63,20 @@ def _interval(record: Mapping[str, object], start_key: str, end_key: str, label:
     return start, end
 
 
+def _signed_interval(
+    record: Mapping[str, object], start_key: str, end_key: str, label: str
+) -> tuple[int, int]:
+    start = record.get(start_key)
+    end = record.get(end_key)
+    if not isinstance(start, int) or isinstance(start, bool):
+        raise ValueError(f"{label}.{start_key} 必须是整数纳秒")
+    if not isinstance(end, int) or isinstance(end, bool):
+        raise ValueError(f"{label}.{end_key} 必须是整数纳秒")
+    if end < start:
+        raise ValueError(f"{label} 的半开区间逆序")
+    return start, end
+
+
 def _covers(interval: tuple[int, int], segment: tuple[int, int]) -> bool:
     return interval[0] <= segment[0] and segment[1] <= interval[1]
 
@@ -234,6 +248,12 @@ def _window_record(inputs: ABInputs, window: RequestPhaseWindow) -> dict[str, ob
     syncs: list[tuple[Mapping[str, object], tuple[int, int], str]] = []
     reasons: list[str] = []
     for sync in inputs.s_records:
+        if sync.get("host_start_ns") is None and sync.get("host_end_ns") is None:
+            if sync.get("validity") != "INVALID" or sync.get("request_id") is not None:
+                raise ValueError(
+                    f"sync {sync.get('sync_id')} 缺少时间但不满足 request 外 invalid 条件"
+                )
+            continue
         interval = _interval(sync, "host_start_ns", "host_end_ns", f"sync {sync.get('sync_id')}")
         validity = sync.get("validity")
         status = validity if isinstance(validity, str) else "UNKNOWN"
@@ -245,7 +265,9 @@ def _window_record(inputs: ABInputs, window: RequestPhaseWindow) -> dict[str, ob
     )
     api_by_correlation: dict[object, list[Mapping[str, object]]] = {}
     for api in inputs.canonical.records.get("cuda_api", ()):
-        interval = _interval(api, "start_ns", "end_ns", f"cuda_api {api.get('record_id')}")
+        interval = _signed_interval(
+            api, "start_ns", "end_ns", f"cuda_api {api.get('record_id')}"
+        )
         apis.append((api, interval))
         correlation = api.get("correlation_id")
         if correlation is not None:
@@ -258,12 +280,18 @@ def _window_record(inputs: ABInputs, window: RequestPhaseWindow) -> dict[str, ob
     }
 
     boundaries = [window.start_ns, window.end_ns]
+    def add_window_boundaries(interval: tuple[int, int]) -> None:
+        start = max(window.start_ns, interval[0])
+        end = min(window.end_ns, interval[1])
+        if start < end:
+            boundaries.extend((start, end))
+
     for _, interval, _ in syncs:
-        boundaries.extend(interval)
+        add_window_boundaries(interval)
     for _, interval in apis:
-        boundaries.extend(interval)
+        add_window_boundaries(interval)
     for _, interval in activities.values():
-        boundaries.extend(interval)
+        add_window_boundaries(interval)
 
     for segment in atomic_segments(window_interval, boundaries):
         duration = segment[1] - segment[0]

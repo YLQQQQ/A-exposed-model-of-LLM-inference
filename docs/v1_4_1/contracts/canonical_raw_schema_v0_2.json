@@ -69,8 +69,8 @@
     },
     "cuda_sync": {
       "filename": "cuda_sync.jsonl.gz",
-      "required_non_null_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "start_ns", "end_ns", "device_id", "context_id", "stream_id", "correlation_id", "sync_type_id", "sync_type_name", "sync_type_label", "runtime_mapping_count", "runtime_api_name"],
-      "nullable_fields": ["global_pid", "process_id", "green_context_id", "event_id", "event_sync_id", "runtime_record_id", "runtime_start_ns", "runtime_end_ns", "runtime_global_tid", "runtime_thread_id"]
+      "required_non_null_fields": ["record_id", "source_table", "source_rowid", "clock_domain_id", "start_ns", "end_ns", "device_id", "context_id", "stream_id", "sync_type_id", "sync_type_name", "sync_type_label", "runtime_mapping_count"],
+      "nullable_fields": ["global_pid", "process_id", "green_context_id", "correlation_id", "event_id", "event_sync_id", "runtime_record_id", "runtime_api_name", "runtime_start_ns", "runtime_end_ns", "runtime_global_tid", "runtime_thread_id"]
     },
     "device_activity": {
       "filename": "device_activity.jsonl.gz",

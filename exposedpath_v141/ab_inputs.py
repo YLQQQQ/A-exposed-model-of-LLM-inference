@@ -434,12 +434,23 @@ def _discovery_result(
         if key in issue_reasons:
             continue
         ranges = groups[key]
-        if any(len(ranges[phase]) != 1 for phase in _WINDOW_PHASES):
+        q0_one_phase = (
+            key[0] == "exposedpath-q0"
+            and len(ranges["full_request"]) == 1
+            and len(ranges["prefill"]) == 0
+            and len(ranges["decode"]) == 1
+        )
+        selected_phases = (
+            ("full_request", "decode") if q0_one_phase else _WINDOW_PHASES
+        )
+        if not q0_one_phase and any(
+            len(ranges[phase]) != 1 for phase in _WINDOW_PHASES
+        ):
             for phase in _WINDOW_PHASES:
                 for nvtx, _ in ranges[phase]:
                     add_issue(key, "WINDOW_PHASE_MISSING_OR_DUPLICATE", nvtx)
             continue
-        selected = {phase: ranges[phase][0] for phase in _WINDOW_PHASES}
+        selected = {phase: ranges[phase][0] for phase in selected_phases}
         valid_times = True
         for nvtx, _ in selected.values():
             start, end = nvtx.get("start_ns"), nvtx.get("end_ns")
@@ -457,18 +468,25 @@ def _discovery_result(
                 add_issue(key, "WINDOW_RANGE_INVALID", nvtx)
             continue
         full = selected["full_request"][0]
-        prefill = selected["prefill"][0]
         decode = selected["decode"][0]
-        if not (
-            full["start_ns"] == prefill["start_ns"]
-            and prefill["end_ns"] == decode["start_ns"]
-            and decode["end_ns"] == full["end_ns"]
-            and prefill["end_ns"] <= full["end_ns"]
-        ):
+        if q0_one_phase:
+            boundaries_valid = (
+                full["start_ns"] <= decode["start_ns"]
+                and decode["end_ns"] <= full["end_ns"]
+            )
+        else:
+            prefill = selected["prefill"][0]
+            boundaries_valid = (
+                full["start_ns"] == prefill["start_ns"]
+                and prefill["end_ns"] == decode["start_ns"]
+                and decode["end_ns"] == full["end_ns"]
+                and prefill["end_ns"] <= full["end_ns"]
+            )
+        if not boundaries_valid:
             for nvtx, _ in selected.values():
                 add_issue(key, "WINDOW_PHASE_BOUNDARY_INCONSISTENT", nvtx)
             continue
-        for phase in _WINDOW_PHASES:
+        for phase in selected_phases:
             nvtx, identity = selected[phase]
             windows.append(
                 RequestPhaseWindow(

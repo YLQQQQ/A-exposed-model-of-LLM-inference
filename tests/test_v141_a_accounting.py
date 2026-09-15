@@ -336,6 +336,30 @@ def test_zero_ns_window_without_global_failure_preserves_both_conservations():
     _accounting_module().validate_a_record(record)
 
 
+def test_signed_trace_relative_api_before_window_does_not_invalidate_a():
+    record = _only_record(
+        _inputs(
+            apis=(_api("profiler-start", -20, -10, "cudaProfilerStart", None),),
+            syncs=(),
+            activities=(),
+        )
+    )
+
+    assert record["T_window_ns"] == 100
+    assert record["A_host_path_ns"] == 100
+    assert record["A_cuda_api_ns"] == 0
+    assert record["A_unattributed_ns"] == 0
+
+
+def test_missing_sync_time_is_only_allowed_for_unowned_invalid_row():
+    invalid_owned = _sync("bad", 10, 20, "VALID_EMPTY", [])
+    invalid_owned["host_start_ns"] = None
+    invalid_owned["host_end_ns"] = None
+
+    with pytest.raises(ValueError, match="request 外 invalid"):
+        _only_record(_inputs(apis=(), syncs=(invalid_owned,), activities=()))
+
+
 @pytest.mark.parametrize(("field", "value"), (("T_window_ns", 1.5), ("A_host_path_ns", -1)))
 def test_runtime_validation_rejects_noninteger_and_negative_ns(field: str, value: object):
     record = _only_record(_inputs(apis=(), syncs=(), activities=()))
