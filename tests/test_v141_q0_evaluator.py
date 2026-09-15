@@ -155,3 +155,45 @@ def test_real_observed_requires_activity_intervals():
 
     assert report["verdict"] == "FAIL"
     assert any("schema" in mismatch for mismatch in report["global_mismatches"])
+
+
+def _real_empty_case():
+    oracle = load_oracle_bundle()
+    observed = build_synthetic_observed()
+    oracle["cases"] = [
+        case for case in oracle["cases"] if case["case_id"] == "Q0-EMPTY-001"
+    ]
+    observed["cases"] = [
+        case for case in observed["cases"] if case["case_id"] == "Q0-EMPTY-001"
+    ]
+    observed["source_kind"] = "REAL_CONTROLLED_TRACE"
+    observed["research_eligibility"]["scope"] = "Q0_REAL_CANDIDATE_ONLY"
+    observed["cases"][0]["activity_intervals"] = []
+    sync = observed["cases"][0]["syncs"][0]
+    sync["sync_start_ns"] = 1000
+    sync["sync_end_ns"] = 21271
+    sync["a_window"]["A_device_wait_ns"] = 0
+    sync["a_window"]["A_sync_residual_ns"] = 20271
+    return oracle, observed
+
+
+def test_real_empty_uses_actual_sync_duration_for_a_residual():
+    """捕获：真实 VALID_EMPTY 仍拿合成 trace 的 30 ns 常量验收。"""
+    oracle, observed = _real_empty_case()
+
+    report = evaluate_q0_observed(oracle, observed)
+
+    assert report["verdict"] == "REAL_CASE_PASS"
+
+
+def test_real_empty_wrong_a_residual_fails_closed():
+    oracle, observed = _real_empty_case()
+    observed["cases"][0]["syncs"][0]["a_window"]["A_sync_residual_ns"] -= 1
+
+    report = evaluate_q0_observed(oracle, observed)
+
+    assert report["verdict"] == "FAIL"
+    assert any(
+        "A_sync_residual_ns" in mismatch
+        for mismatch in report["cases"][0]["mismatches"]
+    )

@@ -349,6 +349,47 @@ def test_converter_writes_zero_record_files_when_optional_tables_are_absent(tmp_
     assert _read_jsonl(manifest_path.parent / "cuda_event.jsonl.gz") == []
 
 
+def test_converter_writes_zero_device_activity_for_lazy_absent_kernel_table(tmp_path):
+    """lazy 零 kernel 必须安全转换为空记录文件，不能查询或伪造缺失表。"""
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    connection = sqlite3.connect(database)
+    connection.execute("DROP TABLE CUPTI_ACTIVITY_KIND_KERNEL")
+    connection.execute("DELETE FROM CUPTI_ACTIVITY_KIND_MEMCPY")
+    connection.execute("DELETE FROM CUPTI_ACTIVITY_KIND_MEMSET")
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='2026.2.1.210' "
+        "WHERE name='EXPORT_PRODUCT_VERSION'"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='3.25.0' "
+        "WHERE name='EXPORT_SCHEMA_VERSION'"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='true' "
+        "WHERE name='EXPORT_PARAM_LAZY'"
+    )
+    connection.commit()
+    connection.close()
+
+    manifest_path = convert_sqlite_to_canonical(
+        database,
+        tmp_path / "canonical",
+        data_role="Engineering",
+        raw_sha256="6" * 64,
+        collector_version="2026.2.1.210",
+        source_manifest=source_manifest,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["files"]["device_activity"]["record_count"] == 0
+    assert _read_jsonl(manifest_path.parent / "device_activity.jsonl.gz") == []
+    assert manifest["source"]["export"]["lazy"] == "true"
+    assert manifest["observation_validity"]["status"] == "valid"
+
+
 def test_converter_accepts_reviewed_nsys_2026_2_schema(tmp_path):
     database = tmp_path / "source.sqlite"
     source_manifest = tmp_path / "run_manifest.json"

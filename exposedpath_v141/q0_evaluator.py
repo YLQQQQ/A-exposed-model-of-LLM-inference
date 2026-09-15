@@ -294,15 +294,24 @@ def evaluate_q0_observed(
             )
             timing = actual.get("b_timing")
             real_expected: Mapping[str, int] | None = None
+            if (
+                source_kind == "REAL_CONTROLLED_TRACE"
+                and expected_sync.get("b_status") in {"B_VALID", "B_NOT_APPLICABLE"}
+            ):
+                try:
+                    real_expected = _real_expected_timing(
+                        expected_sync, observed_case, actual
+                    )
+                except (KeyError, TypeError, ValueError) as exc:
+                    mismatches.append(f"{sync_label}.真实区间预期无法计算: {exc}")
             if expected_sync.get("b_status") == "B_VALID":
                 try:
-                    expected_timing = (
-                        _real_expected_timing(expected_sync, observed_case, actual)
-                        if source_kind == "REAL_CONTROLLED_TRACE"
-                        else calculate_expected_timing(oracle_case, sync_label)
-                    )
                     if source_kind == "REAL_CONTROLLED_TRACE":
-                        real_expected = expected_timing
+                        expected_timing = real_expected or {}
+                    else:
+                        expected_timing = calculate_expected_timing(
+                            oracle_case, sync_label
+                        )
                 except (KeyError, TypeError, ValueError) as exc:
                     mismatches.append(f"{sync_label}.真实区间预期无法计算: {exc}")
                     expected_timing = {}

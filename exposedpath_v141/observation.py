@@ -15,7 +15,7 @@ from typing import Any
 from . import __version__
 
 
-REPORT_SCHEMA_VERSION = "exposedpath.observation-report/0.3.0"
+REPORT_SCHEMA_VERSION = "exposedpath.observation-report/0.4.0"
 CONTRACT_VERSION = "exposedpath-v1.4.1-draft-0.1"
 STRUCTURED_NVTX_PREFIX = "EXPOSEDPATH_JSON_V1:"
 SUPPORTED_EXPORT_SCHEMAS = {
@@ -39,11 +39,6 @@ CORE_REQUIRED_COLUMNS: dict[str, tuple[str, ...]] = {
         "start", "end", "deviceId", "contextId", "greenContextId", "streamId",
         "correlationId", "globalPid", "syncType", "eventId", "eventSyncId",
     ),
-    "CUPTI_ACTIVITY_KIND_KERNEL": (
-        "start", "end", "deviceId", "contextId", "greenContextId", "streamId",
-        "correlationId", "globalPid", "demangledName", "shortName", "graphNodeId",
-        "graphId",
-    ),
     "ENUM_CUPTI_SYNC_TYPE": ("id", "name", "label"),
     "TARGET_INFO_CUDA_CONTEXT_INFO": (
         "nullStreamId", "hwId", "vmId", "processId", "deviceId", "contextId",
@@ -54,6 +49,14 @@ CORE_REQUIRED_COLUMNS: dict[str, tuple[str, ...]] = {
     ),
     "TARGET_INFO_GPU": ("id", "name"),
     "DIAGNOSTIC_EVENT": ("timestamp", "source", "severity", "text"),
+}
+
+CONDITIONAL_ACTIVITY_COLUMNS: dict[str, tuple[str, ...]] = {
+    "CUPTI_ACTIVITY_KIND_KERNEL": (
+        "start", "end", "deviceId", "contextId", "greenContextId", "streamId",
+        "correlationId", "globalPid", "demangledName", "shortName", "graphNodeId",
+        "graphId",
+    ),
 }
 
 OPTIONAL_ACTIVITY_COLUMNS: dict[str, tuple[str, ...]] = {
@@ -70,6 +73,22 @@ OPTIONAL_ACTIVITY_COLUMNS: dict[str, tuple[str, ...]] = {
         "timestamp", "deviceId", "contextId", "greenContextId", "streamId",
         "correlationId", "globalPid", "eventId", "eventSyncId",
     ),
+}
+
+KERNEL_OR_GRAPH_LAUNCH_APIS = {
+    "cudaLaunch",
+    "cudaLaunchKernel",
+    "cudaLaunchKernelExC",
+    "cudaLaunchCooperativeKernel",
+    "cudaLaunchCooperativeKernelMultiDevice",
+    "cudaGraphLaunch",
+    "cuLaunchKernel",
+    "cuLaunchKernelEx",
+    "cuLaunchCooperativeKernel",
+    "cuLaunchCooperativeKernelMultiDevice",
+    "cuLaunchGrid",
+    "cuLaunchGridAsync",
+    "cuGraphLaunch",
 }
 
 COUNT_TABLES = (
@@ -136,6 +155,13 @@ def _metadata(connection: sqlite3.Connection, table: str) -> dict[str, list[str]
 def _first(metadata: dict[str, list[str]], key: str) -> str | None:
     values = metadata.get(key, [])
     return values[0] if values else None
+
+
+def _normalized_cuda_api_name(value: str) -> str:
+    """移除 Nsight/CUDA 的版本与 per-thread-default-stream 装饰。"""
+
+    normalized = re.sub(r"_v\d+$", "", value)
+    return re.sub(r"_(?:ptsz|ptds)$", "", normalized)
 
 
 def _issue(level: str, code: str, detail: Any) -> dict[str, Any]:
@@ -249,6 +275,56 @@ def _sync_observation_scope(
     return "GLOBAL_TRACE"
 
 
+def _kernel_presence_evidence(
+    connection: sqlite3.Connection,
+    table_usable: dict[str, bool],
+    target_request_scope: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    if not (
+        table_usable.get("CUPTI_ACTIVITY_KIND_RUNTIME")
+        and table_usable.get("StringIds")
+    ):
+        return []
+    evidence: list[dict[str, Any]] = []
+    for row in connection.execute(
+        """
+        SELECT r.rowid, r.start, r.end, r.globalTid, r.correlationId,
+               r.nameId, COALESCE(s.value, '')
+        FROM CUPTI_ACTIVITY_KIND_RUNTIME AS r
+        LEFT JOIN StringIds AS s ON s.id = r.nameId
+        ORDER BY r.start, r.end, r.rowid
+        """
+    ):
+        api_name = str(row[6])
+        normalized_api_name = _normalized_cuda_api_name(api_name)
+        if normalized_api_name not in KERNEL_OR_GRAPH_LAUNCH_APIS:
+            continue
+        process_id, thread_id = _global_parts(row[3])
+        scope = "GLOBAL_TRACE"
+        if target_request_scope and target_request_scope.get("status") == "RESOLVED":
+            overlaps_target = (
+                row[1] < target_request_scope["end_ns"]
+                and row[2] > target_request_scope["start_ns"]
+            )
+            scope = "TARGET_REQUEST" if overlaps_target else "HARNESS_OUTSIDE_REQUEST"
+        evidence.append(
+            {
+                "source_rowid": row[0],
+                "start_ns": row[1],
+                "end_ns": row[2],
+                "global_tid": row[3],
+                "process_id": process_id,
+                "thread_id": thread_id,
+                "correlation_id": row[4],
+                "name_id": row[5],
+                "api_name": api_name,
+                "normalized_api_name": normalized_api_name,
+                "scope": scope,
+            }
+        )
+    return evidence
+
+
 def inspect_sqlite(
     sqlite_path: Path,
     data_role: str,
@@ -286,6 +362,7 @@ def inspect_sqlite(
             )
         }
         required_table_checks: dict[str, dict[str, Any]] = {}
+        conditional_table_checks: dict[str, dict[str, Any]] = {}
         optional_table_checks: dict[str, dict[str, Any]] = {}
         table_usable: dict[str, bool] = {}
         for table, required in CORE_REQUIRED_COLUMNS.items():
@@ -299,6 +376,28 @@ def inspect_sqlite(
             if table not in table_names:
                 issues.append(_issue("invalid", "MISSING_REQUIRED_TABLE", table))
             elif missing:
+                issues.append(
+                    _issue(
+                        "invalid",
+                        "MISSING_REQUIRED_COLUMNS",
+                        {"table": table, "columns": missing},
+                    )
+                )
+        for table, required in CONDITIONAL_ACTIVITY_COLUMNS.items():
+            actual = _table_columns(connection, table) if table in table_names else []
+            missing = (
+                [column for column in required if column not in actual]
+                if table in table_names
+                else []
+            )
+            conditional_table_checks[table] = {
+                "present": table in table_names,
+                "missing_columns": missing,
+                "normalization": "TABLE_ROWS" if table in table_names else None,
+                "presence_evidence": [],
+            }
+            table_usable[table] = table in table_names and not missing
+            if table in table_names and missing:
                 issues.append(
                     _issue(
                         "invalid",
@@ -349,10 +448,47 @@ def inspect_sqlite(
             else {}
         )
 
+        export_metadata_contract: dict[str, dict[str, Any]] = {}
+        unique_export_metadata: dict[str, str | None] = {}
+        for name in (
+            "EXPORT_PRODUCT_VERSION",
+            "EXPORT_SCHEMA_VERSION",
+            "EXPORT_PARAM_LAZY",
+        ):
+            values = export_metadata.get(name, [])
+            is_unique = len(values) == 1
+            unique_export_metadata[name] = values[0] if is_unique else None
+            export_metadata_contract[name] = {
+                "count": len(values),
+                "values": values,
+                "unique": is_unique,
+            }
+            if table_usable.get("META_DATA_EXPORT") and not is_unique:
+                issues.append(
+                    _issue(
+                        "invalid",
+                        "EXPORT_METADATA_NOT_UNIQUE",
+                        {"name": name, "count": len(values), "values": values},
+                    )
+                )
+
         export_schema_pair = (
-            _first(export_metadata, "EXPORT_PRODUCT_VERSION"),
-            _first(export_metadata, "EXPORT_SCHEMA_VERSION"),
+            unique_export_metadata["EXPORT_PRODUCT_VERSION"],
+            unique_export_metadata["EXPORT_SCHEMA_VERSION"],
         )
+        export_lazy = unique_export_metadata["EXPORT_PARAM_LAZY"]
+        if export_lazy is not None and export_lazy not in {"true", "false"}:
+            issues.append(
+                _issue(
+                    "invalid",
+                    "INVALID_EXPORT_METADATA_VALUE",
+                    {
+                        "name": "EXPORT_PARAM_LAZY",
+                        "value": export_lazy,
+                        "allowed": ["false", "true"],
+                    },
+                )
+            )
         if (
             table_usable.get("META_DATA_EXPORT")
             and export_schema_pair not in SUPPORTED_EXPORT_SCHEMAS
@@ -396,6 +532,40 @@ def inspect_sqlite(
             issues.append(
                 _issue("invalid", "TARGET_REQUEST_SCOPE_UNRESOLVED", target_request_scope)
             )
+
+        kernel_table = "CUPTI_ACTIVITY_KIND_KERNEL"
+        kernel_check = conditional_table_checks[kernel_table]
+        if not kernel_check["present"]:
+            kernel_presence = _kernel_presence_evidence(
+                connection, table_usable, target_request_scope
+            )
+            kernel_check["presence_evidence"] = kernel_presence
+            cuda_capture_enabled = "Cuda" in capture_metadata.get(
+                "CAPTURE_EVENT_TYPE", []
+            )
+            supported_lazy_zero = (
+                export_schema_pair in SUPPORTED_EXPORT_SCHEMAS
+                and export_lazy == "true"
+                and cuda_capture_enabled
+            )
+            if supported_lazy_zero and not kernel_presence:
+                kernel_check["normalization"] = "ZERO_ROWS_LAZY_EXPORT"
+                counts[kernel_table] = 0
+            elif kernel_presence:
+                kernel_check["normalization"] = "PRESENCE_CONFLICT"
+                issues.append(
+                    _issue(
+                        "invalid",
+                        "KERNEL_TABLE_ABSENT_WITH_PRESENCE_EVIDENCE",
+                        {
+                            "table": kernel_table,
+                            "presence_evidence": kernel_presence,
+                        },
+                    )
+                )
+            else:
+                kernel_check["normalization"] = "UNRESOLVED_MISSING_TABLE"
+                issues.append(_issue("invalid", "MISSING_REQUIRED_TABLE", kernel_table))
 
         sync_check: dict[str, Any] = {
             "total": counts.get("CUPTI_ACTIVITY_KIND_SYNCHRONIZATION"),
@@ -557,12 +727,12 @@ def inspect_sqlite(
                 _issue("invalid", "DROPPED_OR_MISSING_RECORD_EVIDENCE", dropped_evidence)
             )
 
-        if _first(export_metadata, "EXPORT_PARAM_LAZY") == "true":
+        if export_lazy == "true":
             issues.append(
                 _issue(
                     "warning",
                     "LAZY_EXPORT",
-                    "历史导出采用 lazy=true；核心必需表仍须实际存在。",
+                    "导出采用 lazy=true；零行 activity 表可按受支持 schema 的条件化规则规范化。",
                 )
             )
 
@@ -582,10 +752,10 @@ def inspect_sqlite(
             },
             "export": {
                 "product_name": _first(export_metadata, "EXPORT_PRODUCT_NAME"),
-                "product_version": _first(export_metadata, "EXPORT_PRODUCT_VERSION"),
-                "schema_version": _first(export_metadata, "EXPORT_SCHEMA_VERSION"),
+                "product_version": unique_export_metadata["EXPORT_PRODUCT_VERSION"],
+                "schema_version": unique_export_metadata["EXPORT_SCHEMA_VERSION"],
                 "platform": _first(export_metadata, "EXPORT_PLATFORM"),
-                "lazy": _first(export_metadata, "EXPORT_PARAM_LAZY"),
+                "lazy": export_lazy,
             },
             "capture": {
                 "event_types": capture_metadata.get("CAPTURE_EVENT_TYPE", []),
@@ -624,6 +794,8 @@ def inspect_sqlite(
                 for product, schema in sorted(SUPPORTED_EXPORT_SCHEMAS)
             ],
             "required_tables": required_table_checks,
+            "export_metadata_contract": export_metadata_contract,
+            "conditional_activity_tables": conditional_table_checks,
             "optional_activity_tables": optional_table_checks,
             "target_request_scope": target_request_scope,
             "sync_correlation": sync_check,

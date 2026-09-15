@@ -10,7 +10,7 @@
 Wsn1
 ├── YLQ_test                 # 旧项目和旧结果，保持不动
 ├── ExposedPath_Q0_*.bundle  # 本机交付包
-└── YLQ_test_q0_v141         # 已有 Q0 工作目录，含未跟踪的 r1/r2/r3
+└── YLQ_test_q0_v141         # 已有 Q0 工作目录，含未跟踪的 r1/r2/r3/r4
 ```
 
 先在服务器 PowerShell 中确认不存在尚未提交的受跟踪修改，并为服务器临时提交建立备份分支：
@@ -27,7 +27,7 @@ git reset --hard FETCH_HEAD
 git rev-parse HEAD
 ```
 
-`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3`。严禁追加 `git clean`。更新后以最终交付消息记录的 commit 为核对值。
+`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4`。严禁追加 `git clean`。更新后以最终交付消息记录的 commit 为核对值。
 
 Q0 不加载模型，因此不用复制旧 `models`。服务器已有 GPU driver、CUDA Toolkit、`nvcc` 和 Nsight Systems 可以复用，但必须重新记录版本。旧 `.venv` 不必删除，也不要向其中追加依赖；在新版目录建立轻量独立环境：
 
@@ -102,13 +102,45 @@ if ($R3Invalid.Count -ne 0) { throw "r3 仍存在目标 observation invalid" }
 if ($R3Harness.Count -ne 1 -or $R3Harness[0].detail.offending[0].correlation_id -ne 135 -or $R3Harness[0].detail.offending[0].scope -ne "HARNESS_OUTSIDE_REQUEST") { throw "r3 harness 尾部同步诊断不符合预期" }
 ```
 
-已知 r3 的目标 `cudaStreamSynchronize`（`correlationId=133`）和 request 后显式 `cudaDeviceSynchronize`（`correlationId=134`）均唯一映射；另有一条 request 结束后的尾部同步（`correlationId=135`）没有 runtime 候选。该记录只能表述为与 profiler/harness teardown 时间一致，不能在没有 API 映射时断言其具体来源。新版 analyzer 应完整保留它并标为 `HARNESS_OUTSIDE_REQUEST` warning，不得让它污染目标 request validity，也不得忽略目标 request 内的证据缺失。诊断通过仍不把已有 r3 升级为 Q0 PASS；必须按新 commit 创建全新 r4。
+已知 r3 的目标 `cudaStreamSynchronize`（`correlationId=133`）和 request 后显式 `cudaDeviceSynchronize`（`correlationId=134`）均唯一映射；另有一条 request 结束后的尾部同步（`correlationId=135`）没有 runtime 候选。该记录只能表述为与 profiler/harness teardown 时间一致，不能在没有 API 映射时断言其具体来源。新版 analyzer 应完整保留它并标为 `HARNESS_OUTSIDE_REQUEST` warning，不得让它污染目标 request validity，也不得忽略目标 request 内的证据缺失。诊断通过仍不把已有 r3 升级为 Q0 PASS。
+
+## 2.6 使用现有 r4 EMPTY 做只读 lazy-export 诊断
+
+r4 已在批量阶段的 `Q0-EMPTY-001` 停止，必须保持失败现场。更新代码后只读取其 SQLite，并把新输出写入独立诊断目录：
+
+```powershell
+$R4EmptyCandidates = @(
+    Get-ChildItem (Join-Path $Q0Root "engineering_evidence") -Recurse -File -Filter "trace.sqlite" |
+        Where-Object { $_.Directory.Name -eq "Q0-EMPTY-001" -and $_.FullName -match "(?i)r4" }
+)
+$R4EmptyCandidates | Select-Object FullName
+if ($R4EmptyCandidates.Count -ne 1) { throw "无法唯一定位 r4/Q0-EMPTY-001" }
+$R4Case = $R4EmptyCandidates[0].Directory.FullName
+$R4Sqlite = $R4EmptyCandidates[0].FullName
+$R4Raw = Join-Path $R4Case "trace.nsys-rep"
+$R4Manifest = Join-Path $R4Case "source_manifest.json"
+$R4Receipt = Get-Content -LiteralPath (Join-Path $R4Case "collection_receipt.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+$R4Diag = Join-Path $Q0Root "engineering_evidence\q0_compat_diagnostics\r4-empty-$CodeShort"
+
+& $Python -m exposedpath_v141 inspect-sqlite --sqlite $R4Sqlite --output-dir (Join-Path $R4Diag "inspect") --data-role Engineering --raw-sha256 (Get-FileHash -LiteralPath $R4Raw -Algorithm SHA256).Hash --collector-version ([string]$R4Receipt.environment.nsight_systems) --source-manifest $R4Manifest
+if ($LASTEXITCODE -ne 0) { throw "r4 EMPTY observation 未通过" }
+& $Python -m exposedpath_v141 convert-sqlite --sqlite $R4Sqlite --output-dir (Join-Path $R4Diag "canonical") --data-role Engineering --raw-sha256 (Get-FileHash -LiteralPath $R4Raw -Algorithm SHA256).Hash --collector-version ([string]$R4Receipt.environment.nsight_systems) --source-manifest $R4Manifest
+if ($LASTEXITCODE -ne 0) { throw "r4 EMPTY Canonical 未通过" }
+& $Python -m exposedpath_v141 analyze-s --canonical-manifest (Join-Path $R4Diag "canonical\canonical_manifest.json") --output-dir (Join-Path $R4Diag "s")
+if ($LASTEXITCODE -notin 0,2,3) { throw "r4 EMPTY S 执行异常" }
+& $Python -m exposedpath_v141 analyze-ab --canonical-manifest (Join-Path $R4Diag "canonical\canonical_manifest.json") --s-manifest (Join-Path $R4Diag "s\s_manifest.json") --output-dir (Join-Path $R4Diag "ab")
+if ($LASTEXITCODE -notin 0,2,3) { throw "r4 EMPTY A/B 执行异常" }
+& $Python -m exposedpath_v141 evaluate-q0-real-case --case Q0-EMPTY-001 --canonical-manifest (Join-Path $R4Diag "canonical\canonical_manifest.json") --s-manifest (Join-Path $R4Diag "s\s_manifest.json") --ab-manifest (Join-Path $R4Diag "ab\ab_manifest.json") --collection-receipt (Join-Path $R4Case "collection_receipt.json") --output-dir (Join-Path $R4Diag "evidence")
+if ($LASTEXITCODE -ne 0) { throw "r4 EMPTY 独立对照未通过" }
+```
+
+验收：observation 与 Canonical 返回 0；目标 `S_EMPTY` 为 `VALID_EMPTY`，B 为 `B_NOT_APPLICABLE`，独立 evaluator 为 `REAL_CASE_PASS`。这只是兼容性诊断，不改变 r4 的失败资格。确认后必须创建全新 r5。
 
 ## 3. 编译并准备不可覆盖运行目录
 
 ```powershell
 $Q0Root = Resolve-Path .
-$RunId = "q0-win-4090-YYYYMMDD-r4"  # 执行时替换日期；必须是全新目录
+$RunId = "q0-win-4090-YYYYMMDD-r5"  # 执行时替换日期；必须是全新目录
 $Out = Join-Path $Q0Root "engineering_evidence\q0_real\$RunId"
 $Binary = Join-Path $Out "bin\exposedpath_q0.exe"
 $Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
@@ -125,7 +157,7 @@ git status --porcelain=v1 | Set-Content (Join-Path $Out "git_status.txt")
 
 验收：编译输出为 `PASS`；run manifest 为 `PREPARED_NOT_EXECUTED`；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定。
 
-## 4. 只采集 r4 单例
+## 4. 只采集 r5 单例
 
 ```powershell
 $RunManifest = Join-Path $Out "run\q0_run_manifest.json"
@@ -133,12 +165,12 @@ $Run = Get-Content -LiteralPath $RunManifest -Raw -Encoding UTF8 | ConvertFrom-J
 $NativeCases = @($Run.cases | Where-Object { $null -ne $_.command_argv })
 $SmokeCaseId = "Q0-STREAM-001"
 & $Python -m exposedpath_v141 execute-q0-case --run-manifest $RunManifest --case $SmokeCaseId
-if ($LASTEXITCODE -ne 0) { throw "r4 单例采集失败，保留现场并停止" }
+if ($LASTEXITCODE -ne 0) { throw "r5 单例采集失败，保留现场并停止" }
 ```
 
 验收：此时只能新增 `Q0-STREAM-001` 的 receipt 和非空 `.nsys-rep`。不要提前运行其余 20 个 seed，也不要手工改 receipt 或 Raw。
 
-## 5. r4 单例全链路验收
+## 5. r5 单例全链路验收
 
 先只处理 `Q0-STREAM-001`。`nsys export` 只读取 Raw，不得覆盖已存在 SQLite：
 
@@ -152,7 +184,7 @@ $RawSha = (Get-FileHash -LiteralPath $Raw -Algorithm SHA256).Hash
 $Receipt = Get-Content -LiteralPath (Join-Path $CaseDir "collection_receipt.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 $CollectorVersion = [string]$Receipt.environment.nsight_systems
 
-& $Nsys export --type sqlite --force-overwrite=false --output $Sqlite $Raw
+& $Nsys export --type sqlite --lazy=false --force-overwrite=false --output $Sqlite $Raw
 if ($LASTEXITCODE -ne 0) { throw "SQLite 导出失败：$CaseId" }
 & $Python -m exposedpath_v141 convert-sqlite --sqlite $Sqlite --output-dir (Join-Path $CaseDir "canonical") --data-role Engineering --raw-sha256 $RawSha --collector-version $CollectorVersion --source-manifest $SourceManifest
 if ($LASTEXITCODE -ne 0) { throw "Canonical 转换未通过：$CaseId；保留现场并停止" }
@@ -161,14 +193,14 @@ $SDir = Join-Path $CaseDir "s"
 $ABDir = Join-Path $CaseDir "ab"
 $EvidenceDir = Join-Path $Out "real_evidence\$CaseId"
 & $Python -m exposedpath_v141 analyze-s --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --output-dir $SDir
-if ($LASTEXITCODE -notin 0,2,3) { throw "r4 单例 S 执行异常；保留现场并停止" }
+if ($LASTEXITCODE -notin 0,2,3) { throw "r5 单例 S 执行异常；保留现场并停止" }
 & $Python -m exposedpath_v141 analyze-ab --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --s-manifest (Join-Path $SDir "s_manifest.json") --output-dir $ABDir
-if ($LASTEXITCODE -notin 0,2,3) { throw "r4 单例 A/B 执行异常；保留现场并停止" }
+if ($LASTEXITCODE -notin 0,2,3) { throw "r5 单例 A/B 执行异常；保留现场并停止" }
 & $Python -m exposedpath_v141 evaluate-q0-real-case --case $CaseId --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --s-manifest (Join-Path $SDir "s_manifest.json") --ab-manifest (Join-Path $ABDir "ab_manifest.json") --collection-receipt (Join-Path $CaseDir "collection_receipt.json") --output-dir $EvidenceDir
-if ($LASTEXITCODE -ne 0) { throw "r4 单例独立对照未通过；保留现场并停止" }
+if ($LASTEXITCODE -ne 0) { throw "r5 单例独立对照未通过；保留现场并停止" }
 ```
 
-验收：Canonical 转换必须返回 0；S/A/B 必须生成完整 bundle，其中 request 外的 harness 尾部同步可以按既有 fail-closed 规则形成非零状态；独立 evaluator 必须返回 0，且 `Q0-STREAM-001` 的 real evidence 为 `REAL_CASE_PASS`。若目标 request 仍出现额外 sync、映射歧义或其他 invalid，停止并回传整个 r4 单例目录；不能继续批量。
+验收：Canonical 转换必须返回 0；S/A/B 必须生成完整 bundle，其中 request 外的 harness 尾部同步可以按既有 fail-closed 规则形成非零状态；独立 evaluator 必须返回 0，且 `Q0-STREAM-001` 的 real evidence 为 `REAL_CASE_PASS`。若目标 request 仍出现额外 sync、映射歧义或其他 invalid，停止并回传整个 r5 单例目录；不能继续批量。
 
 ## 6. 单例通过后采集并转换其余 20 个 seed
 
@@ -186,7 +218,7 @@ foreach ($Case in $RemainingCases) {
     $RawSha = (Get-FileHash -LiteralPath $Raw -Algorithm SHA256).Hash
     $Receipt = Get-Content -LiteralPath (Join-Path $CaseDir "collection_receipt.json") -Raw -Encoding UTF8 | ConvertFrom-Json
     $CollectorVersion = [string]$Receipt.environment.nsight_systems
-    & $Nsys export --type sqlite --force-overwrite=false --output $Sqlite $Raw
+    & $Nsys export --type sqlite --lazy=false --force-overwrite=false --output $Sqlite $Raw
     if ($LASTEXITCODE -ne 0) { throw "SQLite 导出失败：$CaseId" }
     & $Python -m exposedpath_v141 convert-sqlite --sqlite $Sqlite --output-dir (Join-Path $CaseDir "canonical") --data-role Engineering --raw-sha256 $RawSha --collector-version $CollectorVersion --source-manifest $SourceManifest
     if ($LASTEXITCODE -ne 0) { throw "Canonical 转换未通过：$CaseId；保留现场并停止" }

@@ -10,7 +10,7 @@ Canonical Raw 不判断某个活动是否属于 `W(s)`，不选 terminal，也�
 
 输入为 Nsight SQLite、对应 `.nsys-rep` 的 SHA-256、采集器版本、数据角色和可选 source manifest。adapter 仅接受已经审查的两组版本：`2026.1.1.204 / 3.24.14` 与 `2026.2.1.210 / 3.25.0`；不接受版本范围或未知 schema。
 
-输出是一个新目录，包含 `canonical_manifest.json` 和八类确定性 gzip JSONL：NVTX、CUDA API、CUDA synchronization activity、device activity、CUDA event、context、stream、diagnostic。若源 SQLite 因没有相应活动而缺少 Memcpy、Memset 或 CUDA event 表，仍生成记录数为 0 的规范化文件；这不等于伪造源表。已有输出目录一律拒绝覆盖；转换通过同级临时目录完成，全部成功后才原子改名。输入 SQLite 以 read-only/immutable 方式打开，Raw 报告只读取哈希。
+输出是一个新目录，包含 `canonical_manifest.json` 和八类确定性 gzip JSONL：NVTX、CUDA API、CUDA synchronization activity、device activity、CUDA event、context、stream、diagnostic。若源 SQLite 因没有相应活动而缺少 Memcpy、Memset 或 CUDA event 表，仍生成记录数为 0 的规范化文件；对受支持的 lazy schema，KERNEL 缺表还必须通过关键导出元数据唯一性、CUDA capture 与 kernel/graph-presence 冲突检查后才能规范化为 0 条。规范化只生成空 Canonical 记录文件，不伪造源表或事件。已有输出目录一律拒绝覆盖；转换通过同级临时目录完成，全部成功后才原子改名。输入 SQLite 以 read-only/immutable 方式打开，Raw 报告只读取哈希。
 
 ## 3. 记录身份与时钟
 
@@ -42,7 +42,7 @@ Raw 中的 CUDA synchronization activity 既可能对应 Host blocking sync，�
 
 ## 6. fail-closed
 
-核心表/字段缺失、可选活动表存在但字段不完整、未知导出 schema、目标受控 observation 内 sync correlation 缺失或不唯一、dropped records 证据、必需非空字段为空、逆序时间区间都会拒绝转换。可选活动表不存在只表示该类记录为 0。
+核心表/字段缺失、条件化或可选活动表存在但字段不完整、未知导出 schema、目标受控 observation 内 sync correlation 缺失或不唯一、dropped records 证据、必需非空字段为空、逆序时间区间都会拒绝转换。Memcpy/Memset/CUDA event 缺表表示该类记录为 0；KERNEL 缺表只有在白名单 schema、`lazy=true`、三项关键导出元数据各自唯一、lazy 值严格合法、CUDA capture 已启用且没有可观察 kernel/graph launch API 证据时才表示 0，否则拒绝转换。API 名称在移除版本及 `_ptsz`/`_ptds` 装饰后匹配；request 外的潜在 launch 也会阻止对全 trace 进行零行解释。
 
 Q0 有一条范围严格受限的保留规则：只有 source manifest 与唯一、可解析的结构化 request identity 完整匹配后，起点不早于 request 结束的同步才能标记为 harness 尾部证据。此类记录不能被删除或伪造 runtime 映射，Canonical 中保留 `runtime_mapping_count`，缺 correlation 时 `correlation_id` 为 `null`，无唯一候选时 `runtime_api_name` 等 runtime 字段为 `null`。目标 request 内、目标范围无法唯一确定、存在无法解析的结构化 NVTX，或非 Q0 trace 的 correlation 问题仍 fail closed。缺 source manifest 的 Prototype/Engineering trace 可以生成派生 bundle，但 observation/identity 问题必须传播，研究资格仍为 false；Pilot/Formal 缺 manifest 时直接 invalid。
 

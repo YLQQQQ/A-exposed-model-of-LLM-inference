@@ -350,6 +350,306 @@ def test_present_optional_activity_table_with_missing_columns_is_invalid(tmp_pat
     )
 
 
+def test_supported_lazy_export_without_kernel_table_normalizes_zero_rows(tmp_path):
+    """捕获：把 lazy 导出的合法零 kernel 错判为缺少核心证据。"""
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _make_manifest(manifest)
+    connection = sqlite3.connect(database)
+    connection.execute("DROP TABLE CUPTI_ACTIVITY_KIND_KERNEL")
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='2026.2.1.210' "
+        "WHERE name='EXPORT_PRODUCT_VERSION'"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='3.25.0' "
+        "WHERE name='EXPORT_SCHEMA_VERSION'"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='true' "
+        "WHERE name='EXPORT_PARAM_LAZY'"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        data_role="Engineering",
+        raw_sha256="2" * 64,
+        collector_version="2026.2.1.210",
+        source_manifest=manifest,
+    )
+
+    kernel = report["derived_checks"]["conditional_activity_tables"][
+        "CUPTI_ACTIVITY_KIND_KERNEL"
+    ]
+    assert report["validity"]["status"] == "valid"
+    assert report["observed_facts"]["row_counts"][
+        "CUPTI_ACTIVITY_KIND_KERNEL"
+    ] == 0
+    assert kernel["present"] is False
+    assert kernel["normalization"] == "ZERO_ROWS_LAZY_EXPORT"
+    assert kernel["presence_evidence"] == []
+
+
+def test_lazy_missing_kernel_table_with_target_launch_evidence_is_invalid(tmp_path):
+    """捕获：有目标 request kernel launch 时仍把缺表伪装成零活动。"""
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _replace_with_q0_target_request(database, manifest)
+    connection = sqlite3.connect(database)
+    connection.execute("DROP TABLE CUPTI_ACTIVITY_KIND_KERNEL")
+    connection.execute("INSERT INTO StringIds VALUES (2, 'cudaLaunchKernel_v7000')")
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES (30,40,0,1,8,2,0,NULL)"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='2026.2.1.210' "
+        "WHERE name='EXPORT_PRODUCT_VERSION'"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='3.25.0' "
+        "WHERE name='EXPORT_SCHEMA_VERSION'"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='true' "
+        "WHERE name='EXPORT_PARAM_LAZY'"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        data_role="Engineering",
+        raw_sha256="3" * 64,
+        collector_version="2026.2.1.210",
+        source_manifest=manifest,
+    )
+
+    issue = next(
+        item for item in report["validity"]["issues"]
+        if item["code"] == "KERNEL_TABLE_ABSENT_WITH_PRESENCE_EVIDENCE"
+    )
+    evidence = issue["detail"]["presence_evidence"]
+    assert report["validity"]["status"] == "invalid"
+    assert report["observed_facts"]["row_counts"][
+        "CUPTI_ACTIVITY_KIND_KERNEL"
+    ] is None
+    assert len(evidence) == 1
+    assert evidence[0]["api_name"] == "cudaLaunchKernel_v7000"
+    assert evidence[0]["scope"] == "TARGET_REQUEST"
+
+
+@pytest.mark.parametrize(
+    ("api_name", "start_ns", "expected_scope"),
+    [
+        ("cudaGraphLaunch_v10000", 30, "TARGET_REQUEST"),
+        ("cudaLaunchKernel_ptsz_v7000", 30, "TARGET_REQUEST"),
+        ("cuLaunchKernelEx_v12000", 30, "TARGET_REQUEST"),
+        ("cuGraphLaunch_ptsz_v10000", 130, "HARNESS_OUTSIDE_REQUEST"),
+    ],
+)
+def test_lazy_missing_kernel_table_rejects_all_launch_evidence_scopes(
+    tmp_path, api_name, start_ns, expected_scope
+):
+    """潜在 kernel/graph launch 在 request 内外都阻止全 trace 零行规范化。"""
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _replace_with_q0_target_request(database, manifest)
+    connection = sqlite3.connect(database)
+    connection.execute("DROP TABLE CUPTI_ACTIVITY_KIND_KERNEL")
+    connection.execute("INSERT INTO StringIds VALUES (2, ?)", (api_name,))
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES (?,?,0,1,8,2,0,NULL)",
+        (start_ns, start_ns + 10),
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='2026.2.1.210' "
+        "WHERE name='EXPORT_PRODUCT_VERSION'"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='3.25.0' "
+        "WHERE name='EXPORT_SCHEMA_VERSION'"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='true' "
+        "WHERE name='EXPORT_PARAM_LAZY'"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        data_role="Engineering",
+        raw_sha256="4" * 64,
+        collector_version="2026.2.1.210",
+        source_manifest=manifest,
+    )
+
+    issue = next(
+        item for item in report["validity"]["issues"]
+        if item["code"] == "KERNEL_TABLE_ABSENT_WITH_PRESENCE_EVIDENCE"
+    )
+    evidence = issue["detail"]["presence_evidence"]
+    assert report["validity"]["status"] == "invalid"
+    assert evidence[0]["api_name"] == api_name
+    assert evidence[0]["scope"] == expected_scope
+
+
+@pytest.mark.parametrize(
+    ("metadata_name", "extra_value"),
+    [
+        ("EXPORT_PRODUCT_VERSION", "2026.2.1.210"),
+        ("EXPORT_SCHEMA_VERSION", "3.25.0"),
+        ("EXPORT_PARAM_LAZY", "false"),
+    ],
+)
+def test_lazy_missing_kernel_requires_unique_export_metadata(
+    tmp_path, metadata_name, extra_value
+):
+    """零行规范化所依赖的版本和 lazy 字段缺乏唯一值时必须 fail closed。"""
+    database = tmp_path / "trace.sqlite"
+    _make_sqlite(database)
+    connection = sqlite3.connect(database)
+    connection.execute("DROP TABLE CUPTI_ACTIVITY_KIND_KERNEL")
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='2026.2.1.210' "
+        "WHERE name='EXPORT_PRODUCT_VERSION'"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='3.25.0' "
+        "WHERE name='EXPORT_SCHEMA_VERSION'"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='true' "
+        "WHERE name='EXPORT_PARAM_LAZY'"
+    )
+    connection.execute(
+        "INSERT INTO META_DATA_EXPORT(name,value) VALUES (?,?)",
+        (metadata_name, extra_value),
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(database, data_role="Engineering")
+
+    assert report["validity"]["status"] == "invalid"
+    assert report["observed_facts"]["row_counts"][
+        "CUPTI_ACTIVITY_KIND_KERNEL"
+    ] is None
+    assert any(
+        item["code"] == "EXPORT_METADATA_NOT_UNIQUE"
+        and item["detail"]["name"] == metadata_name
+        for item in report["validity"]["issues"]
+    )
+
+
+def test_export_lazy_metadata_requires_exact_boolean_text(tmp_path):
+    """唯一但未知的 lazy 值也不能成为可接受的 observation 元数据。"""
+    database = tmp_path / "trace.sqlite"
+    _make_sqlite(database)
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='TRUE' "
+        "WHERE name='EXPORT_PARAM_LAZY'"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(database, data_role="Engineering")
+
+    assert report["validity"]["status"] == "invalid"
+    assert any(
+        item["code"] == "INVALID_EXPORT_METADATA_VALUE"
+        and item["detail"]["name"] == "EXPORT_PARAM_LAZY"
+        for item in report["validity"]["issues"]
+    )
+
+
+def test_nonlazy_export_without_kernel_table_remains_invalid(tmp_path):
+    """捕获：把非 lazy 导出的结构缺表错误解释为零活动。"""
+    database = tmp_path / "trace.sqlite"
+    _make_sqlite(database)
+    connection = sqlite3.connect(database)
+    connection.execute("DROP TABLE CUPTI_ACTIVITY_KIND_KERNEL")
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(database, data_role="Engineering")
+
+    assert report["validity"]["status"] == "invalid"
+    assert any(
+        item["code"] == "MISSING_REQUIRED_TABLE"
+        and item["detail"] == "CUPTI_ACTIVITY_KIND_KERNEL"
+        for item in report["validity"]["issues"]
+    )
+
+
+@pytest.mark.parametrize("missing_precondition", ["supported_schema", "cuda_capture"])
+def test_lazy_missing_kernel_table_without_zero_evidence_remains_invalid(
+    tmp_path, missing_precondition
+):
+    """缺少 schema 白名单或 CUDA capture 证明时不得采用零行规范化。"""
+    database = tmp_path / "trace.sqlite"
+    _make_sqlite(database)
+    connection = sqlite3.connect(database)
+    connection.execute("DROP TABLE CUPTI_ACTIVITY_KIND_KERNEL")
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='true' "
+        "WHERE name='EXPORT_PARAM_LAZY'"
+    )
+    if missing_precondition == "supported_schema":
+        connection.execute(
+            "UPDATE META_DATA_EXPORT SET value='unknown' "
+            "WHERE name='EXPORT_SCHEMA_VERSION'"
+        )
+    else:
+        connection.execute(
+            "DELETE FROM META_DATA_CAPTURE WHERE value='Cuda'"
+        )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(database, data_role="Engineering")
+
+    assert report["validity"]["status"] == "invalid"
+    assert report["observed_facts"]["row_counts"][
+        "CUPTI_ACTIVITY_KIND_KERNEL"
+    ] is None
+    assert report["derived_checks"]["conditional_activity_tables"][
+        "CUPTI_ACTIVITY_KIND_KERNEL"
+    ]["normalization"] == "UNRESOLVED_MISSING_TABLE"
+
+
+def test_present_kernel_table_with_missing_columns_remains_invalid(tmp_path):
+    """捕获：条件化缺表策略意外放过实际存在但损坏的 KERNEL 表。"""
+    database = tmp_path / "trace.sqlite"
+    _make_sqlite(database)
+    connection = sqlite3.connect(database)
+    connection.execute("DROP TABLE CUPTI_ACTIVITY_KIND_KERNEL")
+    connection.execute(
+        "CREATE TABLE CUPTI_ACTIVITY_KIND_KERNEL(start INTEGER, end INTEGER)"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='true' "
+        "WHERE name='EXPORT_PARAM_LAZY'"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(database, data_role="Engineering")
+
+    assert report["validity"]["status"] == "invalid"
+    assert any(
+        item["code"] == "MISSING_REQUIRED_COLUMNS"
+        and item["detail"]["table"] == "CUPTI_ACTIVITY_KIND_KERNEL"
+        for item in report["validity"]["issues"]
+    )
+
+
 def test_reviewed_nsys_2026_2_schema_3_25_is_supported(tmp_path):
     database = tmp_path / "trace.sqlite"
     manifest = tmp_path / "manifest.json"
@@ -473,7 +773,7 @@ def test_q0_post_request_unmatched_sync_is_harness_warning(tmp_path):
     assert report["validity"]["status"] == "valid"
     assert warning["level"] == "warning"
     assert warning["detail"]["offending"][0]["scope"] == "HARNESS_OUTSIDE_REQUEST"
-    assert report["schema_version"] == "exposedpath.observation-report/0.3.0"
+    assert report["schema_version"] == "exposedpath.observation-report/0.4.0"
     assert report["derived_checks"]["target_request_scope"] == {
         "status": "RESOLVED",
         "request_id": "Q0-STREAM-001",
