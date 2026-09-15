@@ -90,6 +90,7 @@ def validate_canonical_raw_schema(schema: Mapping[str, Any]) -> None:
         "unit": "ns",
         "comparison_scope": "SINGLE_SOURCE_TRACE_ONLY",
         "timestamp_normalization": "DISABLED",
+        "timestamp_value_domain": "SIGNED_INT64",
     }:
         raise CanonicalRawSchemaError("时钟模型必须是单 trace 相对纳秒半开区间")
 
@@ -106,16 +107,22 @@ def validate_canonical_raw_schema(schema: Mapping[str, Any]) -> None:
         raise CanonicalRawSchemaError("全局记录身份必须绑定 SQLite 哈希和 source row")
 
     adapters = _list(schema.get("source_adapters"), "source_adapters")
-    if adapters != [
+    expected_adapters = [
         {
             "adapter_id": "NSYS-SQLITE-2026.1.1-3.24.14",
             "export_product_version": "2026.1.1.204",
             "export_schema_version": "3.24.14",
-        }
-    ]:
+        },
+        {
+            "adapter_id": "NSYS-SQLITE-2026.2.1-3.25.0",
+            "export_product_version": "2026.2.1.210",
+            "export_schema_version": "3.25.0",
+        },
+    ]
+    if adapters != expected_adapters:
         raise CanonicalRawSchemaError("Nsight source adapter 未锁定到已审查 schema")
-    if schema.get("adapter_id") != adapters[0]["adapter_id"]:
-        raise CanonicalRawSchemaError("adapter_id 与 source_adapters 不一致")
+    if schema.get("adapter_id") != "NSYS-SQLITE-CANONICAL-RAW-V0.2":
+        raise CanonicalRawSchemaError("Canonical adapter_id 不匹配")
 
     manifest = _mapping(schema.get("bundle_manifest"), "bundle_manifest")
     _text(manifest.get("filename"), "bundle_manifest.filename")
@@ -210,13 +217,15 @@ def _validate_record(kind: str, record: Mapping[str, Any], schema: Mapping[str, 
     if "start_ns" in record:
         start = record["start_ns"]
         end = record.get("end_ns")
-        if not isinstance(start, int) or start < 0:
+        if not isinstance(start, int) or isinstance(start, bool):
             raise ValueError(f"{kind} 时间区间非法")
-        if end is not None and (not isinstance(end, int) or end < start):
+        if end is not None and (
+            not isinstance(end, int) or isinstance(end, bool) or end < start
+        ):
             raise ValueError(f"{kind} 时间区间非法")
     if "timestamp_ns" in record:
         timestamp = record["timestamp_ns"]
-        if not isinstance(timestamp, int) or timestamp < 0:
+        if not isinstance(timestamp, int) or isinstance(timestamp, bool):
             raise ValueError(f"{kind} 时间区间非法")
 
 
@@ -337,6 +346,12 @@ def _extract_records(
     connection: sqlite3.Connection,
     schema: Mapping[str, Any],
 ) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
+    table_names = {
+        str(row[0])
+        for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        )
+    }
     strings = {
         int(row[0]): str(row[1])
         for row in connection.execute("SELECT id, value FROM StringIds")
@@ -433,6 +448,8 @@ def _extract_records(
         ("CUPTI_ACTIVITY_KIND_MEMSET", "MEMSET"),
     )
     for table, activity_kind in activity_specs:
+        if table not in table_names:
+            continue
         for row in _fetch_rows(connection, table, "start, end, source_rowid"):
             if activity_kind == "KERNEL":
                 name = strings.get(row["demangledName"], strings.get(row["shortName"], ""))
@@ -468,16 +485,21 @@ def _extract_records(
         key=lambda item: (item["start_ns"], item["end_ns"], item["source_table"], item["source_rowid"])
     )
 
-    for row in _fetch_rows(connection, "CUPTI_ACTIVITY_KIND_CUDA_EVENT", "timestamp, source_rowid"):
-        record = _base("cuda_event", "CUPTI_ACTIVITY_KIND_CUDA_EVENT", row["source_rowid"])
-        record.update(
-            timestamp_ns=row["timestamp"], device_id=row["deviceId"],
-            context_id=row["contextId"], green_context_id=row["greenContextId"],
-            stream_id=row["streamId"], correlation_id=row["correlationId"],
-            global_pid=row["globalPid"], process_id=_process_part(row["globalPid"]),
-            event_id=row["eventId"], event_sync_id=row["eventSyncId"],
-        )
-        result["cuda_event"].append(record)
+    if "CUPTI_ACTIVITY_KIND_CUDA_EVENT" in table_names:
+        for row in _fetch_rows(
+            connection, "CUPTI_ACTIVITY_KIND_CUDA_EVENT", "timestamp, source_rowid"
+        ):
+            record = _base(
+                "cuda_event", "CUPTI_ACTIVITY_KIND_CUDA_EVENT", row["source_rowid"]
+            )
+            record.update(
+                timestamp_ns=row["timestamp"], device_id=row["deviceId"],
+                context_id=row["contextId"], green_context_id=row["greenContextId"],
+                stream_id=row["streamId"], correlation_id=row["correlationId"],
+                global_pid=row["globalPid"], process_id=_process_part(row["globalPid"]),
+                event_id=row["eventId"], event_sync_id=row["eventSyncId"],
+            )
+            result["cuda_event"].append(record)
 
     for row in _fetch_rows(connection, "TARGET_INFO_CUDA_CONTEXT_INFO", "processId, contextId, source_rowid"):
         record = _base("context", "TARGET_INFO_CUDA_CONTEXT_INFO", row["source_rowid"])

@@ -472,6 +472,9 @@ int main(int argc, char** argv) {
     {
       CudaProfilerRange capture;
       selected->second(resources, case_id, run_id);
+      // Q0 的请求范围已经结束；显式排空其余受控工作，避免
+      // cudaProfilerStop 以无 runtime API 行的隐式 context sync 结束采集。
+      CUDA_CHECK(cudaDeviceSynchronize());
     }
     return 0;
   } catch (const std::exception& error) {

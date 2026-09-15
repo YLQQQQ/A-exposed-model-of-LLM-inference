@@ -223,6 +223,7 @@ def test_clock_and_source_identity_are_explicit():
         "unit": "ns",
         "comparison_scope": "SINGLE_SOURCE_TRACE_ONLY",
         "timestamp_normalization": "DISABLED",
+        "timestamp_value_domain": "SIGNED_INT64",
     }
     assert schema["record_identity"]["tuple"] == [
         "source_sqlite_sha256",
@@ -234,13 +235,13 @@ def test_clock_and_source_identity_are_explicit():
 def test_source_adapter_is_locked_to_reviewed_nsys_schema():
     schema = load_canonical_raw_schema()
 
-    assert schema["source_adapters"] == [
-        {
-            "adapter_id": "NSYS-SQLITE-2026.1.1-3.24.14",
-            "export_product_version": "2026.1.1.204",
-            "export_schema_version": "3.24.14",
-        }
-    ]
+    assert {
+        (item["export_product_version"], item["export_schema_version"])
+        for item in schema["source_adapters"]
+    } == {
+        ("2026.1.1.204", "3.24.14"),
+        ("2026.2.1.210", "3.25.0"),
+    }
 
 
 def test_converter_preserves_input_and_writes_all_record_types(tmp_path):
@@ -269,6 +270,100 @@ def test_converter_preserves_input_and_writes_all_record_types(tmp_path):
         "selected_device_id": 0,
     }
     assert all((manifest_path.parent / item["filename"]).is_file() for item in manifest["files"].values())
+
+
+def test_converter_writes_zero_record_files_when_optional_tables_are_absent(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    connection = sqlite3.connect(database)
+    for table in (
+        "CUPTI_ACTIVITY_KIND_MEMCPY",
+        "CUPTI_ACTIVITY_KIND_MEMSET",
+        "CUPTI_ACTIVITY_KIND_CUDA_EVENT",
+    ):
+        connection.execute(f'DROP TABLE "{table}"')
+    connection.commit()
+    connection.close()
+
+    manifest_path = convert_sqlite_to_canonical(
+        database,
+        tmp_path / "canonical",
+        data_role="Engineering",
+        raw_sha256="5" * 64,
+        collector_version="synthetic",
+        source_manifest=source_manifest,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["files"]["device_activity"]["record_count"] == 1
+    assert manifest["files"]["cuda_event"]["record_count"] == 0
+    assert _read_jsonl(manifest_path.parent / "cuda_event.jsonl.gz") == []
+
+
+def test_converter_accepts_reviewed_nsys_2026_2_schema(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='2026.2.1.210' "
+        "WHERE name='EXPORT_PRODUCT_VERSION'"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='3.25.0' "
+        "WHERE name='EXPORT_SCHEMA_VERSION'"
+    )
+    connection.commit()
+    connection.close()
+
+    manifest_path = convert_sqlite_to_canonical(
+        database,
+        tmp_path / "canonical",
+        data_role="Engineering",
+        raw_sha256="6" * 64,
+        collector_version="2026.2.1.210",
+        source_manifest=source_manifest,
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["source"]["export"]["product_version"] == "2026.2.1.210"
+    assert manifest["source"]["export"]["schema_version"] == "3.25.0"
+
+
+def test_converter_preserves_signed_trace_relative_control_timestamps(tmp_path):
+    database = tmp_path / "source.sqlite"
+    source_manifest = tmp_path / "run_manifest.json"
+    _make_source_sqlite(database)
+    _make_manifest(source_manifest)
+    connection = sqlite3.connect(database)
+    connection.execute("INSERT INTO StringIds VALUES (3, 'cudaProfilerStart_v4000')")
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES "
+        "(-200,5,0,?,99,3,0,NULL)",
+        ((1 << 56) | (2 << 48) | (3 << 24) | 4,),
+    )
+    connection.execute(
+        "INSERT INTO DIAGNOSTIC_EVENT VALUES (-500,1,1,'profiler initialized')"
+    )
+    connection.commit()
+    connection.close()
+
+    manifest_path = convert_sqlite_to_canonical(
+        database,
+        tmp_path / "canonical",
+        data_role="Engineering",
+        raw_sha256="7" * 64,
+        collector_version="2026.2.1.210",
+        source_manifest=source_manifest,
+    )
+
+    cuda_api = _read_jsonl(manifest_path.parent / "cuda_api.jsonl.gz")
+    diagnostic = _read_jsonl(manifest_path.parent / "diagnostic.jsonl.gz")
+    assert next(row for row in cuda_api if row["correlation_id"] == 99)["start_ns"] == -200
+    assert diagnostic[0]["timestamp_ns"] == -500
 
 
 def test_converter_resolves_names_ids_and_source_rows(tmp_path):

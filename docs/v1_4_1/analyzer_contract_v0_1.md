@@ -26,8 +26,8 @@ python -m exposedpath_v141 inspect-sqlite \
 2. `raw_sha256` 表示对应 `.nsys-rep` 的身份，SQLite 自身另行计算 SHA-256。两者不能互相替代。
 3. `collector_version` 与 SQLite 中的 `EXPORT_PRODUCT_VERSION` 分开记录。
 4. 文件名不能替代 request、repeat、workload 或运行身份。缺少 source manifest 时，Prototype/Engineering 可生成报告，但 validity 至少为 `ambiguous`；Pilot/Formal 为 `invalid`。
-5. 新采集建议使用非 lazy SQLite 导出；历史 lazy 导出只有在全部必需表实际存在时才可进入 Engineering 检查。
-6. 当前 adapter 只支持已验证组合 `EXPORT_PRODUCT_VERSION=2026.1.1.204` 与 `EXPORT_SCHEMA_VERSION=3.24.14`。其他组合即使列名相似也必须判为 `invalid`，经独立 schema 审查后才能扩展允许列表。
+5. 新采集建议使用非 lazy SQLite 导出；历史 lazy 导出必须包含全部核心必需表。没有发生对应活动时，允许缺少下述按活动出现的可选表。
+6. 当前 adapter 精确支持两组已审查组合：`2026.1.1.204 / 3.24.14` 与 `2026.2.1.210 / 3.25.0`。其他组合即使列名相似也必须判为 `invalid`，经独立 schema 审查后才能扩展允许列表。
 
 ## 必需的 observation evidence
 
@@ -37,15 +37,15 @@ python -m exposedpath_v141 inspect-sqlite \
 - `NVTX_EVENTS`、`StringIds`：request/phase 可观察标签；
 - `CUPTI_ACTIVITY_KIND_RUNTIME`：CUDA API、correlation 与 Host 线程事实；
 - `CUPTI_ACTIVITY_KIND_SYNCHRONIZATION`、`ENUM_CUPTI_SYNC_TYPE`：同步 activity 事实；
-- `CUPTI_ACTIVITY_KIND_KERNEL`、`MEMCPY`、`MEMSET`：GPU activity 事实；
+- `CUPTI_ACTIVITY_KIND_KERNEL`：核心 GPU activity 事实；
 - `TARGET_INFO_CUDA_CONTEXT_INFO`、`TARGET_INFO_CUDA_STREAM`、`TARGET_INFO_GPU`：context/stream/process/device 映射；
 - `DIAGNOSTIC_EVENT`：dropped/missing record 与采集诊断证据。
 
-缺表、缺关键字段、sync 到 CUDA API 的 correlation 缺失或不唯一、明确的 dropped/missing record 诊断，均必须 fail closed。零行与缺表不得等价处理。
+`CUPTI_ACTIVITY_KIND_MEMCPY`、`CUPTI_ACTIVITY_KIND_MEMSET` 与 `CUPTI_ACTIVITY_KIND_CUDA_EVENT` 是按活动出现的可选表：表不存在表示该类源记录为 0；表一旦存在，缺少 Canonical 提取所需任一字段仍必须 fail closed。核心表缺失、sync 到 CUDA API 的 correlation 缺失或不唯一、明确的 dropped/missing record 诊断，同样必须 fail closed。
 
 ## 输出合同
 
-唯一输出文件为 `observation_report.json`，schema 为 `exposedpath.observation-report/0.1.0`。内容分层保存：
+唯一输出文件为 `observation_report.json`，schema 为 `exposedpath.observation-report/0.2.0`。内容分层保存：
 
 - `observed_facts`：输入哈希、导出元数据、表/字段、行数、GPU、sync/phase 计数；
 - `derived_checks`：表合同检查、sync correlation 检查、dropped-record 扫描；

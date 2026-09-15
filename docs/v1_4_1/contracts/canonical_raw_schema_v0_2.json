@@ -2,19 +2,25 @@
   "schema_version": "exposedpath-canonical-raw/0.2.0",
   "measurement_contract_version": "exposedpath-measurement-contract-0.2.0",
   "status": "ENGINEERING_PRE_PILOT",
-  "adapter_id": "NSYS-SQLITE-2026.1.1-3.24.14",
+  "adapter_id": "NSYS-SQLITE-CANONICAL-RAW-V0.2",
   "source_adapters": [
     {
       "adapter_id": "NSYS-SQLITE-2026.1.1-3.24.14",
       "export_product_version": "2026.1.1.204",
       "export_schema_version": "3.24.14"
+    },
+    {
+      "adapter_id": "NSYS-SQLITE-2026.2.1-3.25.0",
+      "export_product_version": "2026.2.1.210",
+      "export_schema_version": "3.25.0"
     }
   ],
   "clock_model": {
     "clock_domain_id": "NSYS_TRACE_RELATIVE_NS",
     "unit": "ns",
     "comparison_scope": "SINGLE_SOURCE_TRACE_ONLY",
-    "timestamp_normalization": "DISABLED"
+    "timestamp_normalization": "DISABLED",
+    "timestamp_value_domain": "SIGNED_INT64"
   },
   "record_identity": {
     "tuple": ["source_sqlite_sha256", "source_table", "source_rowid"],

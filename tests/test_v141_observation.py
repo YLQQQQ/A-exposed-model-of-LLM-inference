@@ -13,30 +13,42 @@ CREATE TABLE META_DATA_CAPTURE(name TEXT NOT NULL, value TEXT);
 CREATE TABLE META_DATA_EXPORT(name TEXT NOT NULL, value TEXT);
 CREATE TABLE StringIds(id INTEGER NOT NULL, value TEXT);
 CREATE TABLE NVTX_EVENTS(start INTEGER NOT NULL, end INTEGER, eventType INTEGER NOT NULL,
- text TEXT, textId INTEGER, globalTid INTEGER);
+ rangeId INTEGER, category INTEGER, color INTEGER, text TEXT, globalTid INTEGER,
+ endGlobalTid INTEGER, textId INTEGER, domainId INTEGER, jsonText TEXT);
 CREATE TABLE CUPTI_ACTIVITY_KIND_RUNTIME(start INTEGER NOT NULL, end INTEGER NOT NULL,
- globalTid INTEGER, correlationId INTEGER, nameId INTEGER NOT NULL, returnValue INTEGER NOT NULL);
+ eventClass INTEGER NOT NULL, globalTid INTEGER, correlationId INTEGER,
+ nameId INTEGER NOT NULL, returnValue INTEGER NOT NULL, callchainId INTEGER);
 CREATE TABLE CUPTI_ACTIVITY_KIND_SYNCHRONIZATION(start INTEGER NOT NULL, end INTEGER NOT NULL,
- deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, streamId INTEGER NOT NULL,
+ deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, greenContextId INTEGER,
+ streamId INTEGER NOT NULL,
  correlationId INTEGER, globalPid INTEGER, syncType INTEGER NOT NULL,
  eventId INTEGER NOT NULL, eventSyncId INTEGER);
 CREATE TABLE CUPTI_ACTIVITY_KIND_KERNEL(start INTEGER NOT NULL, end INTEGER NOT NULL,
- deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, streamId INTEGER NOT NULL,
- correlationId INTEGER, globalPid INTEGER, demangledName INTEGER NOT NULL, shortName INTEGER NOT NULL);
+ deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, greenContextId INTEGER,
+ streamId INTEGER NOT NULL, correlationId INTEGER, globalPid INTEGER,
+ demangledName INTEGER NOT NULL, shortName INTEGER NOT NULL,
+ graphNodeId INTEGER, graphId INTEGER);
 CREATE TABLE CUPTI_ACTIVITY_KIND_MEMCPY(start INTEGER NOT NULL, end INTEGER NOT NULL,
- deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, streamId INTEGER NOT NULL,
- correlationId INTEGER, globalPid INTEGER, bytes INTEGER NOT NULL, copyKind INTEGER NOT NULL);
+ deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, greenContextId INTEGER,
+ streamId INTEGER NOT NULL, correlationId INTEGER, globalPid INTEGER,
+ bytes INTEGER NOT NULL, copyKind INTEGER NOT NULL, srcKind INTEGER, dstKind INTEGER,
+ graphNodeId INTEGER);
 CREATE TABLE CUPTI_ACTIVITY_KIND_MEMSET(start INTEGER NOT NULL, end INTEGER NOT NULL,
- deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, streamId INTEGER NOT NULL,
- correlationId INTEGER, globalPid INTEGER, bytes INTEGER NOT NULL);
+ deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, greenContextId INTEGER,
+ streamId INTEGER NOT NULL, correlationId INTEGER, globalPid INTEGER,
+ value INTEGER NOT NULL, bytes INTEGER NOT NULL, graphNodeId INTEGER, memKind INTEGER);
 CREATE TABLE CUPTI_ACTIVITY_KIND_CUDA_EVENT(timestamp INTEGER, deviceId INTEGER NOT NULL,
- contextId INTEGER NOT NULL, streamId INTEGER NOT NULL, correlationId INTEGER,
+ contextId INTEGER NOT NULL, greenContextId INTEGER, streamId INTEGER NOT NULL,
+ correlationId INTEGER,
  globalPid INTEGER, eventId INTEGER NOT NULL, eventSyncId INTEGER);
 CREATE TABLE ENUM_CUPTI_SYNC_TYPE(id INTEGER NOT NULL, name TEXT, label TEXT);
-CREATE TABLE TARGET_INFO_CUDA_CONTEXT_INFO(nullStreamId INTEGER NOT NULL, processId INTEGER NOT NULL,
- deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL);
-CREATE TABLE TARGET_INFO_CUDA_STREAM(streamId INTEGER NOT NULL, processId INTEGER NOT NULL,
- contextId INTEGER NOT NULL);
+CREATE TABLE TARGET_INFO_CUDA_CONTEXT_INFO(nullStreamId INTEGER NOT NULL,
+ hwId INTEGER NOT NULL, vmId INTEGER NOT NULL, processId INTEGER NOT NULL,
+ deviceId INTEGER NOT NULL, contextId INTEGER NOT NULL, parentContextId INTEGER,
+ isGreenContext INTEGER);
+CREATE TABLE TARGET_INFO_CUDA_STREAM(streamId INTEGER NOT NULL, hwId INTEGER NOT NULL,
+ vmId INTEGER NOT NULL, processId INTEGER NOT NULL, contextId INTEGER NOT NULL,
+ priority INTEGER NOT NULL, flag INTEGER NOT NULL);
 CREATE TABLE TARGET_INFO_GPU(id INTEGER NOT NULL, name TEXT);
 CREATE TABLE DIAGNOSTIC_EVENT(timestamp INTEGER NOT NULL, source INTEGER NOT NULL,
  severity INTEGER NOT NULL, text TEXT NOT NULL);
@@ -66,11 +78,11 @@ def _make_sqlite(path: Path, diagnostic: str | None = None) -> None:
     )
     connection.execute("INSERT INTO StringIds VALUES (1, 'cudaStreamSynchronize')")
     connection.execute(
-        "INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES (10,20,1,7,1,0)"
+        "INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES (10,20,0,1,7,1,0,NULL)"
     )
     connection.execute(
         "INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION "
-        "VALUES (11,19,0,1,2,7,1,3,4294967295,4294967295)"
+        "VALUES (11,19,0,1,NULL,2,7,1,3,4294967295,4294967295)"
     )
     connection.execute("INSERT INTO TARGET_INFO_GPU VALUES (0, 'test-gpu')")
     for index, label in enumerate(("full_request", "prefill", "decode"), start=1):
@@ -239,3 +251,130 @@ def test_unknown_export_schema_is_invalid(tmp_path):
     assert "UNSUPPORTED_EXPORT_SCHEMA" in {
         item["code"] for item in report["validity"]["issues"]
     }
+
+
+def test_absent_optional_activity_tables_are_zero_records_not_invalid(tmp_path):
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _make_manifest(manifest)
+    connection = sqlite3.connect(database)
+    for table in (
+        "CUPTI_ACTIVITY_KIND_MEMCPY",
+        "CUPTI_ACTIVITY_KIND_MEMSET",
+        "CUPTI_ACTIVITY_KIND_CUDA_EVENT",
+    ):
+        connection.execute(f'DROP TABLE "{table}"')
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        data_role="Engineering",
+        raw_sha256="F" * 64,
+        collector_version="synthetic",
+        source_manifest=manifest,
+    )
+
+    assert report["validity"]["status"] == "valid"
+    assert all(
+        report["observed_facts"]["row_counts"][table] == 0
+        for table in (
+            "CUPTI_ACTIVITY_KIND_MEMCPY",
+            "CUPTI_ACTIVITY_KIND_MEMSET",
+            "CUPTI_ACTIVITY_KIND_CUDA_EVENT",
+        )
+    )
+    assert report["derived_checks"]["optional_activity_tables"][
+        "CUPTI_ACTIVITY_KIND_MEMCPY"
+    ]["present"] is False
+    assert report["derived_checks"]["optional_activity_tables"][
+        "CUPTI_ACTIVITY_KIND_MEMCPY"
+    ]["missing_columns"] == []
+
+
+def test_present_optional_activity_table_with_missing_columns_is_invalid(tmp_path):
+    database = tmp_path / "trace.sqlite"
+    _make_sqlite(database)
+    connection = sqlite3.connect(database)
+    connection.execute("DROP TABLE CUPTI_ACTIVITY_KIND_MEMCPY")
+    connection.execute(
+        "CREATE TABLE CUPTI_ACTIVITY_KIND_MEMCPY(start INTEGER, end INTEGER)"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(database, data_role="Engineering")
+
+    assert report["validity"]["status"] == "invalid"
+    assert any(
+        item["code"] == "MISSING_REQUIRED_COLUMNS"
+        and item["detail"]["table"] == "CUPTI_ACTIVITY_KIND_MEMCPY"
+        for item in report["validity"]["issues"]
+    )
+
+
+def test_reviewed_nsys_2026_2_schema_3_25_is_supported(tmp_path):
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _make_manifest(manifest)
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='2026.2.1.210' "
+        "WHERE name='EXPORT_PRODUCT_VERSION'"
+    )
+    connection.execute(
+        "UPDATE META_DATA_EXPORT SET value='3.25.0' "
+        "WHERE name='EXPORT_SCHEMA_VERSION'"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        data_role="Engineering",
+        raw_sha256="1" * 64,
+        collector_version="2026.2.1.210",
+        source_manifest=manifest,
+    )
+
+    assert report["validity"]["status"] == "valid"
+    assert {
+        (item["product_version"], item["schema_version"])
+        for item in report["derived_checks"]["supported_export_schemas"]
+    } == {
+        ("2026.1.1.204", "3.24.14"),
+        ("2026.2.1.210", "3.25.0"),
+    }
+
+
+def test_non_unique_sync_runtime_mapping_keeps_fail_closed_details(tmp_path):
+    database = tmp_path / "trace.sqlite"
+    _make_sqlite(database)
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "INSERT INTO StringIds VALUES (2, 'cudaDeviceSynchronize')"
+    )
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES (12,18,0,1,7,2,0,NULL)"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(database, data_role="Engineering")
+
+    issue = next(
+        item for item in report["validity"]["issues"]
+        if item["code"] == "SYNC_RUNTIME_MAPPING_NOT_UNIQUE"
+    )
+    assert report["validity"]["status"] == "invalid"
+    assert issue["detail"]["count"] == 1
+    offending = issue["detail"]["offending"][0]
+    assert offending["correlation_id"] == 7
+    assert offending["runtime_match_count"] == 2
+    assert {row["api_name"] for row in offending["runtime_candidates"]} == {
+        "cudaStreamSynchronize",
+        "cudaDeviceSynchronize",
+    }
+    assert all("source_rowid" in row for row in offending["runtime_candidates"])

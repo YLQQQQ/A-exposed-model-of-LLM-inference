@@ -14,7 +14,7 @@ from exposedpath_v141.q0_collection import Q0CollectionError, execute_q0_case
 from exposedpath_v141.q0_execution import prepare_q0_run
 
 
-def _prepared(tmp_path: Path) -> Path:
+def _prepared(tmp_path: Path, cuda_visible_device: str = "GPU-ABC") -> Path:
     tools = tmp_path / "tools"
     tools.mkdir(parents=True)
     binary = tools / "q0.exe"
@@ -23,7 +23,7 @@ def _prepared(tmp_path: Path) -> Path:
     nsys.write_bytes(b"nsys-v1")
     return prepare_q0_run(
         tmp_path / "run", binary, nsys,
-        platform="windows", run_id="real-q0-001", cuda_visible_device="GPU-ABC",
+        platform="windows", run_id="real-q0-001", cuda_visible_device=cuda_visible_device,
     )
 
 
@@ -72,6 +72,37 @@ def test_execute_native_case_writes_hashed_receipt_and_preserves_gpu_mapping(tmp
     assert seen["env"]["CUDA_VISIBLE_DEVICES"] == "GPU-ABC"
     assert receipt["raw_trace"]["sha256"] == hashlib.sha256(raw.read_bytes()).hexdigest().upper()
     assert (receipt_path.parent / "collection_stdout.txt").read_text(encoding="utf-8") == "collector stdout"
+
+
+def test_gpu_uuid_with_or_without_internal_hyphens_is_equivalent(tmp_path):
+    selector = "GPU-0d8fafe6-a1e9-33cc-25fb-632316736455"
+    manifest = _prepared(tmp_path, selector)
+    environment = _environment()
+    environment["selected_gpu"]["uuid"] = "GPU-0d8fafe6a1e933cc25fb632316736455"
+
+    receipt_path = execute_q0_case(
+        manifest,
+        "Q0-STREAM-001",
+        process_runner=_successful_runner({}),
+        environment_probe=lambda *_: environment,
+    )
+
+    assert json.loads(receipt_path.read_text(encoding="utf-8"))["status"] == "COLLECTED"
+
+
+def test_different_gpu_uuids_are_not_equivalent(tmp_path):
+    selector = "GPU-0d8fafe6-a1e9-33cc-25fb-632316736455"
+    manifest = _prepared(tmp_path, selector)
+    environment = _environment()
+    environment["selected_gpu"]["uuid"] = "GPU-1d8fafe6a1e933cc25fb632316736455"
+
+    with pytest.raises(Q0CollectionError, match="GPU UUID"):
+        execute_q0_case(
+            manifest,
+            "Q0-STREAM-001",
+            process_runner=_successful_runner({}),
+            environment_probe=lambda *_: environment,
+        )
 
 
 def test_execute_rejects_tool_hash_change_existing_output_and_synthetic_case(tmp_path):

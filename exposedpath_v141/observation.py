@@ -15,45 +15,60 @@ from typing import Any
 from . import __version__
 
 
-REPORT_SCHEMA_VERSION = "exposedpath.observation-report/0.1.0"
+REPORT_SCHEMA_VERSION = "exposedpath.observation-report/0.2.0"
 CONTRACT_VERSION = "exposedpath-v1.4.1-draft-0.1"
-SUPPORTED_EXPORT_SCHEMAS = {("2026.1.1.204", "3.24.14")}
+SUPPORTED_EXPORT_SCHEMAS = {
+    ("2026.1.1.204", "3.24.14"),
+    ("2026.2.1.210", "3.25.0"),
+}
 
-REQUIRED_COLUMNS: dict[str, tuple[str, ...]] = {
+CORE_REQUIRED_COLUMNS: dict[str, tuple[str, ...]] = {
     "META_DATA_CAPTURE": ("name", "value"),
     "META_DATA_EXPORT": ("name", "value"),
     "StringIds": ("id", "value"),
-    "NVTX_EVENTS": ("start", "end", "eventType", "text", "textId", "globalTid"),
+    "NVTX_EVENTS": (
+        "start", "end", "eventType", "rangeId", "category", "color", "text",
+        "globalTid", "endGlobalTid", "textId", "domainId", "jsonText",
+    ),
     "CUPTI_ACTIVITY_KIND_RUNTIME": (
-        "start", "end", "globalTid", "correlationId", "nameId", "returnValue",
+        "start", "end", "eventClass", "globalTid", "correlationId", "nameId",
+        "returnValue", "callchainId",
     ),
     "CUPTI_ACTIVITY_KIND_SYNCHRONIZATION": (
-        "start", "end", "deviceId", "contextId", "streamId", "correlationId",
-        "globalPid", "syncType", "eventId", "eventSyncId",
+        "start", "end", "deviceId", "contextId", "greenContextId", "streamId",
+        "correlationId", "globalPid", "syncType", "eventId", "eventSyncId",
     ),
     "CUPTI_ACTIVITY_KIND_KERNEL": (
-        "start", "end", "deviceId", "contextId", "streamId", "correlationId",
-        "globalPid", "demangledName", "shortName",
-    ),
-    "CUPTI_ACTIVITY_KIND_MEMCPY": (
-        "start", "end", "deviceId", "contextId", "streamId", "correlationId",
-        "globalPid", "bytes", "copyKind",
-    ),
-    "CUPTI_ACTIVITY_KIND_MEMSET": (
-        "start", "end", "deviceId", "contextId", "streamId", "correlationId",
-        "globalPid", "bytes",
-    ),
-    "CUPTI_ACTIVITY_KIND_CUDA_EVENT": (
-        "timestamp", "deviceId", "contextId", "streamId", "correlationId",
-        "globalPid", "eventId", "eventSyncId",
+        "start", "end", "deviceId", "contextId", "greenContextId", "streamId",
+        "correlationId", "globalPid", "demangledName", "shortName", "graphNodeId",
+        "graphId",
     ),
     "ENUM_CUPTI_SYNC_TYPE": ("id", "name", "label"),
     "TARGET_INFO_CUDA_CONTEXT_INFO": (
-        "processId", "deviceId", "contextId", "nullStreamId",
+        "nullStreamId", "hwId", "vmId", "processId", "deviceId", "contextId",
+        "parentContextId", "isGreenContext",
     ),
-    "TARGET_INFO_CUDA_STREAM": ("processId", "contextId", "streamId"),
+    "TARGET_INFO_CUDA_STREAM": (
+        "streamId", "hwId", "vmId", "processId", "contextId", "priority", "flag",
+    ),
     "TARGET_INFO_GPU": ("id", "name"),
     "DIAGNOSTIC_EVENT": ("timestamp", "source", "severity", "text"),
+}
+
+OPTIONAL_ACTIVITY_COLUMNS: dict[str, tuple[str, ...]] = {
+    "CUPTI_ACTIVITY_KIND_MEMCPY": (
+        "start", "end", "deviceId", "contextId", "greenContextId", "streamId",
+        "correlationId", "globalPid", "bytes", "copyKind", "srcKind", "dstKind",
+        "graphNodeId",
+    ),
+    "CUPTI_ACTIVITY_KIND_MEMSET": (
+        "start", "end", "deviceId", "contextId", "greenContextId", "streamId",
+        "correlationId", "globalPid", "value", "bytes", "graphNodeId", "memKind",
+    ),
+    "CUPTI_ACTIVITY_KIND_CUDA_EVENT": (
+        "timestamp", "deviceId", "contextId", "greenContextId", "streamId",
+        "correlationId", "globalPid", "eventId", "eventSyncId",
+    ),
 }
 
 COUNT_TABLES = (
@@ -126,6 +141,13 @@ def _issue(level: str, code: str, detail: Any) -> dict[str, Any]:
     return {"level": level, "code": code, "detail": detail}
 
 
+def _global_parts(global_id: int | None) -> tuple[int | None, int | None]:
+    if global_id is None:
+        return None, None
+    value = int(global_id)
+    return (value >> 24) & 0xFFFFFF, value & 0xFFFFFF
+
+
 def inspect_sqlite(
     sqlite_path: Path,
     data_role: str,
@@ -158,14 +180,17 @@ def inspect_sqlite(
                 "SELECT name FROM sqlite_master WHERE type='table'"
             )
         }
-        table_checks: dict[str, dict[str, Any]] = {}
-        for table, required in REQUIRED_COLUMNS.items():
+        required_table_checks: dict[str, dict[str, Any]] = {}
+        optional_table_checks: dict[str, dict[str, Any]] = {}
+        table_usable: dict[str, bool] = {}
+        for table, required in CORE_REQUIRED_COLUMNS.items():
             actual = _table_columns(connection, table) if table in table_names else []
             missing = [column for column in required if column not in actual]
-            table_checks[table] = {
+            required_table_checks[table] = {
                 "present": table in table_names,
                 "missing_columns": missing,
             }
+            table_usable[table] = table in table_names and not missing
             if table not in table_names:
                 issues.append(_issue("invalid", "MISSING_REQUIRED_TABLE", table))
             elif missing:
@@ -176,23 +201,46 @@ def inspect_sqlite(
                         {"table": table, "columns": missing},
                     )
                 )
+        for table, required in OPTIONAL_ACTIVITY_COLUMNS.items():
+            actual = _table_columns(connection, table) if table in table_names else []
+            missing = (
+                [column for column in required if column not in actual]
+                if table in table_names
+                else []
+            )
+            optional_table_checks[table] = {
+                "present": table in table_names,
+                "missing_columns": missing,
+            }
+            table_usable[table] = table in table_names and not missing
+            if table in table_names and missing:
+                issues.append(
+                    _issue(
+                        "invalid",
+                        "MISSING_REQUIRED_COLUMNS",
+                        {"table": table, "columns": missing},
+                    )
+                )
 
         counts: dict[str, int | None] = {}
         for table in COUNT_TABLES:
-            counts[table] = (
-                int(connection.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0])
-                if table in table_names
-                else None
-            )
+            if table in table_names:
+                counts[table] = int(
+                    connection.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+                )
+            elif table in OPTIONAL_ACTIVITY_COLUMNS:
+                counts[table] = 0
+            else:
+                counts[table] = None
 
         export_metadata = (
             _metadata(connection, "META_DATA_EXPORT")
-            if "META_DATA_EXPORT" in table_names
+            if table_usable.get("META_DATA_EXPORT")
             else {}
         )
         capture_metadata = (
             _metadata(connection, "META_DATA_CAPTURE")
-            if "META_DATA_CAPTURE" in table_names
+            if table_usable.get("META_DATA_CAPTURE")
             else {}
         )
 
@@ -201,7 +249,7 @@ def inspect_sqlite(
             _first(export_metadata, "EXPORT_SCHEMA_VERSION"),
         )
         if (
-            "META_DATA_EXPORT" in table_names
+            table_usable.get("META_DATA_EXPORT")
             and export_schema_pair not in SUPPORTED_EXPORT_SCHEMAS
         ):
             issues.append(
@@ -216,7 +264,7 @@ def inspect_sqlite(
             )
 
         gpu_rows = []
-        if "TARGET_INFO_GPU" in table_names:
+        if table_usable.get("TARGET_INFO_GPU"):
             gpu_rows = [
                 {"device_id": row[0], "name": row[1]}
                 for row in connection.execute(
@@ -225,7 +273,7 @@ def inspect_sqlite(
             ]
 
         phase_counts: dict[str, int] = {}
-        if {"NVTX_EVENTS", "StringIds"}.issubset(table_names):
+        if table_usable.get("NVTX_EVENTS") and table_usable.get("StringIds"):
             query = """
                 SELECT COALESCE(n.text, s.value, ''), COUNT(*)
                 FROM NVTX_EVENTS AS n
@@ -240,40 +288,102 @@ def inspect_sqlite(
             "total": counts.get("CUPTI_ACTIVITY_KIND_SYNCHRONIZATION"),
             "missing_correlation": None,
             "non_unique_runtime_mapping": None,
+            "non_unique_runtime_mapping_details": [],
         }
-        if {
-            "CUPTI_ACTIVITY_KIND_SYNCHRONIZATION",
-            "CUPTI_ACTIVITY_KIND_RUNTIME",
-        }.issubset(table_names):
+        if (
+            table_usable.get("CUPTI_ACTIVITY_KIND_SYNCHRONIZATION")
+            and table_usable.get("CUPTI_ACTIVITY_KIND_RUNTIME")
+            and table_usable.get("StringIds")
+        ):
             missing_correlation = int(
                 connection.execute(
                     "SELECT COUNT(*) FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION "
                     "WHERE correlationId IS NULL"
                 ).fetchone()[0]
             )
-            non_unique = int(
-                connection.execute(
-                    """
-                    SELECT COUNT(*) FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION AS s
-                    WHERE s.correlationId IS NOT NULL
-                      AND (SELECT COUNT(*) FROM CUPTI_ACTIVITY_KIND_RUNTIME AS r
-                           WHERE r.correlationId = s.correlationId) <> 1
-                    """
-                ).fetchone()[0]
+            offending: list[dict[str, Any]] = []
+            sync_rows = connection.execute(
+                """
+                SELECT rowid, start, end, deviceId, contextId, streamId,
+                       correlationId, globalPid, syncType, eventId, eventSyncId
+                FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION
+                WHERE correlationId IS NOT NULL
+                ORDER BY start, end, rowid
+                """
             )
+            for sync_row in sync_rows:
+                correlation_id = sync_row[6]
+                runtime_rows = list(
+                    connection.execute(
+                        """
+                        SELECT r.rowid, r.start, r.end, r.eventClass, r.globalTid,
+                               r.correlationId, r.nameId, COALESCE(s.value, ''),
+                               r.returnValue, r.callchainId
+                        FROM CUPTI_ACTIVITY_KIND_RUNTIME AS r
+                        LEFT JOIN StringIds AS s ON s.id = r.nameId
+                        WHERE r.correlationId = ?
+                        ORDER BY r.start, r.end, r.rowid
+                        """,
+                        (correlation_id,),
+                    )
+                )
+                if len(runtime_rows) == 1:
+                    continue
+                candidates = []
+                for runtime_row in runtime_rows:
+                    process_id, thread_id = _global_parts(runtime_row[4])
+                    candidates.append(
+                        {
+                            "source_rowid": runtime_row[0],
+                            "start_ns": runtime_row[1],
+                            "end_ns": runtime_row[2],
+                            "event_class": runtime_row[3],
+                            "global_tid": runtime_row[4],
+                            "process_id": process_id,
+                            "thread_id": thread_id,
+                            "correlation_id": runtime_row[5],
+                            "name_id": runtime_row[6],
+                            "api_name": str(runtime_row[7]),
+                            "return_value": runtime_row[8],
+                            "callchain_id": runtime_row[9],
+                        }
+                    )
+                offending.append(
+                    {
+                        "sync_source_rowid": sync_row[0],
+                        "start_ns": sync_row[1],
+                        "end_ns": sync_row[2],
+                        "device_id": sync_row[3],
+                        "context_id": sync_row[4],
+                        "stream_id": sync_row[5],
+                        "correlation_id": correlation_id,
+                        "global_pid": sync_row[7],
+                        "sync_type": sync_row[8],
+                        "event_id": sync_row[9],
+                        "event_sync_id": sync_row[10],
+                        "runtime_match_count": len(runtime_rows),
+                        "runtime_candidates": candidates,
+                    }
+                )
+            non_unique = len(offending)
             sync_check["missing_correlation"] = missing_correlation
             sync_check["non_unique_runtime_mapping"] = non_unique
+            sync_check["non_unique_runtime_mapping_details"] = offending
             if missing_correlation:
                 issues.append(
                     _issue("invalid", "SYNC_CORRELATION_MISSING", missing_correlation)
                 )
             if non_unique:
                 issues.append(
-                    _issue("invalid", "SYNC_RUNTIME_MAPPING_NOT_UNIQUE", non_unique)
+                    _issue(
+                        "invalid",
+                        "SYNC_RUNTIME_MAPPING_NOT_UNIQUE",
+                        {"count": non_unique, "offending": offending},
+                    )
                 )
 
         dropped_evidence: list[dict[str, Any]] = []
-        if "DIAGNOSTIC_EVENT" in table_names:
+        if table_usable.get("DIAGNOSTIC_EVENT"):
             for timestamp, severity, source, text in connection.execute(
                 "SELECT timestamp, severity, source, text FROM DIAGNOSTIC_EVENT ORDER BY timestamp"
             ):
@@ -297,7 +407,7 @@ def inspect_sqlite(
                 _issue(
                     "warning",
                     "LAZY_EXPORT",
-                    "历史导出采用 lazy=true；本次必需表均需实际存在。",
+                    "历史导出采用 lazy=true；核心必需表仍须实际存在。",
                 )
             )
 
@@ -358,7 +468,8 @@ def inspect_sqlite(
                 {"product_version": product, "schema_version": schema}
                 for product, schema in sorted(SUPPORTED_EXPORT_SCHEMAS)
             ],
-            "required_tables": table_checks,
+            "required_tables": required_table_checks,
+            "optional_activity_tables": optional_table_checks,
             "sync_correlation": sync_check,
             "dropped_record_evidence": dropped_evidence,
         },

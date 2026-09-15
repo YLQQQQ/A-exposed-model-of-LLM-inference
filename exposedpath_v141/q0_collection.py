@@ -21,6 +21,13 @@ ProcessRunner = Callable[..., subprocess.CompletedProcess[str]]
 EnvironmentProbe = Callable[..., Mapping[str, Any]]
 
 
+def _normalize_gpu_uuid(value: Any) -> str:
+    normalized = str(value).strip().upper()
+    if normalized.startswith("GPU-"):
+        return "GPU-" + normalized[4:].replace("-", "")
+    return normalized
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -115,7 +122,8 @@ def _validate_environment(snapshot: Mapping[str, Any], selector: str) -> None:
             raise Q0CollectionError("Q0 binary 必须运行在过滤后的逻辑设备 0")
         if (
             selector.upper().startswith("GPU-")
-            and str(selected.get("uuid", "")).upper() != selector.upper()
+            and _normalize_gpu_uuid(selected.get("uuid", ""))
+            != _normalize_gpu_uuid(selector)
         ):
             raise Q0CollectionError("GPU UUID 与 CUDA_VISIBLE_DEVICES 选择不一致")
     if missing:

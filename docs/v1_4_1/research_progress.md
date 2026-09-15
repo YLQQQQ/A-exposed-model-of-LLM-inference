@@ -2,15 +2,15 @@
 
 ## 当前快照
 
-- 清单版本：`4.2`
+- 清单版本：`4.3`
 - 最近更新：`2026-09-15`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G6-03`，按 Windows GPU 服务器手册在一张固定 GPU/软件栈上采集 21 个真实 seed；本地 GPU 前缺口已补齐
-- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2、S v0.2 与 Gate 5 的 A/B/D/Exposure Signature 已通过离线/Engineering 审查；历史 trace 回归保持 fail-closed，不能升级为 Q0 或正式证据；真实 Q0、Engineering Pilot、Protocol Freeze 和正式实验仍未开始
+- 当前最高优先级：`EP-G6-03`，将新版 bundle 更新到服务器后，只新建 r3 并重跑 `Q0-STREAM-001`，先证明捕获结束同步问题闭合，再决定是否批量运行其余 20 个 native seed
+- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2、S v0.2 与 Gate 5 的 A/B/D/Exposure Signature 已通过离线/Engineering 审查；r2 已获得 21/21 Raw，但 Step 5 因捕获结束同步正确地 fail-closed，不能升级为 Q0 证据；真实 Q0、Engineering Pilot、Protocol Freeze 和正式实验仍未完成
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -83,11 +83,12 @@
 - [x] `EP-G3-01` 建立独立新版入口 `python -m exposedpath_v141 inspect-sqlite`，未覆盖旧 analyzer。
 - [x] `EP-G3-02` 对支持的 Nsight schema、必需表/字段、sync correlation 和 dropped-record 诊断执行 fail-closed 检查。
 - [x] `EP-G3-03` 三份历史 trace 的 observation 回归稳定；因缺 source manifest 保持 `ambiguous`。证据：`engineering_evidence/observation_v0_1/`。
-- [x] `EP-G3-04` 新版 observation 定向测试通过。证据：最近记录为 `8 passed`，测试文件 `tests/test_v141_observation.py`。
+- [x] `EP-G3-04` 新版 observation 定向测试通过。证据：最近记录为 `12 passed`，测试文件 `tests/test_v141_observation.py`。
 - [x] `EP-G3-05` 冻结 Canonical Raw v0.2 的八类记录、结构化 NVTX、单 trace 相对纳秒时钟、source-row identity、lineage、诊断和研究资格字段。证据：`canonical_raw_schema_v0_2.json`、`canonical_raw_v0_2.md`。
 - [x] `EP-G3-06` 实现 SQLite 到确定性 gzip JSONL bundle 的只读转换器；已有输出拒绝覆盖，临时目录成功后原子改名。
 - [x] `EP-G3-07` 建立合成 SQLite、未知 schema、缺表/重复 correlation/dropped/逆序时间等测试，并完成三份历史 trace 回归。证据：`tests/test_v141_canonical_raw.py`、`engineering_evidence/canonical_raw_v0_2/historical_regression.json`。
 - [x] `EP-G3-08` 建立下游边界静态检查，禁止未来 S/A/B 导入 sqlite3 或直接引用 Nsight 私有表名。当前下游模块尚未创建，测试同时用恶意样例证明检查器能拒绝越界访问。证据：`scripts/verify_canonical_raw_boundary.py`。
+- [x] `EP-G3-09` 完成 Windows 真实 r2 的 Nsight `2026.2.1.210 / 3.25.0` adapter 审查：核心表继续必需，未发生相应活动时允许缺少 Memcpy/Memset/CUDA event 表并规范化为 0 条记录；可选表存在但字段不全仍 fail-closed；保留有符号 trace-relative 控制时间。r2 原 SQLite 哈希复核不变，唯一 invalid 为未映射的捕获结束同步。证据：`tests/test_v141_observation.py`、`tests/test_v141_canonical_raw.py` 及本轮只读诊断。
 
 ## Gate 4：S 同步语义层
 
@@ -116,15 +117,16 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 ## Gate 6：Q0 资格验证
 
-**Gate verdict：`BLOCKED`。** Gate 5 已完成；Q0 微程序、manifest 与合成 oracle 对照可继续开发，但当前没有可执行真实 CUDA/Nsight 受控 trace 的 GPU，因此本 Gate 整体仍不能运行或通过。
+**Gate verdict：`FAIL`。** 服务器 r2 已采集 21/21 非空 Raw，但 Step 5 在 `Q0-STREAM-001` 检出 `SYNC_RUNTIME_MAPPING_NOT_UNIQUE` 并正确停止。代码已修正 schema/可选表/UUID 处理并在 request 外、停止 profiler 前增加显式设备排空；该行为仍须由全新 r3 的真实 trace 验证，Q0 状态保持 `NOT_RUN`。
 
 - [x] `EP-G6-01` 实现受控 CUDA Q0 微程序和机器可读 manifest。23 个 oracle case 严格一一映射，其中 21 个具有 native CUDA seed，terminal tie 与 submission race 明确保持纯合成；缺 correlation、dropped records 与 graph mapping 缺失使用真实 seed 后受控 Canonical 故障注入。CUDA 13.0 在无 GPU 执行条件下成功编译，binary `--list-cases` 与 21 个 seed 集合一致，未知 case 在 CUDA 初始化前失败。证据：`q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json`、`tests/test_v141_q0_cuda_source.py`。
 - [x] `EP-G6-02` 完成 GPU 前 Q0 执行准备：Windows/Linux 结构化 `nsys` argv、每 case source manifest、输入哈希、不可覆盖输出和 `PREPARED_NOT_EXECUTED/NOT_RUN` dry-run；23 个显式合成 Canonical profile 均经正式 S/A/B 与独立 evaluator 对照通过。observed 使用严格 schema，evaluator 静态禁止导入被测 S/A/B，错误字段、重复 identity、缺失/额外 case 和资格升级均 fail closed。证据：`exposedpath_v141/q0_execution.py`、`exposedpath_v141/q0_synthetic.py`、`exposedpath_v141/q0_evaluator.py`、`docs/v1_4_1/contracts/q0_observed_schema_v0_2.json`、`tests/test_v141_q0_execution.py`、`tests/test_v141_q0_synthetic.py`、`tests/test_v141_q0_evaluator.py`。
 - [x] `EP-G6-02A` 完成 GPU 前集成验收。CUDA 13.0 编译和 21-seed 清单、Nsight 2026.1.1 Windows dry-run、23/23 合成对照、oracle/evaluator 独立性、Canonical 边界和 Python compileall 通过；Gate4/5/Q0 定向 `200 passed`，CUDA source `5 passed`，全仓 `570 passed, 2 failed`，仅为既有 PowerShell smoke 基线失败。证据：`engineering_evidence/q0_pre_gpu_v0_2/readiness_report.json`。
 - [x] `EP-G6-02B` 补齐真实 Q0 执行适配。capture/显式 GPU 身份、单 case executor/receipt、三种受控 Canonical fault、真实 observed/evaluator、策略约束的 23-case Gate 聚合、CLI 与 Windows 服务器手册均已实现。活动标签必须经 `activity correlation -> launch API -> 同线程唯一 marker` 恢复；缺 correlation 故障只能使用注入前写入 lineage 的预写标签；真实 A/B 预期使用人工 wait-set/terminal 与实际区间独立重算。Q0 聚焦回归 `62 passed`、独立性与 compileall `PASS`；全仓 `590 passed, 2 failed`，仅为已登记的旧 PowerShell smoke 基线失败。证据：`exposedpath_v141/q0_collection.py`、`q0_faults.py`、`q0_real.py`、`q0_gate.py`、`docs/v1_4_1/gate6_windows_server_runbook.md`。
-- [ ] `EP-G6-03`（受阻于 GPU）在目标 observation stack 上采集真实受控 trace。
-- [ ] `EP-G6-04`（受阻）真实 trace 全部必需用例对照 oracle，并验证 fail-closed。
-- [ ] `EP-G6-05`（受阻）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
+- [x] `EP-G6-02C` 修复首次 Windows 实跑暴露的执行适配问题：GPU UUID 比较兼容带/不带内部连字符；精确加入已审查的 Nsight 2026.2.1/3.25.0；增强同步映射诊断；明确 CUDA 12.4 使用 v143/MSVC 14.39；Q0 微程序在请求范围结束后、`cudaProfilerStop` 前显式排空受控设备工作。全仓非 GPU 回归 `602 passed`，边界、oracle 独立性和 compileall 通过；显式排空尚未经过 GPU 验证。
+- [ ] `EP-G6-03`（进行中）r2 已采集 21/21 Raw 但因旧捕获结束同步不可用于 Q0；下一步只新建 r3 并重跑 `Q0-STREAM-001`，不得覆盖 r1/r2。
+- [ ] `EP-G6-04`（等待 r3）先完成单例 Raw→Canonical→S→A/B→real evaluator；单例通过后才批量运行其余 native seed 并验证受控负例 fail-closed。
+- [ ] `EP-G6-05`（未开始）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
 
 ## Gate 7：Runner 与跨平台执行对齐
 
@@ -205,10 +207,11 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - `EP-ISSUE-01`：旧 runner 的首 Token 时间取在异步 argmax 提交后，但后续 EOS `.any()` 可能触发隐式同步，Token 完成边界不一致。影响：Gate 1、7；不得直接用于新版 phase 定义。
 - `EP-ISSUE-02`：三份历史 trace 缺少 source manifest。影响：validity 必须保持 `ambiguous`，不能升级数据资格。
 - `EP-ISSUE-03`：Gate 4 第三轮复审修正后的仓库全量测试为 `365 passed, 2 failed`；两项失败与工作前基线相同，仍为 `tests/test_server_smoke_script.py::test_dry_run` 和 `test_spaces`。影响：跨平台执行层需单独修复或重新界定，但不属于 Gate 2～4 新增失败。
-- `EP-ISSUE-04`：当前无 GPU。影响：Q0 真实 trace、跨平台 GPU smoke、Engineering Pilot 及后续实验保持 `BLOCKED`；不影响 Gate 1 至 Gate 5 的离线设计和确定性测试工作。
+- `EP-ISSUE-04`：本机无 GPU，但实验室 Windows 服务器已有可用 RTX 4090/6000 Ada。本地只能完成离线验证；Q0、跨平台 GPU smoke、Engineering Pilot 及后续实验的真实结论必须由服务器证据给出。
 - `EP-ISSUE-05`（已解决）：使用校验过哈希的 LibreOffice 临时解包版本完成本地全页渲染；研究主体 40 页、实验协议 27 页均已检查。渲染器仅用于文档 QA，不改变研究 Gate。
 - `EP-ISSUE-06`：S 层已对 event/wait 的 context/stream 活动查找建立索引，并缓存重复 scope 建图；event/default-stream 密集型大 trace 的规模性能尚未在真实 Engineering 数据上验收。影响：需在 Engineering Pilot 记录耗时与峰值内存；当前不改变 S 语义正确性或数据资格。
 - `EP-ISSUE-07`：本机环境变量 `CL` 被配置为 MSVC 目录，但该名称会被 `cl.exe`/`nvcc` 解释为隐式编译参数，导致 CUDA 编译失败。Q0 编译入口只在子进程环境中移除 `CL/_CL_`，不修改用户系统环境；后续 GPU 平台资格检查仍需记录并复核实际编译环境。
+- `EP-ISSUE-08`：r2 的 `Q0-STREAM-001` 在 request 结束后出现 `correlationId=134`、runtime 匹配数为 0 的 context sync，来源与 `cudaProfilerStop` 捕获结束一致。r2 必须保持 invalid；新版显式排空只能通过全新 r3 验证，不能通过修改旧 SQLite 证明修复。
 
 ## 固定执行顺序与最近任务
 
@@ -216,9 +219,9 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 最近应执行的任务：
 
-1. `EP-G6-03`：获得 GPU 后，在目标 observation stack 上采集真实受控 trace；此前 Gate 6 保持 `BLOCKED`。
-2. `EP-G6-04`：执行真实 trace 标准化、故障注入和逐 case oracle 对照。
-3. `EP-G6-05`：仅在全部必需 case 通过后输出唯一 Q0 gate 报告。
+1. `EP-G6-03`：用新 bundle 更新服务器受跟踪代码，保留 r1/r2；按手册先对 r2 做只读诊断，再新建 r3，仅采集 `Q0-STREAM-001`。
+2. `EP-G6-04`：单例依次完成 Raw→Canonical→S→A/B→real evaluator；若仍存在额外 sync 或其他不符合项，保留现场并回到诊断，不运行其余 20 个 seed。
+3. `EP-G6-04/05`：只有单例全链路通过后才批量采集其余 native seed、实施受控负例并聚合唯一 Q0 gate 报告。
 
 ## 计划调整记录
 
@@ -266,3 +269,4 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 | 4.0 | 2026-09-14 | 完成真实 Q0 observed/evaluator：稳定活动标签由 correlation、launch API 与唯一结构化 marker 联结；真实数值预期只使用 oracle 预写的 wait-set/terminal 标签和本次真实区间独立重算，避免拿合成固定纳秒值评判 GPU。缺区间、缺映射和歧义映射均 fail closed。 | EP-G6-02B | 单 case 通过仅标记 `REAL_CASE_PASS/REAL_CASE_ONLY`，Q0 仍为 `NOT_RUN`；尚未聚合全部必需 case，Gate 6 保持 `BLOCKED`。 |
 | 4.1 | 2026-09-14 | 完成本地全部真实 Q0 执行缺口：故障注入前记录唯一目标/预写标签；单 case 证据绑定 receipt、Raw/source manifest、Canonical/S/A/B 哈希与环境；唯一聚合器强制 21 个真实 case、2 个合成边界例、单 run 和单环境，完整合成报告不得替代真实案例；补齐 CLI 与 Windows 服务器手册。 | EP-G6-02B、EP-G6-03 至 EP-G6-05 | 本地准备完成不等于真实 Q0 已运行。Gate 6 仍 `BLOCKED`、Q0 仍 `NOT_RUN`；下一步必须在固定 GPU/软件栈执行服务器采集。 |
 | 4.2 | 2026-09-15 | 根据服务器已有旧 `YLQ_test` 环境补充部署与回传流程：旧项目/虚拟环境/历史结果保持不动；新版由 Git bundle 在同级目录 clone，使用轻量独立虚拟环境并记录 commit/dirty state；先跑单例再批量，最终回传完整 `$Out`。 | EP-G6-03 | 只完善 Engineering 执行与 provenance，不改变 Measurement Contract、Q0 verdict、Protocol Freeze 或 Formal 数据资格。 |
+| 4.3 | 2026-09-15 | 基于服务器 r2 真实 SQLite 修复 Windows Q0 适配：精确支持 Nsight `2026.2.1.210 / 3.25.0`，区分核心表与按活动出现的可选表，保留有符号 trace-relative 时间，规范化 GPU UUID，并输出未唯一映射 sync 的完整诊断；r2 哈希保持不变且继续因捕获结束同步 fail-closed。微程序新增 request 外显式排空，手册改为原目录 bundle 更新、MSVC 14.39 和 r3 单例优先。全仓 `602 passed`。 | EP-G3-09、EP-G6-02C、EP-G6-03、EP-ISSUE-08 | 不改变 `W(s)`、terminal、A/B 等 Measurement Contract；这是 Protocol Freeze 前的 observation/执行适配修正。Q0 仍 `NOT_RUN`，r1/r2 不升级资格，当前无 Formal 数据。 |

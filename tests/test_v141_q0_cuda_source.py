@@ -98,6 +98,16 @@ def test_unknown_case_fails_before_cuda_initialization(compiled_q0):
     assert "unknown case" in completed.stderr.lower()
 
 
+def test_capture_drains_controlled_work_before_profiler_stop():
+    source = SOURCE.read_text(encoding="utf-8")
+
+    case_call = source.index("selected->second(resources, case_id, run_id);")
+    drain = source.index("CUDA_CHECK(cudaDeviceSynchronize());", case_call)
+    capture_scope_end = source.index("    }\n    return 0;", drain)
+
+    assert case_call < drain < capture_scope_end
+
+
 def test_build_cli_compiles_without_claiming_q0_pass(tmp_path, capsys):
     nvcc = shutil.which("nvcc")
     if nvcc is None:

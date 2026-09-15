@@ -8,9 +8,9 @@ Canonical Raw 不判断某个活动是否属于 `W(s)`，不选 terminal，也�
 
 ## 2. 输入、输出与不可变性
 
-输入为 Nsight SQLite、对应 `.nsys-rep` 的 SHA-256、采集器版本、数据角色和可选 source manifest。adapter 仅接受已经审查的 `EXPORT_PRODUCT_VERSION=2026.1.1.204` 与 `EXPORT_SCHEMA_VERSION=3.24.14`。
+输入为 Nsight SQLite、对应 `.nsys-rep` 的 SHA-256、采集器版本、数据角色和可选 source manifest。adapter 仅接受已经审查的两组版本：`2026.1.1.204 / 3.24.14` 与 `2026.2.1.210 / 3.25.0`；不接受版本范围或未知 schema。
 
-输出是一个新目录，包含 `canonical_manifest.json` 和八类确定性 gzip JSONL：NVTX、CUDA API、CUDA synchronization activity、device activity、CUDA event、context、stream、diagnostic。已有输出目录一律拒绝覆盖；转换通过同级临时目录完成，全部成功后才原子改名。输入 SQLite 以 read-only/immutable 方式打开，Raw 报告只读取哈希。
+输出是一个新目录，包含 `canonical_manifest.json` 和八类确定性 gzip JSONL：NVTX、CUDA API、CUDA synchronization activity、device activity、CUDA event、context、stream、diagnostic。若源 SQLite 因没有相应活动而缺少 Memcpy、Memset 或 CUDA event 表，仍生成记录数为 0 的规范化文件；这不等于伪造源表。已有输出目录一律拒绝覆盖；转换通过同级临时目录完成，全部成功后才原子改名。输入 SQLite 以 read-only/immutable 方式打开，Raw 报告只读取哈希。
 
 ## 3. 记录身份与时钟
 
@@ -18,7 +18,7 @@ Canonical Raw 不判断某个活动是否属于 `W(s)`，不选 terminal，也�
 
 bundle manifest 还保留 S 层必需但不属于事件行的执行上下文：`default_stream_mode` 与 `selected_device_id`。它们只能来自 source manifest；缺失时保持空值，不能从文件名或活动形状猜测。
 
-所有时间字段保留 Nsight 导出的单 trace 相对纳秒，时钟域固定为 `NSYS_TRACE_RELATIVE_NS`。区间采用半开语义；时间只能在同一 source trace 内比较，不允许把两份 trace 的相对时间直接相减。`globalTid/globalPid` 原值保留，拆出的 pid/tid 是依据 NVIDIA 序列化 GlobalId 位布局得到的派生便利字段。
+所有时间字段原样保留 Nsight 导出的单 trace 有符号相对纳秒，时钟域固定为 `NSYS_TRACE_RELATIVE_NS`。采集控制 API 或 profiler 初始化诊断可能跨越时钟原点而出现负值；这不是请求时长为负，也不得通过平移时间轴掩盖。区间采用半开语义且必须满足 `end >= start`；时间只能在同一 source trace 内比较，不允许把两份 trace 的相对时间直接相减。A/B 的请求窗口与时长仍执行各自的非负和守恒约束。`globalTid/globalPid` 原值保留，拆出的 pid/tid 是依据 NVIDIA 序列化 GlobalId 位布局得到的派生便利字段。
 
 ## 4. 事实映射
 
@@ -42,7 +42,7 @@ Raw 中的 CUDA synchronization activity 既可能对应 Host blocking sync，�
 
 ## 6. fail-closed
 
-缺必需表/字段、未知导出 schema、sync correlation 缺失或不唯一、dropped records 证据、必需非空字段为空、逆序时间区间都会拒绝转换。缺 source manifest 的 Prototype/Engineering trace 可以生成派生 bundle，但 observation/identity 问题必须传播，研究资格仍为 false；Pilot/Formal 缺 manifest 时直接 invalid。
+核心表/字段缺失、可选活动表存在但字段不完整、未知导出 schema、sync correlation 缺失或不唯一、dropped records 证据、必需非空字段为空、逆序时间区间都会拒绝转换。可选活动表不存在只表示该类记录为 0。缺 source manifest 的 Prototype/Engineering trace 可以生成派生 bundle，但 observation/identity 问题必须传播，研究资格仍为 false；Pilot/Formal 缺 manifest 时直接 invalid。
 
 ## 7. 历史 trace 工程回归
 
