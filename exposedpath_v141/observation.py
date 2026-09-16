@@ -247,7 +247,9 @@ def _resolve_q0_target_request_scope(
             "structured_request_count": len(request_rows),
             "matching_request_count": len(matching),
         }
-    if len(request_rows) != 1 or len(matching) != 1:
+    # 同一 trace 可以合法包含其他 invocation；唯一性只约束完整 target identity。
+    # 零个或多个 target 匹配仍必须 fail closed。
+    if len(matching) != 1:
         return {
             "status": "UNRESOLVED",
             "request_id": request_id,

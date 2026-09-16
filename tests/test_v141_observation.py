@@ -904,6 +904,86 @@ def test_q0_ambiguous_target_request_keeps_global_fail_closed(tmp_path):
     assert issue["detail"]["offending"][0]["scope"] == "GLOBAL_TRACE"
 
 
+def test_q0_prior_invocation_does_not_make_unique_target_ambiguous(tmp_path):
+    """非目标 prior request 合法共存，且 target 后同步仍按 request 外规则分类。"""
+
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _replace_with_q0_target_request(database, manifest, start_ns=30, end_ns=100)
+    prior_identity = {
+        "kind": "request",
+        "experiment_id": "exposedpath-q0",
+        "wmpc_id": "q0-controlled",
+        "run_id": "q0-test.q0-stream-001",
+        "run_role": "Engineering",
+        "pass_id": "Pass1",
+        "request_id": "Q0-PRIOR-INVOCATION",
+        "repeat_id": "repeat-0",
+        "phase": "full_request",
+    }
+    prior_label = "EXPOSEDPATH_JSON_V1:" + json.dumps(
+        prior_identity, separators=(",", ":")
+    )
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "INSERT INTO NVTX_EVENTS(start,end,eventType,text,textId,globalTid) "
+        "VALUES (?,?,?,?,?,?)",
+        (1, 20, 59, prior_label, None, 1),
+    )
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES "
+        "(110,120,0,1,NULL,4294967295,131,1,4,4294967295,4294967295)"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        "Engineering",
+        raw_sha256="A" * 64,
+        collector_version="synthetic",
+        source_manifest=manifest,
+    )
+
+    scope = report["derived_checks"]["target_request_scope"]
+    warning = next(
+        issue for issue in report["validity"]["issues"]
+        if issue["code"] == "HARNESS_SYNC_RUNTIME_MAPPING_NOT_UNIQUE"
+    )
+    assert report["validity"]["status"] == "valid"
+    assert scope["status"] == "RESOLVED"
+    assert scope["request_id"] == "Q0-STREAM-001"
+    assert scope["start_ns"] == 30
+    assert scope["end_ns"] == 100
+    assert warning["detail"]["offending"][0]["correlation_id"] == 131
+    assert warning["detail"]["offending"][0]["scope"] == "HARNESS_OUTSIDE_REQUEST"
+
+
+def test_q0_zero_matching_target_request_remains_fail_closed(tmp_path):
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _replace_with_q0_target_request(database, manifest)
+    source_manifest = json.loads(manifest.read_text(encoding="utf-8"))
+    source_manifest["q0_case_id"] = "Q0-NOT-PRESENT"
+    manifest.write_text(json.dumps(source_manifest), encoding="utf-8")
+
+    report = inspect_sqlite(
+        database,
+        "Engineering",
+        raw_sha256="A" * 64,
+        collector_version="synthetic",
+        source_manifest=manifest,
+    )
+
+    scope = report["derived_checks"]["target_request_scope"]
+    assert report["validity"]["status"] == "invalid"
+    assert scope["reason"] == "TARGET_REQUEST_NOT_UNIQUE"
+    assert scope["structured_request_count"] == 1
+    assert scope["matching_request_count"] == 0
+
+
 def test_q0_worker_marker_does_not_duplicate_request_and_teardown_stays_warning(
     tmp_path,
 ):
