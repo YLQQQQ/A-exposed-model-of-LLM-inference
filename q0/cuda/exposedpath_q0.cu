@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <exception>
 #include <functional>
 #include <iomanip>
 #include <iostream>
@@ -252,14 +253,61 @@ void run_empty(Resources& r, const std::string& c, const std::string& id) {
 
 void run_kernel_memop(Resources& r, const std::string& c, const std::string& id) {
   one_phase(c, id, [&] {
+    std::mutex start_mutex;
+    std::condition_variable start_condition;
+    bool kernel_ready = false;
+    bool release_kernel = false;
+    bool kernel_submitted = false;
+    std::exception_ptr kernel_error;
+
+    std::thread kernel_worker([&] {
+      {
+        std::unique_lock<std::mutex> lock(start_mutex);
+        kernel_ready = true;
+        start_condition.notify_one();
+        start_condition.wait(lock, [&] { return release_kernel; });
+      }
+      try {
+        launch(r, c, id, "decode", "KERNEL_A", r.first, kKernelMemopKernelMilliseconds);
+      } catch (...) {
+        kernel_error = std::current_exception();
+      }
+      {
+        std::lock_guard<std::mutex> lock(start_mutex);
+        kernel_submitted = true;
+      }
+      start_condition.notify_one();
+    });
+
+    {
+      std::unique_lock<std::mutex> lock(start_mutex);
+      start_condition.wait(lock, [&] { return kernel_ready; });
+      release_kernel = true;
+    }
+    start_condition.notify_one();
+
+    cudaError_t copy_status = cudaSuccess;
     {
       auto marker = marker_range(c, id, "decode", "MEMCPY_B");
-      CUDA_CHECK(cudaMemcpyAsync(r.device_buffer, r.host_buffer, r.buffer_capacity_bytes,
-                                 cudaMemcpyHostToDevice, r.second));
+      copy_status = cudaMemcpyAsync(r.device_buffer, r.host_buffer,
+                                    r.buffer_capacity_bytes,
+                                    cudaMemcpyHostToDevice, r.second);
     }
-    launch(r, c, id, "decode", "KERNEL_A", r.first, kKernelMemopKernelMilliseconds);
-    auto sync = sync_range(c, id, "decode", "S_DEVICE", 0);
-    CUDA_CHECK(cudaDeviceSynchronize());
+    {
+      std::unique_lock<std::mutex> lock(start_mutex);
+      start_condition.wait(lock, [&] { return kernel_submitted; });
+    }
+
+    cudaError_t sync_status = cudaSuccess;
+    {
+      auto sync = sync_range(c, id, "decode", "S_DEVICE", 0);
+      sync_status = cudaDeviceSynchronize();
+    }
+    kernel_worker.join();
+
+    if (kernel_error) std::rethrow_exception(kernel_error);
+    CUDA_CHECK(copy_status);
+    CUDA_CHECK(sync_status);
   });
 }
 

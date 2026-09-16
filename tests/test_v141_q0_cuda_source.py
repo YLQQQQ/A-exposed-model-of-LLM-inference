@@ -176,7 +176,7 @@ def test_ptds_request_uses_one_host_callback_instead_of_cuda_query_polling():
 
 
 def test_kernel_memop_uses_case_scoped_preallocated_capacity_for_stable_overlap():
-    """混合构造必须让 H2D 足够长，且分配发生在 profiler/request 之前。"""
+    """混合构造用并发 Host 提交，且分配发生在 profiler/request 之前。"""
 
     source = SOURCE.read_text(encoding="utf-8")
     body = _function_body(source, "run_kernel_memop")
@@ -193,9 +193,19 @@ def test_kernel_memop_uses_case_scoped_preallocated_capacity_for_stable_overlap(
     )
     assert '"KERNEL_A", r.first, kKernelMemopKernelMilliseconds' in body
     assert "r.buffer_capacity_bytes" in body
-    assert body.index("cudaMemcpyAsync(") < body.index(
-        '"KERNEL_A", r.first, kKernelMemopKernelMilliseconds'
-    ) < body.index('"S_DEVICE"')
+    assert "std::thread kernel_worker" in body
+    assert "kernel_ready" in body
+    assert "release_kernel" in body
+    assert "kernel_submitted" in body
+    assert "start_condition.wait(" in body
+    assert "start_condition.wait(lock, [&] { return kernel_submitted; });" in body
+    assert body.index("cudaMemcpyAsync(") < body.index('"S_DEVICE"')
+    assert body.index("return kernel_submitted;") < body.index('"S_DEVICE"')
+    assert body.index('"S_DEVICE"') < body.index("kernel_worker.join();")
+    assert "cudaStreamQuery" not in body
+    assert "cudaEventQuery" not in body
+    assert "request_range(" not in body
+    assert "phase_range(" not in body
     assert "cudaMalloc(" not in body
     assert "cudaMallocHost(" not in body
 
