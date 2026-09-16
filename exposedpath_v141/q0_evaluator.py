@@ -58,6 +58,26 @@ def _compare_field(
         )
 
 
+def _compare_unique_string_set_field(
+    mismatches: list[str], sync_label: str, field: str, expected: Any, observed: Any
+) -> None:
+    def is_unique_string_list(value: Any) -> bool:
+        return (
+            isinstance(value, list)
+            and all(isinstance(item, str) for item in value)
+            and len(value) == len(set(value))
+        )
+
+    if (
+        not is_unique_string_list(expected)
+        or not is_unique_string_list(observed)
+        or set(observed) != set(expected)
+    ):
+        mismatches.append(
+            f"{sync_label}.{field}: expected={expected!r}, observed={observed!r}"
+        )
+
+
 def _intersection(interval: tuple[int, int], window: tuple[int, int]) -> tuple[int, int] | None:
     start, end = max(interval[0], window[0]), min(interval[1], window[1])
     return (start, end) if end > start else None
@@ -280,9 +300,15 @@ def evaluate_q0_observed(
             actual = actual_syncs.get(sync_label)
             if actual is None:
                 continue
+            _compare_unique_string_set_field(
+                mismatches,
+                sync_label,
+                "wait_set_activity_labels",
+                expected_sync.get("wait_set_activity_labels"),
+                actual.get("wait_set_activity_labels"),
+            )
             for field in (
                 "wait_set_status",
-                "wait_set_activity_labels",
                 "validity",
                 "primary_reason",
                 "secondary_reasons",

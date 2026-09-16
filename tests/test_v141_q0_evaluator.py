@@ -5,6 +5,8 @@ from __future__ import annotations
 from copy import deepcopy
 import json
 
+import pytest
+
 from exposedpath_v141.q0_evaluator import evaluate_q0_observed
 from exposedpath_v141.q0_oracle import load_oracle_bundle
 from exposedpath_v141.q0_synthetic import build_synthetic_observed
@@ -35,6 +37,47 @@ def test_wrong_wait_set_is_reported_by_case_and_sync():
     failure = next(case for case in report["cases"] if case["case_id"] == target["case_id"])
     assert failure["status"] == "FAIL"
     assert any(target["syncs"][0]["sync_label"] in item for item in failure["mismatches"])
+
+
+def _device_wait_set_observed():
+    observed = build_synthetic_observed()
+    case = next(
+        case for case in observed["cases"] if case["case_id"] == "Q0-DEVICE-001"
+    )
+    return observed, case["syncs"][0]
+
+
+def test_wait_set_labels_accept_same_unique_members_in_different_order():
+    oracle = load_oracle_bundle()
+    observed, sync = _device_wait_set_observed()
+    sync["wait_set_activity_labels"] = ["K_B", "K_A"]
+
+    report = evaluate_q0_observed(oracle, observed)
+
+    assert report["verdict"] == "SYNTHETIC_PASS"
+
+
+@pytest.mark.parametrize(
+    "labels",
+    [
+        ["K_A"],
+        ["K_A", "K_B", "K_EXTRA"],
+        ["K_A", "K_B", "K_B"],
+    ],
+    ids=["missing", "extra", "duplicate"],
+)
+def test_wait_set_labels_reject_non_exact_or_duplicate_members(labels):
+    oracle = load_oracle_bundle()
+    observed, sync = _device_wait_set_observed()
+    sync["wait_set_activity_labels"] = labels
+
+    report = evaluate_q0_observed(oracle, observed)
+    failure = next(
+        case for case in report["cases"] if case["case_id"] == "Q0-DEVICE-001"
+    )
+
+    assert report["verdict"] == "FAIL"
+    assert any("wait_set_activity_labels" in item for item in failure["mismatches"])
 
 
 def test_missing_and_extra_case_fail_closed():

@@ -10,7 +10,7 @@
 Wsn1
 ├── YLQ_test                 # 旧项目和旧结果，保持不动
 ├── ExposedPath_Q0_*.bundle  # 本机交付包
-└── YLQ_test_q0_v141         # 已有 Q0 工作目录，含未跟踪的 r1/r2/r3/r4/r5/r6/r7/r8
+└── YLQ_test_q0_v141         # 已有 Q0 工作目录，含未跟踪的 r1/r2/r3/r4/r5/r6/r7/r8/r9
 ```
 
 先在服务器 PowerShell 中确认不存在尚未提交的受跟踪修改，并为服务器临时提交建立备份分支：
@@ -27,7 +27,7 @@ git reset --hard FETCH_HEAD
 git rev-parse HEAD
 ```
 
-`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4、r5、r6、r7、r8`。严禁追加 `git clean`。更新后以最终交付消息记录的 commit 为核对值。
+`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4、r5、r6、r7、r8、r9`。严禁追加 `git clean`。更新后以最终交付消息记录的 commit 为核对值。
 
 Q0 不加载模型，因此不用复制旧 `models`。服务器已有 GPU driver、CUDA Toolkit、`nvcc` 和 Nsight Systems 可以复用，但必须重新记录版本。旧 `.venv` 不必删除，也不要向其中追加依赖；在新版目录建立轻量独立环境：
 
@@ -256,11 +256,46 @@ r8 默认采集只有 graph-level trace，没有 node-level activity，因此 Gr
 
 r8 必须保持失败现场，不覆盖、不续跑、不升级资格。该独立诊断只证明采集修复方向，不是完整 Q0 证据。服务器已完成上述诊断时，更新代码后无需重复 2.5～2.9，直接从下面的新 r9 开始；r1～r8 均不得执行 `git clean` 或人工改写。
 
+## 2.11 使用现有 r9 DEVICE 做只读 evaluator 诊断
+
+r9 已证明 Graph case 的 node tracing 参数进入正式执行计划，但批量运行在 `Q0-DEVICE-001` 的独立 evaluator 停止。唯一 mismatch 是同一 wait-set 的枚举顺序不同：oracle 为 `['K_A', 'K_B']`，真实 S 为 `['K_B', 'K_A']`。`W(s)` 是活动集合，不以 JSON 数组顺序表达 CUDA dependency 顺序；新版 evaluator 只对 `wait_set_activity_labels` 使用无序且无重复的精确成员比较，其他 list 字段仍保持原比较语义。
+
+更新代码后，先只读使用 r9 已生成的 Canonical、S、A/B 与 receipt，输出写入新的诊断目录：
+
+```powershell
+$Q0Root = Resolve-Path .
+$CodeShort = git rev-parse --short=8 HEAD
+$R9DeviceCandidates = @(
+    Get-ChildItem (Join-Path $Q0Root "engineering_evidence") -Recurse -Directory -Filter "Q0-DEVICE-001" |
+        Where-Object {
+            $_.FullName -match "(?i)r9" -and
+            (Test-Path (Join-Path $_.FullName "canonical\canonical_manifest.json")) -and
+            (Test-Path (Join-Path $_.FullName "s\s_manifest.json")) -and
+            (Test-Path (Join-Path $_.FullName "ab\ab_manifest.json")) -and
+            (Test-Path (Join-Path $_.FullName "collection_receipt.json"))
+        }
+)
+$R9DeviceCandidates | Select-Object FullName
+if ($R9DeviceCandidates.Count -ne 1) { throw "无法唯一定位 r9/Q0-DEVICE-001 完整派生输入" }
+$R9Case = $R9DeviceCandidates[0].FullName
+$R9Raw = Join-Path $R9Case "trace.nsys-rep"
+$R9RawHashBefore = (Get-FileHash -LiteralPath $R9Raw -Algorithm SHA256).Hash
+$R9Diag = Join-Path $Q0Root "engineering_evidence\q0_compat_diagnostics\r9-device-evaluator-$CodeShort"
+
+& $Python -m exposedpath_v141 evaluate-q0-real-case --case Q0-DEVICE-001 --canonical-manifest (Join-Path $R9Case "canonical\canonical_manifest.json") --s-manifest (Join-Path $R9Case "s\s_manifest.json") --ab-manifest (Join-Path $R9Case "ab\ab_manifest.json") --collection-receipt (Join-Path $R9Case "collection_receipt.json") --output-dir $R9Diag
+if ($LASTEXITCODE -ne 0) { throw "r9 DEVICE 只读 evaluator 诊断未通过" }
+if ((Get-FileHash -LiteralPath $R9Raw -Algorithm SHA256).Hash -ne $R9RawHashBefore) { throw "r9 Raw 被意外修改" }
+$R9Evidence = Get-Content -LiteralPath (Join-Path $R9Diag "q0_real_evidence.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($R9Evidence.verdict -ne "REAL_CASE_PASS") { throw "r9 DEVICE 未得到 REAL_CASE_PASS" }
+```
+
+验收：新诊断返回 `REAL_CASE_PASS`，且 r9 Raw 哈希不变。该结果仅证明 evaluator 修复能正确重放既有证据，不把 r9 升级为完整 Q0；r9 保持失败现场。正式重跑必须使用全新 r10，r1～r9 均不得覆盖、续跑或执行 `git clean`。
+
 ## 3. 编译并准备不可覆盖运行目录
 
 ```powershell
 $Q0Root = Resolve-Path .
-$RunId = "q0-win-4090-YYYYMMDD-r9"  # 执行时替换日期；必须是全新目录
+$RunId = "q0-win-4090-YYYYMMDD-r10"  # 执行时替换日期；必须是全新目录
 $Out = Join-Path $Q0Root "engineering_evidence\q0_real\$RunId"
 $Binary = Join-Path $Out "bin\exposedpath_q0.exe"
 $Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
@@ -288,7 +323,7 @@ if ($UnexpectedGraphFlags.Count -ne 0) { throw "普通 case 不得启用 node-le
 
 验收：编译输出为 `PASS`；run manifest 为 `PREPARED_NOT_EXECUTED`；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。
 
-## 4. 只采集 r9 单例
+## 4. 只采集 r10 单例
 
 ```powershell
 $RunManifest = Join-Path $Out "run\q0_run_manifest.json"
@@ -296,12 +331,12 @@ $Run = Get-Content -LiteralPath $RunManifest -Raw -Encoding UTF8 | ConvertFrom-J
 $NativeCases = @($Run.cases | Where-Object { $null -ne $_.command_argv })
 $SmokeCaseId = "Q0-STREAM-001"
 & $Python -m exposedpath_v141 execute-q0-case --run-manifest $RunManifest --case $SmokeCaseId
-if ($LASTEXITCODE -ne 0) { throw "r9 单例采集失败，保留现场并停止" }
+if ($LASTEXITCODE -ne 0) { throw "r10 单例采集失败，保留现场并停止" }
 ```
 
 验收：此时只能新增 `Q0-STREAM-001` 的 receipt 和非空 `.nsys-rep`。不要提前运行其余 20 个 seed，也不要手工改 receipt 或 Raw。
 
-## 5. r9 单例全链路验收
+## 5. r10 单例全链路验收
 
 先只处理 `Q0-STREAM-001`。`nsys export` 只读取 Raw，不得覆盖已存在 SQLite：
 
@@ -324,14 +359,14 @@ $SDir = Join-Path $CaseDir "s"
 $ABDir = Join-Path $CaseDir "ab"
 $EvidenceDir = Join-Path $Out "real_evidence\$CaseId"
 & $Python -m exposedpath_v141 analyze-s --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --output-dir $SDir
-if ($LASTEXITCODE -notin 0,2,3) { throw "r9 单例 S 执行异常；保留现场并停止" }
+if ($LASTEXITCODE -notin 0,2,3) { throw "r10 单例 S 执行异常；保留现场并停止" }
 & $Python -m exposedpath_v141 analyze-ab --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --s-manifest (Join-Path $SDir "s_manifest.json") --output-dir $ABDir
-if ($LASTEXITCODE -notin 0,2,3) { throw "r9 单例 A/B 执行异常；保留现场并停止" }
+if ($LASTEXITCODE -notin 0,2,3) { throw "r10 单例 A/B 执行异常；保留现场并停止" }
 & $Python -m exposedpath_v141 evaluate-q0-real-case --case $CaseId --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --s-manifest (Join-Path $SDir "s_manifest.json") --ab-manifest (Join-Path $ABDir "ab_manifest.json") --collection-receipt (Join-Path $CaseDir "collection_receipt.json") --output-dir $EvidenceDir
-if ($LASTEXITCODE -ne 0) { throw "r9 单例独立对照未通过；保留现场并停止" }
+if ($LASTEXITCODE -ne 0) { throw "r10 单例独立对照未通过；保留现场并停止" }
 ```
 
-验收：Canonical 转换必须返回 0；S/A/B 必须生成完整 bundle，其中 request 外的 harness 尾部同步可以按既有 fail-closed 规则形成非零状态；独立 evaluator 必须返回 0，且 `Q0-STREAM-001` 的 real evidence 为 `REAL_CASE_PASS`。若目标 request 仍出现额外 sync、映射歧义或其他 invalid，停止并回传整个 r9 单例目录；不能继续批量。
+验收：Canonical 转换必须返回 0；S/A/B 必须生成完整 bundle，其中 request 外的 harness 尾部同步可以按既有 fail-closed 规则形成非零状态；独立 evaluator 必须返回 0，且 `Q0-STREAM-001` 的 real evidence 为 `REAL_CASE_PASS`。若目标 request 仍出现额外 sync、映射歧义或其他 invalid，停止并回传整个 r10 单例目录；不能继续批量。
 
 本轮修复未放宽 target request 唯一性。后续批量运行到 `Q0-DEFAULT-PTDS-001`、`Q0-MULTITHREAD-ORDERED-001` 和 `Q0-OVERLAPPING-HOST-SYNC-001` 时，Canonical 转换返回 0 是最低验收条件：它意味着每个 case 的 coordinator `full_request + decode` 能唯一解析，并覆盖相应 worker 的 CUDA 工作；一旦任一 case 再次报告 `TARGET_REQUEST_NOT_UNIQUE` 或 scope unresolved，立即保留现场并停止。
 
