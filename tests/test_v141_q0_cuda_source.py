@@ -193,6 +193,9 @@ def test_kernel_memop_uses_case_scoped_preallocated_capacity_for_stable_overlap(
     )
     assert '"KERNEL_A", r.first, kKernelMemopKernelMilliseconds' in body
     assert "r.buffer_capacity_bytes" in body
+    assert body.index("cudaMemcpyAsync(") < body.index(
+        '"KERNEL_A", r.first, kKernelMemopKernelMilliseconds'
+    ) < body.index('"S_DEVICE"')
     assert "cudaMalloc(" not in body
     assert "cudaMallocHost(" not in body
 

@@ -2,15 +2,15 @@
 
 ## 当前快照
 
-- 清单版本：`5.1`
+- 清单版本：`5.2`
 - 最近更新：`2026-09-16`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G6-04`，将本轮新 bundle 增量更新到服务器，先单独实测新版 `Q0-KERNEL-MEMOP-001` 构造；四项真实验收全部通过后，才新建 r11 从 `Q0-STREAM-001` 完整重跑。已有 r1～r10 均保持不可变
-- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2、S v0.2 与 Gate 5 的 A/B/D/Exposure Signature 已通过离线/Engineering 审查；r10 在 `Q0-KERNEL-MEMOP-001` 停止，真实 4 KiB H2D 晚于 35 ms kernel 才开始，导致 mixed exposure 为零，但 wait-set、MEMCPY terminal 与 B 均正确。现仅将该 case 改为 profiler/request 前预分配 512 MiB buffer，并提交 10 ms kernel 与 512 MiB H2D；其他 case 保持 4 KiB。必须先做真实单例诊断，不能仅凭静态参数宣称修复有效
+- 当前最高优先级：`EP-G6-04`，将本轮新 bundle 增量更新到服务器，创建全新的 memcpy-first KERNEL-MEMOP diagnostic；四项真实验收全部通过前不得建立 r11。已有 r1～r10 及上一份失败 diagnostic 均保持不可变
+- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2、S v0.2 与 Gate 5 的 A/B/D/Exposure Signature 已通过离线/Engineering 审查；512 MiB/10 ms 第一版真实 diagnostic 仍串行，kernel 结束后约 108159 ns 才开始 H2D，说明容量已生效但提交编排未形成重叠。当前只交换该 case 的提交顺序：先提交长 H2D，再提交 kernel；不再扩大 buffer，不修改 oracle 或分析链。是否有效仍必须由新 diagnostic 判定
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -118,7 +118,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 ## Gate 6：Q0 资格验证
 
-**Gate verdict：`FAIL`。** r2 至 r10 均为 Engineering 失败现场，不能升级为 Q0 证据。r10 的 KERNEL-MEMOP 语义归属正确，但真实活动没有 oracle 要求的时间重叠。新版构造须先在目标 4090 上同时证明 overlap、`mixed_ns>0`、terminal=`MEMCPY_B` 和 `REAL_CASE_PASS`，再由全新 r11 完整执行；Q0 状态保持 `NOT_RUN`。
+**Gate verdict：`FAIL`。** r2 至 r10 及其后第一份 KERNEL-MEMOP diagnostic 均为 Engineering 失败现场，不能升级为 Q0 证据。新版 memcpy-first 构造仍须在目标 4090 上同时证明 overlap、`mixed_ns>0`、terminal=`MEMCPY_B` 和 `REAL_CASE_PASS`；在此之前不得建立 r11，Q0 状态保持 `NOT_RUN`。
 
 - [x] `EP-G6-01` 实现受控 CUDA Q0 微程序和机器可读 manifest。23 个 oracle case 严格一一映射，其中 21 个具有 native CUDA seed，terminal tie 与 submission race 明确保持纯合成；缺 correlation、dropped records 与 graph mapping 缺失使用真实 seed 后受控 Canonical 故障注入。CUDA 13.0 在无 GPU 执行条件下成功编译，binary `--list-cases` 与 21 个 seed 集合一致，未知 case 在 CUDA 初始化前失败。证据：`q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json`、`tests/test_v141_q0_cuda_source.py`。
 - [x] `EP-G6-02` 完成 GPU 前 Q0 执行准备：Windows/Linux 结构化 `nsys` argv、每 case source manifest、输入哈希、不可覆盖输出和 `PREPARED_NOT_EXECUTED/NOT_RUN` dry-run；23 个显式合成 Canonical profile 均经正式 S/A/B 与独立 evaluator 对照通过。observed 使用严格 schema，evaluator 静态禁止导入被测 S/A/B，错误字段、重复 identity、缺失/额外 case 和资格升级均 fail closed。证据：`exposedpath_v141/q0_execution.py`、`exposedpath_v141/q0_synthetic.py`、`exposedpath_v141/q0_evaluator.py`、`docs/v1_4_1/contracts/q0_observed_schema_v0_2.json`、`tests/test_v141_q0_execution.py`、`tests/test_v141_q0_synthetic.py`、`tests/test_v141_q0_evaluator.py`。
@@ -133,8 +133,9 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - [x] `EP-G6-02I` 修复真实 r8 暴露的 Graph 采集前态缺失：仅 `Q0-GRAPH-UNSUPPORTED-001` 的结构化 Nsight argv 增加一次 `--cuda-graph-trace=node`，其余 20 个 native seed 保持原采集参数。microbench、oracle、analyzer/S、Canonical adapter/schema、fault 语义和既有 identity 均不修改；run manifest 与 receipt 继续记录实际 argv。新增 Windows/Linux 回归验证 Graph case 参数恰好出现一次且其余 native case 均不包含；Q0 定向与合同/边界测试通过，全仓为 `643 passed, 2 failed`，两项仍是既有 PowerShell smoke 基线。
 - [x] `EP-G6-02J` 修复真实 r9 暴露的 evaluator 集合语义错误：仅 `wait_set_activity_labels` 使用无序且无重复的精确字符串成员比较；其他 list 字段继续使用原顺序比较。新增同成员换序通过，以及缺失、额外、重复标签失败回归；不修改 oracle、S/analyzer、Canonical 或 microbench。Q0 全套 `86 passed`，合同/Canonical/S/A-B/派生边界 `163 passed`，全仓 `647 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。
 - [x] `EP-G6-02K` 修复真实 r10 暴露的 KERNEL/MEMOP 构造不足：仅 `Q0-KERNEL-MEMOP-001` 在 profiler/request 前通过既有 `Resources` 生命周期预分配 512 MiB pinned host/device buffer，随后在原两个 nonblocking stream 上提交 10 ms `KERNEL_A` 与 512 MiB H2D `MEMCPY_B`；其余 case 继续使用 4 KiB。request 内不增加 malloc，oracle、identity、analyzer、evaluator、S/A-B 与 Canonical 均不修改。CUDA 源码实际编译通过；Q0 `87 passed`、合同/边界 `163 passed`、全仓 `648 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。
-- [x] `EP-G6-03` r4 在 EMPTY、r5 在重复 request、r6 在 PTDS query 轮询、r7 在 invocation scope resolver、r8 在 Graph fault 前态、r9 在 evaluator wait-set 顺序、r10 在 KERNEL/MEMOP 真实重叠处均按 fail-fast 规则停止并保留现场。r1～r10 均不得覆盖或升级资格。
-- [ ] `EP-G6-04`（等待 KERNEL-MEMOP diagnostic 与 r11）用新 bundle 更新服务器后，先独立运行该 case 并要求真实 overlap、`mixed_ns>0`、terminal=`MEMCPY_B`、`REAL_CASE_PASS`；全部通过后才新建 r11 从 `Q0-STREAM-001` 完整重跑。
+- [x] `EP-G6-02L` 根据第一份 512 MiB/10 ms diagnostic 继续修正 KERNEL/MEMOP 启动编排：buffer 与时长不再变化，仅将 `MEMCPY_B` 提交移到 `KERNEL_A` 之前，让 DMA 先进入执行，再提交 compute；同一个 `S_DEVICE`、stream、标签、oracle 和分析链均不变。源码回归明确要求 `cudaMemcpyAsync` 早于 kernel launch 且二者早于 sync；CUDA 实际编译通过，Q0 `87 passed`、合同/边界 `163 passed`、全仓 `648 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。
+- [x] `EP-G6-03` r4 在 EMPTY、r5 在重复 request、r6 在 PTDS query 轮询、r7 在 invocation scope resolver、r8 在 Graph fault 前态、r9 在 evaluator wait-set 顺序、r10 及其第一份 diagnostic 在 KERNEL/MEMOP 真实重叠处均按 fail-fast 规则停止并保留现场。r1～r10 与失败 diagnostic 均不得覆盖或升级资格。
+- [ ] `EP-G6-04`（等待 memcpy-first diagnostic 与 r11）用新 bundle 更新服务器后，创建全新单 case diagnostic 并要求真实 overlap、`mixed_ns>0`、terminal=`MEMCPY_B`、`REAL_CASE_PASS`；全部通过后才新建 r11 从 `Q0-STREAM-001` 完整重跑。
 - [ ] `EP-G6-05`（未开始）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
 
 ## Gate 7：Runner 与跨平台执行对齐
@@ -228,7 +229,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - `EP-ISSUE-13`（已解决并经 r8 复验）：r7 invocation-bleed 的 prior 与 target request identity 不同且不重叠，旧 resolver 却因结构化 request 总数为 2 判定目标不唯一。现只对完整目标 identity 的匹配数执行唯一性 gate；r8 已完成 21/21 native source Canonical，确认该问题不再阻断。
 - `EP-ISSUE-14`（代码已修复，待 r10 完整复验）：r8 默认 Nsight graph-level tracing 只产生 `GRAPH_TRACE`，没有 KERNEL node activity 或 `CUDA_GRAPH_NODE_EVENTS`，导致 Graph mapping-removal fault 零命中。独立服务器诊断确认仅增加 `--cuda-graph-trace=node` 后，真实 node mapping 可进入现有 Canonical 并被既有 selector 唯一移除。修复严格限定 Graph case，不放宽 fault 或 analyzer。
 - `EP-ISSUE-15`（已解决并经 r10 路径推进验证）：r9 `S_DEVICE` 的 wait-set 成员与 oracle 完全相同但顺序相反，旧 evaluator 通过通用 list equality 误判失败。现为该字段单独应用唯一字符串集合比较；r10 已越过 DEVICE case，重复标签和其他 list 合同仍保持 fail closed。
-- `EP-ISSUE-16`（代码已修复，待真实 diagnostic/r11 复验）：r10 的 4 KiB `MEMCPY_B` 仅约 2.3 μs，且在 35 ms `KERNEL_A` 结束后开始，无法形成 oracle 要求的 mixed exposure。现仅对该 case 使用 512 MiB H2D 与 10 ms kernel，并把大 buffer 分配放在 profiler/request 前；真实重叠和 terminal 仍必须由目标 4090 实测证明。
+- `EP-ISSUE-16`（第二版代码已完成，待 memcpy-first diagnostic/r11 复验）：r10 的 4 KiB `MEMCPY_B` 无法重叠；第一版 512 MiB/10 ms 构造已真实生效，但仍表现为 kernel 结束后约 108159 ns 才开始 copy。第二版不再扩大 buffer，只交换提交顺序使 H2D 先进入 DMA，再提交 kernel；真实 overlap 和 terminal 仍必须由目标 4090 实测证明。
 
 ## 固定执行顺序与最近任务
 
@@ -236,8 +237,8 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 最近应执行的任务：
 
-1. `EP-G6-04`：用新 bundle 更新服务器受跟踪代码并保留 r1～r10；按手册第 2.12 节创建独立 KERNEL-MEMOP diagnostic，不复用或改写 r10。
-2. `EP-G6-04`：仅当 diagnostic 同时满足真实 overlap、`mixed_ns>0`、MEMCPY terminal 与 `REAL_CASE_PASS` 时，新建 r11；从 `Q0-STREAM-001` 单例完成全链路后再推进批量。
+1. `EP-G6-04`：用新 bundle 更新服务器受跟踪代码并保留 r1～r10 及上一份失败 diagnostic；按手册第 2.12 节以全新 `kernel-memop-memcpy-first-diag` 目录只运行该 case。
+2. `EP-G6-04`：仅当新 diagnostic 同时满足真实 overlap、`mixed_ns>0`、MEMCPY terminal 与 `REAL_CASE_PASS` 时，新建 r11；否则继续保留现场且不建立 r11。
 3. `EP-G6-04/05`：只有单例全链路通过后才批量采集其余 native seed、实施受控负例并聚合唯一 Q0 gate 报告。
 
 ## 计划调整记录
@@ -295,3 +296,4 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 | 4.9 | 2026-09-16 | r8 已完成 21/21 源 Canonical，但默认 graph-level tracing 无 node activity，导致 Graph mapping-removal fault 零命中。现仅为该 Graph case 增加 `--cuda-graph-trace=node`，并以跨平台命令回归保证其余 native case 不受影响；手册切换到全新 r9。全仓 `643 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。 | EP-G6-02I、EP-G6-03、EP-G6-04、EP-ISSUE-14 | 不改变 Measurement Contract、Q0 oracle、microbench、analyzer/S、Canonical 或 fault 语义；r8 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，无 Pilot/Formal 数据受影响。 |
 | 5.0 | 2026-09-16 | r9 在 `Q0-DEVICE-001` 因 wait-set 标签顺序与 oracle 不同被 evaluator 误判。现仅对 `wait_set_activity_labels` 使用无序、无重复的精确成员比较；缺失、额外、重复仍失败，其他 list 字段不变。手册增加 r9 只读 evaluator 重放并切换到全新 r10。Q0 `86 passed`、合同/边界 `163 passed`、全仓 `647 passed, 2 failed`。 | EP-G6-02J、EP-G6-03、EP-G6-04、EP-ISSUE-15 | 不改变 `W(s)`、oracle、S/analyzer、Canonical、microbench 或 Formal 资格；r9 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
 | 5.1 | 2026-09-16 | r10 的 4 KiB H2D 未与 35 ms kernel 重叠，mixed exposure 为零。现仅对 KERNEL-MEMOP case 在 profiler/request 前预分配 512 MiB buffer，改用 10 ms kernel 与 512 MiB H2D；其他 case 保持 4 KiB。新增真实单 case diagnostic gate，通过后才允许新建 r11。Q0 `87 passed`、合同/边界 `163 passed`、全仓 `648 passed, 2 failed`。 | EP-G6-02K、EP-G6-03、EP-G6-04、EP-ISSUE-16 | 不改变 oracle、measurement semantics、identity、analyzer/evaluator、Canonical 或 Formal 资格；r10 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
+| 5.2 | 2026-09-16 | 第一份 512 MiB/10 ms diagnostic 仍显示 kernel 后约 108159 ns 才开始 copy。第二版不再扩大 buffer，只把长 H2D 提交移到 kernel 之前，并以静态构造回归锁定 memcpy→kernel→sync 顺序；手册要求全新 memcpy-first diagnostic，未通过前禁止建立 r11。Q0 `87 passed`、合同/边界 `163 passed`、全仓 `648 passed, 2 failed`。 | EP-G6-02L、EP-G6-03、EP-G6-04、EP-ISSUE-16 | 不改变 oracle、measurement semantics、identity、analyzer/evaluator、Canonical 或 Formal 资格；已有 diagnostic 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |

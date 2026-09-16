@@ -293,13 +293,15 @@ if ($R9Evidence.verdict -ne "REAL_CASE_PASS") { throw "r9 DEVICE 未得到 REAL_
 
 ## 2.12 新代码的 KERNEL-MEMOP 独立真实诊断
 
-r10 在 `Q0-KERNEL-MEMOP-001` 停止：wait-set、`MEMCPY_B` terminal 和 B 均正确，但 4 KiB H2D 在真实 4090 上晚于 35 ms kernel 才开始，`mixed_ns=0`。新版只把该 case 的构造改为 profiler/request 前预分配 512 MiB pinned/device buffer，并在两个既有 nonblocking stream 上提交 10 ms `KERNEL_A` 与 512 MiB `MEMCPY_B`；其他 case 继续使用 4 KiB，不新增 request 内分配。
+r10 在 `Q0-KERNEL-MEMOP-001` 停止：wait-set、`MEMCPY_B` terminal 和 B 均正确，但 4 KiB H2D 在真实 4090 上晚于 35 ms kernel 才开始，`mixed_ns=0`。第一版修复虽改为 512 MiB H2D 与 10 ms kernel，真实 diagnostic 仍显示 kernel 先完成、copy 晚约 108159 ns 才开始，说明仅扩大 transfer 不足以改变该平台的启动编排；该失败 diagnostic 必须保留。
+
+当前版本不再扩大 buffer，而只交换该 case 的提交顺序：先在 `r.second` 提交 512 MiB `MEMCPY_B`，再在 `r.first` 提交 10 ms `KERNEL_A`，最后仍由同一个 `S_DEVICE` 等待。目标是先让 DMA 进入执行，再让 compute 与其重叠，同时依靠更长 copy 保持 `MEMCPY_B` 晚结束。buffer 仍在 profiler/request 前由既有 `Resources` 生命周期分配，其他 case 继续使用 4 KiB；oracle、标签和分析链均不变。
 
 不要直接开始完整 r11。先创建独立 Engineering diagnostic，只运行该 case：
 
 ```powershell
 $Q0Root = Resolve-Path .
-$DiagRunId = "q0-win-4090-YYYYMMDD-kernel-memop-diag"  # 替换日期；必须是全新目录
+$DiagRunId = "q0-win-4090-YYYYMMDD-kernel-memop-memcpy-first-diag"  # 替换日期；必须是全新目录
 $DiagOut = Join-Path $Q0Root "engineering_evidence\q0_diagnostics\$DiagRunId"
 $DiagBinary = Join-Path $DiagOut "bin\exposedpath_q0.exe"
 $Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
@@ -345,7 +347,7 @@ if ($DiagSync.terminal.activity_label -ne "MEMCPY_B") { throw "terminal 必须�
 if ($DiagEvidence.verdict -ne "REAL_CASE_PASS") { throw "diagnostic 必须得到 REAL_CASE_PASS" }
 ```
 
-验收：`DiagOverlapNs > 0`、`A_device_wait_kernel_memop_mixed_ns > 0`、terminal 为 `MEMCPY_B`、evaluator 为 `REAL_CASE_PASS`。该 diagnostic 只验证新构造，不是完整 Q0，不得与 r10 或后续 r11 拼接。r10 保持失败现场。只有上述四项全部满足，才进入第 3 节建立全新 r11。
+验收：`DiagOverlapNs > 0`、`A_device_wait_kernel_memop_mixed_ns > 0`、terminal 为 `MEMCPY_B`、evaluator 为 `REAL_CASE_PASS`。该 diagnostic 只验证新构造，不是完整 Q0，不得与 r10、上一份失败 diagnostic 或后续 r11 拼接。r10 和已有 diagnostic 均保持失败现场。只有上述四项全部满足，才进入第 3 节建立全新 r11。
 
 ## 3. 编译并准备不可覆盖运行目录
 

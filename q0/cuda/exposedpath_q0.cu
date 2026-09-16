@@ -252,12 +252,12 @@ void run_empty(Resources& r, const std::string& c, const std::string& id) {
 
 void run_kernel_memop(Resources& r, const std::string& c, const std::string& id) {
   one_phase(c, id, [&] {
-    launch(r, c, id, "decode", "KERNEL_A", r.first, kKernelMemopKernelMilliseconds);
     {
       auto marker = marker_range(c, id, "decode", "MEMCPY_B");
       CUDA_CHECK(cudaMemcpyAsync(r.device_buffer, r.host_buffer, r.buffer_capacity_bytes,
                                  cudaMemcpyHostToDevice, r.second));
     }
+    launch(r, c, id, "decode", "KERNEL_A", r.first, kKernelMemopKernelMilliseconds);
     auto sync = sync_range(c, id, "decode", "S_DEVICE", 0);
     CUDA_CHECK(cudaDeviceSynchronize());
   });
