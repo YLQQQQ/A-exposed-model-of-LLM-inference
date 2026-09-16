@@ -21,6 +21,23 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "q0" / "cuda" / "exposedpath_q0.cu"
 
 
+def _function_body(source: str, name: str) -> str:
+    """提取一个顶层 C++ 函数体，用于检查无法在无 GPU 环境实跑的 NVTX 所有权结构。"""
+
+    signature = f"void {name}("
+    start = source.index(signature)
+    opening = source.index("{", start)
+    depth = 0
+    for index in range(opening, len(source)):
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[opening + 1:index]
+    raise AssertionError(f"无法解析函数体：{name}")
+
+
 def test_compile_command_is_structured_and_preserves_paths_with_spaces(tmp_path):
     nvcc = tmp_path / "cuda toolkit" / "nvcc.exe"
     source = tmp_path / "source tree" / "q0.cu"
@@ -106,6 +123,52 @@ def test_capture_drains_controlled_work_before_profiler_stop():
     capture_scope_end = source.index("    }\n    return 0;", drain)
 
     assert case_call < drain < capture_scope_end
+
+
+@pytest.mark.parametrize(
+    ("function_name", "worker_labels"),
+    [
+        ("run_ptds", ("WORKER_PTDS_OTHER",)),
+        ("run_multithread", ("WORKER_THREAD_A", "WORKER_THREAD_B")),
+        ("run_overlapping_sync", ("WORKER_SYNC_A", "WORKER_SYNC_B")),
+    ],
+)
+def test_multithread_cases_have_one_coordinator_scope_covering_all_workers(
+    function_name, worker_labels
+):
+    """捕获 worker 自建同 identity request，或 coordinator 范围未覆盖线程生命周期。"""
+
+    body = _function_body(SOURCE.read_text(encoding="utf-8"), function_name)
+
+    assert body.count("one_phase(c, id, [&] {") == 1
+    assert "request_range(" not in body
+    assert "phase_range(" not in body
+    assert body.index("one_phase(c, id, [&] {") < body.index("std::thread")
+    assert body.rfind(".join();") < body.rfind("  });")
+    for label in worker_labels:
+        assert f'worker_marker(c, id, "decode", "{label}")' in body
+
+
+def test_worker_marker_ends_before_worker_cuda_api_to_preserve_unique_callsite():
+    """worker 身份标记不能包住 activity/sync marker，否则 launch API 会有两个候选。"""
+
+    source = SOURCE.read_text(encoding="utf-8")
+    body = _function_body(source, "worker_marker")
+
+    assert "identity_json(\"marker\"" in body
+    assert "NvtxRange" in body
+    assert "cuda" not in body.lower()
+
+
+def test_ptds_request_waits_for_worker_gpu_completion_without_adding_worker_sync():
+    """PTDS 的无关 worker 活动必须真实落在唯一 request 内，同时不能新增 oracle sync。"""
+
+    body = _function_body(SOURCE.read_text(encoding="utf-8"), "run_ptds")
+
+    assert "cudaStreamQuery(cudaStreamPerThread)" in body
+    assert body.index('"K_OTHER_THREAD"') < body.index('"K_PTDS"')
+    assert body.index('"S_PTDS"') < body.index("other.join();")
+    assert body.count("sync_range(") == 1
 
 
 def test_build_cli_compiles_without_claiming_q0_pass(tmp_path, capsys):

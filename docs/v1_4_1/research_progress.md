@@ -2,15 +2,15 @@
 
 ## 当前快照
 
-- 清单版本：`4.5`
-- 最近更新：`2026-09-15`
+- 清单版本：`4.6`
+- 最近更新：`2026-09-16`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G6-04`，将本轮新 bundle 增量更新到服务器，先只读复核 r4 EMPTY，再新建 r5 从 `Q0-STREAM-001` 重新开始；已有 r1/r2/r3/r4 均保持不可变
-- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2、S v0.2 与 Gate 5 的 A/B/D/Exposure Signature 已通过离线/Engineering 审查；r4 批量真实 Q0 已运行到 `Q0-EMPTY-001`，暴露 lazy export 零行 KERNEL 缺表和真实 EMPTY evaluator 两个适配问题。本地只读重放现有 r4 EMPTY 已得到 `VALID_EMPTY/B_NOT_APPLICABLE/REAL_CASE_PASS`，但 r4 仍是失败现场，不能升级为 Q0 证据；完整真实 Q0、Engineering Pilot、Protocol Freeze 和正式实验仍未完成
+- 当前最高优先级：`EP-G6-04`，将本轮新 bundle 增量更新到服务器，先只读确认 r5 PTDS 仍因重复 target request fail closed，再新建 r6 从 `Q0-STREAM-001` 重新开始；已有 r1/r2/r3/r4/r5 均保持不可变
+- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2、S v0.2 与 Gate 5 的 A/B/D/Exposure Signature 已通过离线/Engineering 审查；r5 已越过此前 EMPTY 阻断，但在 `Q0-DEFAULT-PTDS-001` 暴露 worker 线程重复创建同 identity `full_request` 的 instrumentation 缺陷。三个同源多线程 case 已改为单一 coordinator request/decode 覆盖完整 worker 生命周期，worker 只写结构化 marker；analyzer 的重复 request fail-closed 规则未改变。该修复仍须由全新 r6 真实 trace 验证；完整真实 Q0、Engineering Pilot、Protocol Freeze 和正式实验均未完成
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -118,7 +118,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 ## Gate 6：Q0 资格验证
 
-**Gate verdict：`FAIL`。** r2、r3 与 r4 均为 Engineering 失败现场，不能升级为 Q0 证据。r4 的前置 smoke 和若干真实 case 已推进到批量阶段，但 `Q0-EMPTY-001` 因 lazy export 零行 KERNEL 表未创建而停止；本地新实现只读重放该 EMPTY 已得到 `REAL_CASE_PASS`。仍须由全新 r5 从 smoke 开始完整验证本轮提交，Q0 状态保持 `NOT_RUN`。
+**Gate verdict：`FAIL`。** r2、r3、r4 与 r5 均为 Engineering 失败现场，不能升级为 Q0 证据。r5 已推进至 `Q0-DEFAULT-PTDS-001`，但该 case 的 worker 与 coordinator 分别创建同 identity `full_request`，使 target scope 无法唯一解析；本地修复覆盖三个同源多线程 case，但尚无真实 GPU 复验。仍须由全新 r6 从 smoke 开始完整验证本轮提交，Q0 状态保持 `NOT_RUN`。
 
 - [x] `EP-G6-01` 实现受控 CUDA Q0 微程序和机器可读 manifest。23 个 oracle case 严格一一映射，其中 21 个具有 native CUDA seed，terminal tie 与 submission race 明确保持纯合成；缺 correlation、dropped records 与 graph mapping 缺失使用真实 seed 后受控 Canonical 故障注入。CUDA 13.0 在无 GPU 执行条件下成功编译，binary `--list-cases` 与 21 个 seed 集合一致，未知 case 在 CUDA 初始化前失败。证据：`q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json`、`tests/test_v141_q0_cuda_source.py`。
 - [x] `EP-G6-02` 完成 GPU 前 Q0 执行准备：Windows/Linux 结构化 `nsys` argv、每 case source manifest、输入哈希、不可覆盖输出和 `PREPARED_NOT_EXECUTED/NOT_RUN` dry-run；23 个显式合成 Canonical profile 均经正式 S/A/B 与独立 evaluator 对照通过。observed 使用严格 schema，evaluator 静态禁止导入被测 S/A/B，错误字段、重复 identity、缺失/额外 case 和资格升级均 fail closed。证据：`exposedpath_v141/q0_execution.py`、`exposedpath_v141/q0_synthetic.py`、`exposedpath_v141/q0_evaluator.py`、`docs/v1_4_1/contracts/q0_observed_schema_v0_2.json`、`tests/test_v141_q0_execution.py`、`tests/test_v141_q0_synthetic.py`、`tests/test_v141_q0_evaluator.py`。
@@ -127,8 +127,9 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - [x] `EP-G6-02C` 修复首次 Windows 实跑暴露的执行适配问题：GPU UUID 比较兼容带/不带内部连字符；精确加入已审查的 Nsight 2026.2.1/3.25.0；增强同步映射诊断；明确 CUDA 12.4 使用 v143/MSVC 14.39；Q0 微程序在请求范围结束后、`cudaProfilerStop` 前显式排空受控设备工作。全仓非 GPU 回归 `602 passed`，边界、oracle 独立性和 compileall 通过；显式排空尚未经过 GPU 验证。
 - [x] `EP-G6-02D` 修复真实 r3 揭示的 Q0 范围与下游合同错位：request 外未映射同步可贯穿 Canonical→S→B 且保持 invalid/null，不污染 A；Q0 单阶段微程序允许严格的 full_request+内嵌 decode 两窗口，普通 workload 仍要求 full_request/prefill/decode 三段；A 接受窗口外的有符号 trace-relative profiler API。真实 r3 输入哈希复核不变，本地只读链路为 inspect/Canonical 0、S/A-B 3、独立 evaluator 0/`REAL_CASE_PASS`；全仓 `615 passed`，Canonical 边界、oracle/evaluator 独立性、合同与 compileall 均通过。
 - [x] `EP-G6-02E` 修复真实 r4 EMPTY 暴露的 lazy-export 适配：KERNEL 缺表只在白名单 schema、`lazy=true`、CUDA capture 存在、关键导出元数据唯一且无 kernel/graph launch API 证据时规范化为零条；request 内外的 launch 冲突、非 lazy、未知 schema、缺 CUDA capture、元数据重复/冲突和残缺表继续 fail closed。真实 `VALID_EMPTY` evaluator 改用本次 sync 实际区间重算 A residual，不再使用合成 30 ns 常量。本地只读 r4 EMPTY 链路为 inspect/Canonical 0、S/A-B 3、evaluator 0/`REAL_CASE_PASS`；r4 输入保持不可变。
-- [x] `EP-G6-03` r4 已完成新提交下的 `Q0-STREAM-001` smoke 并进入批量真实 case；在 `Q0-EMPTY-001` 按 fail-fast 规则停止并保留完整现场，未覆盖 r1/r2/r3。
-- [ ] `EP-G6-04`（等待 r5）先只读验证 r4 EMPTY 兼容性，再新建 r5 从 `Q0-STREAM-001` 单例完成 Raw→Canonical→S→A/B→real evaluator；通过后才批量运行其余 native seed 并验证受控负例 fail-closed。
+- [x] `EP-G6-02F` 修复真实 r5 暴露的多线程 NVTX 范围错误：`Q0-DEFAULT-PTDS-001`、`Q0-MULTITHREAD-ORDERED-001`、`Q0-OVERLAPPING-HOST-SYNC-001` 均改为由 coordinator 创建唯一 `full_request + decode`，且范围从 worker 创建前持续到全部 worker join 后；worker 仅写立即结束的结构化 marker，避免包住 CUDA API 后与 activity/sync marker 形成多候选。PTDS worker 以非阻塞 stream query 确认自身 GPU 活动完成，不新增受控 sync，使无关活动真实留在唯一 request 内。原有 activity/sync/API/callsite identity 与 Q0 oracle 不变，analyzer 对重复 target request 继续 fail closed。r5 SQLite 只读复核仍为 `TARGET_REQUEST_NOT_UNIQUE` 且输入 SHA256 不变；定向测试 `45 passed`、CUDA source/编译测试 `11 passed`、全仓 `636 passed, 2 failed`（仍仅为既有 PowerShell smoke 基线），合同 37/37、Canonical 边界、oracle 独立性和 compileall 通过；真实有效性仍等待 r6。
+- [x] `EP-G6-03` r4 在 `Q0-EMPTY-001`、r5 在 `Q0-DEFAULT-PTDS-001` 均按 fail-fast 规则停止并保留完整现场；r5 已越过此前 EMPTY 阻断。r1/r2/r3/r4/r5 均不得覆盖或升级资格。
+- [ ] `EP-G6-04`（等待 r6）先只读验证 r5 PTDS 仍按重复 target request fail closed，再新建 r6 从 `Q0-STREAM-001` 单例完成 Raw→Canonical→S→A/B→real evaluator；通过后才批量运行其余 native seed，并重点确认三个多线程 case 的 target scope 唯一且覆盖 worker CUDA 工作。
 - [ ] `EP-G6-05`（未开始）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
 
 ## Gate 7：Runner 与跨平台执行对齐
@@ -216,7 +217,8 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - `EP-ISSUE-07`：本机环境变量 `CL` 被配置为 MSVC 目录，但该名称会被 `cl.exe`/`nvcc` 解释为隐式编译参数，导致 CUDA 编译失败。Q0 编译入口只在子进程环境中移除 `CL/_CL_`，不修改用户系统环境；后续 GPU 平台资格检查仍需记录并复核实际编译环境。
 - `EP-ISSUE-08`（已解决并保留历史）：r2 的 `Q0-STREAM-001` 在 request 结束后出现未映射 context sync；r2 保持原失败现场，未修改或升级资格。后续 r3 已证明新增显式排空本身具有唯一 runtime 映射。
 - `EP-ISSUE-09`（已解决，待 r4 复验）：r3 的 request 后尾部同步 `correlationId=135` 无 runtime 候选。现以唯一 Q0 full_request identity 限定 observation scope，保留该 Raw/Canonical 记录并标为 `HARNESS_OUTSIDE_REQUEST` warning；因无 API 映射，只能称为与 teardown 时间一致，不能断言具体 API 来源。
-- `EP-ISSUE-10`（已解决，待 r5 复验）：Nsight 2026.2.1 的 `lazy=true` SQLite 在零 kernel case 不创建 KERNEL 表，旧 observation 将其误判为核心缺表；真实 EMPTY evaluator 还错误沿用合成 trace 的 30 ns residual。现已用条件化 adapter 与真实区间 oracle 修复，并对 kernel/graph launch API 变体及关键导出元数据重复/冲突继续 fail closed；r4 保持失败现场。
+- `EP-ISSUE-10`（已解决并经 r5 路径推进验证）：Nsight 2026.2.1 的 `lazy=true` SQLite 在零 kernel case 不创建 KERNEL 表，旧 observation 将其误判为核心缺表；真实 EMPTY evaluator 还错误沿用合成 trace 的 30 ns residual。现已用条件化 adapter 与真实区间 oracle 修复，并对 kernel/graph launch API 变体及关键导出元数据重复/冲突继续 fail closed；r4 保持失败现场。
+- `EP-ISSUE-11`（代码已修复，待 r6 复验）：r5 的 PTDS worker 线程创建了与 coordinator 完全相同 identity 的 `full_request`，触发 `TARGET_REQUEST_NOT_UNIQUE`；同源 multithread/overlapping-sync 实现也有相同结构。现统一为 coordinator 唯一 request/decode 包围全部 worker 生命周期，worker 使用 marker；旧 r5 必须继续 invalid，只有新 r6 可验证修复。
 
 ## 固定执行顺序与最近任务
 
@@ -224,8 +226,8 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 最近应执行的任务：
 
-1. `EP-G6-04`：用新 bundle 更新服务器受跟踪代码，保留 r1/r2/r3/r4；按手册先对 r4 EMPTY 做只读全链复核，再新建 r5，仅采集 `Q0-STREAM-001`。
-2. `EP-G6-04`：r5 单例依次完成 Raw→Canonical→S→A/B→real evaluator；若仍存在额外 sync 或其他不符合项，保留现场并回到诊断，不运行其余 20 个 seed。
+1. `EP-G6-04`：用新 bundle 更新服务器受跟踪代码，保留 r1/r2/r3/r4/r5；按手册先对 r5 PTDS 做只读 fail-closed 复核，再新建 r6，仅采集 `Q0-STREAM-001`。
+2. `EP-G6-04`：r6 单例依次完成 Raw→Canonical→S→A/B→real evaluator；若仍存在额外 sync 或其他不符合项，保留现场并回到诊断，不运行其余 20 个 seed。
 3. `EP-G6-04/05`：只有单例全链路通过后才批量采集其余 native seed、实施受控负例并聚合唯一 Q0 gate 报告。
 
 ## 计划调整记录
@@ -277,3 +279,4 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 | 4.3 | 2026-09-15 | 基于服务器 r2 真实 SQLite 修复 Windows Q0 适配：精确支持 Nsight `2026.2.1.210 / 3.25.0`，区分核心表与按活动出现的可选表，保留有符号 trace-relative 时间，规范化 GPU UUID，并输出未唯一映射 sync 的完整诊断；r2 哈希保持不变且继续因捕获结束同步 fail-closed。微程序新增 request 外显式排空，手册改为原目录 bundle 更新、MSVC 14.39 和 r3 单例优先。全仓 `602 passed`。 | EP-G3-09、EP-G6-02C、EP-G6-03、EP-ISSUE-08 | 不改变 `W(s)`、terminal、A/B 等 Measurement Contract；这是 Protocol Freeze 前的 observation/执行适配修正。Q0 仍 `NOT_RUN`，r1/r2 不升级资格，当前无 Formal 数据。 |
 | 4.4 | 2026-09-15 | 基于不可变 r3 修正 Q0 observation scope 和下游空映射处理：唯一目标 request 外同步保留为 harness warning，目标内与非 Q0 仍 fail closed；S/B 保留 invalid/null 行，A 不让无 ownership 的 request 外行污染窗口；Q0 单阶段窗口与微程序对齐，并允许窗口外有符号 profiler API。r3 本地只读重放得到 `REAL_CASE_PASS`，全仓 `615 passed`，手册切换为 r3 诊断后新建 r4。 | EP-G3-10、EP-G6-02D、EP-G6-03、EP-ISSUE-09 | 不改变 `W(s)`、terminal 或正式 workload 三阶段语义；属于 Engineering、Protocol Freeze 前合同澄清。r3 不升级为 Q0 证据，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，当前无 Pilot/Formal 数据。 |
 | 4.5 | 2026-09-15 | 基于不可变 r4 EMPTY 修正 lazy-export 零行 KERNEL 表与真实 `VALID_EMPTY` evaluator：缺表只在已审查 schema、lazy、CUDA capture、关键导出元数据唯一且无 kernel/graph launch evidence 时规范化为零条；其他情况继续 fail closed。独立复审后补齐 graph launch、`_ptsz`/`_ptds` API 变体、严格 lazy 取值与重复/冲突元数据反例。新导出统一 `--lazy=false`，服务器流程改为 r4 只读诊断后新建 r5。最终定向测试 `86 passed`、全量 pytest `632 passed`，合同 37/37、Canonical 边界、oracle 独立性和 compileall 均通过。 | EP-G6-02E、EP-G6-04、EP-ISSUE-10 | 不改变 Measurement Contract、Q0 oracle 的语义预期、S/A/B 定义或 Formal 资格；r4 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
+| 4.6 | 2026-09-16 | 基于不可变 r5 PTDS 修复三个同源多线程 native seed 的重复 target request：coordinator 唯一持有 full_request/decode 并覆盖 worker GPU 工作，worker 仅写不包住 CUDA API 的短 marker；analyzer 唯一性规则保持 fail closed。旧 r5 只读复核仍 invalid 且哈希不变；服务器流程切换为 r5 诊断后新建 r6。全仓 `636 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。 | EP-G6-02F、EP-G6-03、EP-G6-04、EP-ISSUE-11 | 不改变 Measurement Contract、Q0 oracle、A/B 定义或 Formal 资格；r5 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |

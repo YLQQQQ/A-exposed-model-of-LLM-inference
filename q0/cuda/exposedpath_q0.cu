@@ -4,6 +4,7 @@
 #include <nvtx3/nvToolsExt.h>
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
@@ -94,6 +95,11 @@ NvtxRange phase_range(const std::string& case_id, const std::string& run_id,
 NvtxRange marker_range(const std::string& case_id, const std::string& run_id,
                        const std::string& phase, const std::string& label) {
   return NvtxRange(identity_json("marker", case_id, run_id, phase, label));
+}
+
+void worker_marker(const std::string& case_id, const std::string& run_id,
+                   const std::string& phase, const std::string& label) {
+  NvtxRange marker(identity_json("marker", case_id, run_id, phase, label));
 }
 
 NvtxRange sync_range(const std::string& case_id, const std::string& run_id,
@@ -260,59 +266,67 @@ void run_legacy_default(Resources& r, const std::string& c, const std::string& i
 }
 
 void run_ptds(Resources& r, const std::string& c, const std::string& id) {
-  std::thread other([&] {
-    auto request = request_range(c, id);
-    auto phase = phase_range(c, id, "decode");
-    launch(r, c, id, "decode", "K_OTHER_THREAD", cudaStreamPerThread, 60);
-  });
-  other.join();
   one_phase(c, id, [&] {
+    std::atomic<bool> other_submitted{false};
+    std::thread other([&] {
+      worker_marker(c, id, "decode", "WORKER_PTDS_OTHER");
+      launch(r, c, id, "decode", "K_OTHER_THREAD", cudaStreamPerThread, 60);
+      other_submitted.store(true, std::memory_order_release);
+      while (true) {
+        const cudaError_t status = cudaStreamQuery(cudaStreamPerThread);
+        if (status == cudaSuccess) break;
+        if (status != cudaErrorNotReady) {
+          cuda_check(status, "cudaStreamQuery(cudaStreamPerThread)");
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+    });
+    while (!other_submitted.load(std::memory_order_acquire)) {
+      std::this_thread::yield();
+    }
     launch(r, c, id, "decode", "K_PTDS", cudaStreamPerThread, 30);
     auto sync = sync_range(c, id, "decode", "S_PTDS", 0);
     CUDA_CHECK(cudaStreamSynchronize(cudaStreamPerThread));
+    other.join();
   });
 }
 
 void run_multithread(Resources& r, const std::string& c, const std::string& id) {
-  std::thread producer([&] {
-    auto request = request_range(c, id);
-    auto phase = phase_range(c, id, "decode");
-    launch(r, c, id, "decode", "K_THREAD_A", r.first, 25);
-    CUDA_CHECK(cudaEventRecord(r.event, r.first));
+  one_phase(c, id, [&] {
+    std::thread producer([&] {
+      worker_marker(c, id, "decode", "WORKER_THREAD_A");
+      launch(r, c, id, "decode", "K_THREAD_A", r.first, 25);
+      CUDA_CHECK(cudaEventRecord(r.event, r.first));
+    });
+    producer.join();
+    std::thread consumer([&] {
+      worker_marker(c, id, "decode", "WORKER_THREAD_B");
+      CUDA_CHECK(cudaStreamWaitEvent(r.second, r.event, 0));
+      launch(r, c, id, "decode", "K_THREAD_B", r.second, 35);
+      auto sync = sync_range(c, id, "decode", "S_THREAD_B", 0);
+      CUDA_CHECK(cudaStreamSynchronize(r.second));
+    });
+    consumer.join();
   });
-  producer.join();
-  std::thread consumer([&] {
-    auto request = request_range(c, id);
-    auto phase = phase_range(c, id, "decode");
-    CUDA_CHECK(cudaStreamWaitEvent(r.second, r.event, 0));
-    launch(r, c, id, "decode", "K_THREAD_B", r.second, 35);
-    auto sync = sync_range(c, id, "decode", "S_THREAD_B", 0);
-    CUDA_CHECK(cudaStreamSynchronize(r.second));
-  });
-  consumer.join();
 }
 
 void run_overlapping_sync(Resources& r, const std::string& c, const std::string& id) {
-  {
-    auto request = request_range(c, id);
-    auto phase = phase_range(c, id, "decode");
+  one_phase(c, id, [&] {
     launch(r, c, id, "decode", "K_A", r.first, 40);
     launch(r, c, id, "decode", "K_B", r.second, 50);
-  }
-  std::thread first([&] {
-    auto request = request_range(c, id);
-    auto phase = phase_range(c, id, "decode");
-    auto sync = sync_range(c, id, "decode", "S_A", 0);
-    CUDA_CHECK(cudaStreamSynchronize(r.first));
+    std::thread first([&] {
+      worker_marker(c, id, "decode", "WORKER_SYNC_A");
+      auto sync = sync_range(c, id, "decode", "S_A", 0);
+      CUDA_CHECK(cudaStreamSynchronize(r.first));
+    });
+    std::thread second([&] {
+      worker_marker(c, id, "decode", "WORKER_SYNC_B");
+      auto sync = sync_range(c, id, "decode", "S_B", 1);
+      CUDA_CHECK(cudaStreamSynchronize(r.second));
+    });
+    first.join();
+    second.join();
   });
-  std::thread second([&] {
-    auto request = request_range(c, id);
-    auto phase = phase_range(c, id, "decode");
-    auto sync = sync_range(c, id, "decode", "S_B", 1);
-    CUDA_CHECK(cudaStreamSynchronize(r.second));
-  });
-  first.join();
-  second.join();
 }
 
 void run_phase_spill(Resources& r, const std::string& c, const std::string& id) {

@@ -890,6 +890,7 @@ def test_q0_ambiguous_target_request_keeps_global_fail_closed(tmp_path):
         source_manifest=manifest,
     )
 
+    scope = report["derived_checks"]["target_request_scope"]
     codes = {item["code"] for item in report["validity"]["issues"]}
     issue = next(
         item for item in report["validity"]["issues"]
@@ -897,7 +898,66 @@ def test_q0_ambiguous_target_request_keeps_global_fail_closed(tmp_path):
     )
     assert report["validity"]["status"] == "invalid"
     assert "TARGET_REQUEST_SCOPE_UNRESOLVED" in codes
+    assert scope["reason"] == "TARGET_REQUEST_NOT_UNIQUE"
+    assert scope["structured_request_count"] == 2
+    assert scope["matching_request_count"] == 2
     assert issue["detail"]["offending"][0]["scope"] == "GLOBAL_TRACE"
+
+
+def test_q0_worker_marker_does_not_duplicate_request_and_teardown_stays_warning(
+    tmp_path,
+):
+    """捕获 worker marker 被误计为第二个 request，导致 teardown 退回 GLOBAL_TRACE。"""
+
+    database = tmp_path / "trace.sqlite"
+    manifest = tmp_path / "manifest.json"
+    _make_sqlite(database)
+    _replace_with_q0_target_request(database, manifest)
+    worker_identity = {
+        "kind": "marker",
+        "experiment_id": "exposedpath-q0",
+        "wmpc_id": "q0-controlled",
+        "run_id": "q0-test.q0-stream-001",
+        "run_role": "Engineering",
+        "pass_id": "Pass1",
+        "request_id": "Q0-STREAM-001",
+        "repeat_id": "repeat-0",
+        "phase": "decode",
+        "callsite_id": "WORKER_PTDS_OTHER",
+    }
+    worker_label = "EXPOSEDPATH_JSON_V1:" + json.dumps(
+        worker_identity, separators=(",", ":")
+    )
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "INSERT INTO NVTX_EVENTS(start,end,eventType,text,textId,globalTid) "
+        "VALUES (?,?,?,?,?,?)",
+        (10, 40, 59, worker_label, None, 2),
+    )
+    connection.execute(
+        "INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES "
+        "(110,120,0,1,NULL,4294967295,99,1,4,4294967295,4294967295)"
+    )
+    connection.commit()
+    connection.close()
+
+    report = inspect_sqlite(
+        database,
+        "Engineering",
+        raw_sha256="A" * 64,
+        collector_version="synthetic",
+        source_manifest=manifest,
+    )
+
+    scope = report["derived_checks"]["target_request_scope"]
+    warning = next(
+        item for item in report["validity"]["issues"]
+        if item["code"] == "HARNESS_SYNC_RUNTIME_MAPPING_NOT_UNIQUE"
+    )
+    assert report["validity"]["status"] == "valid"
+    assert scope["status"] == "RESOLVED"
+    assert scope["nvtx_source_rowid"] == 1
+    assert warning["detail"]["offending"][0]["scope"] == "HARNESS_OUTSIDE_REQUEST"
 
 
 def test_q0_malformed_structured_nvtx_prevents_scope_exemption(tmp_path):
