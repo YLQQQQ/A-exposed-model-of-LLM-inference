@@ -6,12 +6,14 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
@@ -100,6 +102,21 @@ NvtxRange marker_range(const std::string& case_id, const std::string& run_id,
 void worker_marker(const std::string& case_id, const std::string& run_id,
                    const std::string& phase, const std::string& label) {
   NvtxRange marker(identity_json("marker", case_id, run_id, phase, label));
+}
+
+struct HostCompletion {
+  std::mutex mutex;
+  std::condition_variable condition;
+  bool complete{false};
+};
+
+void CUDART_CB signal_host_completion(void* raw_completion) {
+  auto* completion = static_cast<HostCompletion*>(raw_completion);
+  {
+    std::lock_guard<std::mutex> lock(completion->mutex);
+    completion->complete = true;
+  }
+  completion->condition.notify_one();
 }
 
 NvtxRange sync_range(const std::string& case_id, const std::string& run_id,
@@ -268,18 +285,15 @@ void run_legacy_default(Resources& r, const std::string& c, const std::string& i
 void run_ptds(Resources& r, const std::string& c, const std::string& id) {
   one_phase(c, id, [&] {
     std::atomic<bool> other_submitted{false};
+    HostCompletion completion;
     std::thread other([&] {
       worker_marker(c, id, "decode", "WORKER_PTDS_OTHER");
       launch(r, c, id, "decode", "K_OTHER_THREAD", cudaStreamPerThread, 60);
+      CUDA_CHECK(cudaLaunchHostFunc(cudaStreamPerThread, signal_host_completion,
+                                    &completion));
       other_submitted.store(true, std::memory_order_release);
-      while (true) {
-        const cudaError_t status = cudaStreamQuery(cudaStreamPerThread);
-        if (status == cudaSuccess) break;
-        if (status != cudaErrorNotReady) {
-          cuda_check(status, "cudaStreamQuery(cudaStreamPerThread)");
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-      }
+      std::unique_lock<std::mutex> lock(completion.mutex);
+      completion.condition.wait(lock, [&] { return completion.complete; });
     });
     while (!other_submitted.load(std::memory_order_acquire)) {
       std::this_thread::yield();

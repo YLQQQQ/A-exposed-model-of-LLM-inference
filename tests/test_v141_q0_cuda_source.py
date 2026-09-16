@@ -160,15 +160,30 @@ def test_worker_marker_ends_before_worker_cuda_api_to_preserve_unique_callsite()
     assert "cuda" not in body.lower()
 
 
-def test_ptds_request_waits_for_worker_gpu_completion_without_adding_worker_sync():
-    """PTDS 的无关 worker 活动必须真实落在唯一 request 内，同时不能新增 oracle sync。"""
+def test_ptds_request_uses_one_host_callback_instead_of_cuda_query_polling():
+    """PTDS worker 完成协调不能生成重复的 CUDA query/synchronization activity。"""
 
     body = _function_body(SOURCE.read_text(encoding="utf-8"), "run_ptds")
 
-    assert "cudaStreamQuery(cudaStreamPerThread)" in body
+    assert "cudaStreamQuery" not in body
+    assert "cudaEventQuery" not in body
+    assert "cudaLaunchHostFunc(cudaStreamPerThread" in body
+    assert "completion.condition.wait(" in body
+    assert "sleep_for" not in body
     assert body.index('"K_OTHER_THREAD"') < body.index('"K_PTDS"')
     assert body.index('"S_PTDS"') < body.index("other.join();")
     assert body.count("sync_range(") == 1
+
+
+@pytest.mark.parametrize(
+    "function_name",
+    ["run_ptds", "run_multithread", "run_overlapping_sync"],
+)
+def test_multithread_cases_do_not_poll_cuda_completion(function_name):
+    body = _function_body(SOURCE.read_text(encoding="utf-8"), function_name)
+
+    assert "cudaStreamQuery" not in body
+    assert "cudaEventQuery" not in body
 
 
 def test_build_cli_compiles_without_claiming_q0_pass(tmp_path, capsys):

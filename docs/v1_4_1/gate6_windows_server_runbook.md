@@ -10,7 +10,7 @@
 Wsn1
 ├── YLQ_test                 # 旧项目和旧结果，保持不动
 ├── ExposedPath_Q0_*.bundle  # 本机交付包
-└── YLQ_test_q0_v141         # 已有 Q0 工作目录，含未跟踪的 r1/r2/r3/r4/r5
+└── YLQ_test_q0_v141         # 已有 Q0 工作目录，含未跟踪的 r1/r2/r3/r4/r5/r6
 ```
 
 先在服务器 PowerShell 中确认不存在尚未提交的受跟踪修改，并为服务器临时提交建立备份分支：
@@ -27,7 +27,7 @@ git reset --hard FETCH_HEAD
 git rev-parse HEAD
 ```
 
-`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4、r5`。严禁追加 `git clean`。更新后以最终交付消息记录的 commit 为核对值。
+`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4、r5、r6`。严禁追加 `git clean`。更新后以最终交付消息记录的 commit 为核对值。
 
 Q0 不加载模型，因此不用复制旧 `models`。服务器已有 GPU driver、CUDA Toolkit、`nvcc` 和 Nsight Systems 可以复用，但必须重新记录版本。旧 `.venv` 不必删除，也不要向其中追加依赖；在新版目录建立轻量独立环境：
 
@@ -168,13 +168,54 @@ if ($R5Mapping.Count -ne 1 -or $R5Mapping[0].detail.offending[0].correlation_id 
 if ((Get-FileHash -LiteralPath $R5Sqlite -Algorithm SHA256).Hash -ne $R5SqliteHashBefore) { throw "r5 SQLite 被意外修改" }
 ```
 
-验收：r5 仍明确报告两个匹配 request，并将尾部 `correlationId=133` 保守归为 `GLOBAL_TRACE`；SQLite 哈希保持不变。这证明 analyzer 的唯一性规则没有被放宽，不证明新版 microbench 已正确运行。只有全新 r6 trace 才能验证 instrumentation 修复。
+验收：r5 仍明确报告两个匹配 request，并将尾部 `correlationId=133` 保守归为 `GLOBAL_TRACE`；SQLite 哈希保持不变。这证明 analyzer 的唯一性规则没有被放宽。r6 已验证重复 request 修复，但暴露了 query 轮询问题；继续执行 2.8。
+
+## 2.8 使用现有 r6 PTDS 做只读 query-polling 诊断
+
+r6 已确认 target request 唯一且 request 后尾部同步能归为 `HARNESS_OUTSIDE_REQUEST`，但 PTDS worker 的 `cudaStreamQuery` 轮询在 request 内产生 31 条无 Runtime 映射的 synchronization activity。新版只移除该轮询，不修改 analyzer，因此旧 r6 仍必须 fail closed：
+
+```powershell
+$Q0Root = Resolve-Path .
+$CodeShort = git rev-parse --short=8 HEAD
+$R6PtdsCandidates = @(
+    Get-ChildItem (Join-Path $Q0Root "engineering_evidence") -Recurse -File -Filter "trace.sqlite" |
+        Where-Object { $_.Directory.Name -eq "Q0-DEFAULT-PTDS-001" -and $_.FullName -match "(?i)r6" }
+)
+$R6PtdsCandidates | Select-Object FullName
+if ($R6PtdsCandidates.Count -ne 1) { throw "无法唯一定位 r6/Q0-DEFAULT-PTDS-001" }
+$R6Case = $R6PtdsCandidates[0].Directory.FullName
+$R6Sqlite = $R6PtdsCandidates[0].FullName
+$R6Raw = Join-Path $R6Case "trace.nsys-rep"
+$R6Manifest = Join-Path $R6Case "source_manifest.json"
+$R6Receipt = Get-Content -LiteralPath (Join-Path $R6Case "collection_receipt.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+$R6SqliteHashBefore = (Get-FileHash -LiteralPath $R6Sqlite -Algorithm SHA256).Hash
+$R6Diag = Join-Path $Q0Root "engineering_evidence\q0_compat_diagnostics\r6-ptds-$CodeShort"
+
+& $Python -m exposedpath_v141 inspect-sqlite --sqlite $R6Sqlite --output-dir $R6Diag --data-role Engineering --raw-sha256 (Get-FileHash -LiteralPath $R6Raw -Algorithm SHA256).Hash --collector-version ([string]$R6Receipt.environment.nsight_systems) --source-manifest $R6Manifest
+if ($LASTEXITCODE -ne 3) { throw "r6 PTDS 应继续 fail closed，但退出码不是 3" }
+$R6Report = Get-Content -LiteralPath (Join-Path $R6Diag "observation_report.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+$R6Issues = @($R6Report.validity.issues)
+$R6ScopeErrors = @($R6Issues | Where-Object code -eq "TARGET_REQUEST_SCOPE_UNRESOLVED")
+$R6Mapping = @($R6Issues | Where-Object code -eq "SYNC_RUNTIME_MAPPING_NOT_UNIQUE")
+$R6TargetUnmapped = @($R6Mapping.detail.offending | Where-Object scope -eq "TARGET_REQUEST")
+$R6HarnessWarnings = @($R6Issues | Where-Object code -eq "HARNESS_SYNC_RUNTIME_MAPPING_NOT_UNIQUE")
+$ExpectedR6CorrelationIds = @(129) + @(133..162)
+$ActualR6CorrelationIds = @($R6TargetUnmapped.correlation_id | Sort-Object)
+if ($R6Report.validity.status -ne "invalid") { throw "r6 PTDS 不应被升级为 valid" }
+if ($R6ScopeErrors.Count -ne 0) { throw "r6 不应重新出现 target request 唯一性错误" }
+if ($R6TargetUnmapped.Count -ne 31 -or @($R6TargetUnmapped | Where-Object runtime_match_count -ne 0).Count -ne 31) { throw "r6 query 轮询诊断数量不符合失败现场" }
+if (@(Compare-Object $ExpectedR6CorrelationIds $ActualR6CorrelationIds).Count -ne 0) { throw "r6 query 轮询 correlation 集合不符合失败现场" }
+if ($R6HarnessWarnings.Count -lt 1) { throw "r6 request 后尾部同步未保留为 harness warning" }
+if ((Get-FileHash -LiteralPath $R6Sqlite -Algorithm SHA256).Hash -ne $R6SqliteHashBefore) { throw "r6 SQLite 被意外修改" }
+```
+
+验收：r6 不再出现重复 target request；31 条 request 内未映射同步仍使旧 trace invalid；request 外尾部同步保持 warning；SQLite 哈希不变。只有全新 r7 能验证 host callback 替代 query 轮询后的真实 Nsight 行为。
 
 ## 3. 编译并准备不可覆盖运行目录
 
 ```powershell
 $Q0Root = Resolve-Path .
-$RunId = "q0-win-4090-YYYYMMDD-r6"  # 执行时替换日期；必须是全新目录
+$RunId = "q0-win-4090-YYYYMMDD-r7"  # 执行时替换日期；必须是全新目录
 $Out = Join-Path $Q0Root "engineering_evidence\q0_real\$RunId"
 $Binary = Join-Path $Out "bin\exposedpath_q0.exe"
 $Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
@@ -191,7 +232,7 @@ git status --porcelain=v1 | Set-Content (Join-Path $Out "git_status.txt")
 
 验收：编译输出为 `PASS`；run manifest 为 `PREPARED_NOT_EXECUTED`；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定。
 
-## 4. 只采集 r6 单例
+## 4. 只采集 r7 单例
 
 ```powershell
 $RunManifest = Join-Path $Out "run\q0_run_manifest.json"
@@ -199,12 +240,12 @@ $Run = Get-Content -LiteralPath $RunManifest -Raw -Encoding UTF8 | ConvertFrom-J
 $NativeCases = @($Run.cases | Where-Object { $null -ne $_.command_argv })
 $SmokeCaseId = "Q0-STREAM-001"
 & $Python -m exposedpath_v141 execute-q0-case --run-manifest $RunManifest --case $SmokeCaseId
-if ($LASTEXITCODE -ne 0) { throw "r6 单例采集失败，保留现场并停止" }
+if ($LASTEXITCODE -ne 0) { throw "r7 单例采集失败，保留现场并停止" }
 ```
 
 验收：此时只能新增 `Q0-STREAM-001` 的 receipt 和非空 `.nsys-rep`。不要提前运行其余 20 个 seed，也不要手工改 receipt 或 Raw。
 
-## 5. r6 单例全链路验收
+## 5. r7 单例全链路验收
 
 先只处理 `Q0-STREAM-001`。`nsys export` 只读取 Raw，不得覆盖已存在 SQLite：
 
@@ -227,14 +268,14 @@ $SDir = Join-Path $CaseDir "s"
 $ABDir = Join-Path $CaseDir "ab"
 $EvidenceDir = Join-Path $Out "real_evidence\$CaseId"
 & $Python -m exposedpath_v141 analyze-s --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --output-dir $SDir
-if ($LASTEXITCODE -notin 0,2,3) { throw "r6 单例 S 执行异常；保留现场并停止" }
+if ($LASTEXITCODE -notin 0,2,3) { throw "r7 单例 S 执行异常；保留现场并停止" }
 & $Python -m exposedpath_v141 analyze-ab --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --s-manifest (Join-Path $SDir "s_manifest.json") --output-dir $ABDir
-if ($LASTEXITCODE -notin 0,2,3) { throw "r6 单例 A/B 执行异常；保留现场并停止" }
+if ($LASTEXITCODE -notin 0,2,3) { throw "r7 单例 A/B 执行异常；保留现场并停止" }
 & $Python -m exposedpath_v141 evaluate-q0-real-case --case $CaseId --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --s-manifest (Join-Path $SDir "s_manifest.json") --ab-manifest (Join-Path $ABDir "ab_manifest.json") --collection-receipt (Join-Path $CaseDir "collection_receipt.json") --output-dir $EvidenceDir
-if ($LASTEXITCODE -ne 0) { throw "r6 单例独立对照未通过；保留现场并停止" }
+if ($LASTEXITCODE -ne 0) { throw "r7 单例独立对照未通过；保留现场并停止" }
 ```
 
-验收：Canonical 转换必须返回 0；S/A/B 必须生成完整 bundle，其中 request 外的 harness 尾部同步可以按既有 fail-closed 规则形成非零状态；独立 evaluator 必须返回 0，且 `Q0-STREAM-001` 的 real evidence 为 `REAL_CASE_PASS`。若目标 request 仍出现额外 sync、映射歧义或其他 invalid，停止并回传整个 r6 单例目录；不能继续批量。
+验收：Canonical 转换必须返回 0；S/A/B 必须生成完整 bundle，其中 request 外的 harness 尾部同步可以按既有 fail-closed 规则形成非零状态；独立 evaluator 必须返回 0，且 `Q0-STREAM-001` 的 real evidence 为 `REAL_CASE_PASS`。若目标 request 仍出现额外 sync、映射歧义或其他 invalid，停止并回传整个 r7 单例目录；不能继续批量。
 
 本轮修复未放宽 target request 唯一性。后续批量运行到 `Q0-DEFAULT-PTDS-001`、`Q0-MULTITHREAD-ORDERED-001` 和 `Q0-OVERLAPPING-HOST-SYNC-001` 时，Canonical 转换返回 0 是最低验收条件：它意味着每个 case 的 coordinator `full_request + decode` 能唯一解析，并覆盖相应 worker 的 CUDA 工作；一旦任一 case 再次报告 `TARGET_REQUEST_NOT_UNIQUE` 或 scope unresolved，立即保留现场并停止。
 
