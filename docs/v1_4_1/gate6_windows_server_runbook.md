@@ -10,7 +10,7 @@
 Wsn1
 ├── YLQ_test                 # 旧项目和旧结果，保持不动
 ├── ExposedPath_Q0_*.bundle  # 本机交付包
-└── YLQ_test_q0_v141         # 已有 Q0 工作目录，含未跟踪的 r1/r2/r3/r4/r5/r6/r7/r8/r9
+└── YLQ_test_q0_v141         # 已有 Q0 工作目录，含未跟踪的 r1/r2/r3/r4/r5/r6/r7/r8/r9/r10
 ```
 
 先在服务器 PowerShell 中确认不存在尚未提交的受跟踪修改，并为服务器临时提交建立备份分支：
@@ -27,7 +27,7 @@ git reset --hard FETCH_HEAD
 git rev-parse HEAD
 ```
 
-`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4、r5、r6、r7、r8、r9`。严禁追加 `git clean`。更新后以最终交付消息记录的 commit 为核对值。
+`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4、r5、r6、r7、r8、r9、r10`。严禁追加 `git clean`。更新后以最终交付消息记录的 commit 为核对值。
 
 Q0 不加载模型，因此不用复制旧 `models`。服务器已有 GPU driver、CUDA Toolkit、`nvcc` 和 Nsight Systems 可以复用，但必须重新记录版本。旧 `.venv` 不必删除，也不要向其中追加依赖；在新版目录建立轻量独立环境：
 
@@ -291,11 +291,67 @@ if ($R9Evidence.verdict -ne "REAL_CASE_PASS") { throw "r9 DEVICE 未得到 REAL_
 
 验收：新诊断返回 `REAL_CASE_PASS`，且 r9 Raw 哈希不变。该结果仅证明 evaluator 修复能正确重放既有证据，不把 r9 升级为完整 Q0；r9 保持失败现场。正式重跑必须使用全新 r10，r1～r9 均不得覆盖、续跑或执行 `git clean`。
 
+## 2.12 新代码的 KERNEL-MEMOP 独立真实诊断
+
+r10 在 `Q0-KERNEL-MEMOP-001` 停止：wait-set、`MEMCPY_B` terminal 和 B 均正确，但 4 KiB H2D 在真实 4090 上晚于 35 ms kernel 才开始，`mixed_ns=0`。新版只把该 case 的构造改为 profiler/request 前预分配 512 MiB pinned/device buffer，并在两个既有 nonblocking stream 上提交 10 ms `KERNEL_A` 与 512 MiB `MEMCPY_B`；其他 case 继续使用 4 KiB，不新增 request 内分配。
+
+不要直接开始完整 r11。先创建独立 Engineering diagnostic，只运行该 case：
+
+```powershell
+$Q0Root = Resolve-Path .
+$DiagRunId = "q0-win-4090-YYYYMMDD-kernel-memop-diag"  # 替换日期；必须是全新目录
+$DiagOut = Join-Path $Q0Root "engineering_evidence\q0_diagnostics\$DiagRunId"
+$DiagBinary = Join-Path $DiagOut "bin\exposedpath_q0.exe"
+$Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
+$GpuSelector = "GPU-替换为nvidia-smi显示的完整UUID"
+$Nvcc = (Get-Command nvcc).Source
+
+cmd /d /s /c "`"$VcVars`" -vcvars_ver=14.39 && where cl && `"$Python`" -m exposedpath_v141 build-q0-microbench --nvcc `"$Nvcc`" --output `"$DiagBinary`" --platform windows"
+if ($LASTEXITCODE -ne 0) { throw "KERNEL-MEMOP diagnostic CUDA 编译失败" }
+& $Python -m exposedpath_v141 prepare-q0-run --output-dir (Join-Path $DiagOut "run") --binary $DiagBinary --nsys $Nsys --platform windows --run-id $DiagRunId --cuda-visible-device $GpuSelector
+if ($LASTEXITCODE -ne 0) { throw "KERNEL-MEMOP diagnostic 准备失败" }
+
+$DiagRunManifest = Join-Path $DiagOut "run\q0_run_manifest.json"
+$DiagCaseId = "Q0-KERNEL-MEMOP-001"
+& $Python -m exposedpath_v141 execute-q0-case --run-manifest $DiagRunManifest --case $DiagCaseId
+if ($LASTEXITCODE -ne 0) { throw "KERNEL-MEMOP diagnostic 采集失败" }
+
+$DiagCase = Join-Path $DiagOut "run\cases\$DiagCaseId"
+$DiagRaw = Join-Path $DiagCase "trace.nsys-rep"
+$DiagSqlite = Join-Path $DiagCase "trace.sqlite"
+$DiagReceipt = Get-Content -LiteralPath (Join-Path $DiagCase "collection_receipt.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+$DiagRawSha = (Get-FileHash -LiteralPath $DiagRaw -Algorithm SHA256).Hash
+& $Nsys export --type sqlite --lazy=false --force-overwrite=false --output $DiagSqlite $DiagRaw
+if ($LASTEXITCODE -ne 0) { throw "KERNEL-MEMOP diagnostic SQLite 导出失败" }
+& $Python -m exposedpath_v141 convert-sqlite --sqlite $DiagSqlite --output-dir (Join-Path $DiagCase "canonical") --data-role Engineering --raw-sha256 $DiagRawSha --collector-version ([string]$DiagReceipt.environment.nsight_systems) --source-manifest (Join-Path $DiagCase "source_manifest.json")
+if ($LASTEXITCODE -ne 0) { throw "KERNEL-MEMOP diagnostic Canonical 失败" }
+& $Python -m exposedpath_v141 analyze-s --canonical-manifest (Join-Path $DiagCase "canonical\canonical_manifest.json") --output-dir (Join-Path $DiagCase "s")
+if ($LASTEXITCODE -notin 0,2,3) { throw "KERNEL-MEMOP diagnostic S 执行异常" }
+& $Python -m exposedpath_v141 analyze-ab --canonical-manifest (Join-Path $DiagCase "canonical\canonical_manifest.json") --s-manifest (Join-Path $DiagCase "s\s_manifest.json") --output-dir (Join-Path $DiagCase "ab")
+if ($LASTEXITCODE -notin 0,2,3) { throw "KERNEL-MEMOP diagnostic A/B 执行异常" }
+$DiagEvidenceDir = Join-Path $DiagOut "real_evidence\$DiagCaseId"
+& $Python -m exposedpath_v141 evaluate-q0-real-case --case $DiagCaseId --canonical-manifest (Join-Path $DiagCase "canonical\canonical_manifest.json") --s-manifest (Join-Path $DiagCase "s\s_manifest.json") --ab-manifest (Join-Path $DiagCase "ab\ab_manifest.json") --collection-receipt (Join-Path $DiagCase "collection_receipt.json") --output-dir $DiagEvidenceDir
+if ($LASTEXITCODE -ne 0) { throw "KERNEL-MEMOP diagnostic evaluator 未通过" }
+
+$DiagObserved = Get-Content -LiteralPath (Join-Path $DiagEvidenceDir "real_observed.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+$DiagKernel = $DiagObserved.cases[0].activity_intervals | Where-Object activity_label -eq "KERNEL_A"
+$DiagMemcpy = $DiagObserved.cases[0].activity_intervals | Where-Object activity_label -eq "MEMCPY_B"
+$DiagSync = $DiagObserved.cases[0].syncs | Where-Object sync_label -eq "S_DEVICE"
+$DiagOverlapNs = [Math]::Min([int64]$DiagKernel.end_ns, [int64]$DiagMemcpy.end_ns) - [Math]::Max([int64]$DiagKernel.start_ns, [int64]$DiagMemcpy.start_ns)
+$DiagEvidence = Get-Content -LiteralPath (Join-Path $DiagEvidenceDir "q0_real_evidence.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($DiagOverlapNs -le 0) { throw "KERNEL_A 与 MEMCPY_B 没有真实时间重叠" }
+if ([int64]$DiagSync.a_window.A_device_wait_kernel_memop_mixed_ns -le 0) { throw "mixed_ns 必须大于 0" }
+if ($DiagSync.terminal.activity_label -ne "MEMCPY_B") { throw "terminal 必须保持 MEMCPY_B" }
+if ($DiagEvidence.verdict -ne "REAL_CASE_PASS") { throw "diagnostic 必须得到 REAL_CASE_PASS" }
+```
+
+验收：`DiagOverlapNs > 0`、`A_device_wait_kernel_memop_mixed_ns > 0`、terminal 为 `MEMCPY_B`、evaluator 为 `REAL_CASE_PASS`。该 diagnostic 只验证新构造，不是完整 Q0，不得与 r10 或后续 r11 拼接。r10 保持失败现场。只有上述四项全部满足，才进入第 3 节建立全新 r11。
+
 ## 3. 编译并准备不可覆盖运行目录
 
 ```powershell
 $Q0Root = Resolve-Path .
-$RunId = "q0-win-4090-YYYYMMDD-r10"  # 执行时替换日期；必须是全新目录
+$RunId = "q0-win-4090-YYYYMMDD-r11"  # 执行时替换日期；必须是全新目录
 $Out = Join-Path $Q0Root "engineering_evidence\q0_real\$RunId"
 $Binary = Join-Path $Out "bin\exposedpath_q0.exe"
 $Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
@@ -323,7 +379,7 @@ if ($UnexpectedGraphFlags.Count -ne 0) { throw "普通 case 不得启用 node-le
 
 验收：编译输出为 `PASS`；run manifest 为 `PREPARED_NOT_EXECUTED`；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。
 
-## 4. 只采集 r10 单例
+## 4. 只采集 r11 单例
 
 ```powershell
 $RunManifest = Join-Path $Out "run\q0_run_manifest.json"
@@ -331,12 +387,12 @@ $Run = Get-Content -LiteralPath $RunManifest -Raw -Encoding UTF8 | ConvertFrom-J
 $NativeCases = @($Run.cases | Where-Object { $null -ne $_.command_argv })
 $SmokeCaseId = "Q0-STREAM-001"
 & $Python -m exposedpath_v141 execute-q0-case --run-manifest $RunManifest --case $SmokeCaseId
-if ($LASTEXITCODE -ne 0) { throw "r10 单例采集失败，保留现场并停止" }
+if ($LASTEXITCODE -ne 0) { throw "r11 单例采集失败，保留现场并停止" }
 ```
 
 验收：此时只能新增 `Q0-STREAM-001` 的 receipt 和非空 `.nsys-rep`。不要提前运行其余 20 个 seed，也不要手工改 receipt 或 Raw。
 
-## 5. r10 单例全链路验收
+## 5. r11 单例全链路验收
 
 先只处理 `Q0-STREAM-001`。`nsys export` 只读取 Raw，不得覆盖已存在 SQLite：
 
@@ -359,14 +415,14 @@ $SDir = Join-Path $CaseDir "s"
 $ABDir = Join-Path $CaseDir "ab"
 $EvidenceDir = Join-Path $Out "real_evidence\$CaseId"
 & $Python -m exposedpath_v141 analyze-s --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --output-dir $SDir
-if ($LASTEXITCODE -notin 0,2,3) { throw "r10 单例 S 执行异常；保留现场并停止" }
+if ($LASTEXITCODE -notin 0,2,3) { throw "r11 单例 S 执行异常；保留现场并停止" }
 & $Python -m exposedpath_v141 analyze-ab --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --s-manifest (Join-Path $SDir "s_manifest.json") --output-dir $ABDir
-if ($LASTEXITCODE -notin 0,2,3) { throw "r10 单例 A/B 执行异常；保留现场并停止" }
+if ($LASTEXITCODE -notin 0,2,3) { throw "r11 单例 A/B 执行异常；保留现场并停止" }
 & $Python -m exposedpath_v141 evaluate-q0-real-case --case $CaseId --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --s-manifest (Join-Path $SDir "s_manifest.json") --ab-manifest (Join-Path $ABDir "ab_manifest.json") --collection-receipt (Join-Path $CaseDir "collection_receipt.json") --output-dir $EvidenceDir
-if ($LASTEXITCODE -ne 0) { throw "r10 单例独立对照未通过；保留现场并停止" }
+if ($LASTEXITCODE -ne 0) { throw "r11 单例独立对照未通过；保留现场并停止" }
 ```
 
-验收：Canonical 转换必须返回 0；S/A/B 必须生成完整 bundle，其中 request 外的 harness 尾部同步可以按既有 fail-closed 规则形成非零状态；独立 evaluator 必须返回 0，且 `Q0-STREAM-001` 的 real evidence 为 `REAL_CASE_PASS`。若目标 request 仍出现额外 sync、映射歧义或其他 invalid，停止并回传整个 r10 单例目录；不能继续批量。
+验收：Canonical 转换必须返回 0；S/A/B 必须生成完整 bundle，其中 request 外的 harness 尾部同步可以按既有 fail-closed 规则形成非零状态；独立 evaluator 必须返回 0，且 `Q0-STREAM-001` 的 real evidence 为 `REAL_CASE_PASS`。若目标 request 仍出现额外 sync、映射歧义或其他 invalid，停止并回传整个 r11 单例目录；不能继续批量。
 
 本轮修复未放宽 target request 唯一性。后续批量运行到 `Q0-DEFAULT-PTDS-001`、`Q0-MULTITHREAD-ORDERED-001` 和 `Q0-OVERLAPPING-HOST-SYNC-001` 时，Canonical 转换返回 0 是最低验收条件：它意味着每个 case 的 coordinator `full_request + decode` 能唯一解析，并覆盖相应 worker 的 CUDA 工作；一旦任一 case 再次报告 `TARGET_REQUEST_NOT_UNIQUE` 或 scope unresolved，立即保留现场并停止。
 

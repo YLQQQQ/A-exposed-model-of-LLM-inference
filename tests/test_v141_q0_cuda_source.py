@@ -175,6 +175,28 @@ def test_ptds_request_uses_one_host_callback_instead_of_cuda_query_polling():
     assert body.count("sync_range(") == 1
 
 
+def test_kernel_memop_uses_case_scoped_preallocated_capacity_for_stable_overlap():
+    """混合构造必须让 H2D 足够长，且分配发生在 profiler/request 之前。"""
+
+    source = SOURCE.read_text(encoding="utf-8")
+    body = _function_body(source, "run_kernel_memop")
+    main = source[source.index("int main("):]
+
+    assert "kDefaultBufferBytes = 4096" in source
+    assert "kKernelMemopBufferBytes = 512ULL * 1024ULL * 1024ULL" in source
+    assert "kKernelMemopKernelMilliseconds = 10" in source
+    assert "buffer_capacity_bytes" in source
+    assert 'case_id == "Q0-KERNEL-MEMOP-001"' in main
+    assert "Resources resources(buffer_bytes);" in main
+    assert main.index("Resources resources(buffer_bytes);") < main.index(
+        "CudaProfilerRange capture;"
+    )
+    assert '"KERNEL_A", r.first, kKernelMemopKernelMilliseconds' in body
+    assert "r.buffer_capacity_bytes" in body
+    assert "cudaMalloc(" not in body
+    assert "cudaMallocHost(" not in body
+
+
 @pytest.mark.parametrize(
     "function_name",
     ["run_ptds", "run_multithread", "run_overlapping_sync"],

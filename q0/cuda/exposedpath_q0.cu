@@ -7,6 +7,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
@@ -28,6 +29,9 @@ constexpr const char* kWmpcId = "q0-controlled";
 constexpr const char* kRunRole = "Engineering";
 constexpr const char* kPassId = "Pass1";
 constexpr const char* kRepeatId = "repeat-0";
+constexpr std::size_t kDefaultBufferBytes = 4096;
+constexpr std::size_t kKernelMemopBufferBytes = 512ULL * 1024ULL * 1024ULL;
+constexpr int kKernelMemopKernelMilliseconds = 10;
 
 void cuda_check(cudaError_t status, const char* expression) {
   if (status != cudaSuccess) {
@@ -138,15 +142,17 @@ struct Resources {
   cudaEvent_t event{};
   void* device_buffer{};
   void* host_buffer{};
+  std::size_t buffer_capacity_bytes{};
 
-  Resources() {
+  explicit Resources(std::size_t buffer_bytes = kDefaultBufferBytes)
+      : buffer_capacity_bytes(buffer_bytes) {
     CUDA_CHECK(cudaGetDeviceProperties(&properties, 0));
     CUDA_CHECK(cudaDeviceGetAttribute(&clock_rate_khz, cudaDevAttrClockRate, 0));
     CUDA_CHECK(cudaStreamCreateWithFlags(&first, cudaStreamNonBlocking));
     CUDA_CHECK(cudaStreamCreateWithFlags(&second, cudaStreamNonBlocking));
     CUDA_CHECK(cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
-    CUDA_CHECK(cudaMalloc(&device_buffer, 4096));
-    CUDA_CHECK(cudaMallocHost(&host_buffer, 4096));
+    CUDA_CHECK(cudaMalloc(&device_buffer, buffer_capacity_bytes));
+    CUDA_CHECK(cudaMallocHost(&host_buffer, buffer_capacity_bytes));
   }
 
   ~Resources() {
@@ -246,10 +252,10 @@ void run_empty(Resources& r, const std::string& c, const std::string& id) {
 
 void run_kernel_memop(Resources& r, const std::string& c, const std::string& id) {
   one_phase(c, id, [&] {
-    launch(r, c, id, "decode", "KERNEL_A", r.first, 35);
+    launch(r, c, id, "decode", "KERNEL_A", r.first, kKernelMemopKernelMilliseconds);
     {
       auto marker = marker_range(c, id, "decode", "MEMCPY_B");
-      CUDA_CHECK(cudaMemcpyAsync(r.device_buffer, r.host_buffer, 4096,
+      CUDA_CHECK(cudaMemcpyAsync(r.device_buffer, r.host_buffer, r.buffer_capacity_bytes,
                                  cudaMemcpyHostToDevice, r.second));
     }
     auto sync = sync_range(c, id, "decode", "S_DEVICE", 0);
@@ -496,7 +502,10 @@ int main(int argc, char** argv) {
   }
 
   try {
-    Resources resources;
+    const std::size_t buffer_bytes =
+        case_id == "Q0-KERNEL-MEMOP-001" ? kKernelMemopBufferBytes
+                                          : kDefaultBufferBytes;
+    Resources resources(buffer_bytes);
     {
       CudaProfilerRange capture;
       selected->second(resources, case_id, run_id);
