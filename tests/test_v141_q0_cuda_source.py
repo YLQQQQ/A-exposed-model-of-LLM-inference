@@ -194,6 +194,11 @@ def test_kernel_memop_uses_case_scoped_preallocated_capacity_for_stable_overlap(
     assert '"KERNEL_A", r.first, kKernelMemopKernelMilliseconds' in body
     assert "r.buffer_capacity_bytes" in body
     assert "std::thread kernel_worker" in body
+    worker_marker = 'worker_marker(c, id, "decode", "WORKER_KERNEL_MEMOP")'
+    assert worker_marker in body
+    assert body.index(worker_marker) < body.index(
+        '"KERNEL_A", r.first, kKernelMemopKernelMilliseconds'
+    )
     assert "kernel_ready" in body
     assert "release_kernel" in body
     assert "kernel_submitted" in body
@@ -204,6 +209,8 @@ def test_kernel_memop_uses_case_scoped_preallocated_capacity_for_stable_overlap(
     assert body.index('"S_DEVICE"') < body.index("kernel_worker.join();")
     assert "cudaStreamQuery" not in body
     assert "cudaEventQuery" not in body
+    assert body.count("one_phase(c, id, [&] {") == 1
+    assert body.count("sync_range(") == 1
     assert "request_range(" not in body
     assert "phase_range(" not in body
     assert "cudaMalloc(" not in body

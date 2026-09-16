@@ -268,6 +268,7 @@ void run_kernel_memop(Resources& r, const std::string& c, const std::string& id)
         start_condition.wait(lock, [&] { return release_kernel; });
       }
       try {
+        worker_marker(c, id, "decode", "WORKER_KERNEL_MEMOP");
         launch(r, c, id, "decode", "KERNEL_A", r.first, kKernelMemopKernelMilliseconds);
       } catch (...) {
         kernel_error = std::current_exception();
