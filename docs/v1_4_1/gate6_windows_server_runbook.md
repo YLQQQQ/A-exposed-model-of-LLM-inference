@@ -10,7 +10,7 @@
 Wsn1
 ├── YLQ_test                 # 旧项目和旧结果，保持不动
 ├── ExposedPath_Q0_*.bundle  # 本机交付包
-└── YLQ_test_q0_v141         # 已有 Q0 工作目录，含未跟踪的 r1/r2/r3/r4/r5/r6/r7
+└── YLQ_test_q0_v141         # 已有 Q0 工作目录，含未跟踪的 r1/r2/r3/r4/r5/r6/r7/r8
 ```
 
 先在服务器 PowerShell 中确认不存在尚未提交的受跟踪修改，并为服务器临时提交建立备份分支：
@@ -27,7 +27,7 @@ git reset --hard FETCH_HEAD
 git rev-parse HEAD
 ```
 
-`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4、r5、r6、r7`。严禁追加 `git clean`。更新后以最终交付消息记录的 commit 为核对值。
+`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4、r5、r6、r7、r8`。严禁追加 `git clean`。更新后以最终交付消息记录的 commit 为核对值。
 
 Q0 不加载模型，因此不用复制旧 `models`。服务器已有 GPU driver、CUDA Toolkit、`nvcc` 和 Nsight Systems 可以复用，但必须重新记录版本。旧 `.venv` 不必删除，也不要向其中追加依赖；在新版目录建立轻量独立环境：
 
@@ -246,13 +246,21 @@ if ($R7Correlation131.Count -ne 1 -or $R7Correlation131[0].scope -ne "HARNESS_OU
 if ((Get-FileHash -LiteralPath $R7Sqlite -Algorithm SHA256).Hash -ne $R7SqliteHashBefore) { throw "r7 SQLite 被意外修改" }
 ```
 
-验收：唯一 target request 成功解析；prior request 保留但不制造歧义；correlation 131 仅作为 request 外 warning；SQLite 哈希不变。该只读成功不升级 r7 的失败资格，正式重跑必须使用全新 r8。
+验收：唯一 target request 成功解析；prior request 保留但不制造歧义；correlation 131 仅作为 request 外 warning；SQLite 哈希不变。该只读成功不升级 r7 的失败资格。服务器后续 r8 已越过此处，证明该修复生效。
+
+## 2.10 r8 Graph fault 失败现场与 r9 边界
+
+r8 已完成 `Q0-STREAM-001` smoke、21/21 native collection、21/21 源 Canonical，以及 `Q0-MISSING-CORR-001`、`Q0-DROPPED-001` 两个故障副本；随后在 `Q0-GRAPH-UNSUPPORTED-001` 停止。这里的“21/21 源 Canonical valid”只表示通用 observation 与转换有效，不表示 Graph fault 的前态充分。
+
+r8 默认采集只有 graph-level trace，没有 node-level activity，因此 Graph 源 Canonical 的 `device_activity` 为零，`REMOVE_GRAPH_NODE_MAPPING` 按 fail-closed 规则零命中。独立 Engineering 诊断仅增加 `--cuda-graph-trace=node` 后，真实 graph kernel、`graph_id`、`graph_node_id` 与 node events 均可观察，现有 Canonical adapter 和 fault selector 能完成一次明确 mutation。因此新代码只给 `Q0-GRAPH-UNSUPPORTED-001` 增加该采集参数；其他 native case 不变。
+
+r8 必须保持失败现场，不覆盖、不续跑、不升级资格。该独立诊断只证明采集修复方向，不是完整 Q0 证据。服务器已完成上述诊断时，更新代码后无需重复 2.5～2.9，直接从下面的新 r9 开始；r1～r8 均不得执行 `git clean` 或人工改写。
 
 ## 3. 编译并准备不可覆盖运行目录
 
 ```powershell
 $Q0Root = Resolve-Path .
-$RunId = "q0-win-4090-YYYYMMDD-r8"  # 执行时替换日期；必须是全新目录
+$RunId = "q0-win-4090-YYYYMMDD-r9"  # 执行时替换日期；必须是全新目录
 $Out = Join-Path $Q0Root "engineering_evidence\q0_real\$RunId"
 $Binary = Join-Path $Out "bin\exposedpath_q0.exe"
 $Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
@@ -265,11 +273,22 @@ if ($LASTEXITCODE -ne 0) { throw "Q0 CUDA 编译失败" }
 
 git rev-parse HEAD | Set-Content (Join-Path $Out "code_commit.txt")
 git status --porcelain=v1 | Set-Content (Join-Path $Out "git_status.txt")
+
+$Run = Get-Content -LiteralPath (Join-Path $Out "run\q0_run_manifest.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+$GraphCase = $Run.cases | Where-Object case_id -eq "Q0-GRAPH-UNSUPPORTED-001"
+$GraphFlagCount = @($GraphCase.command_argv | Where-Object { $_ -eq "--cuda-graph-trace=node" }).Count
+$UnexpectedGraphFlags = @(
+    $Run.cases |
+        Where-Object { $_.case_id -ne "Q0-GRAPH-UNSUPPORTED-001" -and $null -ne $_.command_argv } |
+        Where-Object { $_.command_argv -contains "--cuda-graph-trace=node" }
+)
+if ($GraphFlagCount -ne 1) { throw "Graph case 必须恰好包含一次 node-level graph tracing 参数" }
+if ($UnexpectedGraphFlags.Count -ne 0) { throw "普通 case 不得启用 node-level graph tracing" }
 ```
 
-验收：编译输出为 `PASS`；run manifest 为 `PREPARED_NOT_EXECUTED`；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定。
+验收：编译输出为 `PASS`；run manifest 为 `PREPARED_NOT_EXECUTED`；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。
 
-## 4. 只采集 r8 单例
+## 4. 只采集 r9 单例
 
 ```powershell
 $RunManifest = Join-Path $Out "run\q0_run_manifest.json"
@@ -277,12 +296,12 @@ $Run = Get-Content -LiteralPath $RunManifest -Raw -Encoding UTF8 | ConvertFrom-J
 $NativeCases = @($Run.cases | Where-Object { $null -ne $_.command_argv })
 $SmokeCaseId = "Q0-STREAM-001"
 & $Python -m exposedpath_v141 execute-q0-case --run-manifest $RunManifest --case $SmokeCaseId
-if ($LASTEXITCODE -ne 0) { throw "r8 单例采集失败，保留现场并停止" }
+if ($LASTEXITCODE -ne 0) { throw "r9 单例采集失败，保留现场并停止" }
 ```
 
 验收：此时只能新增 `Q0-STREAM-001` 的 receipt 和非空 `.nsys-rep`。不要提前运行其余 20 个 seed，也不要手工改 receipt 或 Raw。
 
-## 5. r8 单例全链路验收
+## 5. r9 单例全链路验收
 
 先只处理 `Q0-STREAM-001`。`nsys export` 只读取 Raw，不得覆盖已存在 SQLite：
 
@@ -305,14 +324,14 @@ $SDir = Join-Path $CaseDir "s"
 $ABDir = Join-Path $CaseDir "ab"
 $EvidenceDir = Join-Path $Out "real_evidence\$CaseId"
 & $Python -m exposedpath_v141 analyze-s --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --output-dir $SDir
-if ($LASTEXITCODE -notin 0,2,3) { throw "r8 单例 S 执行异常；保留现场并停止" }
+if ($LASTEXITCODE -notin 0,2,3) { throw "r9 单例 S 执行异常；保留现场并停止" }
 & $Python -m exposedpath_v141 analyze-ab --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --s-manifest (Join-Path $SDir "s_manifest.json") --output-dir $ABDir
-if ($LASTEXITCODE -notin 0,2,3) { throw "r8 单例 A/B 执行异常；保留现场并停止" }
+if ($LASTEXITCODE -notin 0,2,3) { throw "r9 单例 A/B 执行异常；保留现场并停止" }
 & $Python -m exposedpath_v141 evaluate-q0-real-case --case $CaseId --canonical-manifest (Join-Path $CaseDir "canonical\canonical_manifest.json") --s-manifest (Join-Path $SDir "s_manifest.json") --ab-manifest (Join-Path $ABDir "ab_manifest.json") --collection-receipt (Join-Path $CaseDir "collection_receipt.json") --output-dir $EvidenceDir
-if ($LASTEXITCODE -ne 0) { throw "r8 单例独立对照未通过；保留现场并停止" }
+if ($LASTEXITCODE -ne 0) { throw "r9 单例独立对照未通过；保留现场并停止" }
 ```
 
-验收：Canonical 转换必须返回 0；S/A/B 必须生成完整 bundle，其中 request 外的 harness 尾部同步可以按既有 fail-closed 规则形成非零状态；独立 evaluator 必须返回 0，且 `Q0-STREAM-001` 的 real evidence 为 `REAL_CASE_PASS`。若目标 request 仍出现额外 sync、映射歧义或其他 invalid，停止并回传整个 r8 单例目录；不能继续批量。
+验收：Canonical 转换必须返回 0；S/A/B 必须生成完整 bundle，其中 request 外的 harness 尾部同步可以按既有 fail-closed 规则形成非零状态；独立 evaluator 必须返回 0，且 `Q0-STREAM-001` 的 real evidence 为 `REAL_CASE_PASS`。若目标 request 仍出现额外 sync、映射歧义或其他 invalid，停止并回传整个 r9 单例目录；不能继续批量。
 
 本轮修复未放宽 target request 唯一性。后续批量运行到 `Q0-DEFAULT-PTDS-001`、`Q0-MULTITHREAD-ORDERED-001` 和 `Q0-OVERLAPPING-HOST-SYNC-001` 时，Canonical 转换返回 0 是最低验收条件：它意味着每个 case 的 coordinator `full_request + decode` 能唯一解析，并覆盖相应 worker 的 CUDA 工作；一旦任一 case 再次报告 `TARGET_REQUEST_NOT_UNIQUE` 或 scope unresolved，立即保留现场并停止。
 

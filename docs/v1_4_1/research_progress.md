@@ -2,15 +2,15 @@
 
 ## 当前快照
 
-- 清单版本：`4.8`
+- 清单版本：`4.9`
 - 最近更新：`2026-09-16`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G6-04`，将本轮新 bundle 增量更新到服务器，先只读确认 r7 invocation-bleed 能解析唯一 target 且 correlation 131 恢复为 request 外 warning，再新建 r8 从 `Q0-STREAM-001` 重新开始；已有 r1/r2/r3/r4/r5/r6/r7 均保持不可变
-- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2、S v0.2 与 Gate 5 的 A/B/D/Exposure Signature 已通过离线/Engineering 审查；r7 已推进到 `Q0-INVOCATION-BLEED-001`，真实 trace 中 prior 与 target 是两个不同 identity 的相邻 request，但旧 resolver 因全 trace request 数为 2 错误报告目标不唯一。现改为按完整 target identity 过滤后判断唯一性：恰好一个目标可解析，零个或多个目标继续 fail closed；correlation 131 不加特例，随已解析 request 边界自动归为 `HARNESS_OUTSIDE_REQUEST`。仍须由全新 r8 验证完整真实链路
+- 当前最高优先级：`EP-G6-04`，将本轮新 bundle 增量更新到服务器并新建 r9，从 `Q0-STREAM-001` smoke 重新开始；已有 r1～r8 均保持不可变，不续跑、不覆盖且不执行 `git clean`
+- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2、S v0.2 与 Gate 5 的 A/B/D/Exposure Signature 已通过离线/Engineering 审查；r8 已完成 21/21 native collection 和通用有效的源 Canonical，但在 `Q0-GRAPH-UNSUPPORTED-001` 故障注入处停止。原因是默认 Nsight graph-level tracing 不产生该故障所需的 node activity；独立服务器诊断确认 `--cuda-graph-trace=node` 后，现有 Canonical adapter 与 fault selector 可完成全链路。当前只对该 Graph case 增加采集参数，仍须由全新 r9 验证完整 Q0
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -118,7 +118,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 ## Gate 6：Q0 资格验证
 
-**Gate verdict：`FAIL`。** r2 至 r7 均为 Engineering 失败现场，不能升级为 Q0 证据。r7 的 invocation-bleed 包含合法 prior request 与唯一 target request，旧 resolver 错把“存在其他 request”当成“目标不唯一”；本地已按完整 target identity 修复，但尚无服务器复验。仍须由全新 r8 从 smoke 开始，Q0 状态保持 `NOT_RUN`。
+**Gate verdict：`FAIL`。** r2 至 r8 均为 Engineering 失败现场，不能升级为 Q0 证据。r8 已证明此前 invocation scope、PTDS、EMPTY 等问题不再阻断，并得到 21/21 通用有效源 Canonical；但 Graph 源 trace 缺少 node-level activity，无法构造预定义的 mapping-removal 负例。仍须由全新 r9 从 smoke 开始，Q0 状态保持 `NOT_RUN`。
 
 - [x] `EP-G6-01` 实现受控 CUDA Q0 微程序和机器可读 manifest。23 个 oracle case 严格一一映射，其中 21 个具有 native CUDA seed，terminal tie 与 submission race 明确保持纯合成；缺 correlation、dropped records 与 graph mapping 缺失使用真实 seed 后受控 Canonical 故障注入。CUDA 13.0 在无 GPU 执行条件下成功编译，binary `--list-cases` 与 21 个 seed 集合一致，未知 case 在 CUDA 初始化前失败。证据：`q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json`、`tests/test_v141_q0_cuda_source.py`。
 - [x] `EP-G6-02` 完成 GPU 前 Q0 执行准备：Windows/Linux 结构化 `nsys` argv、每 case source manifest、输入哈希、不可覆盖输出和 `PREPARED_NOT_EXECUTED/NOT_RUN` dry-run；23 个显式合成 Canonical profile 均经正式 S/A/B 与独立 evaluator 对照通过。observed 使用严格 schema，evaluator 静态禁止导入被测 S/A/B，错误字段、重复 identity、缺失/额外 case 和资格升级均 fail closed。证据：`exposedpath_v141/q0_execution.py`、`exposedpath_v141/q0_synthetic.py`、`exposedpath_v141/q0_evaluator.py`、`docs/v1_4_1/contracts/q0_observed_schema_v0_2.json`、`tests/test_v141_q0_execution.py`、`tests/test_v141_q0_synthetic.py`、`tests/test_v141_q0_evaluator.py`。
@@ -130,8 +130,9 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - [x] `EP-G6-02F` 修复真实 r5 暴露的多线程 NVTX 范围错误：`Q0-DEFAULT-PTDS-001`、`Q0-MULTITHREAD-ORDERED-001`、`Q0-OVERLAPPING-HOST-SYNC-001` 均改为由 coordinator 创建唯一 `full_request + decode`，且范围从 worker 创建前持续到全部 worker join 后；worker 仅写立即结束的结构化 marker，避免包住 CUDA API 后与 activity/sync marker 形成多候选。原有 activity/sync/API/callsite identity 与 Q0 oracle 不变，analyzer 对重复 target request 继续 fail closed。r6 已验证 request 唯一性修复生效；该版用于保持 PTDS worker 生命周期的 query 轮询随后被 r6 证明不适合目标 Nsight observation stack，转由 `EP-G6-02G` 修复。
 - [x] `EP-G6-02G` 修复真实 r6 暴露的 PTDS query 轮询副作用：删除 `cudaStreamQuery` 循环，在 worker 的 `K_OTHER_THREAD` 后只排入一次 `cudaLaunchHostFunc`，由 Host 条件变量等待该 stream-ordered callback 并在 coordinator request 内 join。该机制不新增 CUDA sync/query；另外两个同源多线程 case 经源码检查没有 query 轮询，保持原实现。analyzer、Q0 oracle 及既有 activity/sync/API/callsite 标签均不变。定向 observation/CUDA 测试 `48 passed`，CUDA source/编译测试 `14 passed`，全仓 `639 passed, 2 failed`（仍仅为既有 PowerShell smoke 基线）；r7 已越过 PTDS 并推进至 invocation-bleed，确认本问题不再阻断批量流程。
 - [x] `EP-G6-02H` 修复真实 r7 暴露的 target scope 过滤错误：resolver 不再要求全 trace 只能有一个结构化 request，而是先按 `request_id + experiment/wmpc/run/run_role/pass/repeat + full_request` 完整目标 identity 过滤，再要求目标匹配数恰好为 1。prior 等非目标 request 可共存；零匹配和重复同 identity target 继续 fail closed。新增合成回归同时验证 prior+唯一 target、零目标、重复目标，以及 target 后 correlation 131 自动归为 request 外 warning；microbench、oracle 和既有 identity 均不修改。observation 定向测试 `36 passed`，全仓 `641 passed, 2 failed`（仍仅为既有 PowerShell smoke 基线）；合同 37/37、Canonical 边界、oracle 独立性和 compileall 通过。
-- [x] `EP-G6-03` r4 在 EMPTY、r5 在重复 request、r6 在 PTDS query 轮询、r7 在 invocation scope resolver 处均按 fail-fast 规则停止并保留现场。r1/r2/r3/r4/r5/r6/r7 均不得覆盖或升级资格。
-- [ ] `EP-G6-04`（等待 r8）先只读验证 r7 invocation-bleed 可解析唯一 target 且 correlation 131 为 harness warning，再新建 r8 从 `Q0-STREAM-001` 单例完成 Raw→Canonical→S→A/B→real evaluator；通过后才批量运行其余 native seed。
+- [x] `EP-G6-02I` 修复真实 r8 暴露的 Graph 采集前态缺失：仅 `Q0-GRAPH-UNSUPPORTED-001` 的结构化 Nsight argv 增加一次 `--cuda-graph-trace=node`，其余 20 个 native seed 保持原采集参数。microbench、oracle、analyzer/S、Canonical adapter/schema、fault 语义和既有 identity 均不修改；run manifest 与 receipt 继续记录实际 argv。新增 Windows/Linux 回归验证 Graph case 参数恰好出现一次且其余 native case 均不包含；Q0 定向与合同/边界测试通过，全仓为 `643 passed, 2 failed`，两项仍是既有 PowerShell smoke 基线。
+- [x] `EP-G6-03` r4 在 EMPTY、r5 在重复 request、r6 在 PTDS query 轮询、r7 在 invocation scope resolver、r8 在 Graph fault 前态处均按 fail-fast 规则停止并保留现场。r1～r8 均不得覆盖或升级资格。
+- [ ] `EP-G6-04`（等待 r9）用新 bundle 更新服务器代码后新建 r9，从 `Q0-STREAM-001` 单例完成 Raw→Canonical→S→A/B→real evaluator；单例通过后才批量运行其余 native seed。Graph case 的 run manifest 必须恰好包含一次 node tracing 参数，其他 case 必须不包含。
 - [ ] `EP-G6-05`（未开始）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
 
 ## Gate 7：Runner 与跨平台执行对齐
@@ -222,7 +223,8 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - `EP-ISSUE-10`（已解决并经 r5 路径推进验证）：Nsight 2026.2.1 的 `lazy=true` SQLite 在零 kernel case 不创建 KERNEL 表，旧 observation 将其误判为核心缺表；真实 EMPTY evaluator 还错误沿用合成 trace 的 30 ns residual。现已用条件化 adapter 与真实区间 oracle 修复，并对 kernel/graph launch API 变体及关键导出元数据重复/冲突继续 fail closed；r4 保持失败现场。
 - `EP-ISSUE-11`（已解决并经 r6 复验）：r5 的 PTDS worker 线程创建了与 coordinator 完全相同 identity 的 `full_request`，触发 `TARGET_REQUEST_NOT_UNIQUE`；同源 multithread/overlapping-sync 实现也有相同结构。r6 已确认 coordinator 唯一 request/decode 生效，不再出现 target request 唯一性错误。
 - `EP-ISSUE-12`（已解决并经 r7 路径推进验证）：r6 中 PTDS worker 的 `cudaStreamQuery` 轮询产生 correlation 129、133～162 共 31 条 request 内 synchronization activity，但 Runtime 表无对应 API 行。microbench 改用一次 stream-ordered host callback 与 Host 条件变量；r7 已越过该 case，analyzer 未放宽映射规则。
-- `EP-ISSUE-13`（代码已修复，待 r8 复验）：r7 invocation-bleed 的 prior 与 target request identity 不同且不重叠，旧 resolver 却因结构化 request 总数为 2 判定目标不唯一。现只对完整目标 identity 的匹配数执行唯一性 gate；不为 correlation 131 添加特殊分支。
+- `EP-ISSUE-13`（已解决并经 r8 复验）：r7 invocation-bleed 的 prior 与 target request identity 不同且不重叠，旧 resolver 却因结构化 request 总数为 2 判定目标不唯一。现只对完整目标 identity 的匹配数执行唯一性 gate；r8 已完成 21/21 native source Canonical，确认该问题不再阻断。
+- `EP-ISSUE-14`（代码已修复，待 r9 复验）：r8 默认 Nsight graph-level tracing 只产生 `GRAPH_TRACE`，没有 KERNEL node activity 或 `CUDA_GRAPH_NODE_EVENTS`，导致 Graph mapping-removal fault 零命中。独立服务器诊断确认仅增加 `--cuda-graph-trace=node` 后，真实 node mapping 可进入现有 Canonical 并被既有 selector 唯一移除。修复严格限定 Graph case，不放宽 fault 或 analyzer。
 
 ## 固定执行顺序与最近任务
 
@@ -230,8 +232,8 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 最近应执行的任务：
 
-1. `EP-G6-04`：用新 bundle 更新服务器受跟踪代码，保留 r1/r2/r3/r4/r5/r6/r7；按手册先对 r7 invocation-bleed 做只读 scope 复核，再新建 r8，仅采集 `Q0-STREAM-001`。
-2. `EP-G6-04`：r8 单例依次完成 Raw→Canonical→S→A/B→real evaluator；若仍存在额外 sync 或其他不符合项，保留现场并回到诊断，不运行其余 20 个 seed。
+1. `EP-G6-04`：用新 bundle 更新服务器受跟踪代码，保留 r1～r8；核对 Graph case 独占且恰好一次 `--cuda-graph-trace=node`，然后新建 r9，仅采集 `Q0-STREAM-001`。
+2. `EP-G6-04`：r9 单例依次完成 Raw→Canonical→S→A/B→real evaluator；若仍存在额外 sync、映射歧义或其他 invalid，保留现场并回到诊断，不运行其余 20 个 seed。
 3. `EP-G6-04/05`：只有单例全链路通过后才批量采集其余 native seed、实施受控负例并聚合唯一 Q0 gate 报告。
 
 ## 计划调整记录
@@ -286,3 +288,4 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 | 4.6 | 2026-09-16 | 基于不可变 r5 PTDS 修复三个同源多线程 native seed 的重复 target request：coordinator 唯一持有 full_request/decode 并覆盖 worker GPU 工作，worker 仅写不包住 CUDA API 的短 marker；analyzer 唯一性规则保持 fail closed。旧 r5 只读复核仍 invalid 且哈希不变；服务器流程切换为 r5 诊断后新建 r6。全仓 `636 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。 | EP-G6-02F、EP-G6-03、EP-G6-04、EP-ISSUE-11 | 不改变 Measurement Contract、Q0 oracle、A/B 定义或 Formal 资格；r5 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
 | 4.7 | 2026-09-16 | r6 已确认重复 request 修复和 request 外 harness 分类正确，同时发现 PTDS 的 `cudaStreamQuery` 轮询生成 31 条无 Runtime 映射的 request 内 synchronization。microbench 改为一次 stream-ordered host callback 加 Host 条件变量；analyzer 保持 fail closed，手册切换为 r6 只读诊断后新建 r7。全仓 `639 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。 | EP-G6-02G、EP-G6-03、EP-G6-04、EP-ISSUE-11、EP-ISSUE-12 | 不改变 Measurement Contract、Q0 oracle、既有稳定标签、A/B 定义或 Formal 资格；r6 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
 | 4.8 | 2026-09-16 | r7 invocation-bleed 暴露 resolver 将全 trace request 总数误用为目标唯一性条件。现改为只对完整 target identity 的匹配数执行唯一性 gate；prior request 可共存，零目标与重复目标继续 fail closed，correlation 131 复用既有 request 外规则。手册切换为 r7 只读诊断后新建 r8。全仓 `641 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。 | EP-G6-02H、EP-G6-03、EP-G6-04、EP-ISSUE-13 | 不改变 Measurement Contract、Q0 oracle、microbench、既有 identity、A/B 定义或 Formal 资格；r7 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
+| 4.9 | 2026-09-16 | r8 已完成 21/21 源 Canonical，但默认 graph-level tracing 无 node activity，导致 Graph mapping-removal fault 零命中。现仅为该 Graph case 增加 `--cuda-graph-trace=node`，并以跨平台命令回归保证其余 native case 不受影响；手册切换到全新 r9。全仓 `643 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。 | EP-G6-02I、EP-G6-03、EP-G6-04、EP-ISSUE-14 | 不改变 Measurement Contract、Q0 oracle、microbench、analyzer/S、Canonical 或 fault 语义；r8 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，无 Pilot/Formal 数据受影响。 |

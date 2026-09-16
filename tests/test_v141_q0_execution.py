@@ -157,6 +157,34 @@ def test_prepare_q0_run_writes_complete_nonexecuted_plan_with_structured_argv(
     }
 
 
+@pytest.mark.parametrize("platform", ["windows", "linux"])
+def test_prepare_q0_run_enables_node_graph_trace_only_for_graph_fault_seed(
+    tmp_path, platform
+):
+    binary, nsys = _fake_tools(tmp_path)
+    manifest_path = prepare_q0_run(
+        tmp_path / f"graph trace {platform}",
+        binary,
+        nsys,
+        platform=platform,
+        run_id="q0-graph-trace-001",
+        cuda_visible_device="GPU-TEST-0001",
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    native_cases = {
+        case["case_id"]: case["command_argv"]
+        for case in manifest["cases"]
+        if case["command_argv"] is not None
+    }
+
+    assert native_cases["Q0-GRAPH-UNSUPPORTED-001"].count(
+        "--cuda-graph-trace=node"
+    ) == 1
+    for case_id, argv in native_cases.items():
+        if case_id != "Q0-GRAPH-UNSUPPORTED-001":
+            assert "--cuda-graph-trace=node" not in argv, case_id
+
+
 def test_prepare_q0_run_rejects_missing_tools_and_existing_output(tmp_path):
     binary, nsys = _fake_tools(tmp_path)
     output_dir = tmp_path / "prepared"

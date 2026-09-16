@@ -298,6 +298,11 @@ def prepare_q0_run(
         trace_prefix = case_dir / "trace" if native_seed is not None else None
         argv = None
         if native_seed is not None:
+            case_profile_args = (
+                ["--cuda-graph-trace=node"]
+                if case_id == "Q0-GRAPH-UNSUPPORTED-001"
+                else []
+            )
             argv = [
                 str(nsys_path),
                 "profile",
@@ -305,6 +310,7 @@ def prepare_q0_run(
                 "--capture-range=cudaProfilerApi",
                 "--capture-range-end=stop",
                 "--force-overwrite=false",
+                *case_profile_args,
                 "-o",
                 str(trace_prefix),
                 str(binary_path),
