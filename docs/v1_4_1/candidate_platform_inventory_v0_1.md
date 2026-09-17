@@ -18,6 +18,7 @@
 2. 本机 `nvcc --version`、`nsys --version`、`nsys profile --help`（工具版本与参数支持查询）。
 3. 本机编译冻结 microbench（`python -m exposedpath_v141 build-q0-microbench`，输出到临时目录，非仓库路径），再执行 `--list-cases` 并与冻结 manifest 的 21 个 native seed 做集合比较。
 4. 只读检索仓库既有证据（receipt、runbook、manifest、历史文档）中已有的平台信息。
+5. 用户在服务器侧执行本仓库提供的 CP-03 静态资格脚本（只读 `nvidia-smi`/`nvcc`/`nsys` 查询 + 在冻结 commit 上编译 microbench + `--list-cases`），其结果用于 CP-03 的 A1/A2/A3/A6 判定；该脚本同样未运行任何 case / workload / allocation probe。本会话未直接执行该服务器脚本。
 
 ## 1. Candidate Platform Inventory
 
@@ -61,7 +62,7 @@
 | CUDA driver version | 包版本未记录；receipt 的 `driver_version` 字段与 driver API 同为 `12050` |
 | CUDA driver API version | 12050 |
 | CUDA runtime version | 12040 |
-| CUDA Toolkit / nvcc | UNKNOWN（runbook 要求 `(Get-Command nvcc).Source`，但版本未入档） |
+| CUDA Toolkit / nvcc | UNKNOWN（runbook 要求 `(Get-Command nvcc).Source`，但版本未入档）。注意：同一主机栈的 Toolkit 已由 CP-03 本轮记录为 `12.4 / V12.4.131`、driver package 为 `555.99`；是否据此闭合 CP-02 的 A3 需另行确认，本文件暂不改变 CP-02 判定 |
 | Nsight Systems 完整版本与路径 | `2026.2.1.210-262137639646v0`，`C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe` |
 | collection/export 同一 Nsight 版本 | PASS（采集与导出 argv 均为该版本） |
 | Nsight schema 是否已被当前 adapter 审查 | **PASS**（`2026.2.1.210 / schema 3.25.0` 已审查） |
@@ -78,15 +79,15 @@
 
 | 项 | 事实 |
 |---|---|
-| machine / access source | 与 CP-02 同一服务器；来源为仓库文档（`CHANGE_MANIFEST.md`: `0 (6000 Ada) or 1 (4090)`；v7.x 整合文档：历史数据来自同一服务器的 4090 与 6000 Ada） |
-| OS / 版本 / build | 与 CP-02 相同（同主机） |
-| bare metal / VM / container | UNKNOWN |
-| 可独占 | UNKNOWN（且需确认是否允许使用该卡） |
-| GPU | NVIDIA RTX 6000 Ada；UUID / compute capability / 显存 / 当前数量均未记录 |
-| driver / API / runtime / toolkit | 若与 CP-02 同栈则继承其状态；toolkit 仍 UNKNOWN |
-| Nsight / schema / launcher / flags | 与 CP-02 相同（同一主机栈） |
-| microbench 编译 / `--list-cases` | 主机级编译能力继承 CP-02；该卡自身的 `--list-cases` 记录 UNKNOWN |
-| 512 MiB pinned host + device buffer | UNKNOWN（显存级别大于 512 MiB 不能证明分配会成功；无实测分配记录） |
+| machine / access source | 与 CP-02 同一服务器；物理机型 ASUS `ESC8000A-E12`（来源为仓库文档 `CHANGE_MANIFEST.md`：`0 (6000 Ada) or 1 (4090)`，以及本轮服务器侧静态查询） |
+| OS / 版本 / build | `Windows Server 2022 Datacenter`，`10.0.20348`（本轮服务器侧静态查询确认，**A1 = PASS**） |
+| bare metal / VM / container | 物理机 ASUS `ESC8000A-E12`；Hyper-V 已安装且 `vmms` 服务运行（据此记录宿主状态，A1 = PASS） |
+| 可独占 | **PENDING**：RTX 6000 Ada / GPU2 当前有其他用户任务运行，当前时刻不能独占；这只是临时占用，不代表正式实验时无法协调独占窗口——admission 执行前需另行确认并预留（这是 A2 唯一未闭合项） |
+| GPU | index `2`；`NVIDIA RTX 6000 Ada Generation`；UUID `GPU-dff87fa4-1a85-8853-3fa7-c539b3886b38`；compute capability `8.9`；`memory.total = 49140 MiB`。**A2 = UNKNOWN / PENDING**（仅独占窗口未闭合） |
+| driver package / driver API / runtime / toolkit | **PASS**：driver package `555.99`；`cudaDriverGetVersion = 12050 → 12.5`；`cudaRuntimeGetVersion = 12040 → 12.4`；Toolkit/nvcc `12.4 / V12.4.131` |
+| Nsight / schema / launcher / flags | Nsight Systems `2026.2.1.210-262137639646v0`（与 CP-02 同一主机栈，schema 已审查）；A4/A5/A8/A9 = PASS |
+| microbench 编译 / `--list-cases` | **PASS**：frozen HEAD `a607645e9c4fcd7df4b05d4e97fa8bf788763e47`，frozen source dirty lines = `0`；编译 `PASS`；`--list-cases` = `21/21 MATCH`；未运行任何 case；binary SHA256 `A07C4BE52ED8EB1901C2AFEA529AF3E8FB230D27861FE390DC14BD3DE5BCD308` |
+| 512 MiB pinned host + device buffer | UNKNOWN（本轮未做任何 allocation；只能由以后单独批准的最小 allocation/free capability probe 闭合） |
 
 ### CP-04：任何其他可访问平台（Linux 或其他机器）
 
@@ -96,12 +97,12 @@
 
 | 条款 | CP-01 本机 GTX 1650 | CP-02 服务器 RTX 4090 | CP-03 服务器 6000 Ada |
 |---|---|---|---|
-| A1 平台与 OS 身份 | UNKNOWN（OS 身份已知，bare metal / VM / container 状态未确认） | UNKNOWN（OS 身份已知，bare metal / VM / container 状态未确认） | UNKNOWN（同主机，bare metal / VM / container 状态未确认） |
-| A2 GPU UUID 与单 GPU 独占 | UNKNOWN（UUID/数量 PASS，独占未确认） | UNKNOWN（UUID PASS，独占与 compute capability 未记录） | UNKNOWN（UUID/数量/独占均未记录） |
-| A3 driver/runtime/toolkit | UNKNOWN（仅 driver package `581.57` 与 toolkit `V13.0.88` 已知；driver API 与 runtime 未取得） | UNKNOWN（toolkit/包版本未记录） | UNKNOWN |
+| A1 平台与 OS 身份 | UNKNOWN（OS 身份已知，bare metal / VM / container 状态未确认） | UNKNOWN（OS 身份已知，bare metal / VM / container 状态未确认） | PASS |
+| A2 GPU UUID 与单 GPU 独占 | UNKNOWN（UUID/数量 PASS，独占未确认） | UNKNOWN（UUID PASS，独占与 compute capability 未记录） | UNKNOWN / PENDING（GPU 身份已取得；仅独占窗口待 admission 前确认与预留） |
+| A3 driver/runtime/toolkit | UNKNOWN（仅 driver package `581.57` 与 toolkit `V13.0.88` 已知；driver API 与 runtime 未取得） | UNKNOWN（toolkit/包版本未记录） | PASS |
 | A4 Nsight 版本与路径 | PASS | PASS | PASS |
 | A5 已审查 schema / export compatibility | UNKNOWN（2026.1.1 未审查，需只读 adapter 审查） | PASS | PASS |
-| A6 compile 与冻结 `--list-cases` 一致性 | PASS（本轮实测） | UNKNOWN（`--list-cases` 未记录） | UNKNOWN（同上） |
+| A6 compile 与冻结 `--list-cases` 一致性 | PASS（本轮实测） | UNKNOWN（`--list-cases` 未记录） | PASS（冻结 commit 编译 + `--list-cases` 21/21 一致） |
 | A7 512 MiB pinned host + device buffer | UNKNOWN | PASS（依据该平台已实际执行过的 512 MiB 构造，而非算术推断） | UNKNOWN |
 | A8 launcher/adapter 前置（Linux 尤其） | PASS | PASS | PASS |
 | A9 冻结采集参数工具支持 | PASS | PASS | PASS |
@@ -111,7 +112,7 @@
 - **没有任何候选达到 `QUALIFIED_FOR_ADMISSION_PLANNING`。**
 - CP-01：`NEEDS_INFORMATION`，未闭合项为 **A1、A2、A3、A5、A7**。
 - CP-02：`NEEDS_INFORMATION`，未闭合项为 **A1、A2、A3、A6**。其三种**不同**构造的 overlap=0 现场已按用户决定记为 construction-blocked baseline（不构成冻结判据下的 admission FAIL）；本轮不继续在该平台做参数搜索或根因深挖。
-- CP-03：`NEEDS_INFORMATION`，未闭合项为 **A1、A2、A3、A6、A7**。
+- CP-03：`NEEDS_INFORMATION`，未闭合项为 **A2（待 admission 前确认并预留独占窗口）与 A7（512 MiB pinned-host + device probe）**；A1、A3、A4、A5、A6、A8、A9 已 PASS。**不判为 `NOT_QUALIFIED`**，优先级不变（仍为第一候选）。
 - CP-04：无信息，不判定。
 
 因此本轮**不推荐**任何 `candidate_id` 进入 construction admission planning；应先补齐上表的 UNKNOWN 项或提供新的可访问平台信息。
@@ -147,11 +148,8 @@
 | CP-02 | A2 独占与 GPU 身份补全 | 确认服务器使用窗口；`nvidia-smi --query-gpu=uuid,driver_version,compute_cap,memory.total --format=csv` 补齐 compute capability 与 driver 包版本 | 是 |
 | CP-02 | A3 toolkit / nvcc | `nvcc --version`（driver API `12050` 与 runtime `12040` 已记录，toolkit 未记录） | 是 |
 | CP-02 | A6 `--list-cases` | 编译后在不运行任何 case 的前提下执行 `--list-cases`，与冻结 21 个 native seed 比对 | 是 |
-| CP-03 | A1 bare metal / VM / container 状态 | 同 CP-02 的查询 | 是 |
-| CP-03 | A2 GPU 身份与授权 | 同服务器 `nvidia-smi -L` 与 `--query-gpu=...` 输出（UUID / compute capability / 显存 / 数量）；以及该卡的使用授权 | 是 |
-| CP-03 | A3 driver / runtime / toolkit | 若与 CP-02 同栈则继承其状态；toolkit / nvcc 仍须单独记录 | 是 |
-| CP-03 | A6 `--list-cases` | 同 CP-02 的编译与 `--list-cases` 检查 | 是 |
-| CP-03 | A7 512 MiB pinned-host + device | 同 CP-01：只能由以后单独批准的最小 allocation/free capability probe 闭合；显存大小不作为判据 | 是 |
+| CP-03 | A2 独占窗口 | 当前 GPU2 有其他用户任务运行，属临时占用；admission 执行前需用户确认并预留独占窗口（GPU 身份已取得，不再是缺失项） | 是 |
+| CP-03 | A7 512 MiB pinned-host + device | 只能由以后单独批准的最小 allocation/free capability probe 闭合；显存大小与当前 occupancy 均不作为判据 | 是 |
 | CP-04 | A1～A9 全部 | 由用户填写 §5 最小信息表 | 是 |
 
 ## 5. 需要用户提供的 Candidate Platform Inventory 最小信息表
