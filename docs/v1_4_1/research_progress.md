@@ -2,15 +2,15 @@
 
 ## 当前快照
 
-- 清单版本：`5.6`
+- 清单版本：`5.7`
 - 最近更新：`2026-09-17`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G6-04`，用新 commit/bundle 创建全新的 KERNEL-MEMOP activity-ownership 单例 diagnostic；本轮只回传单例证据，不得建立 r11。已有 r1～r10 及四份失败 diagnostic 均保持不可变
-- 当前总体判断：Measurement Contract、Q0 独立标准答案设计、Canonical Raw v0.2 与 Gate 5 A/B/D/Exposure Signature 保持不变。S 已增加仅供 device activity 使用的 marker ownership resolver：marker 必须同线程完整覆盖 enqueue API，NVTX text 与缓存 identity 完整一致；不完整证据为 invalid，invocation/phase 冲突为 ambiguous。通用 sync/event ownership、A 窗口、oracle、A/B 与 Q0 expected 均未修改。离线验证通过，真实 GPU 单例尚未复验
+- 当前最高优先级：`EP-G6-04`，只执行全新的 KERNEL-MEMOP WDDM-enhanced Engineering diagnostic，以审查 Host/driver/WDDM 提交路径的可观察时间线；不得建立 r11。已有 r1～r10 及全部失败 diagnostic 均保持不可变
+- 当前总体判断：activity-specific marker ownership 已由真实 RTX 4090 单例验证成功，目标 `S_DEVICE=VALID_NONEMPTY` 且 wait-set 为 `{MEMCPY_B,KERNEL_A}`；当前失败已收敛为真实 device activity 无重叠（间隔 428704 ns）、`mixed_ns=0`、terminal=`KERNEL_A`。新 WDDM 入口只改变独立 Engineering diagnostic 的 profiler 参数，正常 Q0 collection argv、microbench、oracle、S、A/B 与 evaluator 均保持不变
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -118,7 +118,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 ## Gate 6：Q0 资格验证
 
-**Gate verdict：`FAIL`。** r2 至 r10 及其后四份 KERNEL-MEMOP diagnostic 均为 Engineering 失败现场，不能升级为 Q0 证据。activity-specific marker ownership 已通过离线验证，但尚未经过全新真实 GPU 单例复验；本轮不得建立 r11，Q0 状态保持 `NOT_RUN`。
+**Gate verdict：`FAIL`。** r2 至 r10 及其后 KERNEL-MEMOP diagnostics 均为 Engineering 失败现场，不能升级为 Q0 证据。真实 activity-ownership 单例已确认 S ownership 修复成功，但 512 MiB H2D 与 10 ms kernel 在设备时间线上仍未重叠；当前只允许执行独立 WDDM diagnostic，不得建立 r11，Q0 状态保持 `NOT_RUN`。
 
 - [x] `EP-G6-01` 实现受控 CUDA Q0 微程序和机器可读 manifest。23 个 oracle case 严格一一映射，其中 21 个具有 native CUDA seed，terminal tie 与 submission race 明确保持纯合成；缺 correlation、dropped records 与 graph mapping 缺失使用真实 seed 后受控 Canonical 故障注入。CUDA 13.0 在无 GPU 执行条件下成功编译，binary `--list-cases` 与 21 个 seed 集合一致，未知 case 在 CUDA 初始化前失败。证据：`q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json`、`tests/test_v141_q0_cuda_source.py`。
 - [x] `EP-G6-02` 完成 GPU 前 Q0 执行准备：Windows/Linux 结构化 `nsys` argv、每 case source manifest、输入哈希、不可覆盖输出和 `PREPARED_NOT_EXECUTED/NOT_RUN` dry-run；23 个显式合成 Canonical profile 均经正式 S/A/B 与独立 evaluator 对照通过。observed 使用严格 schema，evaluator 静态禁止导入被测 S/A/B，错误字段、重复 identity、缺失/额外 case 和资格升级均 fail closed。证据：`exposedpath_v141/q0_execution.py`、`exposedpath_v141/q0_synthetic.py`、`exposedpath_v141/q0_evaluator.py`、`docs/v1_4_1/contracts/q0_observed_schema_v0_2.json`、`tests/test_v141_q0_execution.py`、`tests/test_v141_q0_synthetic.py`、`tests/test_v141_q0_evaluator.py`。
@@ -137,8 +137,9 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - [x] `EP-G6-02M` 根据 memcpy-first diagnostic 的 Runtime API 时间定位同线程序列化：`cudaMemcpyAsync` 仅 59399 ns，随后同一 `globalTid` 的 `cudaLaunchKernel` 阻塞 53242288 ns，kernel 设备活动直到 copy 完成后才开始。仅该 case 改由 coordinator 与 kernel worker 经纯 Host 条件变量同时放行，在两个既有 nonblocking stream 并发提交；coordinator 等 launch 返回后执行原 `S_DEVICE`，同步后才 join。未增加 CUDA query/event/sync，唯一 request/decode 覆盖 worker 生命周期，buffer、时长、oracle、identity 和分析链均不变。CUDA 源码实际编译通过；Q0 `87 passed`、全仓 `648 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。
 - [x] `EP-G6-02N` 修复 concurrent-host diagnostic 暴露的 worker invocation 证据缺失：仅在 `kernel_worker` 真正 launch `KERNEL_A` 前写入立即结束的 `WORKER_KERNEL_MEMOP` marker。coordinator 仍唯一持有 request/decode 并覆盖 worker 生命周期；未新增 CUDA query/event/sync，concurrent-host 编排、buffer、时长、stream、`S_DEVICE`、标签、oracle 与分析链均不变。CUDA 源码实际编译通过；Q0 `87 passed`、全仓 `648 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。
 - [x] `EP-G6-02O` 为 `_normalize_activity()` 增加 activity-specific marker ownership：只接受同线程、完整覆盖 enqueue API、NVTX text/cache 完整一致的 marker；不完整证据为 `INVALID`，invocation/phase 冲突为 `AMBIGUOUS`。marker 不创建 A 窗口，不改变 sync/event ownership、oracle、A/B 或 Q0 expected。新增跨线程正例、wait-set 集成、嵌套一致 marker、提前结束/部分覆盖/错线程、API 前或内部开始但未闭合、不完整/伪造及 identity/phase 冲突反例；合法 marker 不能遮蔽同线程的部分相交或未闭合坏证据。S 定向 `77 passed`；A marker/window `13 passed`；Q0 oracle/evaluator/real/synthetic `40 passed`；全仓 `661 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线；合同 37/37、oracle 独立性、Canonical 边界和 compileall 通过。规格：`docs/superpowers/specs/2026-09-17-s-activity-marker-ownership-design.md`。
-- [x] `EP-G6-03` r4 在 EMPTY、r5 在重复 request、r6 在 PTDS query 轮询、r7 在 invocation scope resolver、r8 在 Graph fault 前态、r9 在 evaluator wait-set 顺序、r10 及其四份 diagnostic 在 KERNEL/MEMOP 真实重叠/证据恢复处均按 fail-fast 规则停止并保留现场。r1～r10 与失败 diagnostic 均不得覆盖或升级资格。
-- [ ] `EP-G6-04`（待新单例实测）用新 bundle 创建全新 activity-ownership diagnostic；仍要求 overlap、`mixed_ns>0`、terminal=`MEMCPY_B`、`REAL_CASE_PASS` 全部成立。本轮只回传证据，不建立 r11。
+- [x] `EP-G6-02P` 增加与正常 Q0 executor 隔离的 `run-q0-wddm-diagnostic`：仅允许 `Q0-KERNEL-MEMOP-001`、Engineering 和单 GPU，以全新不可覆盖目录采集 `cuda,nvtx,wddm` 及 WDDM additional events，同时保存本机 Nsight version/help、HAGS 注册表状态、Raw、SQLite、receipt、WDDM 表摘要和目标 request 时间窗记录。输出明确禁止 CUDA activity 与 WDDM packet 一一对应或硬件根因结论；HAGS 未确认、WDDM 表为空或目标 packet 不可归属时统一为 `EVIDENCE_INSUFFICIENT`。正常 Q0 argv 继续严格为 `--trace=cuda,nvtx`，未来 r11 不继承 WDDM 参数。证据：`exposedpath_v141/q0_wddm_diagnostic.py`、`tests/test_v141_q0_wddm_diagnostic.py`、Windows 服务器手册 §2.13。
+- [x] `EP-G6-03` r4 在 EMPTY、r5 在重复 request、r6 在 PTDS query 轮询、r7 在 invocation scope resolver、r8 在 Graph fault 前态、r9 在 evaluator wait-set 顺序、r10 及其后全部 diagnostic 在 KERNEL/MEMOP 真实重叠/证据恢复处均按 fail-fast 规则停止并保留现场。r1～r10 与失败 diagnostic 均不得覆盖或升级资格。
+- [ ] `EP-G6-04`（待 WDDM 单例实测）保持当前 512 MiB H2D、10 ms kernel、双 Host thread、双 nonblocking stream 与 `S_DEVICE` 不变，只增强 profiler 采集。目标是判断 kernel 对应工作在 copy 结束前是否已有可归属的 WDDM queue 时间线，以及 compute/copy queue 是否在同一 request 时间窗共存；无法可靠归属时必须报告证据不足。本轮只回传证据，不建立 r11。
 - [ ] `EP-G6-05`（未开始）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
 
 ## Gate 7：Runner 与跨平台执行对齐
@@ -232,8 +233,8 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - `EP-ISSUE-13`（已解决并经 r8 复验）：r7 invocation-bleed 的 prior 与 target request identity 不同且不重叠，旧 resolver 却因结构化 request 总数为 2 判定目标不唯一。现只对完整目标 identity 的匹配数执行唯一性 gate；r8 已完成 21/21 native source Canonical，确认该问题不再阻断。
 - `EP-ISSUE-14`（代码已修复，待 r10 完整复验）：r8 默认 Nsight graph-level tracing 只产生 `GRAPH_TRACE`，没有 KERNEL node activity 或 `CUDA_GRAPH_NODE_EVENTS`，导致 Graph mapping-removal fault 零命中。独立服务器诊断确认仅增加 `--cuda-graph-trace=node` 后，真实 node mapping 可进入现有 Canonical 并被既有 selector 唯一移除。修复严格限定 Graph case，不放宽 fault 或 analyzer。
 - `EP-ISSUE-15`（已解决并经 r10 路径推进验证）：r9 `S_DEVICE` 的 wait-set 成员与 oracle 完全相同但顺序相反，旧 evaluator 通过通用 list equality 误判失败。现为该字段单独应用唯一字符串集合比较；r10 已越过 DEVICE case，重复标签和其他 list 合同仍保持 fail closed。
-- `EP-ISSUE-16`（第四版代码已完成，待 concurrent-host-marker diagnostic/r11 复验）：r10 的 4 KiB 构造和第一版 512 MiB/10 ms 构造均无法重叠；第二版 memcpy-first 证据确认同线程后续 kernel launch 被串行化；第三版拆分 Host 提交后，两项 submission evidence 均为 `PROVEN`，但 worker 缺少 invocation marker，导致 S fail closed。第四版仅补齐 worker marker，真实 overlap 和 terminal 仍必须由目标 4090 实测证明。
-- `EP-ISSUE-17`（代码已修复，待真实单例复验）：最新 diagnostic 中 `KERNEL_A` marker 已完整覆盖同线程 launch，但旧 S activity ownership 只接受 request/phase range。现采用 activity-specific marker ownership 修正，未全局放宽 sync/event resolver；不完整和冲突 marker 的 fail-closed 回归已通过。
+- `EP-ISSUE-16`（未解决，待 WDDM diagnostic）：真实 activity-ownership 单例中 `MEMCPY_B=26742751..57382403 ns`、`KERNEL_A=57811107..67811983 ns`，两者间隔 428704 ns，故 `mixed_ns=0`、terminal=`KERNEL_A`。现有 trace 只能证明 kernel launch Host API 在 copy 设备执行期间进入且长时间阻塞，不能区分 Runtime/driver submission serialization、WDDM batching/scheduling 或设备并发限制；禁止据此直接写硬件根因。
+- `EP-ISSUE-17`（已解决并经真实单例验证）：activity-specific marker ownership 已使目标 `S_DEVICE=VALID_NONEMPTY`、wait-set=`{MEMCPY_B,KERNEL_A}`，此前 `INVOCATION_BOUNDARY_INVALID` 不再出现。当前失败与 ownership 无关，不再继续修改 S 来处理设备不重叠。
 
 ## 固定执行顺序与最近任务
 
@@ -241,9 +242,9 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 最近应执行的任务：
 
-1. `EP-G6-04`：用新 bundle 更新服务器受跟踪代码，以全新 run-id 只运行 KERNEL-MEMOP activity-ownership diagnostic。
-2. `EP-G6-04`：核验 overlap、`mixed_ns>0`、MEMCPY terminal 与 `REAL_CASE_PASS`，保留并回传完整单例证据；本轮不建立 r11。
-3. `EP-G6-04/05`：单例四项全部通过且再次审核后，才讨论 r11 和完整 Q0 重跑。
+1. `EP-G6-04`：用新 bundle 更新服务器受跟踪代码，只执行手册 §2.13 的 WDDM-enhanced KERNEL-MEMOP Engineering diagnostic。
+2. `EP-G6-04`：回传完整 diagnostic 目录；按 PID/context/engine/request 时间窗审查 WDDM timeline。无 packet、HAGS 未确认或归属不足时停止并记录 `EVIDENCE_INSUFFICIENT`。
+3. `EP-G6-04/05`：根据该诊断再决定是否设计 64 MiB/10 ms、64 MiB/1 ms 或其他 microbench 假设；当前不得实施这些候选，也不得建立 r11。
 
 ## 计划调整记录
 
@@ -305,3 +306,4 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 | 5.4 | 2026-09-16 | concurrent-host diagnostic 中两项 submission evidence 均为 `PROVEN`，但 worker 缺少结构化 invocation marker，导致 `KERNEL_A` 无法归入 decode，S 以 `INVOCATION_BOUNDARY_INVALID` fail closed。第四版仅在 worker launch 前增加立即结束的 `WORKER_KERNEL_MEMOP` marker；手册切换为全新 concurrent-host-marker diagnostic，未通过前禁止建立 r11。Q0 `87 passed`、全仓 `648 passed, 2 failed`。 | EP-G6-02N、EP-G6-03、EP-G6-04、EP-ISSUE-16 | 不改变 oracle、measurement semantics、request/decode identity、analyzer/evaluator、Canonical 或 Formal 资格；r10 与三份 diagnostic 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
 | 5.5 | 2026-09-17 | 最新 diagnostic 证明 `KERNEL_A` marker 完整覆盖同线程 launch，但 S 只接受 request/phase ownership；直接延长 worker marker 仍不会被 S 采用，并会使 Q0 label 多候选。新增 activity-specific marker ownership 修正规格与正反例矩阵，暂停 GPU 重跑，待用户复核后实施。 | EP-G6-02O、EP-G6-03、EP-G6-04、EP-ISSUE-17 | 这是 Pre-Pilot/Engineering 合同一致性修正设计；尚未修改 S、oracle、A/B、Q0 expected 或任何数据资格，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
 | 5.6 | 2026-09-17 | 按批准规格以测试先行方式增加 activity-specific marker ownership；只在 `_normalize_activity()` 接受同线程、完整覆盖 enqueue API、text/cache 完整一致的 marker。坏证据 invalid，identity/phase 冲突 ambiguous；独立复审后补齐合法 marker 不得遮蔽部分相交或在 API 结束前开始但未闭合的坏 marker。sync/event、A 窗口、oracle、A/B 和 Q0 expected 不变。离线 S `77 passed`，全仓 `661 passed, 2 failed`（仅既有 PowerShell smoke 基线），合同/独立性/边界检查通过。 | EP-G6-02O、EP-G6-04、EP-ISSUE-17 | 这是 Engineering analyzer 修正候选；真实 GPU 单例尚未复验，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，本轮不得建立 r11。 |
+| 5.7 | 2026-09-17 | 真实 activity-ownership 单例确认 S 修复成功，但 512 MiB H2D 与 10 ms kernel 仍无 device overlap。新增完全隔离的 WDDM Engineering diagnostic 入口：运行时核对 Nsight 版本/help，保存 HAGS、Raw/SQLite/receipt 和中立 WDDM 时间线；仅允许 PID/context/engine/time-window 推断，永不声称 CUDA↔packet 严格映射或具体硬件根因。正常 Q0 argv 和未来 r11 均不增加 WDDM 参数。定向回归 `51 passed`，全仓 `671 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线；合同、oracle 独立性、Canonical 边界与 compileall 均通过。 | EP-G6-02P、EP-G6-04、EP-ISSUE-16、EP-ISSUE-17 | 不改变 microbench、oracle、Canonical、S、A/B、evaluator、Measurement Contract 或数据资格；Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，当前唯一下一步为 WDDM diagnostic，禁止建立 r11。 |

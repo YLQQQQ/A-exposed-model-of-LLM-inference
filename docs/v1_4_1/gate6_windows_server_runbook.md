@@ -291,9 +291,9 @@ if ($R9Evidence.verdict -ne "REAL_CASE_PASS") { throw "r9 DEVICE 未得到 REAL_
 
 验收：新诊断返回 `REAL_CASE_PASS`，且 r9 Raw 哈希不变。该结果仅证明 evaluator 修复能正确重放既有证据，不把 r9 升级为完整 Q0；r9 保持失败现场。正式重跑必须使用全新 r10，r1～r9 均不得覆盖、续跑或执行 `git clean`。
 
-## 2.12 新代码的 KERNEL-MEMOP 独立真实诊断
+## 2.12 已完成的 KERNEL-MEMOP activity-ownership 诊断（历史步骤，不要重跑）
 
-> **当前只执行本节，不建立 r11（2026-09-17）：** activity-specific marker ownership 已按 `docs/superpowers/specs/2026-09-17-s-activity-marker-ownership-design.md` 实施并通过离线回归。服务器更新到本次新 commit/bundle 后，只能创建全新的单 case diagnostic；无论结果如何，本轮均停在本节并回传证据，不进入第 3 节。
+> 本节已经执行并形成不可变失败现场。真实结果确认 activity ownership 修复成功，但设备活动仍未重叠。不要覆盖或续跑本节目录；当前唯一允许执行的服务器步骤是 §2.13。
 
 r10 在 `Q0-KERNEL-MEMOP-001` 停止：wait-set、`MEMCPY_B` terminal 和 B 均正确，但 4 KiB H2D 在真实 4090 上晚于 35 ms kernel 才开始，`mixed_ns=0`。第一版 512 MiB/10 ms diagnostic 仍显示 kernel 先完成、copy 晚约 108159 ns 才开始。第二版 memcpy-first diagnostic 也必须保留：`MEMCPY_B=22241366..73604625 ns`、`KERNEL_A=74688941..84689831 ns`，二者相隔 1084316 ns，仍无重叠且 terminal 变为 `KERNEL_A`。
 
@@ -353,9 +353,55 @@ if ($DiagSync.terminal.activity_label -ne "MEMCPY_B") { throw "terminal 必须�
 if ($DiagEvidence.verdict -ne "REAL_CASE_PASS") { throw "diagnostic 必须得到 REAL_CASE_PASS" }
 ```
 
-验收：`DiagOverlapNs > 0`、`A_device_wait_kernel_memop_mixed_ns > 0`、terminal 为 `MEMCPY_B`、evaluator 为 `REAL_CASE_PASS`。该 diagnostic 只验证修正后的 ownership 与既有真实构造，不是完整 Q0，不得与 r10、四份既有失败 diagnostic 或后续 r11 拼接。r10 和已有 diagnostic 均保持失败现场。本轮即使四项全部满足，也只保存并回传证据，不建立 r11；下一轮审核通过后才决定是否进入第 3 节。
+本节真实结果为：`S_DEVICE=VALID_NONEMPTY`、wait-set=`{MEMCPY_B,KERNEL_A}`，说明 ownership 修复已生效；但 `MEMCPY_B=26742751..57382403 ns`、`KERNEL_A=57811107..67811983 ns`，间隔 428704 ns，故 `mixed_ns=0`、terminal=`KERNEL_A`，evaluator 正确失败。该目录必须保留，不得升级为 Q0 证据。
+
+## 2.13 当前唯一下一步：WDDM-enhanced KERNEL-MEMOP Engineering diagnostic
+
+本节只增强 profiler collection，复用 §2.12 已实际运行的同一个 binary。不得重新编译或修改 microbench；512 MiB H2D、10 ms kernel、双 Host thread、双 nonblocking stream、`S_DEVICE`、oracle、Canonical、S、A/B 和 evaluator 全部不变。该入口不会被正常 Q0 executor 调用，未来 r11 的标准 argv 仍为 `--trace=cuda,nvtx`。
+
+先更新至本手册对应的新 commit/bundle，再在仓库目录执行。`$PriorDiagOut` 必须指向服务器上 §2.12 的原始 activity-ownership diagnostic 根目录，其中应存在 `bin\exposedpath_q0.exe`；不要指向回传到本地的精简副本。
+
+```powershell
+$Q0Root = Resolve-Path .
+$Python = Join-Path $Q0Root ".venv\Scripts\python.exe"
+$Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
+$GpuSelector = "GPU-替换为nvidia-smi显示的完整UUID"
+$PriorDiagOut = "C:\替换为服务器上原activity-ownership-diagnostic目录"
+$WddmBinary = Join-Path $PriorDiagOut "bin\exposedpath_q0.exe"
+$WddmRunId = "q0-win-4090-YYYYMMDD-kernel-memop-wddm-diag-01"  # 替换实际日期
+$WddmOut = Join-Path $Q0Root "engineering_evidence\q0_diagnostics\$WddmRunId"
+
+if (-not (Test-Path -LiteralPath $WddmBinary -PathType Leaf)) { throw "找不到 §2.12 的原 binary" }
+if (Test-Path -LiteralPath $WddmOut) { throw "WDDM diagnostic 目录已存在，禁止覆盖" }
+
+& $Python -m exposedpath_v141 run-q0-wddm-diagnostic `
+    --output-dir $WddmOut `
+    --binary $WddmBinary `
+    --nsys $Nsys `
+    --run-id $WddmRunId `
+    --cuda-visible-device $GpuSelector
+if ($LASTEXITCODE -ne 0) { throw "WDDM diagnostic 执行失败；保留现场并停止" }
+
+$WddmSummary = Get-Content -LiteralPath (Join-Path $WddmOut "wddm_summary.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+$WddmReceipt = Get-Content -LiteralPath (Join-Path $WddmOut "wddm_diagnostic_receipt.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $WddmSummary.diagnostic_only) { throw "必须是 diagnostic-only" }
+if ($WddmSummary.data_role -ne "Engineering") { throw "必须是 Engineering" }
+if ($WddmReceipt.q0_status -ne "NOT_RUN") { throw "WDDM diagnostic 不得升级 Q0" }
+if ($WddmSummary.strict_cuda_wddm_mapping -ne $false) { throw "不得声称 CUDA-WDDM 严格映射" }
+if ($WddmSummary.causal_verdict -ne "NOT_ESTABLISHED") { throw "不得输出硬件根因结论" }
+
+Get-Content -LiteralPath (Join-Path $WddmOut "wddm_summary.json") -Raw -Encoding UTF8
+```
+
+入口会自动保存 `nsys_version.txt`、完整 `nsys_profile_help.txt`、筛选后的 `nsys_profile_help_wddm.txt`、`hags_status.json`、实际 collection/export argv、Raw、SQLite、两个 receipt、WDDM 表计数和 `wddm_timeline.json`。它会先核对当前安装版本的帮助输出确实包含 `wddm`、`--wddm-additional-events`、`--wddm-memory-trace` 和 `--wddm-backtraces`，缺任一参数即在采集前停止。
+
+`TIMELINE_ATTRIBUTION_AVAILABLE` 只表示：在目标 request 的 PID 和时间窗内找到了带 context/engine 字段的 WDDM packet 记录。WDDM packet 没有 CUDA correlationId，因此只能做 PID/context/engine/time-window 下的归属推断，不能写成 CUDA activity 与 packet 一一对应。若 HAGS 未确认启用、WDDM 表为空或没有可归属目标 packet，`EVIDENCE_INSUFFICIENT` 就是本次合法结论，必须停止进一步根因推断。
+
+现有 Canonical/S/A-B/evaluator 只作一致性旁证，不是本诊断成功判据。需要时可按 §2.12 的 `convert-sqlite -> analyze-s -> analyze-ab -> evaluate-q0-real-case` 命令处理 `$WddmOut` 中的 `trace.sqlite`、`source_manifest.json` 与 `collection_receipt.json`；evaluator 返回 `REAL_CASE_FAIL` 仍不代表 WDDM 采集失败，也不得据此修改 oracle。完成后回传整个 `$WddmOut`，本轮到此停止，不执行第 3 节。
 
 ## 3. 编译并准备不可覆盖运行目录
+
+> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案。必须先回传并审核 §2.13 的 WDDM diagnostic，再决定下一轮是否修改 microbench 或恢复完整 Q0；WDDM 参数绝不能加入本节标准 collection argv。
 
 ```powershell
 $Q0Root = Resolve-Path .

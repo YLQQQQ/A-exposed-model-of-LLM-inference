@@ -139,6 +139,8 @@ def test_prepare_q0_run_writes_complete_nonexecuted_plan_with_structured_argv(
         assert "--capture-range=cudaProfilerApi" in argv
         assert "--capture-range-end=stop" in argv
         assert not any(argument.startswith("--nvtx-capture") for argument in argv)
+        assert "--trace=cuda,nvtx" in argv
+        assert not any("wddm" in argument.lower() for argument in argv)
     assert not list(output_dir.rglob("*.nsys-rep"))
     for case in manifest["cases"]:
         source_manifest = output_dir / case["source_manifest"]
