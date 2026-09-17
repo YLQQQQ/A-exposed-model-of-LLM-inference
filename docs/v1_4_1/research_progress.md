@@ -2,7 +2,7 @@
 
 ## 当前快照
 
-- 清单版本：`6.3`
+- 清单版本：`6.4`
 - 最近更新：`2026-09-17`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
@@ -155,12 +155,14 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 **Gate verdict：`BLOCKED`。** 旧 runner 可运行，但首 Token 与后续 Token 的完成语义不一致，且尚无双平台真实 GPU smoke 证据。
 
-- [ ] `EP-G7-01`（等待前序 Gate）设计并实现一致、可观察的 Token 就绪边界。
-- [ ] `EP-G7-02`（未开始）分离 G1 自然逐 Token 同步和 N1 人为干预模式。
-- [ ] `EP-G7-03`（未开始）冻结 Pass0/Pass1 输入、身份、边界和执行策略一致性。
-- [ ] `EP-G7-04`（未开始）补齐 manifest、环境、early EOS、排除、retry、attempt 和 data role 字段。
-- [ ] `EP-G7-05`（未开始）隔离 Windows PowerShell、Linux shell、Nsight 和平台探测 adapter。
-- [ ] `EP-G7-06`（未开始）通过非 GPU 的参数、命令构造、身份、schema 和错误路径测试。
+`EP-G7-01`～`EP-G7-06` 已获并行授权（2026-09-17），可在 Gate 6 等待期内推进非 GPU 工作；并行推进不代表任何前序 Gate 通过，也不改变 Gate 7 verdict。`EP-G7-07` 不得执行，Gate 8 不得启动；Gate 7 工作必须与 Gate 6 策略工作隔离提交。计划：`docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md`。
+
+- [ ] `EP-G7-01`（允许并行，未开始）设计并实现一致、可观察的 Token 就绪边界。
+- [ ] `EP-G7-02`（允许并行，未开始）分离 G1 自然逐 Token 同步和 N1 人为干预模式。
+- [ ] `EP-G7-03`（允许并行，未开始）冻结 Pass0/Pass1 输入、身份、边界和执行策略一致性。
+- [ ] `EP-G7-04`（允许并行，未开始）补齐 manifest、环境、early EOS、排除、retry、attempt 和 data role 字段。
+- [ ] `EP-G7-05`（允许并行，未开始）隔离 Windows PowerShell、Linux shell、Nsight 和平台探测 adapter。
+- [ ] `EP-G7-06`（允许并行，未开始）通过非 GPU 的参数、命令构造、身份、schema 和错误路径测试。
 - [ ] `EP-G7-07`（受阻于平台/GPU）在实际声称支持的 Windows/Linux 平台完成 GPU smoke，并证明合同等价。
 
 ## Gate 8：Engineering Pilot
@@ -249,6 +251,8 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 当前顺序为：`Gate 1 合同 -> Gate 2 oracle -> Gate 3 Canonical Raw -> Gate 4 S -> Gate 5 A/B/D/Signature -> Gate 6 Q0 -> Gate 7 runner/跨平台 -> Gate 8 Engineering Pilot -> Gate 9~12 正式实验准备 -> Gate 13 N1/G1 -> Gate 14 G2`。
 
+**并行执行记录（2026-09-17，不改变任何 Gate 结论）**：Gate 6 停留在 `Q0-KERNEL-MEMOP-001` platform construction blocked，等待 `EP-G6-07` 的候选平台确认。经用户批准，`EP-G7-01`～`EP-G7-06` 的非 GPU 工作可与该等待期并行推进，但 Gate 7 保持 `BLOCKED`、`EP-G7-07` 与 Gate 8 不启动，且并行工作不得用于修改 Gate 6/Q0 requirement 或数据资格。该安排不代表 Gate 6 或任何其他 Gate 已通过。Gate 7 侧最近任务：按 `docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md` 推进 `EP-G7-01`～`EP-G7-06`，并与 Gate 6 策略工作分开提交。
+
 最近应执行的任务：
 
 1. `EP-G6-07`：确认候选平台后，单独提出并审核准入检查授权；未获授权前不得申请或运行任何外部平台实验；准入判据以冻结的 `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md` 为准，不得按平台事后调整。
@@ -322,3 +326,4 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 | 6.1 | 2026-09-17 | 按批准设计实现严格隔离的 64 MiB D2H/10 ms Engineering diagnostic。binary 仅在专用 flag 与 run identity 同时匹配时切换 copy direction；默认 512 MiB H2D 和既有 64 MiB H2D 路径保持不变。receipt 固化 overlap 唯一判据、terminal 非门槛、两种结果均停止以及禁止因果归因。定向回归 `47 passed`，全仓 `690 passed, 2 failed`，compileall 通过。 | EP-G6-02S、EP-G6-04B、EP-ISSUE-16 | 不修改 oracle、Canonical、S、A/B、evaluator 或 Measurement Contract；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，服务器尚未实跑 D2H，禁止 D2D、调参和 r11。 |
 | 6.2 | 2026-09-17 | 收录并复核 64 MiB D2H/10 ms Engineering diagnostic 真实证据（commit `a607645e`；Raw/SQLite/source manifest/canonical/S/A-B 哈希链与 validity 复核通过）：D2H `77979638..87266973 ns`、kernel `88995128..98995997 ns`，间隔 `1728155 ns`、`overlap=0`，terminal=`KERNEL_A`，A `kernel_only=10000869 ns`、`kernel_memop_mixed=0`。改变 H2D→D2H 方向仍未恢复真实 device overlap，`Q0-KERNEL-MEMOP-001` 记为 platform construction blocked，且不归因 WDDM、driver 或 Runtime。按预注册判据 STOP：不进入 D2D、不运行 64 MiB/1 ms、不建立 r11、不修改 oracle/Canonical/S/A/B/evaluator/Measurement Contract，不在该平台继续参数搜索。新增 `EP-G6-06`，只做策略审查设计。 | EP-G6-04B、EP-G6-05、EP-G6-06、EP-ISSUE-16 | 不改变 Measurement Contract、Q0 oracle、A/B 定义或任何数据资格；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，当前无 Pilot/Formal 数据 |
 | 6.3 | 2026-09-17 | 完成 `EP-G6-06` 策略审查并记录决定：synthetic 仅允许作为 Engineering regression strengthening；覆盖差异矩阵显示现有 23 个 profile 已覆盖 `KERNEL_MEMOP_MIXED` 的重叠 wait-set、mixed 分桶、union 与 terminal 语义，未发现新的未覆盖 failure mode，因此不实施新增 synthetic profile，`EP-G6-08` 只做纯文档边界固化；批准进入“候选平台 + construction admission”设计（仅设计批准，不授权外部实验），并把平台资格与准入判据冻结为 `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`（在确认候选平台之前冻结）；scope limitation 暂不批准、仅作 fallback；runbook 统一为“第 3 节及后续 r11 当前仍一律禁止执行”。新增 `EP-G6-07`、`EP-G6-08`。纯设计/文档变更，未运行任何新实验。 | EP-G6-06、EP-G6-07、EP-G6-08 | 不改变 Measurement Contract、Q0 oracle、Canonical、S、A/B、evaluator 或数据资格；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，当前无 Pilot/Formal 数据 |
+| 6.4 | 2026-09-17 | 批准 `EP-G7-01`～`EP-G7-06` 的非 GPU 工作与 Gate 6 等待期并行推进，并要求与 Gate 6 策略工作隔离提交；Gate 7 保持 `BLOCKED`、`EP-G7-07` 不得执行、Gate 8 不得启动。计划：`docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md`。清单版本同步提升为 `6.4`。纯计划/文档变更，未运行 GPU smoke、未采集任何 pass。 | EP-G7-01 至 EP-G7-06 | 不改变 Measurement Contract、Gate 6/Q0 requirement 或任何数据资格；Gate 7 保持 `BLOCKED`，当前无 Pilot/Formal 数据 |
