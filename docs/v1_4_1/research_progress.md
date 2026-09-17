@@ -2,14 +2,14 @@
 
 ## 当前快照
 
-- 清单版本：`6.4`
+- 清单版本：`6.5`
 - 最近更新：`2026-09-17`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G6-07` 候选平台构造准入（资格与判据已冻结于 `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`；候选平台确认与准入检查授权待单独决定）
+- 当前最高优先级：`EP-G6-07` Candidate Platform qualification（候选平台静态资格；资格与判据已冻结于 `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`；首轮盘点见 `docs/v1_4_1/candidate_platform_inventory_v0_1.md`，当前无 `QUALIFIED_FOR_ADMISSION_PLANNING`，信息补齐顺序为 CP-03 → CP-01、CP-02 仅作 construction-blocked baseline）
 - 当前总体判断：64 MiB D2H/10 ms diagnostic 已在 commit `a607645e9c4fcd7df4b05d4e97fa8bf788763e47` 上实测完成，改变 H2D→D2H 方向仍未恢复真实 device overlap。真实 device interval 为 D2H `77979638..87266973 ns`、kernel `88995128..98995997 ns`，间隔 `1728155 ns`、overlap=`0`，完成顺序为 copy 先、kernel terminal；`S_DEVICE=VALID_NONEMPTY`、wait-set=`{MEMCPY_B,KERNEL_A}`、terminal=`KERNEL_A`，A 为 `kernel_only=10000869 ns`、`kernel_memop_mixed=0`。因此 `Q0-KERNEL-MEMOP-001` 在当前 Windows/RTX 4090 上记为 platform construction blocked，Q0 保持 `NOT_RUN`、Gate 6 保持 `FAIL`。现有证据不能区分 WDDM、driver、Runtime 或其他层，禁止根因归因，也禁止在当前平台继续参数搜索
 - 当前策略决定（`EP-G6-06`，2026-09-17）：synthetic 只允许作为 Engineering regression strengthening，且差异矩阵未发现新增覆盖价值，因此不实施新增 synthetic profile，只固化现有 coverage 与边界说明（`EP-G6-08` 已完成）；批准进入“候选平台 + construction admission”**设计**（不代表授权任何外部平台实验）；scope limitation 当前不批准、仅作 fallback；第 3 节及后续 r11 仍一律禁止执行
 
@@ -65,7 +65,7 @@
 - [x] `EP-G1-08` 冻结 A/B 字段、互斥/守恒、B per-sync 生命周期，以及 D/Exposure Signature 的纯派生规则。证据：合同第 10～12 节及机器合同 `a_layer/b_layer/derived`。
 - [x] `EP-G1-09` 为 37 条合同规则建立 25 个验证案例映射并完成内部合同审查。证据：`measurement_contract_test_map_v0_2.json`、`tests/test_v141_contract.py`；`python -m exposedpath_v141 validate-contract` 输出 `37/37 (100%)` 与 `PASS`。
 
-**下一项：**Gate 2～5 已完成；Gate 6 的 GPU 前准备、执行链路与合成对照均已完成，当前停留在 `Q0-KERNEL-MEMOP-001` 的 platform construction blocked，`EP-G6-06` 策略审查已定稿。下一步是 `EP-G6-07` 的候选平台构造准入设计落地与候选平台确认（含单独授权），在此之前不得运行任何外部平台实验、不得建立 r11。
+**下一项：**Gate 2～5 已完成；Gate 6 的 GPU 前准备、执行链路与合成对照均已完成，当前停留在 `Q0-KERNEL-MEMOP-001` 的 platform construction blocked，`EP-G6-06` 策略审查已定稿。下一步是 `EP-G6-07` Candidate Platform qualification（候选平台静态资格）；未获单独批准前不得运行任何外部平台实验、不得建立 r11。
 
 ## Gate 2：设计 Q0 独立标准答案
 
@@ -119,7 +119,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 ## Gate 6：Q0 资格验证
 
-**Gate verdict：`FAIL`。** r2 至 r10 及其后全部 KERNEL-MEMOP diagnostics 均为 Engineering 失败现场，不能升级为 Q0 证据。512 MiB H2D、64 MiB H2D 与 64 MiB D2H 在 RTX 4090 上均未与 10 ms kernel 发生设备重叠，说明该失败不随 copy direction 改变；64 MiB/1 ms 与 D2D 路线均已停止。`Q0-KERNEL-MEMOP-001` 在当前 Windows/RTX 4090 上判定为 platform construction blocked，Q0 状态保持 `NOT_RUN`。目标 GPU 声明支持 copy/compute overlap，但现有证据不足以区分 WDDM、driver、Runtime 或其他层，因此不得输出根因结论。下一步只是 `EP-G6-06` 的书面策略审查；批准前不得建立 r11、不得实施 synthetic 策略调整、不得运行新的服务器实验。
+**Gate verdict：`FAIL`。** r2 至 r10 及其后全部 KERNEL-MEMOP diagnostics 均为 Engineering 失败现场，不能升级为 Q0 证据。512 MiB H2D、64 MiB H2D 与 64 MiB D2H 在 RTX 4090 上均未与 10 ms kernel 发生设备重叠，说明该失败不随 copy direction 改变；64 MiB/1 ms 与 D2D 路线均已停止。`Q0-KERNEL-MEMOP-001` 在当前 Windows/RTX 4090 上判定为 platform construction blocked，Q0 状态保持 `NOT_RUN`。目标 GPU 声明支持 copy/compute overlap，但现有证据不足以区分 WDDM、driver、Runtime 或其他层，因此不得输出根因结论。下一步是 `EP-G6-07` Candidate Platform qualification（候选平台静态资格）；在获得单独批准前不得运行任何平台实验、不得建立 r11、不得实施 synthetic 策略调整。
 
 - [x] `EP-G6-01` 实现受控 CUDA Q0 微程序和机器可读 manifest。23 个 oracle case 严格一一映射，其中 21 个具有 native CUDA seed，terminal tie 与 submission race 明确保持纯合成；缺 correlation、dropped records 与 graph mapping 缺失使用真实 seed 后受控 Canonical 故障注入。CUDA 13.0 在无 GPU 执行条件下成功编译，binary `--list-cases` 与 21 个 seed 集合一致，未知 case 在 CUDA 初始化前失败。证据：`q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json`、`tests/test_v141_q0_cuda_source.py`。
 - [x] `EP-G6-02` 完成 GPU 前 Q0 执行准备：Windows/Linux 结构化 `nsys` argv、每 case source manifest、输入哈希、不可覆盖输出和 `PREPARED_NOT_EXECUTED/NOT_RUN` dry-run；23 个显式合成 Canonical profile 均经正式 S/A/B 与独立 evaluator 对照通过。observed 使用严格 schema，evaluator 静态禁止导入被测 S/A/B，错误字段、重复 identity、缺失/额外 case 和资格升级均 fail closed。证据：`exposedpath_v141/q0_execution.py`、`exposedpath_v141/q0_synthetic.py`、`exposedpath_v141/q0_evaluator.py`、`docs/v1_4_1/contracts/q0_observed_schema_v0_2.json`、`tests/test_v141_q0_execution.py`、`tests/test_v141_q0_synthetic.py`、`tests/test_v141_q0_evaluator.py`。
@@ -148,26 +148,26 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - [x] `EP-G6-04B` 64 MiB D2H/10 ms 单例已在 commit `a607645e9c4fcd7df4b05d4e97fa8bf788763e47` 上完成并回传。唯一实验变量仍只有 copy direction：D2H `77979638..87266973 ns`（duration `9287335 ns`）、kernel `88995128..98995997 ns`（duration `10000869 ns`）、间隔 `1728155 ns`，真实 `overlap=0`，完成顺序 copy 先、kernel terminal。两项同 `contextId=1`、分别位于 non-blocking stream `14/13`、无 CUDA event dependency、Runtime API correlation 唯一；`S_DEVICE=VALID_NONEMPTY`、wait-set=`{MEMCPY_B,KERNEL_A}`、terminal=`KERNEL_A`（`end_ns=98995997`），A 为 `kernel_only=10000869 ns`、`kernel_memop_mixed=0`。证据目录：`server_evidence_inbox/q0-win-4090-20260917-kernel-memop-d2h-diag-64m-10ms-01/`（Raw、SQLite、receipt、canonical、s、ab）。本地只读复核 SHA-256 链全部一致：Raw `76FAEC18A88FF58A885076616902197B32D4E617E5E76376E779C777E1883425`、SQLite `C9964B0EE2CFD50BDB3DCC8811106204FC9FED99C5D549526D414AD071454956`、source manifest `BE917E5E17673961634B53CDBAC008625F806151122DFCCA8783551DEB713B73`、canonical manifest `DEEEF8F22DBEB3CF8721F0C3350D7DB8AE5D98EACAA039CFA131282A9C32FC3F`、S manifest `08D0B2A0661C1A5C9CA4FCEB737175DC4A6D1AB578DE4E7C597984C7BF9E5A83`，A/B 记录压缩件哈希与各自 manifest 相符。Canonical `observation_validity=valid`、`identity=VALID`，S/A-B quality=`VALID`，仅保留 1 条 `HARNESS_OUTSIDE_REQUEST` warning。按 receipt 预注册判据（`overlap_ns>0` 才算观察到重叠；`on_overlap_zero=STOP`）停止：不进入 D2D、不运行 64 MiB/1 ms、不建立 r11、不修改 oracle/Canonical/S/A/B/evaluator/Measurement Contract，也不在当前平台继续参数搜索。
 - [ ] `EP-G6-05`（受阻于 `Q0-KERNEL-MEMOP-001` 的平台构造）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
 - [x] `EP-G6-06` Gate 6 策略审查已完成并取得书面决定（2026-09-17）：(1) synthetic 原则允许作为 Engineering regression strengthening，但不得替代 real Q0 evidence、不得改变 Gate 6 verdict、不得提升数据资格或扩大 claim，且必须先证明存在新的未覆盖 failure mode；本次差异矩阵未发现此类缺口，故不实施新增 synthetic profile，只固化现有 coverage 与边界说明（转 `EP-G6-08`）。(2) 批准进入“候选平台 + construction admission”**设计**，第一阶段只定义候选平台资格条件与最小真实 overlap construction check，不运行完整 Q0；该批准只是方案设计批准，不代表授权任何外部服务器实验，具体平台与运行步骤需单独审核。(3) scope limitation 当前不批准，仅作 fallback。(4) 允许 Gate 7 非 GPU 项并行，Gate 7 保持 `BLOCKED`。证据：`docs/v1_4_1/gate6_strategy_review_v0_1.md`（审查定稿，含覆盖差异矩阵与 admission 设计草案）、`docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md`。
-- [ ] `EP-G6-07`（设计已提出，待确认候选平台）候选平台 + construction admission：定义候选平台最低资格、固定 workload 与唯一变量、预注册尝试次数、成功/失败/停止条件、所需 evidence，以及通过 admission 后才允许提出完整 Q0 计划的硬门槛。设计与判据已冻结：`docs/v1_4_1/gate6_strategy_review_v0_1.md` §5、`docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`（A～F 节，冻结于候选平台确认之前）。当前只允许设计与审核；未获单独批准前不得申请或运行任何外部平台实验，且构造准入 PASS 本身不等于 Gate 6 PASS、Q0 PASS 或 Gate 9 平台资格。
+- [ ] `EP-G6-07`（进行中）候选平台 + construction admission：定义候选平台最低资格、固定 workload 与唯一变量、预注册尝试次数、成功/失败/停止条件、所需 evidence，以及通过 admission 后才允许提出完整 Q0 计划的硬门槛。设计与判据已冻结：`docs/v1_4_1/gate6_strategy_review_v0_1.md` §5、`docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`（A～F 节，冻结于候选平台确认之前）。首轮候选平台静态资格盘点已完成：`docs/v1_4_1/candidate_platform_inventory_v0_1.md`，结论为无任何平台达到 `QUALIFIED_FOR_ADMISSION_PLANNING`（CP-01 本机、CP-02 服务器 4090、CP-03 服务器 6000 Ada 均为 `NEEDS_INFORMATION`；CP-04 其他平台信息缺失），且盘点只使用工具版本查询、编译与 `--list-cases` 等非 case 手段，未运行任何 case/workload。当前只允许设计与审核；未获单独批准前不得申请或运行任何外部平台实验，且构造准入 PASS 本身不等于 Gate 6 PASS、Q0 PASS 或 Gate 9 平台资格。
 - [x] `EP-G6-08` 完成 `KERNEL_MEMOP_MIXED` 现有 synthetic coverage 与“synthetic ↔ real”边界固化：记录现有 profile 已覆盖 mixed wait-set、A mixed 分桶与守恒、B 半开 union 与跨 kind terminal、无依赖重叠与 terminal 并列等；并记录 synthetic 直接构造 Canonical（`correlation_id` 为空、ownership 直接给定），因此无法替代真实 observation contract。纯文档变更，未新增或修改 profile、未改实现、未改变任何数据资格。证据：`docs/v1_4_1/gate6_strategy_review_v0_1.md` §4 与 §4.1。
 
 ## Gate 7：Runner 与跨平台执行对齐
 
 **Gate verdict：`BLOCKED`。** 旧 runner 可运行，但首 Token 与后续 Token 的完成语义不一致，且尚无双平台真实 GPU smoke 证据。
 
-`EP-G7-01`～`EP-G7-06` 已获并行授权（2026-09-17），可在 Gate 6 等待期内推进非 GPU 工作；并行推进不代表任何前序 Gate 通过，也不改变 Gate 7 verdict。`EP-G7-07` 不得执行，Gate 8 不得启动；Gate 7 工作必须与 Gate 6 策略工作隔离提交。计划：`docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md`。
+`EP-G7-01`～`EP-G7-06` 曾获并行授权（2026-09-17），但**自 2026-09-17 起暂停推进**，本轮主线只推进 Gate 6 的 `EP-G6-07`（见计划调整记录 6.5）。暂停不等于取消；恢复需单独决定。Gate 7 verdict 保持 `BLOCKED`，`EP-G7-07` 不得执行，Gate 8 不得启动；恢复后 Gate 7 工作仍必须与 Gate 6 策略工作隔离提交。计划：`docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md`。
 
-- [ ] `EP-G7-01`（允许并行，未开始）设计并实现一致、可观察的 Token 就绪边界。
-- [ ] `EP-G7-02`（允许并行，未开始）分离 G1 自然逐 Token 同步和 N1 人为干预模式。
-- [ ] `EP-G7-03`（允许并行，未开始）冻结 Pass0/Pass1 输入、身份、边界和执行策略一致性。
-- [ ] `EP-G7-04`（允许并行，未开始）补齐 manifest、环境、early EOS、排除、retry、attempt 和 data role 字段。
-- [ ] `EP-G7-05`（允许并行，未开始）隔离 Windows PowerShell、Linux shell、Nsight 和平台探测 adapter。
-- [ ] `EP-G7-06`（允许并行，未开始）通过非 GPU 的参数、命令构造、身份、schema 和错误路径测试。
+- [ ] `EP-G7-01`（暂停，未开始）设计并实现一致、可观察的 Token 就绪边界。
+- [ ] `EP-G7-02`（暂停，未开始）分离 G1 自然逐 Token 同步和 N1 人为干预模式。
+- [ ] `EP-G7-03`（暂停，未开始）冻结 Pass0/Pass1 输入、身份、边界和执行策略一致性。
+- [ ] `EP-G7-04`（暂停，未开始）补齐 manifest、环境、early EOS、排除、retry、attempt 和 data role 字段。
+- [ ] `EP-G7-05`（暂停，未开始）隔离 Windows PowerShell、Linux shell、Nsight 和平台探测 adapter。
+- [ ] `EP-G7-06`（暂停，未开始）通过非 GPU 的参数、命令构造、身份、schema 和错误路径测试。
 - [ ] `EP-G7-07`（受阻于平台/GPU）在实际声称支持的 Windows/Linux 平台完成 GPU smoke，并证明合同等价。
 
 ## Gate 8：Engineering Pilot
 
-**Gate verdict：`BLOCKED`。** 依赖 Q0 和 runner 对齐，并需要 GPU。
+**Gate verdict：`BLOCKED`。** 依赖 Q0 和 runner 对齐，并需要 GPU。Gate 7 的并行推进已暂停，Gate 8 同样不得启动。
 
 - [ ] `EP-G8-01`（受阻）运行最小端到端开发 workload。
 - [ ] `EP-G8-02`（受阻）验证 benchmark -> runner -> Nsight -> Canonical Raw -> S -> A/B -> D/Signature 全链路。
@@ -232,7 +232,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - `EP-ISSUE-01`：旧 runner 的首 Token 时间取在异步 argmax 提交后，但后续 EOS `.any()` 可能触发隐式同步，Token 完成边界不一致。影响：Gate 1、7；不得直接用于新版 phase 定义。
 - `EP-ISSUE-02`：三份历史 trace 缺少 source manifest。影响：validity 必须保持 `ambiguous`，不能升级数据资格。
 - `EP-ISSUE-03`：Gate 4 第三轮复审修正后的仓库全量测试为 `365 passed, 2 failed`；两项失败与工作前基线相同，仍为 `tests/test_server_smoke_script.py::test_dry_run` 和 `test_spaces`。影响：跨平台执行层需单独修复或重新界定，但不属于 Gate 2～4 新增失败。
-- `EP-ISSUE-04`：本机无 GPU，但实验室 Windows 服务器已有可用 RTX 4090/6000 Ada。本地只能完成离线验证；Q0、跨平台 GPU smoke、Engineering Pilot 及后续实验的真实结论必须由服务器证据给出。
+- `EP-ISSUE-04`（2026-09-17 事实更正）：本机（Lenovo 82L5，Windows build 26200）实际存在 GTX 1650（4 GiB，driver package `581.57`，Toolkit/nvcc `V13.0.88`，Nsight 2026.1.1 系列），此前“本机无 GPU”的记录已过时。该机器**尚未完成 Candidate qualification**（driver API 与 runtime 版本未知、schema 未审查、独占性未确认、A7 未闭合），因此**当前不得作为真实 Q0/workload 平台**；仅允许离线工作与已批准的非 case qualification。实验室 Windows 服务器已有可用 RTX 4090/6000 Ada。Q0、跨平台 GPU smoke、Engineering Pilot 及后续实验的真实结论必须由通过相应资格检查的真实平台证据给出。静态盘点见 `docs/v1_4_1/candidate_platform_inventory_v0_1.md`。
 - `EP-ISSUE-05`（已解决）：使用校验过哈希的 LibreOffice 临时解包版本完成本地全页渲染；研究主体 40 页、实验协议 27 页均已检查。渲染器仅用于文档 QA，不改变研究 Gate。
 - `EP-ISSUE-06`：S 层已对 event/wait 的 context/stream 活动查找建立索引，并缓存重复 scope 建图；event/default-stream 密集型大 trace 的规模性能尚未在真实 Engineering 数据上验收。影响：需在 Engineering Pilot 记录耗时与峰值内存；当前不改变 S 语义正确性或数据资格。
 - `EP-ISSUE-07`：本机环境变量 `CL` 被配置为 MSVC 目录，但该名称会被 `cl.exe`/`nvcc` 解释为隐式编译参数，导致 CUDA 编译失败。Q0 编译入口只在子进程环境中移除 `CL/_CL_`，不修改用户系统环境；后续 GPU 平台资格检查仍需记录并复核实际编译环境。
@@ -251,13 +251,13 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 当前顺序为：`Gate 1 合同 -> Gate 2 oracle -> Gate 3 Canonical Raw -> Gate 4 S -> Gate 5 A/B/D/Signature -> Gate 6 Q0 -> Gate 7 runner/跨平台 -> Gate 8 Engineering Pilot -> Gate 9~12 正式实验准备 -> Gate 13 N1/G1 -> Gate 14 G2`。
 
-**并行执行记录（2026-09-17，不改变任何 Gate 结论）**：Gate 6 停留在 `Q0-KERNEL-MEMOP-001` platform construction blocked，等待 `EP-G6-07` 的候选平台确认。经用户批准，`EP-G7-01`～`EP-G7-06` 的非 GPU 工作可与该等待期并行推进，但 Gate 7 保持 `BLOCKED`、`EP-G7-07` 与 Gate 8 不启动，且并行工作不得用于修改 Gate 6/Q0 requirement 或数据资格。该安排不代表 Gate 6 或任何其他 Gate 已通过。Gate 7 侧最近任务：按 `docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md` 推进 `EP-G7-01`～`EP-G7-06`，并与 Gate 6 策略工作分开提交。
+**并行执行记录（2026-09-17，不改变任何 Gate 结论）**：Gate 6 停留在 `Q0-KERNEL-MEMOP-001` platform construction blocked，等待 `EP-G6-07` 的候选平台确认。`EP-G7-01`～`EP-G7-06` 的非 GPU 工作曾获并行授权，但**现已暂停**：本轮只推进 Gate 6 的 `EP-G6-07`，Gate 7 保持 `BLOCKED`、`EP-G7-07` 与 Gate 8 不启动，且任何工作都不得用于修改 Gate 6/Q0 requirement 或数据资格。该安排不代表 Gate 6 或任何其他 Gate 已通过。恢复 Gate 7 并行推进需要单独决定。
 
 最近应执行的任务：
 
-1. `EP-G6-07`：确认候选平台后，单独提出并审核准入检查授权；未获授权前不得申请或运行任何外部平台实验；准入判据以冻结的 `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md` 为准，不得按平台事后调整。
+1. `EP-G6-07` Candidate Platform qualification：按 CP-03 → CP-01 的顺序补齐静态资格信息（CP-02 仅作 construction-blocked baseline）；只有 A1～A9 全部满足才可标为 `QUALIFIED_FOR_ADMISSION_PLANNING`。未获单独授权前不得申请或运行任何外部平台实验；准入判据以冻结的 `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md` 为准，不得按平台事后调整。
 2. `EP-G6-08`：已完成（纯文档边界固化，见 `docs/v1_4_1/gate6_strategy_review_v0_1.md` §4.1）。
-3. 全程保持 Gate 6 `FAIL`、Q0 `NOT_RUN`、Gate 7 `BLOCKED`；不实施新增 synthetic、不进入 D2D、参数搜索或 r11，不对 WDDM/driver/Runtime 作根因归因。
+3. 全程保持 Gate 6 `FAIL`、Q0 `NOT_RUN`、Gate 7 `BLOCKED`；Gate 7/8 暂停推进，不实施新增 synthetic、不进入 D2D、参数搜索或 r11，不对 WDDM/driver/Runtime 作根因归因。
 
 ## 计划调整记录
 
@@ -327,3 +327,4 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 | 6.2 | 2026-09-17 | 收录并复核 64 MiB D2H/10 ms Engineering diagnostic 真实证据（commit `a607645e`；Raw/SQLite/source manifest/canonical/S/A-B 哈希链与 validity 复核通过）：D2H `77979638..87266973 ns`、kernel `88995128..98995997 ns`，间隔 `1728155 ns`、`overlap=0`，terminal=`KERNEL_A`，A `kernel_only=10000869 ns`、`kernel_memop_mixed=0`。改变 H2D→D2H 方向仍未恢复真实 device overlap，`Q0-KERNEL-MEMOP-001` 记为 platform construction blocked，且不归因 WDDM、driver 或 Runtime。按预注册判据 STOP：不进入 D2D、不运行 64 MiB/1 ms、不建立 r11、不修改 oracle/Canonical/S/A/B/evaluator/Measurement Contract，不在该平台继续参数搜索。新增 `EP-G6-06`，只做策略审查设计。 | EP-G6-04B、EP-G6-05、EP-G6-06、EP-ISSUE-16 | 不改变 Measurement Contract、Q0 oracle、A/B 定义或任何数据资格；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，当前无 Pilot/Formal 数据 |
 | 6.3 | 2026-09-17 | 完成 `EP-G6-06` 策略审查并记录决定：synthetic 仅允许作为 Engineering regression strengthening；覆盖差异矩阵显示现有 23 个 profile 已覆盖 `KERNEL_MEMOP_MIXED` 的重叠 wait-set、mixed 分桶、union 与 terminal 语义，未发现新的未覆盖 failure mode，因此不实施新增 synthetic profile，`EP-G6-08` 只做纯文档边界固化；批准进入“候选平台 + construction admission”设计（仅设计批准，不授权外部实验），并把平台资格与准入判据冻结为 `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`（在确认候选平台之前冻结）；scope limitation 暂不批准、仅作 fallback；runbook 统一为“第 3 节及后续 r11 当前仍一律禁止执行”。新增 `EP-G6-07`、`EP-G6-08`。纯设计/文档变更，未运行任何新实验。 | EP-G6-06、EP-G6-07、EP-G6-08 | 不改变 Measurement Contract、Q0 oracle、Canonical、S、A/B、evaluator 或数据资格；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，当前无 Pilot/Formal 数据 |
 | 6.4 | 2026-09-17 | 批准 `EP-G7-01`～`EP-G7-06` 的非 GPU 工作与 Gate 6 等待期并行推进，并要求与 Gate 6 策略工作隔离提交；Gate 7 保持 `BLOCKED`、`EP-G7-07` 不得执行、Gate 8 不得启动。计划：`docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md`。清单版本同步提升为 `6.4`。纯计划/文档变更，未运行 GPU smoke、未采集任何 pass。 | EP-G7-01 至 EP-G7-06 | 不改变 Measurement Contract、Gate 6/Q0 requirement 或任何数据资格；Gate 7 保持 `BLOCKED`，当前无 Pilot/Formal 数据 |
+| 6.5 | 2026-09-17 | 收口 `EP-G6-07` 首轮候选平台盘点：主线切换为 Candidate Platform qualification；修正 CP-01 的 A3（driver package `581.57`、driver API 与 runtime 均 `UNKNOWN`、Toolkit/nvcc `V13.0.88`，不得用 `nvidia-smi` 的 `CUDA Version` 充当 driver API/runtime），并将 CP-01/CP-03 的 A7 保持 `UNKNOWN`（显存与 host RAM 不能证明 512 MiB pinned-host + device 分配会成功）；确定信息补齐顺序 CP-03 → CP-01，CP-02 仅作 construction-blocked baseline，且该顺序不是 overlap 概率排名；Gate 7/8 暂停推进（Gate 7 保持 `BLOCKED`）；根因边界保持不变（已确认不同 non-blocking stream 在真实 device timeline 上串行，但不得归因到 Runtime/driver/WDDM/scheduler 任一层，不继续 RTX 4090 参数搜索）。清单版本同步提升为 `6.5`。纯文档变更，未运行任何实验。 | EP-G6-07、EP-G7-01 至 EP-G7-06、EP-ISSUE-04、EP-ISSUE-16 | 不改变 Measurement Contract、Q0 oracle、Canonical、S、A/B、evaluator 或数据资格；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`、Gate 7 保持 `BLOCKED`，当前无 Pilot/Formal 数据 |
