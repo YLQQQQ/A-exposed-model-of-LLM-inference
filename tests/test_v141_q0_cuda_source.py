@@ -187,17 +187,18 @@ def test_kernel_memop_uses_case_scoped_preallocated_capacity_for_stable_overlap(
     assert "kKernelMemopKernelMilliseconds = 10" in source
     assert "buffer_capacity_bytes" in source
     assert 'case_id == "Q0-KERNEL-MEMOP-001"' in main
-    assert "Resources resources(buffer_bytes);" in main
-    assert main.index("Resources resources(buffer_bytes);") < main.index(
+    assert "Resources resources(buffer_bytes, diagnostic_kernel_ms);" in main
+    assert main.index("Resources resources(buffer_bytes, diagnostic_kernel_ms);") < main.index(
         "CudaProfilerRange capture;"
     )
-    assert '"KERNEL_A", r.first, kKernelMemopKernelMilliseconds' in body
+    assert '"KERNEL_A", r.first,' in body
+    assert "r.kernel_memop_kernel_milliseconds" in body
     assert "r.buffer_capacity_bytes" in body
     assert "std::thread kernel_worker" in body
     worker_marker = 'worker_marker(c, id, "decode", "WORKER_KERNEL_MEMOP")'
     assert worker_marker in body
     assert body.index(worker_marker) < body.index(
-        '"KERNEL_A", r.first, kKernelMemopKernelMilliseconds'
+        '"KERNEL_A", r.first,'
     )
     assert "kernel_ready" in body
     assert "release_kernel" in body
@@ -215,6 +216,21 @@ def test_kernel_memop_uses_case_scoped_preallocated_capacity_for_stable_overlap(
     assert "phase_range(" not in body
     assert "cudaMalloc(" not in body
     assert "cudaMallocHost(" not in body
+
+
+def test_kernel_memop_diagnostic_parameters_are_strictly_isolated_from_default_q0():
+    source = SOURCE.read_text(encoding="utf-8")
+    main = source[source.index("int main("):]
+
+    assert "kKernelMemopBufferBytes = 512ULL * 1024ULL * 1024ULL" in source
+    assert "kKernelMemopKernelMilliseconds = 10" in source
+    assert '"--diagnostic-h2d-bytes"' in main
+    assert '"--diagnostic-kernel-ms"' in main
+    assert "64ULL * 1024ULL * 1024ULL" in main
+    assert "kernel-memop-size-diag-64m-10ms" in main
+    assert "diagnostic parameters are only supported" in main
+    assert "diagnostic_h2d_bytes" in main
+    assert "diagnostic_kernel_ms" in main
 
 
 @pytest.mark.parametrize(

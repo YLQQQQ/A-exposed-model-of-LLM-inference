@@ -144,9 +144,12 @@ struct Resources {
   void* device_buffer{};
   void* host_buffer{};
   std::size_t buffer_capacity_bytes{};
+  int kernel_memop_kernel_milliseconds{kKernelMemopKernelMilliseconds};
 
-  explicit Resources(std::size_t buffer_bytes = kDefaultBufferBytes)
-      : buffer_capacity_bytes(buffer_bytes) {
+  explicit Resources(std::size_t buffer_bytes = kDefaultBufferBytes,
+                     int kernel_memop_milliseconds = kKernelMemopKernelMilliseconds)
+      : buffer_capacity_bytes(buffer_bytes),
+        kernel_memop_kernel_milliseconds(kernel_memop_milliseconds) {
     CUDA_CHECK(cudaGetDeviceProperties(&properties, 0));
     CUDA_CHECK(cudaDeviceGetAttribute(&clock_rate_khz, cudaDevAttrClockRate, 0));
     CUDA_CHECK(cudaStreamCreateWithFlags(&first, cudaStreamNonBlocking));
@@ -269,7 +272,8 @@ void run_kernel_memop(Resources& r, const std::string& c, const std::string& id)
       }
       try {
         worker_marker(c, id, "decode", "WORKER_KERNEL_MEMOP");
-        launch(r, c, id, "decode", "KERNEL_A", r.first, kKernelMemopKernelMilliseconds);
+        launch(r, c, id, "decode", "KERNEL_A", r.first,
+               r.kernel_memop_kernel_milliseconds);
       } catch (...) {
         kernel_error = std::current_exception();
       }
@@ -533,9 +537,13 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-  if (argc != 5 || std::string(argv[1]) != "--case" ||
-      std::string(argv[3]) != "--run-id") {
-    std::cerr << "usage: exposedpath_q0 --case CASE_ID --run-id RUN_ID\n";
+  const bool diagnostic_parameters =
+      argc == 9 && std::string(argv[5]) == "--diagnostic-h2d-bytes" &&
+      std::string(argv[7]) == "--diagnostic-kernel-ms";
+  if ((argc != 5 && !diagnostic_parameters) ||
+      std::string(argv[1]) != "--case" || std::string(argv[3]) != "--run-id") {
+    std::cerr << "usage: exposedpath_q0 --case CASE_ID --run-id RUN_ID "
+                 "[--diagnostic-h2d-bytes BYTES --diagnostic-kernel-ms MS]\n";
     return 2;
   }
   const std::string case_id = argv[2];
@@ -549,12 +557,28 @@ int main(int argc, char** argv) {
     std::cerr << "invalid run id\n";
     return 2;
   }
+  std::size_t diagnostic_h2d_bytes = kKernelMemopBufferBytes;
+  int diagnostic_kernel_ms = kKernelMemopKernelMilliseconds;
+  if (diagnostic_parameters) {
+    const std::string required_identity = "kernel-memop-size-diag-64m-10ms";
+    if (case_id != "Q0-KERNEL-MEMOP-001" ||
+        run_id.find(required_identity) == std::string::npos ||
+        std::string(argv[6]) != "67108864" || std::string(argv[8]) != "10") {
+      std::cerr << "diagnostic parameters are only supported for the frozen "
+                   "64 MiB/10 ms Engineering diagnostic\n";
+      return 2;
+    }
+    diagnostic_h2d_bytes = 64ULL * 1024ULL * 1024ULL;
+    diagnostic_kernel_ms = 10;
+  }
 
   try {
     const std::size_t buffer_bytes =
-        case_id == "Q0-KERNEL-MEMOP-001" ? kKernelMemopBufferBytes
-                                          : kDefaultBufferBytes;
-    Resources resources(buffer_bytes);
+        case_id == "Q0-KERNEL-MEMOP-001"
+            ? (diagnostic_parameters ? diagnostic_h2d_bytes
+                                     : kKernelMemopBufferBytes)
+            : kDefaultBufferBytes;
+    Resources resources(buffer_bytes, diagnostic_kernel_ms);
     {
       CudaProfilerRange capture;
       selected->second(resources, case_id, run_id);

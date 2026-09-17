@@ -355,9 +355,9 @@ if ($DiagEvidence.verdict -ne "REAL_CASE_PASS") { throw "diagnostic 必须得到
 
 本节真实结果为：`S_DEVICE=VALID_NONEMPTY`、wait-set=`{MEMCPY_B,KERNEL_A}`，说明 ownership 修复已生效；但 `MEMCPY_B=26742751..57382403 ns`、`KERNEL_A=57811107..67811983 ns`，间隔 428704 ns，故 `mixed_ns=0`、terminal=`KERNEL_A`，evaluator 正确失败。该目录必须保留，不得升级为 Q0 证据。
 
-## 2.13 当前唯一下一步：WDDM-enhanced KERNEL-MEMOP Engineering diagnostic
+## 2.13 已完成的 WDDM-enhanced KERNEL-MEMOP diagnostic（历史步骤，不要重跑）
 
-本节只增强 profiler collection，复用 §2.12 已实际运行的同一个 binary。不得重新编译或修改 microbench；512 MiB H2D、10 ms kernel、双 Host thread、双 nonblocking stream、`S_DEVICE`、oracle、Canonical、S、A/B 和 evaluator 全部不变。该入口不会被正常 Q0 executor 调用，未来 r11 的标准 argv 仍为 `--trace=cuda,nvtx`。
+本节已由管理员 PowerShell 以 diag-02 完成。Raw/SQLite/source manifest 哈希与 receipt 一致；目标 request 内获得 WDDM queue 可见性，但 HAGS 状态未确认且 packet 无 CUDA correlationId，因此 `causal_verdict=NOT_ESTABLISHED`。不要覆盖 diag-01/diag-02；当前唯一允许执行的步骤改为 §2.14。
 
 先更新至本手册对应的新 commit/bundle，再在仓库目录执行。`$PriorDiagOut` 必须指向服务器上 §2.12 的原始 activity-ownership diagnostic 根目录，其中应存在 `bin\exposedpath_q0.exe`；不要指向回传到本地的精简副本。
 
@@ -397,11 +397,62 @@ Get-Content -LiteralPath (Join-Path $WddmOut "wddm_summary.json") -Raw -Encoding
 
 `TIMELINE_ATTRIBUTION_AVAILABLE` 只表示：在目标 request 的 PID 和时间窗内找到了带 context/engine 字段的 WDDM packet 记录。WDDM packet 没有 CUDA correlationId，因此只能做 PID/context/engine/time-window 下的归属推断，不能写成 CUDA activity 与 packet 一一对应。若 HAGS 未确认启用、WDDM 表为空或没有可归属目标 packet，`EVIDENCE_INSUFFICIENT` 就是本次合法结论，必须停止进一步根因推断。
 
-现有 Canonical/S/A-B/evaluator 只作一致性旁证，不是本诊断成功判据。需要时可按 §2.12 的 `convert-sqlite -> analyze-s -> analyze-ab -> evaluate-q0-real-case` 命令处理 `$WddmOut` 中的 `trace.sqlite`、`source_manifest.json` 与 `collection_receipt.json`；evaluator 返回 `REAL_CASE_FAIL` 仍不代表 WDDM 采集失败，也不得据此修改 oracle。完成后回传整个 `$WddmOut`，本轮到此停止，不执行第 3 节。
+diag-02 的标准 CUDA 时间线为：`cudaMemcpyAsync=26639965..26702789 ns`、`cudaLaunchKernel=27022422..62116191 ns`、H2D activity=`33435296..58635297 ns`、kernel activity=`63136725..73137628 ns`，两项 device activity 间隔 `4501428 ns`。WDDM Copy sequence 34 与 copy 时间吻合，CUDA-context sequence 53 与 kernel 时间邻近；后者只能作为时间归属推断，不能写成严格映射或具体根因。
+
+## 2.14 当前唯一下一步：64 MiB H2D + 10 ms kernel 参数 diagnostic
+
+本节只检验缩短 copy 后，kernel launch/device activity 是否仍等待 copy 完成。它不是 Q0 正例验收，不要求 terminal=`MEMCPY_B` 或 evaluator PASS。正常 Q0 继续固定 512 MiB H2D/10 ms kernel；本节使用独立入口、标准 `--trace=cuda,nvtx`，不采集 WDDM，不进入标准 Q0 run manifest。
+
+新参数由 binary 严格限制为 64 MiB/10 ms，并要求 diagnostic 专用 run identity。必须用新 commit 重新编译一个独立 binary，不能复用 §2.12 的旧 binary：
+
+```powershell
+$Q0Root = Resolve-Path .
+$Python = Join-Path $Q0Root ".venv\Scripts\python.exe"
+$Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
+$GpuSelector = "GPU-替换为nvidia-smi显示的完整UUID"
+$VcVars = "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+$Nvcc = (Get-Command nvcc).Source
+$CodeShort = (git rev-parse --short HEAD).Trim()
+$SizeBuild = Join-Path $Q0Root "engineering_evidence\q0_diagnostic_builds\kernel-memop-size-$CodeShort"
+$SizeBinary = Join-Path $SizeBuild "exposedpath_q0.exe"
+$SizeRunId = "q0-win-4090-YYYYMMDD-kernel-memop-size-diag-64m-10ms-01"  # 替换实际日期
+$SizeOut = Join-Path $Q0Root "engineering_evidence\q0_diagnostics\$SizeRunId"
+
+if (Test-Path -LiteralPath $SizeBuild) { throw "diagnostic build 目录已存在，禁止覆盖" }
+if (Test-Path -LiteralPath $SizeOut) { throw "diagnostic 输出目录已存在，禁止覆盖" }
+New-Item -ItemType Directory -Path $SizeBuild | Out-Null
+
+cmd /d /s /c "`"$VcVars`" -vcvars_ver=14.39 && where cl && `"$Python`" -m exposedpath_v141 build-q0-microbench --nvcc `"$Nvcc`" --output `"$SizeBinary`" --platform windows"
+if ($LASTEXITCODE -ne 0) { throw "64 MiB/10 ms diagnostic CUDA 编译失败" }
+
+& $Python -m exposedpath_v141 run-q0-kernel-memop-diagnostic `
+    --output-dir $SizeOut `
+    --binary $SizeBinary `
+    --nsys $Nsys `
+    --run-id $SizeRunId `
+    --cuda-visible-device $GpuSelector
+if ($LASTEXITCODE -ne 0) { throw "64 MiB/10 ms diagnostic 失败；保留现场并停止" }
+
+git rev-parse HEAD | Set-Content -LiteralPath (Join-Path $SizeOut "code_commit.txt") -Encoding UTF8
+git status --porcelain=v1 | Set-Content -LiteralPath (Join-Path $SizeOut "git_status.txt") -Encoding UTF8
+
+$SizeReceipt = Get-Content -LiteralPath (Join-Path $SizeOut "diagnostic_receipt.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $SizeReceipt.diagnostic_only) { throw "必须是 diagnostic-only" }
+if ($SizeReceipt.data_role -ne "Engineering") { throw "必须是 Engineering" }
+if ($SizeReceipt.q0_status -ne "NOT_RUN") { throw "不得升级 Q0" }
+if ([int64]$SizeReceipt.diagnostic_parameters.h2d_size_bytes -ne 67108864) { throw "H2D 必须为 64 MiB" }
+if ([int]$SizeReceipt.diagnostic_parameters.kernel_duration_ms -ne 10) { throw "kernel 必须为 10 ms" }
+if ($SizeReceipt.command_argv -notcontains "--trace=cuda,nvtx") { throw "必须使用标准 CUDA/NVTX collection" }
+if (@($SizeReceipt.command_argv | Where-Object { $_ -match "wddm" }).Count -ne 0) { throw "参数 diagnostic 不得启用 WDDM" }
+
+Get-Content -LiteralPath (Join-Path $SizeOut "diagnostic_receipt.json") -Raw -Encoding UTF8
+```
+
+完成后保留并回传整个 `$SizeOut`。不要运行 evaluator 来决定本单例成功与否，也不要建立 r11。后续只比较 SQLite 中 `MEMCPY_B` 与 `KERNEL_A` 的真实 device interval：若 overlap=0，立即停止且不实现 1 ms；若 overlap>0，也先停止并审核，再决定是否设计 64 MiB/1 ms。
 
 ## 3. 编译并准备不可覆盖运行目录
 
-> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案。必须先回传并审核 §2.13 的 WDDM diagnostic，再决定下一轮是否修改 microbench 或恢复完整 Q0；WDDM 参数绝不能加入本节标准 collection argv。
+> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案。必须先回传并审核 §2.14 的 64 MiB/10 ms diagnostic；WDDM 或 diagnostic 参数绝不能加入本节标准 collection argv。
 
 ```powershell
 $Q0Root = Resolve-Path .
