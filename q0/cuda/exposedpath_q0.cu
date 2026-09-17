@@ -509,12 +509,21 @@ int print_environment_json() {
   cudaDeviceProp properties{};
   int driver_version = 0;
   int runtime_version = 0;
+  int async_engine_count = 0;
+  int device_overlap = 0;
+  int concurrent_kernels = 0;
   CUDA_CHECK(cudaGetDeviceProperties(&properties, 0));
   CUDA_CHECK(cudaDriverGetVersion(&driver_version));
   CUDA_CHECK(cudaRuntimeGetVersion(&runtime_version));
+  CUDA_CHECK(cudaDeviceGetAttribute(&async_engine_count, cudaDevAttrAsyncEngineCount, 0));
+  CUDA_CHECK(cudaDeviceGetAttribute(&device_overlap, cudaDevAttrGpuOverlap, 0));
+  CUDA_CHECK(cudaDeviceGetAttribute(&concurrent_kernels, cudaDevAttrConcurrentKernels, 0));
   std::cout << "{\"logical_device_id\":0,\"name\":\"" << properties.name
             << "\",\"uuid\":\"" << cuda_uuid(properties.uuid)
             << "\",\"memory_total_mib\":" << (properties.totalGlobalMem / (1024 * 1024))
+            << ",\"async_engine_count\":" << async_engine_count
+            << ",\"device_overlap\":" << device_overlap
+            << ",\"concurrent_kernels\":" << concurrent_kernels
             << ",\"driver_version\":" << driver_version
             << ",\"cuda_driver_version\":" << driver_version
             << ",\"cuda_runtime_version\":" << runtime_version << "}\n";

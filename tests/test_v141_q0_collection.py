@@ -35,6 +35,9 @@ def _environment() -> dict[str, object]:
             "uuid": "GPU-ABC",
             "name": "NVIDIA RTX 6000 Ada Generation",
             "memory_total_mib": 49140,
+            "async_engine_count": 2,
+            "device_overlap": 1,
+            "concurrent_kernels": 1,
         },
         "driver_version": "999.1",
         "cuda_driver_version": 13000,
@@ -105,6 +108,24 @@ def test_different_gpu_uuids_are_not_equivalent(tmp_path):
         )
 
 
+@pytest.mark.parametrize(
+    "missing_field",
+    ["async_engine_count", "device_overlap", "concurrent_kernels"],
+)
+def test_execute_rejects_missing_gpu_concurrency_capability(tmp_path, missing_field):
+    manifest = _prepared(tmp_path)
+    environment = _environment()
+    environment["selected_gpu"].pop(missing_field)
+
+    with pytest.raises(Q0CollectionError, match=f"selected_gpu.{missing_field}"):
+        execute_q0_case(
+            manifest,
+            "Q0-STREAM-001",
+            process_runner=_successful_runner({}),
+            environment_probe=lambda *_: environment,
+        )
+
+
 def test_execute_rejects_tool_hash_change_existing_output_and_synthetic_case(tmp_path):
     manifest = _prepared(tmp_path)
     plan = json.loads(manifest.read_text(encoding="utf-8"))
@@ -160,6 +181,8 @@ def test_default_environment_probe_is_part_of_real_execution(tmp_path):
                 argv, 0,
                 json.dumps({
                     "uuid": "GPU-ABC", "name": "RTX TEST", "memory_total_mib": 1024,
+                    "async_engine_count": 2, "device_overlap": 1,
+                    "concurrent_kernels": 1,
                     "driver_version": 13000, "cuda_driver_version": 13000,
                     "cuda_runtime_version": 13000,
                 }),
@@ -179,6 +202,9 @@ def test_default_environment_probe_is_part_of_real_execution(tmp_path):
 
     assert receipt["environment"]["cuda_runtime_version"] == 13000
     assert receipt["environment"]["selected_gpu"]["logical_index"] == 0
+    assert receipt["environment"]["selected_gpu"]["async_engine_count"] == 2
+    assert receipt["environment"]["selected_gpu"]["device_overlap"] == 1
+    assert receipt["environment"]["selected_gpu"]["concurrent_kernels"] == 1
 
 
 def test_execute_q0_case_cli_reports_collection_without_q0_upgrade(

@@ -399,7 +399,7 @@ Get-Content -LiteralPath (Join-Path $WddmOut "wddm_summary.json") -Raw -Encoding
 
 diag-02 的标准 CUDA 时间线为：`cudaMemcpyAsync=26639965..26702789 ns`、`cudaLaunchKernel=27022422..62116191 ns`、H2D activity=`33435296..58635297 ns`、kernel activity=`63136725..73137628 ns`，两项 device activity 间隔 `4501428 ns`。WDDM Copy sequence 34 与 copy 时间吻合，CUDA-context sequence 53 与 kernel 时间邻近；后者只能作为时间归属推断，不能写成严格映射或具体根因。
 
-## 2.14 当前唯一下一步：64 MiB H2D + 10 ms kernel 参数 diagnostic
+## 2.14 已完成并停止：64 MiB H2D + 10 ms kernel 参数 diagnostic
 
 本节只检验缩短 copy 后，kernel launch/device activity 是否仍等待 copy 完成。它不是 Q0 正例验收，不要求 terminal=`MEMCPY_B` 或 evaluator PASS。正常 Q0 继续固定 512 MiB H2D/10 ms kernel；本节使用独立入口、标准 `--trace=cuda,nvtx`，不采集 WDDM，不进入标准 Q0 run manifest。
 
@@ -450,9 +450,68 @@ Get-Content -LiteralPath (Join-Path $SizeOut "diagnostic_receipt.json") -Raw -En
 
 完成后保留并回传整个 `$SizeOut`。不要运行 evaluator 来决定本单例成功与否，也不要建立 r11。后续只比较 SQLite 中 `MEMCPY_B` 与 `KERNEL_A` 的真实 device interval：若 overlap=0，立即停止且不实现 1 ms；若 overlap>0，也先停止并审核，再决定是否设计 64 MiB/1 ms。
 
+本次真实结果为：H2D activity=`22365422..26112424 ns`，kernel activity=`26741607..36745367 ns`，间隔 `629183 ns`，真实 overlap=`0`。因此本路线已经按预定判据停止，不得执行 64 MiB/1 ms。
+
+## 2.15 当前唯一下一步：GPU copy/compute 并发能力探针
+
+本节只读取当前 Q0 GPU 的 CUDA device capability，不运行任何 Q0 case、不启动 Nsight、不创建 r11。必须先用当前 commit 重新编译 binary；`CUDA_VISIBLE_DEVICES` 使用完整 GPU UUID 后，binary 中的逻辑设备 0 才代表目标物理 GPU。
+
+```powershell
+$Q0Root = Resolve-Path .
+$Python = Join-Path $Q0Root ".venv\Scripts\python.exe"
+$GpuSelector = "GPU-0d8fafe6-a1e9-33cc-25fb-632316736455"
+$VcVars = "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+$Nvcc = (Get-Command nvcc).Source
+$CodeShort = (git rev-parse --short HEAD).Trim()
+$CapabilityRoot = Join-Path $Q0Root "engineering_evidence\q0_device_capability\gpu3-rtx4090-$CodeShort"
+$CapabilityBinary = Join-Path $CapabilityRoot "exposedpath_q0.exe"
+
+if (Test-Path -LiteralPath $CapabilityRoot) { throw "能力探针目录已存在，禁止覆盖" }
+New-Item -ItemType Directory -Path $CapabilityRoot | Out-Null
+
+cmd /d /s /c "`"$VcVars`" -vcvars_ver=14.39 && where cl && `"$Python`" -m exposedpath_v141 build-q0-microbench --nvcc `"$Nvcc`" --output `"$CapabilityBinary`" --platform windows"
+if ($LASTEXITCODE -ne 0) { throw "能力探针 binary 编译失败" }
+
+$env:CUDA_VISIBLE_DEVICES = $GpuSelector
+$CapabilityRaw = (& $CapabilityBinary --environment-json | Out-String).Trim()
+if ($LASTEXITCODE -ne 0) { throw "CUDA device capability 探针失败" }
+$Capability = $CapabilityRaw | ConvertFrom-Json
+
+$ExpectedUuid = $GpuSelector.ToUpper().Replace("-", "")
+$ObservedUuid = ([string]$Capability.uuid).ToUpper().Replace("-", "")
+if ($ObservedUuid -ne $ExpectedUuid) { throw "能力探针 GPU UUID 与目标 GPU 不一致" }
+foreach ($Field in @("async_engine_count", "device_overlap", "concurrent_kernels")) {
+    if ($null -eq $Capability.$Field) { throw "能力字段缺失：$Field" }
+}
+
+$Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+[System.IO.File]::WriteAllText(
+    (Join-Path $CapabilityRoot "device_capabilities.json"),
+    ($Capability | ConvertTo-Json -Depth 8),
+    $Utf8NoBom
+)
+$Receipt = [ordered]@{
+    data_role = "Engineering"
+    diagnostic_only = $true
+    q0_status = "NOT_RUN"
+    code_commit = (git rev-parse HEAD).Trim()
+    cuda_visible_devices = $GpuSelector
+    capability_file = "device_capabilities.json"
+}
+[System.IO.File]::WriteAllText(
+    (Join-Path $CapabilityRoot "capability_probe_receipt.json"),
+    ($Receipt | ConvertTo-Json -Depth 8),
+    $Utf8NoBom
+)
+
+Get-Content -LiteralPath (Join-Path $CapabilityRoot "device_capabilities.json") -Raw -Encoding UTF8
+```
+
+完成后只需回传整个 `$CapabilityRoot`。三项字段无论为 0 还是非 0 都必须原样保存，不得为满足 Q0 假设而改写。收到证据前，不实施 D2H/D2D，不建立 r11。
+
 ## 3. 编译并准备不可覆盖运行目录
 
-> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案。必须先回传并审核 §2.14 的 64 MiB/10 ms diagnostic；WDDM 或 diagnostic 参数绝不能加入本节标准 collection argv。
+> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案。必须先回传并审核 §2.15 的 GPU capability 证据；WDDM 或 diagnostic 参数绝不能加入本节标准 collection argv。
 
 ```powershell
 $Q0Root = Resolve-Path .

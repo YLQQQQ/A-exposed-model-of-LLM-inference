@@ -87,6 +87,9 @@ def _default_environment_probe(
         "uuid": payload.get("uuid"),
         "name": payload.get("name"),
         "memory_total_mib": payload.get("memory_total_mib"),
+        "async_engine_count": payload.get("async_engine_count"),
+        "device_overlap": payload.get("device_overlap"),
+        "concurrent_kernels": payload.get("concurrent_kernels"),
     }
     return {
         "selected_gpu": selected,
@@ -115,7 +118,15 @@ def _validate_environment(snapshot: Mapping[str, Any], selector: str) -> None:
     if not isinstance(selected, Mapping):
         missing.append("selected_gpu")
     else:
-        for field in ("logical_index", "uuid", "name", "memory_total_mib"):
+        for field in (
+            "logical_index",
+            "uuid",
+            "name",
+            "memory_total_mib",
+            "async_engine_count",
+            "device_overlap",
+            "concurrent_kernels",
+        ):
             if selected.get(field) in {None, ""}:
                 missing.append(f"selected_gpu.{field}")
         if selected.get("logical_index") != 0:
