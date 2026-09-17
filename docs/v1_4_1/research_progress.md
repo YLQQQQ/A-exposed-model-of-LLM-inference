@@ -2,15 +2,16 @@
 
 ## 当前快照
 
-- 清单版本：`5.8`
+- 清单版本：`6.3`
 - 最近更新：`2026-09-17`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/v141-analyzer`
 - 当前数据资格：历史 trace 仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前最高优先级：`EP-G6-04`，只运行全新的 64 MiB H2D + 10 ms kernel 参数 diagnostic，检验缩短 copy 后 kernel launch/device activity 是否仍等待 copy 完成；不得运行 64 MiB/1 ms 或建立 r11
-- 当前总体判断：WDDM diag-02 已获得目标 PID/context/engine/request 时间窗下的 queue 可见性，但因无 CUDA correlationId 且 HAGS 未确认，具体因果仍未建立。其标准 CUDA 时间线仍无重叠：H2D `33.435296..58.635297 ms`，kernel `63.136725..73.137628 ms`，间隔约 `4.501428 ms`。现已增加与正常 Q0 隔离的 64 MiB/10 ms 参数入口；正常默认继续保持 512 MiB/10 ms，标准 collection argv 继续为 `cuda,nvtx`
+- 当前最高优先级：`EP-G6-07` 候选平台构造准入（资格与判据已冻结于 `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`；候选平台确认与准入检查授权待单独决定）
+- 当前总体判断：64 MiB D2H/10 ms diagnostic 已在 commit `a607645e9c4fcd7df4b05d4e97fa8bf788763e47` 上实测完成，改变 H2D→D2H 方向仍未恢复真实 device overlap。真实 device interval 为 D2H `77979638..87266973 ns`、kernel `88995128..98995997 ns`，间隔 `1728155 ns`、overlap=`0`，完成顺序为 copy 先、kernel terminal；`S_DEVICE=VALID_NONEMPTY`、wait-set=`{MEMCPY_B,KERNEL_A}`、terminal=`KERNEL_A`，A 为 `kernel_only=10000869 ns`、`kernel_memop_mixed=0`。因此 `Q0-KERNEL-MEMOP-001` 在当前 Windows/RTX 4090 上记为 platform construction blocked，Q0 保持 `NOT_RUN`、Gate 6 保持 `FAIL`。现有证据不能区分 WDDM、driver、Runtime 或其他层，禁止根因归因，也禁止在当前平台继续参数搜索
+- 当前策略决定（`EP-G6-06`，2026-09-17）：synthetic 只允许作为 Engineering regression strengthening，且差异矩阵未发现新增覆盖价值，因此不实施新增 synthetic profile，只固化现有 coverage 与边界说明（`EP-G6-08` 已完成）；批准进入“候选平台 + construction admission”**设计**（不代表授权任何外部平台实验）；scope limitation 当前不批准、仅作 fallback；第 3 节及后续 r11 仍一律禁止执行
 
 本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
 
@@ -64,7 +65,7 @@
 - [x] `EP-G1-08` 冻结 A/B 字段、互斥/守恒、B per-sync 生命周期，以及 D/Exposure Signature 的纯派生规则。证据：合同第 10～12 节及机器合同 `a_layer/b_layer/derived`。
 - [x] `EP-G1-09` 为 37 条合同规则建立 25 个验证案例映射并完成内部合同审查。证据：`measurement_contract_test_map_v0_2.json`、`tests/test_v141_contract.py`；`python -m exposedpath_v141 validate-contract` 输出 `37/37 (100%)` 与 `PASS`。
 
-**下一项：**Gate 2～5 已完成；继续执行 `EP-G6-01` 的受控 CUDA Q0 微程序与机器可读 manifest，并并行准备 `EP-G6-02` 的合成 trace/oracle 自动对照；真实 Q0 仍须等待 GPU。
+**下一项：**Gate 2～5 已完成；Gate 6 的 GPU 前准备、执行链路与合成对照均已完成，当前停留在 `Q0-KERNEL-MEMOP-001` 的 platform construction blocked，`EP-G6-06` 策略审查已定稿。下一步是 `EP-G6-07` 的候选平台构造准入设计落地与候选平台确认（含单独授权），在此之前不得运行任何外部平台实验、不得建立 r11。
 
 ## Gate 2：设计 Q0 独立标准答案
 
@@ -118,7 +119,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 ## Gate 6：Q0 资格验证
 
-**Gate verdict：`FAIL`。** r2 至 r10 及其后 KERNEL-MEMOP diagnostics 均为 Engineering 失败现场，不能升级为 Q0 证据。512 MiB 与 64 MiB H2D 在 RTX 4090/WDDM 上均未与 10 ms kernel 发生设备重叠；64 MiB/1 ms 路线已停止。目标 GPU 已声明支持 copy/compute overlap，但这不能解释实际串行化原因；下一步只设计隔离的 D2H Engineering diagnostic，不得建立 r11，Q0 状态保持 `NOT_RUN`。
+**Gate verdict：`FAIL`。** r2 至 r10 及其后全部 KERNEL-MEMOP diagnostics 均为 Engineering 失败现场，不能升级为 Q0 证据。512 MiB H2D、64 MiB H2D 与 64 MiB D2H 在 RTX 4090 上均未与 10 ms kernel 发生设备重叠，说明该失败不随 copy direction 改变；64 MiB/1 ms 与 D2D 路线均已停止。`Q0-KERNEL-MEMOP-001` 在当前 Windows/RTX 4090 上判定为 platform construction blocked，Q0 状态保持 `NOT_RUN`。目标 GPU 声明支持 copy/compute overlap，但现有证据不足以区分 WDDM、driver、Runtime 或其他层，因此不得输出根因结论。下一步只是 `EP-G6-06` 的书面策略审查；批准前不得建立 r11、不得实施 synthetic 策略调整、不得运行新的服务器实验。
 
 - [x] `EP-G6-01` 实现受控 CUDA Q0 微程序和机器可读 manifest。23 个 oracle case 严格一一映射，其中 21 个具有 native CUDA seed，terminal tie 与 submission race 明确保持纯合成；缺 correlation、dropped records 与 graph mapping 缺失使用真实 seed 后受控 Canonical 故障注入。CUDA 13.0 在无 GPU 执行条件下成功编译，binary `--list-cases` 与 21 个 seed 集合一致，未知 case 在 CUDA 初始化前失败。证据：`q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json`、`tests/test_v141_q0_cuda_source.py`。
 - [x] `EP-G6-02` 完成 GPU 前 Q0 执行准备：Windows/Linux 结构化 `nsys` argv、每 case source manifest、输入哈希、不可覆盖输出和 `PREPARED_NOT_EXECUTED/NOT_RUN` dry-run；23 个显式合成 Canonical profile 均经正式 S/A/B 与独立 evaluator 对照通过。observed 使用严格 schema，evaluator 静态禁止导入被测 S/A/B，错误字段、重复 identity、缺失/额外 case 和资格升级均 fail closed。证据：`exposedpath_v141/q0_execution.py`、`exposedpath_v141/q0_synthetic.py`、`exposedpath_v141/q0_evaluator.py`、`docs/v1_4_1/contracts/q0_observed_schema_v0_2.json`、`tests/test_v141_q0_execution.py`、`tests/test_v141_q0_synthetic.py`、`tests/test_v141_q0_evaluator.py`。
@@ -144,8 +145,11 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - [x] `EP-G6-03` r4 在 EMPTY、r5 在重复 request、r6 在 PTDS query 轮询、r7 在 invocation scope resolver、r8 在 Graph fault 前态、r9 在 evaluator wait-set 顺序、r10 及其后全部 diagnostic 在 KERNEL/MEMOP 真实重叠/证据恢复处均按 fail-fast 规则停止并保留现场。r1～r10 与失败 diagnostic 均不得覆盖或升级资格。
 - [x] `EP-G6-04` 64 MiB/10 ms 单例已完成：H2D=`22365422..26112424 ns`、kernel=`26741607..36745367 ns`，间隔 `629183 ns`、overlap=`0`。两项使用不同 nonblocking stream（14/13）、无 event/data dependency，最终 device sync 只作为共同完成边界。按预定规则停止，不进入 64 MiB/1 ms。
 - [x] `EP-G6-04A` GPU3 RTX 4090（UUID `GPU-0d8fafe6-a1e9-33cc-25fb-632316736455`）能力探针已在 commit `86147b046218a6f4f9d72bf75da378df4bad42d5` 上完成：`async_engine_count=5`、`device_overlap=1`、`concurrent_kernels=1`，driver/driver API/runtime 分别为 `12050/12050/12040`，数据角色为 Engineering、diagnostic-only、Q0 NOT_RUN。服务器复核报告给出的 capability/receipt/完整 ZIP SHA256 分别为 `30A1DFD39C2F88182CB389BCCBEE8E3A76C2BF768F509372496929AAAEFD7363`、`CE09875DBC4EAE0C364A934562DFADAB6C63FF52EF14B9A3FF4F55D6489D98E4`、`7A8079EE983C0CE04C8F3AF4259B81CEC6DE3EC07FB09CE518624D3B582BE3D2`。该证据只证明设备声明能力，不证明实际并发，更不定位 WDDM/driver/runtime 根因。
-- [ ] `EP-G6-04B`（待服务器实测）只执行手册 §2.16 的 64 MiB D2H/10 ms 单例并回传完整目录。唯一实验变量是 copy direction；`overlap_ns>0` 只表示本次观察到设备重叠，terminal/order 仅记录。无论结果如何均先停止，不自动进入 D2D、调参、r11 或策略修改。
-- [ ] `EP-G6-05`（未开始）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
+- [x] `EP-G6-04B` 64 MiB D2H/10 ms 单例已在 commit `a607645e9c4fcd7df4b05d4e97fa8bf788763e47` 上完成并回传。唯一实验变量仍只有 copy direction：D2H `77979638..87266973 ns`（duration `9287335 ns`）、kernel `88995128..98995997 ns`（duration `10000869 ns`）、间隔 `1728155 ns`，真实 `overlap=0`，完成顺序 copy 先、kernel terminal。两项同 `contextId=1`、分别位于 non-blocking stream `14/13`、无 CUDA event dependency、Runtime API correlation 唯一；`S_DEVICE=VALID_NONEMPTY`、wait-set=`{MEMCPY_B,KERNEL_A}`、terminal=`KERNEL_A`（`end_ns=98995997`），A 为 `kernel_only=10000869 ns`、`kernel_memop_mixed=0`。证据目录：`server_evidence_inbox/q0-win-4090-20260917-kernel-memop-d2h-diag-64m-10ms-01/`（Raw、SQLite、receipt、canonical、s、ab）。本地只读复核 SHA-256 链全部一致：Raw `76FAEC18A88FF58A885076616902197B32D4E617E5E76376E779C777E1883425`、SQLite `C9964B0EE2CFD50BDB3DCC8811106204FC9FED99C5D549526D414AD071454956`、source manifest `BE917E5E17673961634B53CDBAC008625F806151122DFCCA8783551DEB713B73`、canonical manifest `DEEEF8F22DBEB3CF8721F0C3350D7DB8AE5D98EACAA039CFA131282A9C32FC3F`、S manifest `08D0B2A0661C1A5C9CA4FCEB737175DC4A6D1AB578DE4E7C597984C7BF9E5A83`，A/B 记录压缩件哈希与各自 manifest 相符。Canonical `observation_validity=valid`、`identity=VALID`，S/A-B quality=`VALID`，仅保留 1 条 `HARNESS_OUTSIDE_REQUEST` warning。按 receipt 预注册判据（`overlap_ns>0` 才算观察到重叠；`on_overlap_zero=STOP`）停止：不进入 D2D、不运行 64 MiB/1 ms、不建立 r11、不修改 oracle/Canonical/S/A/B/evaluator/Measurement Contract，也不在当前平台继续参数搜索。
+- [ ] `EP-G6-05`（受阻于 `Q0-KERNEL-MEMOP-001` 的平台构造）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
+- [x] `EP-G6-06` Gate 6 策略审查已完成并取得书面决定（2026-09-17）：(1) synthetic 原则允许作为 Engineering regression strengthening，但不得替代 real Q0 evidence、不得改变 Gate 6 verdict、不得提升数据资格或扩大 claim，且必须先证明存在新的未覆盖 failure mode；本次差异矩阵未发现此类缺口，故不实施新增 synthetic profile，只固化现有 coverage 与边界说明（转 `EP-G6-08`）。(2) 批准进入“候选平台 + construction admission”**设计**，第一阶段只定义候选平台资格条件与最小真实 overlap construction check，不运行完整 Q0；该批准只是方案设计批准，不代表授权任何外部服务器实验，具体平台与运行步骤需单独审核。(3) scope limitation 当前不批准，仅作 fallback。(4) 允许 Gate 7 非 GPU 项并行，Gate 7 保持 `BLOCKED`。证据：`docs/v1_4_1/gate6_strategy_review_v0_1.md`（审查定稿，含覆盖差异矩阵与 admission 设计草案）、`docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md`。
+- [ ] `EP-G6-07`（设计已提出，待确认候选平台）候选平台 + construction admission：定义候选平台最低资格、固定 workload 与唯一变量、预注册尝试次数、成功/失败/停止条件、所需 evidence，以及通过 admission 后才允许提出完整 Q0 计划的硬门槛。设计与判据已冻结：`docs/v1_4_1/gate6_strategy_review_v0_1.md` §5、`docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`（A～F 节，冻结于候选平台确认之前）。当前只允许设计与审核；未获单独批准前不得申请或运行任何外部平台实验，且构造准入 PASS 本身不等于 Gate 6 PASS、Q0 PASS 或 Gate 9 平台资格。
+- [x] `EP-G6-08` 完成 `KERNEL_MEMOP_MIXED` 现有 synthetic coverage 与“synthetic ↔ real”边界固化：记录现有 profile 已覆盖 mixed wait-set、A mixed 分桶与守恒、B 半开 union 与跨 kind terminal、无依赖重叠与 terminal 并列等；并记录 synthetic 直接构造 Canonical（`correlation_id` 为空、ownership 直接给定），因此无法替代真实 observation contract。纯文档变更，未新增或修改 profile、未改实现、未改变任何数据资格。证据：`docs/v1_4_1/gate6_strategy_review_v0_1.md` §4 与 §4.1。
 
 ## Gate 7：Runner 与跨平台执行对齐
 
@@ -238,7 +242,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - `EP-ISSUE-13`（已解决并经 r8 复验）：r7 invocation-bleed 的 prior 与 target request identity 不同且不重叠，旧 resolver 却因结构化 request 总数为 2 判定目标不唯一。现只对完整目标 identity 的匹配数执行唯一性 gate；r8 已完成 21/21 native source Canonical，确认该问题不再阻断。
 - `EP-ISSUE-14`（代码已修复，待 r10 完整复验）：r8 默认 Nsight graph-level tracing 只产生 `GRAPH_TRACE`，没有 KERNEL node activity 或 `CUDA_GRAPH_NODE_EVENTS`，导致 Graph mapping-removal fault 零命中。独立服务器诊断确认仅增加 `--cuda-graph-trace=node` 后，真实 node mapping 可进入现有 Canonical 并被既有 selector 唯一移除。修复严格限定 Graph case，不放宽 fault 或 analyzer。
 - `EP-ISSUE-15`（已解决并经 r10 路径推进验证）：r9 `S_DEVICE` 的 wait-set 成员与 oracle 完全相同但顺序相反，旧 evaluator 通过通用 list equality 误判失败。现为该字段单独应用唯一字符串集合比较；r10 已越过 DEVICE case，重复标签和其他 list 合同仍保持 fail closed。
-- `EP-ISSUE-16`（未解决，待 D2H 单例设计与实测）：512 MiB 与 64 MiB H2D 均未和 10 ms kernel 重叠；缩短 copy 将活动间隔降至 629183 ns，但没有改变串行结果。两份真实 trace 已排除相同/default stream、event wait、数据依赖和过早同步；GPU capability 为 `async_engine_count=5/device_overlap=1/concurrent_kernels=1`，只说明硬件声明支持相关能力，不能证明当前 workload 必然重叠，也不能据此归因 Runtime/driver/WDDM。下一步只允许单变量改变 copy direction 的 D2H Engineering diagnostic。
+- `EP-ISSUE-16`（未解决；D2H 已实测，当前平台构造受阻）：512 MiB H2D、64 MiB H2D 与 64 MiB D2H 均未和 10 ms kernel 重叠；缩短 copy 使活动间隔降至 629183 ns，改变方向后为 1728155 ns，都没有改变串行结果。真实 trace 已排除相同/default stream、event wait、数据依赖和过早同步；GPU capability 为 `async_engine_count=5/device_overlap=1/concurrent_kernels=1`，只说明硬件声明支持相关能力，不能证明当前 workload 必然重叠。因此 `Q0-KERNEL-MEMOP-001` 在当前 Windows/RTX 4090 上记为 platform construction blocked；现有证据不能区分 WDDM、driver、Runtime 或调度层，禁止根因归因，也禁止在该平台继续参数搜索。`EP-G6-06` 审查已定稿：不新增 synthetic，只推进异平台 construction admission 设计（`EP-G6-07`），scope limitation 当前仅作 fallback。
 - `EP-ISSUE-17`（已解决并经真实单例验证）：activity-specific marker ownership 已使目标 `S_DEVICE=VALID_NONEMPTY`、wait-set=`{MEMCPY_B,KERNEL_A}`，此前 `INVOCATION_BOUNDARY_INVALID` 不再出现。当前失败与 ownership 无关，不再继续修改 S 来处理设备不重叠。
 
 ## 固定执行顺序与最近任务
@@ -247,9 +251,9 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 最近应执行的任务：
 
-1. 用新 bundle 更新服务器代码，只执行手册 §2.16 的 64 MiB D2H/10 ms Engineering diagnostic。
-2. 回传完整 D2H 目录，本地只读核验 copy kind、stream/context、Runtime API、device interval、overlap、完成顺序及 S terminal。
-3. 无论 overlap 是否出现都先停止审核，不自动进入 D2D、参数调优、r11 或 Q0 策略修改。
+1. `EP-G6-07`：确认候选平台后，单独提出并审核准入检查授权；未获授权前不得申请或运行任何外部平台实验；准入判据以冻结的 `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md` 为准，不得按平台事后调整。
+2. `EP-G6-08`：已完成（纯文档边界固化，见 `docs/v1_4_1/gate6_strategy_review_v0_1.md` §4.1）。
+3. 全程保持 Gate 6 `FAIL`、Q0 `NOT_RUN`、Gate 7 `BLOCKED`；不实施新增 synthetic、不进入 D2D、参数搜索或 r11，不对 WDDM/driver/Runtime 作根因归因。
 
 ## 计划调整记录
 
@@ -316,3 +320,5 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 | 5.9 | 2026-09-17 | 64 MiB/10 ms diagnostic 真实结果仍为 overlap=0，按预定判据停止 1 ms 路线。新增跨 CUDA 12.4/13 兼容的 device capability 探针，通过 `cudaDeviceGetAttribute` 输出并保存 async engine 数、device overlap 和 concurrent kernels；环境快照缺任一字段均 fail closed。定向回归 `42 passed`，全仓 `681 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线；compileall 通过。 | EP-G6-02R、EP-G6-04、EP-G6-04A、EP-ISSUE-16 | 只增加 Engineering 平台资格证据，不修改 microbench case、oracle、Canonical、S、A/B、evaluator 或正常 collection argv；Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，不得建立 r11。 |
 | 6.0 | 2026-09-17 | 服务器 capability probe 已报告并复核 GPU UUID、commit 与三项能力：`async_engine_count=5`、`device_overlap=1`、`concurrent_kernels=1`，同时记录 capability、receipt 和完整 ZIP SHA256。能力证据只能证明设备声明支持，不能解释此前 overlap=0。后续路线切换为先设计单变量 D2H Engineering diagnostic；H2D 调参和 64 MiB/1 ms 正式停止。 | EP-G6-04A、EP-ISSUE-16 | 不改变正常 Q0、oracle、Canonical、S、A/B、evaluator 或 Measurement Contract；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，D2D 与 r11 均禁止。 |
 | 6.1 | 2026-09-17 | 按批准设计实现严格隔离的 64 MiB D2H/10 ms Engineering diagnostic。binary 仅在专用 flag 与 run identity 同时匹配时切换 copy direction；默认 512 MiB H2D 和既有 64 MiB H2D 路径保持不变。receipt 固化 overlap 唯一判据、terminal 非门槛、两种结果均停止以及禁止因果归因。定向回归 `47 passed`，全仓 `690 passed, 2 failed`，compileall 通过。 | EP-G6-02S、EP-G6-04B、EP-ISSUE-16 | 不修改 oracle、Canonical、S、A/B、evaluator 或 Measurement Contract；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，服务器尚未实跑 D2H，禁止 D2D、调参和 r11。 |
+| 6.2 | 2026-09-17 | 收录并复核 64 MiB D2H/10 ms Engineering diagnostic 真实证据（commit `a607645e`；Raw/SQLite/source manifest/canonical/S/A-B 哈希链与 validity 复核通过）：D2H `77979638..87266973 ns`、kernel `88995128..98995997 ns`，间隔 `1728155 ns`、`overlap=0`，terminal=`KERNEL_A`，A `kernel_only=10000869 ns`、`kernel_memop_mixed=0`。改变 H2D→D2H 方向仍未恢复真实 device overlap，`Q0-KERNEL-MEMOP-001` 记为 platform construction blocked，且不归因 WDDM、driver 或 Runtime。按预注册判据 STOP：不进入 D2D、不运行 64 MiB/1 ms、不建立 r11、不修改 oracle/Canonical/S/A/B/evaluator/Measurement Contract，不在该平台继续参数搜索。新增 `EP-G6-06`，只做策略审查设计。 | EP-G6-04B、EP-G6-05、EP-G6-06、EP-ISSUE-16 | 不改变 Measurement Contract、Q0 oracle、A/B 定义或任何数据资格；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，当前无 Pilot/Formal 数据 |
+| 6.3 | 2026-09-17 | 完成 `EP-G6-06` 策略审查并记录决定：synthetic 仅允许作为 Engineering regression strengthening；覆盖差异矩阵显示现有 23 个 profile 已覆盖 `KERNEL_MEMOP_MIXED` 的重叠 wait-set、mixed 分桶、union 与 terminal 语义，未发现新的未覆盖 failure mode，因此不实施新增 synthetic profile，`EP-G6-08` 只做纯文档边界固化；批准进入“候选平台 + construction admission”设计（仅设计批准，不授权外部实验），并把平台资格与准入判据冻结为 `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`（在确认候选平台之前冻结）；scope limitation 暂不批准、仅作 fallback；runbook 统一为“第 3 节及后续 r11 当前仍一律禁止执行”。新增 `EP-G6-07`、`EP-G6-08`。纯设计/文档变更，未运行任何新实验。 | EP-G6-06、EP-G6-07、EP-G6-08 | 不改变 Measurement Contract、Q0 oracle、Canonical、S、A/B、evaluator 或数据资格；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，当前无 Pilot/Formal 数据 |

@@ -47,6 +47,10 @@ $Python = (Resolve-Path ".\.venv\Scripts\python.exe").Path
 
 开始前应确保工作区位于 `codex/v141-analyzer`，且至少包含本地准备完成提交。禁止覆盖已有输出；失败后使用新的 `run-id` 和新目录重跑，保留失败现场。
 
+> **当前状态：`Q0-KERNEL-MEMOP-001` platform construction blocked。** 512 MiB H2D、64 MiB H2D 与 64 MiB D2H 均未在当前 RTX 4090 上与 10 ms kernel 形成真实 device overlap，因此该 case 无法在当前平台构造为满足 oracle 的真实观测对象，Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`。
+>
+> 第 3 节及后续 r11 **当前仍一律禁止执行**。`EP-G6-06` 的批准只批准策略设计，不授权任何服务器实验。只有 `EP-G6-07` 在某一候选真实平台通过预注册 construction admission，并且随后取得用户对“在该平台执行完整 Q0”的单独书面批准，才允许更新并执行第 3 节。construction admission PASS 本身不等于 Gate 6 PASS、Q0 PASS 或 Gate 9 正式平台资格。
+
 ## 2. 一次性环境检查
 
 在新版仓库根目录打开 PowerShell：
@@ -511,9 +515,11 @@ Get-Content -LiteralPath (Join-Path $CapabilityRoot "device_capabilities.json") 
 
 真实 GPU3 RTX 4090 结果为：`async_engine_count=5`、`device_overlap=1`、`concurrent_kernels=1`。这只证明设备声明支持相关并发能力，不能证明任意 workload 必然重叠，也不能把此前 overlap=0 归因于 WDDM、driver、runtime 或设备调度层。
 
-## 2.16 当前唯一下一步：64 MiB D2H + 10 ms kernel 方向 diagnostic
+## 2.16 已完成并停止：64 MiB D2H + 10 ms kernel 方向 diagnostic（历史步骤，不要重跑）
 
 本节以 §2.14 的 64 MiB H2D/10 ms 结果为唯一匹配对照，只把 `MEMCPY_B` 从 H2D 改为 D2H。buffer 大小、kernel 时长、pinned host memory、device buffer、双 Host thread、两个 nonblocking stream、同时放行编排、NVTX identity、`S_DEVICE` 和标准 `cuda,nvtx` 采集均不变；不增加初始化、event、query 或额外同步。
+
+本单例已于 2026-09-17 在 commit `a607645e9c4fcd7df4b05d4e97fa8bf788763e47` 上执行并回传，结果按预注册判据停止，因此本节脚本只保留为历史记录，不得重跑，也不得据其结果创建新的参数变体。
 
 ```powershell
 $Q0Root = Resolve-Path .
@@ -576,9 +582,19 @@ Get-Content -LiteralPath $D2HReceiptPath -Raw -Encoding UTF8
 
 本诊断唯一成功判据是 `overlap_ns > 0`；terminal 及完成顺序只记录、不作为方向诊断门槛。`overlap_ns=0` 与 `overlap_ns>0` 都必须立即停止并回传审核，不得自动进入 D2D、参数调优、r11 或 Q0 策略修改，也不得输出 WDDM/driver/runtime/调度层根因结论。
 
+本次真实结果为 `overlap_ns=0`，因此本路线已经按预定判据停止：
+
+- run-id：`q0-win-4090-20260917-kernel-memop-d2h-diag-64m-10ms-01`，commit `a607645e9c4fcd7df4b05d4e97fa8bf788763e47`，数据角色 `Engineering`、diagnostic-only、Q0 `NOT_RUN`。
+- 真实 device interval：D2H `77979638..87266973 ns`（duration `9287335 ns`，`copy_kind=DEVICE_TO_HOST`、64 MiB），kernel `88995128..98995997 ns`（duration `10000869 ns`）；间隔 `1728155 ns`，`overlap_ns=0`，完成顺序为 copy 先、kernel terminal。
+- 两项同 `contextId=1`、分别位于 non-blocking stream `14`（copy）与 `13`（kernel），无 CUDA event dependency，Runtime API correlation 唯一。
+- 分析链：`S_DEVICE=VALID_NONEMPTY`、wait-set=`{MEMCPY_B,KERNEL_A}`、terminal=`KERNEL_A`（`end_ns=98995997`）；A/B 为 `kernel_only=10000869 ns`、`kernel_memop_mixed=0`、`wait_set_hidden_union_ns=9287335`、`wait_set_exposed_union_ns=10000869`。Canonical `observation_validity=valid`、`identity=VALID`，S/A-B quality=`VALID`，仅 1 条 `HARNESS_OUTSIDE_REQUEST` warning。
+- 哈希链已本地只读复核：Raw `76FAEC18…`、SQLite `C9964B0E…`、source manifest `BE917E5E…`、canonical manifest `DEEEF8F2…`、S manifest `08D0B2A0…`，A/B 压缩件哈希与各自 manifest 相符。回传副本位于本地主工作区未跟踪目录 `server_evidence_inbox/q0-win-4090-20260917-kernel-memop-d2h-diag-64m-10ms-01/`；服务器原始输出目录见 receipt 的 `command_argv`/`export_argv`。
+
+结论与停止条件：改变 H2D→D2H 方向仍未恢复真实 device overlap，`Q0-KERNEL-MEMOP-001` 在当前 Windows/RTX 4090 上判定为 **platform construction blocked**；Q0 保持 `NOT_RUN`，Gate 6 保持 `FAIL`。当前证据不能区分 WDDM、driver、Runtime 或其他层，任何根因结论都不成立。不得进入 D2D，不得运行 64 MiB/1 ms，不得建立 r11，不得在该平台继续参数搜索，也不得修改 oracle、Canonical、S、A/B、evaluator 或 Measurement Contract。后续处置只能通过 `docs/v1_4_1/gate6_strategy_review_v0_1.md` 提出；该审查已于 2026-09-17 定稿，决定为“不新增 synthetic、只做异平台 construction admission 设计、scope limitation 仅作 fallback”。
+
 ## 3. 编译并准备不可覆盖运行目录
 
-> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案。必须先回传并审核 §2.16 的 D2H diagnostic；WDDM 或 diagnostic 参数绝不能加入本节标准 collection argv。
+> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案，**当前仍一律禁止执行**。§2.16 的 D2H diagnostic 已回传、审核并按预注册判据停止，结论是当前 Windows/RTX 4090 上 `Q0-KERNEL-MEMOP-001` platform construction blocked；`EP-G6-06` 的批准只批准策略设计（不新增 synthetic、只做异平台 construction admission 设计、scope limitation 仅作 fallback），**不授权任何服务器实验**。只有 `EP-G6-07` 在某一候选真实平台通过预注册 construction admission，并且随后取得用户对“在该平台执行完整 Q0”的单独书面批准，才允许更新并执行本节。construction admission PASS 本身不等于 Gate 6 PASS、Q0 PASS 或 Gate 9 正式平台资格。WDDM 或 diagnostic 参数绝不能加入本节标准 collection argv。
 
 ```powershell
 $Q0Root = Resolve-Path .
