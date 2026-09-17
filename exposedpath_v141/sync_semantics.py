@@ -22,6 +22,7 @@ class SyncSemanticsError(ValueError):
 _REGISTRY_PATH = Path("docs") / "v1_4_1" / "contracts" / "sync_semantics_registry_v0_2.json"
 _SHA256_PATTERN = re.compile(r"^[0-9A-F]{64}$")
 _ABI_SUFFIX = re.compile(r"_v[0-9]+$")
+_STRUCTURED_NVTX_PREFIX = "EXPOSEDPATH_JSON_V1:"
 _ROLE_BY_UNIVERSE = {
     "SUPPORTED_PHYSICAL_BLOCKING_SYNC": "HOST_BLOCKING_SYNC",
     "DEVICE_DEPENDENCY_EDGE": "DEPENDENCY_EDGE",
@@ -236,6 +237,147 @@ def _phase_ownership(
     }
 
 
+def _trusted_activity_marker_identity(
+    record: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    """返回可作为 activity ownership 证据的完整、未篡改 marker identity。"""
+
+    text = record.get("text")
+    cached = record.get("structured_identity")
+    if not isinstance(text, str) or not text.startswith(_STRUCTURED_NVTX_PREFIX):
+        return None
+    try:
+        payload = json.loads(text[len(_STRUCTURED_NVTX_PREFIX) :])
+    except json.JSONDecodeError:
+        return None
+    if (
+        not isinstance(payload, Mapping)
+        or not isinstance(cached, Mapping)
+        or dict(payload) != dict(cached)
+        or payload.get("kind") != "marker"
+    ):
+        return None
+    required = (*_INVOCATION_FIELDS, "phase", "callsite_id")
+    if any(
+        not isinstance(payload.get(field), str) or not payload[field]
+        for field in required
+    ):
+        return None
+    return payload
+
+
+def _activity_ownership(
+    start_ns: int,
+    end_ns: int,
+    global_tid: int | None,
+    nvtx_records: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """恢复 enqueue API 的 invocation/phase；marker 仅提供 activity ownership。"""
+
+    candidates: list[tuple[Mapping[str, Any], Mapping[str, Any]]] = []
+    invalid_marker_ids: list[str] = []
+    for record in nvtx_records:
+        if global_tid is None or record.get("global_tid") != global_tid:
+            continue
+        range_start = record.get("start_ns")
+        range_end = record.get("end_ns")
+        cached = record.get("structured_identity")
+        kind = cached.get("kind") if isinstance(cached, Mapping) else None
+        text = record.get("text")
+        marker_claim = kind == "marker"
+        if isinstance(text, str) and text.startswith(_STRUCTURED_NVTX_PREFIX):
+            try:
+                text_payload = json.loads(text[len(_STRUCTURED_NVTX_PREFIX) :])
+            except json.JSONDecodeError:
+                text_payload = None
+            marker_claim = marker_claim or (
+                isinstance(text_payload, Mapping) and text_payload.get("kind") == "marker"
+            )
+
+        valid_start = isinstance(range_start, int) and not isinstance(range_start, bool)
+        valid_end = isinstance(range_end, int) and not isinstance(range_end, bool)
+        fully_covers = (
+            valid_start
+            and valid_end
+            and range_start <= start_ns
+            and end_ns <= range_end
+        )
+        if kind in {"request", "phase"}:
+            if fully_covers:
+                candidates.append((record, cached))
+            continue
+        if not marker_claim or not valid_start:
+            continue
+
+        record_id = str(record.get("record_id"))
+        if not valid_end:
+            if range_start < end_ns:
+                invalid_marker_ids.append(record_id)
+            continue
+        if not fully_covers:
+            overlaps_api = range_start < end_ns and start_ns < range_end
+            if overlaps_api:
+                invalid_marker_ids.append(record_id)
+            continue
+
+        identity = _trusted_activity_marker_identity(record)
+        if identity is None:
+            invalid_marker_ids.append(record_id)
+        else:
+            candidates.append((record, identity))
+
+    range_record_ids = sorted(
+        {str(record.get("record_id")) for record, _ in candidates} | set(invalid_marker_ids)
+    )
+    if invalid_marker_ids:
+        return {
+            "status": "INVALID",
+            "identity": None,
+            "phase": None,
+            "range_record_ids": range_record_ids,
+            "reasons": ["INVOCATION_BOUNDARY_INVALID"],
+        }
+    if not candidates:
+        return {
+            "status": "INVALID",
+            "identity": None,
+            "phase": None,
+            "range_record_ids": [],
+            "reasons": ["INVOCATION_BOUNDARY_INVALID"],
+        }
+
+    invocation_keys = {_identity_key(identity) for _, identity in candidates}
+    if len(invocation_keys) != 1:
+        return {
+            "status": "AMBIGUOUS",
+            "identity": None,
+            "phase": None,
+            "range_record_ids": range_record_ids,
+            "reasons": ["INVOCATION_OWNERSHIP_AMBIGUOUS"],
+        }
+
+    specific = [item for item in candidates if item[1].get("phase") != "full_request"]
+    selectable = specific or candidates
+    phases = {identity.get("phase") for _, identity in selectable}
+    if len(phases) != 1:
+        return {
+            "status": "AMBIGUOUS",
+            "identity": None,
+            "phase": None,
+            "range_record_ids": range_record_ids,
+            "reasons": ["PHASE_OWNERSHIP_AMBIGUOUS"],
+        }
+
+    selected_identity = dict(selectable[0][1])
+    return {
+        "status": "VALID",
+        "identity": selected_identity,
+        "phase": selected_identity["phase"],
+        "range_record_ids": range_record_ids,
+        "reasons": [],
+    }
+
+
 def _manifest_input_status(manifest: Mapping[str, Any]) -> tuple[str, list[str]]:
     observation = manifest.get("observation_validity", {})
     observation_status = str(observation.get("status", "invalid")).lower()
@@ -273,7 +415,7 @@ def _normalize_activity(
         return result
 
     enqueue = enqueues[0]
-    ownership = _phase_ownership(
+    ownership = _activity_ownership(
         int(enqueue["start_ns"]),
         int(enqueue["end_ns"]),
         enqueue.get("global_tid"),

@@ -293,19 +293,21 @@ if ($R9Evidence.verdict -ne "REAL_CASE_PASS") { throw "r9 DEVICE 未得到 REAL_
 
 ## 2.12 新代码的 KERNEL-MEMOP 独立真实诊断
 
+> **当前只执行本节，不建立 r11（2026-09-17）：** activity-specific marker ownership 已按 `docs/superpowers/specs/2026-09-17-s-activity-marker-ownership-design.md` 实施并通过离线回归。服务器更新到本次新 commit/bundle 后，只能创建全新的单 case diagnostic；无论结果如何，本轮均停在本节并回传证据，不进入第 3 节。
+
 r10 在 `Q0-KERNEL-MEMOP-001` 停止：wait-set、`MEMCPY_B` terminal 和 B 均正确，但 4 KiB H2D 在真实 4090 上晚于 35 ms kernel 才开始，`mixed_ns=0`。第一版 512 MiB/10 ms diagnostic 仍显示 kernel 先完成、copy 晚约 108159 ns 才开始。第二版 memcpy-first diagnostic 也必须保留：`MEMCPY_B=22241366..73604625 ns`、`KERNEL_A=74688941..84689831 ns`，二者相隔 1084316 ns，仍无重叠且 terminal 变为 `KERNEL_A`。
 
 第二版的 Runtime API 时间进一步排除了“长 H2D 提交阻塞 Host”这一假设：`cudaMemcpyAsync` 仅为 `21248593..21307992 ns`（59399 ns），随后同一 `globalTid` 的 `cudaLaunchKernel` 却为 `21314302..74556590 ns`（53242288 ns）。该 launch 调用覆盖了几乎整个 copy 设备区间，且 kernel 设备活动在 launch 返回后才开始，说明该 Windows/WDDM 栈上的同 Host 线程顺序提交发生了序列化。
 
 第三版不再扩大 buffer，也不改变 stream、标签或 sync。coordinator 与 kernel worker 先通过纯 Host 条件变量同时放行：coordinator 向既有 `r.second` 提交 512 MiB `MEMCPY_B`，worker 向既有 `r.first` 提交 10 ms `KERNEL_A`；coordinator 等待 kernel launch 调用返回后立即进入原 `S_DEVICE`，并在该同步完成后才 join worker。该结构不增加 CUDA query/event/sync，唯一 request/decode 仍由 coordinator 创建并覆盖 worker 生命周期。它只验证分离 Host 提交路径能否绕开现场序列化；真实重叠仍必须由本节 diagnostic 证明。
 
-第三版 concurrent-host diagnostic 已证明 `KERNEL_A` 与 `MEMCPY_B` 的 submission evidence 均为 `PROVEN`，但 S 层只把 `MEMCPY_B` 归入 decode：worker 直接 launch `KERNEL_A`，缺少其他跨线程 case 已使用的结构化 invocation marker，因此 `S_DEVICE` 以 `INVOCATION_BOUNDARY_INVALID` fail closed。该失败现场必须保留。本版只在 worker 真正 launch 前写入立即结束的 `WORKER_KERNEL_MEMOP` marker；不创建第二个 request/decode，也不改变并发提交、buffer、kernel 时长、stream、sync、oracle 或分析链。
+第三版 concurrent-host diagnostic 已证明 `KERNEL_A` 与 `MEMCPY_B` 的 submission evidence 均为 `PROVEN`，但 S 层只把 `MEMCPY_B` 归入 decode。第四版增加立即结束的 `WORKER_KERNEL_MEMOP` marker 后，真实时间线进一步证明现有 `KERNEL_A` marker 已在同一 worker 线程完整覆盖 launch，而旧 S resolver 只读取 request/phase，导致它仍以 `INVOCATION_BOUNDARY_INVALID` fail closed。新实现只让完整、同线程、完整覆盖 API 且 identity 一致的 activity marker 参与 device activity ownership；sync/event ownership、A 窗口、oracle、A/B 和 Q0 expected 均不改变。四份失败 diagnostic 都必须保留。
 
 不要直接开始完整 r11。先创建独立 Engineering diagnostic，只运行该 case：
 
 ```powershell
 $Q0Root = Resolve-Path .
-$DiagRunId = "q0-win-4090-YYYYMMDD-kernel-memop-concurrent-host-marker-diag"  # 替换日期；必须是全新目录
+$DiagRunId = "q0-win-4090-YYYYMMDD-kernel-memop-activity-ownership-diag"  # 替换日期；必须是全新目录
 $DiagOut = Join-Path $Q0Root "engineering_evidence\q0_diagnostics\$DiagRunId"
 $DiagBinary = Join-Path $DiagOut "bin\exposedpath_q0.exe"
 $Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
@@ -351,7 +353,7 @@ if ($DiagSync.terminal.activity_label -ne "MEMCPY_B") { throw "terminal 必须�
 if ($DiagEvidence.verdict -ne "REAL_CASE_PASS") { throw "diagnostic 必须得到 REAL_CASE_PASS" }
 ```
 
-验收：`DiagOverlapNs > 0`、`A_device_wait_kernel_memop_mixed_ns > 0`、terminal 为 `MEMCPY_B`、evaluator 为 `REAL_CASE_PASS`。该 diagnostic 只验证新构造，不是完整 Q0，不得与 r10、三份既有失败 diagnostic 或后续 r11 拼接。r10 和已有 diagnostic 均保持失败现场。只有上述四项全部满足，才进入第 3 节建立全新 r11。
+验收：`DiagOverlapNs > 0`、`A_device_wait_kernel_memop_mixed_ns > 0`、terminal 为 `MEMCPY_B`、evaluator 为 `REAL_CASE_PASS`。该 diagnostic 只验证修正后的 ownership 与既有真实构造，不是完整 Q0，不得与 r10、四份既有失败 diagnostic 或后续 r11 拼接。r10 和已有 diagnostic 均保持失败现场。本轮即使四项全部满足，也只保存并回传证据，不建立 r11；下一轮审核通过后才决定是否进入第 3 节。
 
 ## 3. 编译并准备不可覆盖运行目录
 

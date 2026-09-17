@@ -8,7 +8,7 @@ S 层回答的不是“哪些 GPU 活动与同步在时间上重叠”，而是�
 
 ## 2. ownership 与提交证据
 
-设备活动通过唯一 CUDA correlation 找到 enqueue API，再用同线程、结构化、半开 NVTX 范围恢复 batched invocation 与 origin phase。Host blocking sync 使用其 runtime API 区间恢复 owner phase，并要求唯一结构化 sync identity 提供 origin、callsite 和 ordinal。同一 invocation 的 prefill 活动可以成为 decode 同步的依赖；跨 invocation 活动不能用于强归因。
+设备活动通过唯一 CUDA correlation 找到 enqueue API，再用与该 API 同线程、完整覆盖 API 的结构化半开 NVTX 范围恢复 batched invocation 与 origin phase。普通同线程路径使用 `request/phase` 范围；跨 Host 线程提交允许使用完整且一致的 `kind=marker` activity marker 作为 activity ownership 证据。marker 的 NVTX text payload 必须可重新解析并与 Canonical 缓存 identity 完全一致；缺字段、未闭合、与 API 部分相交、identity/phase 冲突继续 fail closed，且不能被同时存在的合法 marker 遮蔽。该 marker 只证明 device activity 的 invocation/phase 归属，不能创建 A 窗口，也不能单独建立 dependency。Host blocking sync 仍只使用其 runtime API 所在的 request/phase 区间恢复 owner phase，并要求唯一结构化 sync identity 提供 origin、callsite 和 ordinal。同一 invocation 的 prefill 活动可以成为 decode 同步的依赖；跨 invocation 活动不能用于强归因。
 
 活动进入同步候选只接受两种正向证据：`gpu_start < sync.host_start` 或 `enqueue.host_end <= sync.host_start`。enqueue 从同步入口之后才开始只用于证明它不是此前任务，不被当成提交证据；enqueue 跨越同步入口且 activity 尚未开始时保持 `SUBMISSION_ORDER_AMBIGUOUS`。若候选 activity 缺少唯一 correlation/ownership，即使提交顺序同时不明，也必须保留 `MISSING_ACTIVITY_CORRELATION/INVALID`，不能被较弱的提交歧义覆盖；只有 enqueue start 已明确位于同步入口之后时，才可作为 definitively post-sync 排除。
 
@@ -35,4 +35,4 @@ Q0 observation 已唯一恢复目标 request 时，Canonical 仍会保留 reques
 
 ## 5. 当前验证边界
 
-离线测试覆盖 stream/device/context/event、event record 唯一性与 scope 冲突、跨流 wait-event、completed-before、无关重叠、legacy/PTDS、nonblocking stream、提交竞态、缺失 correlation、跨 phase、invocation bleed、terminal frontier/tie/after-return、valid-empty、原因优先级和 Q0 核心 expected 对照。事件和 wait 前缀查找已经按 context/stream 建立索引，同 scope 结果带缓存；event/default-stream 密集型真实 trace 的规模性能仍需在 Engineering Pilot 单独验收，不能由合成测试推断。上述离线测试证明实现符合当前合成语义合同，不替代真实 CUDA/Nsight Q0；Gate 6 在获得 GPU 前仍为 `BLOCKED`。
+离线测试覆盖 stream/device/context/event、event record 唯一性与 scope 冲突、跨流 wait-event、completed-before、无关重叠、legacy/PTDS、nonblocking stream、提交竞态、缺失 correlation、跨 phase、invocation bleed、跨线程 activity marker 的同线程/完整覆盖/identity 完整性及冲突判定、terminal frontier/tie/after-return、valid-empty、原因优先级和 Q0 核心 expected 对照。事件和 wait 前缀查找已经按 context/stream 建立索引，同 scope 结果带缓存；event/default-stream 密集型真实 trace 的规模性能仍需在 Engineering Pilot 单独验收，不能由合成测试推断。上述离线测试只证明实现符合当前合成语义合同，不替代真实 CUDA/Nsight Q0；Gate 6 仍为 `FAIL`，Q0 仍为 `NOT_RUN`。
