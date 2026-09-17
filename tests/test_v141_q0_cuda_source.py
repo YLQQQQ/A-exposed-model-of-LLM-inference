@@ -115,6 +115,24 @@ def test_unknown_case_fails_before_cuda_initialization(compiled_q0):
     assert "unknown case" in completed.stderr.lower()
 
 
+def test_d2h_native_parameters_reject_h2d_run_identity_before_cuda(compiled_q0):
+    completed = subprocess.run(
+        [
+            str(compiled_q0),
+            "--case", "Q0-KERNEL-MEMOP-001",
+            "--run-id", "q0-win-4090-20260917-kernel-memop-size-diag-64m-10ms-01.q0-kernel-memop-001",
+            "--diagnostic-d2h-bytes", str(64 * 1024 * 1024),
+            "--diagnostic-kernel-ms", "10",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 2
+    assert "diagnostic parameters are only supported" in completed.stderr
+
+
 def test_capture_drains_controlled_work_before_profiler_stop():
     source = SOURCE.read_text(encoding="utf-8")
 
@@ -187,8 +205,9 @@ def test_kernel_memop_uses_case_scoped_preallocated_capacity_for_stable_overlap(
     assert "kKernelMemopKernelMilliseconds = 10" in source
     assert "buffer_capacity_bytes" in source
     assert 'case_id == "Q0-KERNEL-MEMOP-001"' in main
-    assert "Resources resources(buffer_bytes, diagnostic_kernel_ms);" in main
-    assert main.index("Resources resources(buffer_bytes, diagnostic_kernel_ms);") < main.index(
+    construction = "Resources resources(buffer_bytes, diagnostic_kernel_ms,"
+    assert construction in main
+    assert main.index(construction) < main.index(
         "CudaProfilerRange capture;"
     )
     assert '"KERNEL_A", r.first,' in body
@@ -231,6 +250,26 @@ def test_kernel_memop_diagnostic_parameters_are_strictly_isolated_from_default_q
     assert "diagnostic parameters are only supported" in main
     assert "diagnostic_h2d_bytes" in main
     assert "diagnostic_kernel_ms" in main
+
+
+def test_d2h_diagnostic_keeps_default_h2d_and_adds_no_cuda_dependency():
+    source = SOURCE.read_text(encoding="utf-8")
+    body = _function_body(source, "run_kernel_memop")
+    main = source[source.index("int main("):]
+
+    assert "KernelMemopCopyDirection::HOST_TO_DEVICE" in source
+    assert "KernelMemopCopyDirection::DEVICE_TO_HOST" in body
+    assert "cudaMemcpyDeviceToHost" in body
+    assert '"--diagnostic-d2h-bytes"' in main
+    assert "kernel-memop-d2h-diag-64m-10ms" in main
+    assert body.count("cudaMemcpyAsync(") == 1
+    assert "cudaMemset" not in body
+    assert "cudaEventRecord" not in body
+    assert "cudaStreamWaitEvent" not in body
+    assert "cudaEventSynchronize" not in body
+    assert "cudaStreamQuery" not in body
+    assert "cudaEventQuery" not in body
+    assert body.count("cudaDeviceSynchronize") == 1
 
 
 @pytest.mark.parametrize(

@@ -140,9 +140,11 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - [x] `EP-G6-02P` 增加与正常 Q0 executor 隔离的 `run-q0-wddm-diagnostic`：仅允许 `Q0-KERNEL-MEMOP-001`、Engineering 和单 GPU，以全新不可覆盖目录采集 `cuda,nvtx,wddm` 及 WDDM additional events，同时保存本机 Nsight version/help、HAGS 注册表状态、Raw、SQLite、receipt、WDDM 表摘要和目标 request 时间窗记录。输出明确禁止 CUDA activity 与 WDDM packet 一一对应或硬件根因结论；HAGS 未确认、WDDM 表为空或目标 packet 不可归属时统一为 `EVIDENCE_INSUFFICIENT`。正常 Q0 argv 继续严格为 `--trace=cuda,nvtx`，未来 r11 不继承 WDDM 参数。证据：`exposedpath_v141/q0_wddm_diagnostic.py`、`tests/test_v141_q0_wddm_diagnostic.py`、Windows 服务器手册 §2.13。
 - [x] `EP-G6-02Q` 增加仅允许 64 MiB H2D/10 ms kernel 的参数 diagnostic：独立 CLI 使用标准 `--trace=cuda,nvtx`，binary 只有在显式 diagnostic 参数、KERNEL-MEMOP case、64m-10ms run identity 和精确数值同时成立时才覆盖默认资源；manifest、source manifest 与 receipt 均记录方向、字节数、MiB 与 kernel 时长，并固定 Engineering/diagnostic-only/Q0 NOT_RUN。正常 Q0 仍为 512 MiB/10 ms，prepared manifest 明确不含 diagnostic flags；64 MiB/1 ms 尚未实现。
 - [x] `EP-G6-02R` 扩展既有 `--environment-json`，通过 `cudaDeviceGetAttribute` 记录 `async_engine_count`、`device_overlap`、`concurrent_kernels`；Q0 环境快照保存三项并在缺失时 fail closed。该探针只读取过滤后的逻辑设备 0，不运行 case、不启动 Nsight、不改变正常 Q0 collection argv。
+- [x] `EP-G6-02S` 增加独立的 64 MiB D2H/10 ms kernel Engineering diagnostic：新 CLI/identity 只允许 `DEVICE_TO_HOST`、精确字节数和时长，使用标准 CUDA/NVTX 采集并记录 Raw/SQLite、参数、环境、哈希与决策边界。正常 Q0 仍为 512 MiB H2D/10 ms，原 64 MiB H2D diagnostic 保持原参数和入口；D2H 路径不增加初始化、event、query 或额外同步。D2H/H2D/default-Q0/CUDA 编译定向回归 `47 passed`，全仓 `690 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线；compileall 通过。
 - [x] `EP-G6-03` r4 在 EMPTY、r5 在重复 request、r6 在 PTDS query 轮询、r7 在 invocation scope resolver、r8 在 Graph fault 前态、r9 在 evaluator wait-set 顺序、r10 及其后全部 diagnostic 在 KERNEL/MEMOP 真实重叠/证据恢复处均按 fail-fast 规则停止并保留现场。r1～r10 与失败 diagnostic 均不得覆盖或升级资格。
 - [x] `EP-G6-04` 64 MiB/10 ms 单例已完成：H2D=`22365422..26112424 ns`、kernel=`26741607..36745367 ns`，间隔 `629183 ns`、overlap=`0`。两项使用不同 nonblocking stream（14/13）、无 event/data dependency，最终 device sync 只作为共同完成边界。按预定规则停止，不进入 64 MiB/1 ms。
 - [x] `EP-G6-04A` GPU3 RTX 4090（UUID `GPU-0d8fafe6-a1e9-33cc-25fb-632316736455`）能力探针已在 commit `86147b046218a6f4f9d72bf75da378df4bad42d5` 上完成：`async_engine_count=5`、`device_overlap=1`、`concurrent_kernels=1`，driver/driver API/runtime 分别为 `12050/12050/12040`，数据角色为 Engineering、diagnostic-only、Q0 NOT_RUN。服务器复核报告给出的 capability/receipt/完整 ZIP SHA256 分别为 `30A1DFD39C2F88182CB389BCCBEE8E3A76C2BF768F509372496929AAAEFD7363`、`CE09875DBC4EAE0C364A934562DFADAB6C63FF52EF14B9A3FF4F55D6489D98E4`、`7A8079EE983C0CE04C8F3AF4259B81CEC6DE3EC07FB09CE518624D3B582BE3D2`。该证据只证明设备声明能力，不证明实际并发，更不定位 WDDM/driver/runtime 根因。
+- [ ] `EP-G6-04B`（待服务器实测）只执行手册 §2.16 的 64 MiB D2H/10 ms 单例并回传完整目录。唯一实验变量是 copy direction；`overlap_ns>0` 只表示本次观察到设备重叠，terminal/order 仅记录。无论结果如何均先停止，不自动进入 D2D、调参、r11 或策略修改。
 - [ ] `EP-G6-05`（未开始）输出唯一 Q0 gate 报告；任何必需用例未通过都不得判为 `PASS`。
 
 ## Gate 7：Runner 与跨平台执行对齐
@@ -245,9 +247,9 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 
 最近应执行的任务：
 
-1. 设计一次与正常 Q0 完全隔离的 64 MiB D2H/10 ms kernel Engineering diagnostic，只改变 copy direction。
-2. 用户确认设计后，以测试先行方式实现独立入口、严格 identity/参数合同和服务器单例章节；正常 Q0 默认构造保持不变。
-3. 新 bundle 只执行 D2H 单例并回传完整证据；无论 overlap 是否出现都先停止审核，不自动进入 D2D、参数调优或 r11。
+1. 用新 bundle 更新服务器代码，只执行手册 §2.16 的 64 MiB D2H/10 ms Engineering diagnostic。
+2. 回传完整 D2H 目录，本地只读核验 copy kind、stream/context、Runtime API、device interval、overlap、完成顺序及 S terminal。
+3. 无论 overlap 是否出现都先停止审核，不自动进入 D2D、参数调优、r11 或 Q0 策略修改。
 
 ## 计划调整记录
 
@@ -313,3 +315,4 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 | 5.8 | 2026-09-17 | diag-02 在管理员权限下成功采集 WDDM queue 证据，但 HAGS 未确认且 packet 无 CUDA correlationId，因果结论保持未建立。新增严格隔离的 64 MiB H2D/10 ms kernel 参数 diagnostic，使用标准 CUDA/NVTX 采集并记录实际参数；正常 512 MiB/10 ms Q0 路径不变，1 ms 候选未实现。定向回归 `55 passed`，全仓 `678 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线；合同、oracle 独立性、Canonical 边界和 compileall 均通过。 | EP-G6-02Q、EP-G6-04、EP-ISSUE-16 | 仅为 Engineering 假设检验能力，不改变 oracle、Canonical、S、A/B、evaluator、Measurement Contract 或数据资格；Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，禁止建立 r11。 |
 | 5.9 | 2026-09-17 | 64 MiB/10 ms diagnostic 真实结果仍为 overlap=0，按预定判据停止 1 ms 路线。新增跨 CUDA 12.4/13 兼容的 device capability 探针，通过 `cudaDeviceGetAttribute` 输出并保存 async engine 数、device overlap 和 concurrent kernels；环境快照缺任一字段均 fail closed。定向回归 `42 passed`，全仓 `681 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线；compileall 通过。 | EP-G6-02R、EP-G6-04、EP-G6-04A、EP-ISSUE-16 | 只增加 Engineering 平台资格证据，不修改 microbench case、oracle、Canonical、S、A/B、evaluator 或正常 collection argv；Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，不得建立 r11。 |
 | 6.0 | 2026-09-17 | 服务器 capability probe 已报告并复核 GPU UUID、commit 与三项能力：`async_engine_count=5`、`device_overlap=1`、`concurrent_kernels=1`，同时记录 capability、receipt 和完整 ZIP SHA256。能力证据只能证明设备声明支持，不能解释此前 overlap=0。后续路线切换为先设计单变量 D2H Engineering diagnostic；H2D 调参和 64 MiB/1 ms 正式停止。 | EP-G6-04A、EP-ISSUE-16 | 不改变正常 Q0、oracle、Canonical、S、A/B、evaluator 或 Measurement Contract；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，D2D 与 r11 均禁止。 |
+| 6.1 | 2026-09-17 | 按批准设计实现严格隔离的 64 MiB D2H/10 ms Engineering diagnostic。binary 仅在专用 flag 与 run identity 同时匹配时切换 copy direction；默认 512 MiB H2D 和既有 64 MiB H2D 路径保持不变。receipt 固化 overlap 唯一判据、terminal 非门槛、两种结果均停止以及禁止因果归因。定向回归 `47 passed`，全仓 `690 passed, 2 failed`，compileall 通过。 | EP-G6-02S、EP-G6-04B、EP-ISSUE-16 | 不修改 oracle、Canonical、S、A/B、evaluator 或 Measurement Contract；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，服务器尚未实跑 D2H，禁止 D2D、调参和 r11。 |

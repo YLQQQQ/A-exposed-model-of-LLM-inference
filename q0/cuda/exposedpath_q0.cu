@@ -34,6 +34,11 @@ constexpr std::size_t kDefaultBufferBytes = 4096;
 constexpr std::size_t kKernelMemopBufferBytes = 512ULL * 1024ULL * 1024ULL;
 constexpr int kKernelMemopKernelMilliseconds = 10;
 
+enum class KernelMemopCopyDirection {
+  HOST_TO_DEVICE,
+  DEVICE_TO_HOST,
+};
+
 void cuda_check(cudaError_t status, const char* expression) {
   if (status != cudaSuccess) {
     throw std::runtime_error(std::string(expression) + ": " + cudaGetErrorString(status));
@@ -145,11 +150,16 @@ struct Resources {
   void* host_buffer{};
   std::size_t buffer_capacity_bytes{};
   int kernel_memop_kernel_milliseconds{kKernelMemopKernelMilliseconds};
+  KernelMemopCopyDirection kernel_memop_copy_direction{
+      KernelMemopCopyDirection::HOST_TO_DEVICE};
 
   explicit Resources(std::size_t buffer_bytes = kDefaultBufferBytes,
-                     int kernel_memop_milliseconds = kKernelMemopKernelMilliseconds)
+                     int kernel_memop_milliseconds = kKernelMemopKernelMilliseconds,
+                     KernelMemopCopyDirection copy_direction =
+                         KernelMemopCopyDirection::HOST_TO_DEVICE)
       : buffer_capacity_bytes(buffer_bytes),
-        kernel_memop_kernel_milliseconds(kernel_memop_milliseconds) {
+        kernel_memop_kernel_milliseconds(kernel_memop_milliseconds),
+        kernel_memop_copy_direction(copy_direction) {
     CUDA_CHECK(cudaGetDeviceProperties(&properties, 0));
     CUDA_CHECK(cudaDeviceGetAttribute(&clock_rate_khz, cudaDevAttrClockRate, 0));
     CUDA_CHECK(cudaStreamCreateWithFlags(&first, cudaStreamNonBlocking));
@@ -294,9 +304,17 @@ void run_kernel_memop(Resources& r, const std::string& c, const std::string& id)
     cudaError_t copy_status = cudaSuccess;
     {
       auto marker = marker_range(c, id, "decode", "MEMCPY_B");
-      copy_status = cudaMemcpyAsync(r.device_buffer, r.host_buffer,
-                                    r.buffer_capacity_bytes,
-                                    cudaMemcpyHostToDevice, r.second);
+      void* destination = r.device_buffer;
+      const void* source = r.host_buffer;
+      cudaMemcpyKind direction = cudaMemcpyHostToDevice;
+      if (r.kernel_memop_copy_direction ==
+          KernelMemopCopyDirection::DEVICE_TO_HOST) {
+        destination = r.host_buffer;
+        source = r.device_buffer;
+        direction = cudaMemcpyDeviceToHost;
+      }
+      copy_status = cudaMemcpyAsync(destination, source, r.buffer_capacity_bytes,
+                                    direction, r.second);
     }
     {
       std::unique_lock<std::mutex> lock(start_mutex);
@@ -546,13 +564,19 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
-  const bool diagnostic_parameters =
+  const bool h2d_diagnostic_parameters =
       argc == 9 && std::string(argv[5]) == "--diagnostic-h2d-bytes" &&
       std::string(argv[7]) == "--diagnostic-kernel-ms";
+  const bool d2h_diagnostic_parameters =
+      argc == 9 && std::string(argv[5]) == "--diagnostic-d2h-bytes" &&
+      std::string(argv[7]) == "--diagnostic-kernel-ms";
+  const bool diagnostic_parameters =
+      h2d_diagnostic_parameters || d2h_diagnostic_parameters;
   if ((argc != 5 && !diagnostic_parameters) ||
       std::string(argv[1]) != "--case" || std::string(argv[3]) != "--run-id") {
     std::cerr << "usage: exposedpath_q0 --case CASE_ID --run-id RUN_ID "
-                 "[--diagnostic-h2d-bytes BYTES --diagnostic-kernel-ms MS]\n";
+                 "[--diagnostic-h2d-bytes BYTES | --diagnostic-d2h-bytes BYTES] "
+                 "[--diagnostic-kernel-ms MS]\n";
     return 2;
   }
   const std::string case_id = argv[2];
@@ -568,8 +592,12 @@ int main(int argc, char** argv) {
   }
   std::size_t diagnostic_h2d_bytes = kKernelMemopBufferBytes;
   int diagnostic_kernel_ms = kKernelMemopKernelMilliseconds;
+  KernelMemopCopyDirection diagnostic_copy_direction =
+      KernelMemopCopyDirection::HOST_TO_DEVICE;
   if (diagnostic_parameters) {
-    const std::string required_identity = "kernel-memop-size-diag-64m-10ms";
+    const std::string required_identity =
+        d2h_diagnostic_parameters ? "kernel-memop-d2h-diag-64m-10ms"
+                                  : "kernel-memop-size-diag-64m-10ms";
     if (case_id != "Q0-KERNEL-MEMOP-001" ||
         run_id.find(required_identity) == std::string::npos ||
         std::string(argv[6]) != "67108864" || std::string(argv[8]) != "10") {
@@ -579,6 +607,9 @@ int main(int argc, char** argv) {
     }
     diagnostic_h2d_bytes = 64ULL * 1024ULL * 1024ULL;
     diagnostic_kernel_ms = 10;
+    if (d2h_diagnostic_parameters) {
+      diagnostic_copy_direction = KernelMemopCopyDirection::DEVICE_TO_HOST;
+    }
   }
 
   try {
@@ -587,7 +618,8 @@ int main(int argc, char** argv) {
             ? (diagnostic_parameters ? diagnostic_h2d_bytes
                                      : kKernelMemopBufferBytes)
             : kDefaultBufferBytes;
-    Resources resources(buffer_bytes, diagnostic_kernel_ms);
+    Resources resources(buffer_bytes, diagnostic_kernel_ms,
+                        diagnostic_copy_direction);
     {
       CudaProfilerRange capture;
       selected->second(resources, case_id, run_id);

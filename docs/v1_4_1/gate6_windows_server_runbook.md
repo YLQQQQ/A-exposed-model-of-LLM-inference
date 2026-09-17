@@ -452,7 +452,7 @@ Get-Content -LiteralPath (Join-Path $SizeOut "diagnostic_receipt.json") -Raw -En
 
 本次真实结果为：H2D activity=`22365422..26112424 ns`，kernel activity=`26741607..36745367 ns`，间隔 `629183 ns`，真实 overlap=`0`。因此本路线已经按预定判据停止，不得执行 64 MiB/1 ms。
 
-## 2.15 当前唯一下一步：GPU copy/compute 并发能力探针
+## 2.15 已完成：GPU copy/compute 并发能力探针
 
 本节只读取当前 Q0 GPU 的 CUDA device capability，不运行任何 Q0 case、不启动 Nsight、不创建 r11。必须先用当前 commit 重新编译 binary；`CUDA_VISIBLE_DEVICES` 使用完整 GPU UUID 后，binary 中的逻辑设备 0 才代表目标物理 GPU。
 
@@ -509,9 +509,76 @@ Get-Content -LiteralPath (Join-Path $CapabilityRoot "device_capabilities.json") 
 
 完成后只需回传整个 `$CapabilityRoot`。三项字段无论为 0 还是非 0 都必须原样保存，不得为满足 Q0 假设而改写。收到证据前，不实施 D2H/D2D，不建立 r11。
 
+真实 GPU3 RTX 4090 结果为：`async_engine_count=5`、`device_overlap=1`、`concurrent_kernels=1`。这只证明设备声明支持相关并发能力，不能证明任意 workload 必然重叠，也不能把此前 overlap=0 归因于 WDDM、driver、runtime 或设备调度层。
+
+## 2.16 当前唯一下一步：64 MiB D2H + 10 ms kernel 方向 diagnostic
+
+本节以 §2.14 的 64 MiB H2D/10 ms 结果为唯一匹配对照，只把 `MEMCPY_B` 从 H2D 改为 D2H。buffer 大小、kernel 时长、pinned host memory、device buffer、双 Host thread、两个 nonblocking stream、同时放行编排、NVTX identity、`S_DEVICE` 和标准 `cuda,nvtx` 采集均不变；不增加初始化、event、query 或额外同步。
+
+```powershell
+$Q0Root = Resolve-Path .
+$Python = Join-Path $Q0Root ".venv\Scripts\python.exe"
+$Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
+$GpuSelector = "GPU-0d8fafe6-a1e9-33cc-25fb-632316736455"
+$VcVars = "C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+$Nvcc = (Get-Command nvcc).Source
+$CodeShort = (git rev-parse --short HEAD).Trim()
+$D2HRunId = "q0-win-4090-YYYYMMDD-kernel-memop-d2h-diag-64m-10ms-01"  # 替换实际日期
+$D2HBuild = Join-Path $Q0Root "engineering_evidence\q0_diagnostic_builds\kernel-memop-d2h-$CodeShort"
+$D2HBinary = Join-Path $D2HBuild "exposedpath_q0.exe"
+$D2HOut = Join-Path $Q0Root "engineering_evidence\q0_diagnostics\$D2HRunId"
+
+if (Test-Path -LiteralPath $D2HBuild) { throw "D2H build 目录已存在，禁止覆盖" }
+if (Test-Path -LiteralPath $D2HOut) { throw "D2H 输出目录已存在，禁止覆盖" }
+New-Item -ItemType Directory -Path $D2HBuild | Out-Null
+
+cmd /d /s /c "`"$VcVars`" -vcvars_ver=14.39 && where cl && `"$Python`" -m exposedpath_v141 build-q0-microbench --nvcc `"$Nvcc`" --output `"$D2HBinary`" --platform windows"
+if ($LASTEXITCODE -ne 0) { throw "D2H diagnostic CUDA 编译失败" }
+
+& $Python -m exposedpath_v141 run-q0-kernel-memop-d2h-diagnostic `
+    --output-dir $D2HOut `
+    --binary $D2HBinary `
+    --nsys $Nsys `
+    --run-id $D2HRunId `
+    --cuda-visible-device $GpuSelector
+if ($LASTEXITCODE -ne 0) { throw "D2H diagnostic 采集或导出失败；保留现场并停止" }
+
+git rev-parse HEAD | Set-Content -LiteralPath (Join-Path $D2HOut "code_commit.txt") -Encoding UTF8
+git status --porcelain=v1 | Set-Content -LiteralPath (Join-Path $D2HOut "git_status.txt") -Encoding UTF8
+
+$D2HReceiptPath = Join-Path $D2HOut "diagnostic_receipt.json"
+$D2HReceipt = Get-Content -LiteralPath $D2HReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
+if (-not $D2HReceipt.diagnostic_only) { throw "必须是 diagnostic-only" }
+if ($D2HReceipt.data_role -ne "Engineering") { throw "必须是 Engineering" }
+if ($D2HReceipt.q0_status -ne "NOT_RUN") { throw "不得升级 Q0" }
+if ($D2HReceipt.diagnostic_parameters.copy_direction -ne "DEVICE_TO_HOST") { throw "copy direction 必须为 D2H" }
+if ([int64]$D2HReceipt.diagnostic_parameters.d2h_size_bytes -ne 67108864) { throw "D2H 必须为 64 MiB" }
+if ([int]$D2HReceipt.diagnostic_parameters.kernel_duration_ms -ne 10) { throw "kernel 必须为 10 ms" }
+if ($D2HReceipt.command_argv -notcontains "--trace=cuda,nvtx") { throw "必须使用标准 CUDA/NVTX collection" }
+if ($D2HReceipt.command_argv -contains "--diagnostic-h2d-bytes") { throw "D2H 路径不得使用 H2D 参数" }
+
+$D2HRaw = Join-Path $D2HOut "trace.nsys-rep"
+$D2HSqlite = Join-Path $D2HOut "trace.sqlite"
+$D2HSourceManifest = Join-Path $D2HOut "source_manifest.json"
+$D2HRawSha = (Get-FileHash -LiteralPath $D2HRaw -Algorithm SHA256).Hash
+
+& $Python -m exposedpath_v141 convert-sqlite --sqlite $D2HSqlite --output-dir (Join-Path $D2HOut "canonical") --data-role Engineering --raw-sha256 $D2HRawSha --collector-version ([string]$D2HReceipt.environment.nsight_systems) --source-manifest $D2HSourceManifest
+if ($LASTEXITCODE -ne 0) { throw "D2H Canonical observation 无效；保留现场并停止" }
+& $Python -m exposedpath_v141 analyze-s --canonical-manifest (Join-Path $D2HOut "canonical\canonical_manifest.json") --output-dir (Join-Path $D2HOut "s")
+if ($LASTEXITCODE -notin 0,2,3) { throw "D2H S 执行异常" }
+& $Python -m exposedpath_v141 analyze-ab --canonical-manifest (Join-Path $D2HOut "canonical\canonical_manifest.json") --s-manifest (Join-Path $D2HOut "s\s_manifest.json") --output-dir (Join-Path $D2HOut "ab")
+if ($LASTEXITCODE -notin 0,2,3) { throw "D2H A/B 执行异常" }
+
+Get-Content -LiteralPath $D2HReceiptPath -Raw -Encoding UTF8
+```
+
+预期 evidence/run-id 为 `engineering_evidence\q0_diagnostics\q0-win-4090-YYYYMMDD-kernel-memop-d2h-diag-64m-10ms-01`。完整目录必须包含 Raw、SQLite、diagnostic/source manifest、receipt、环境与命令日志，以及 `canonical/`、`s/`、`ab/` 派生目录。回传后再只读核验 D2H copy kind、context/stream、Runtime API、device interval、overlap、完成顺序和 S terminal。
+
+本诊断唯一成功判据是 `overlap_ns > 0`；terminal 及完成顺序只记录、不作为方向诊断门槛。`overlap_ns=0` 与 `overlap_ns>0` 都必须立即停止并回传审核，不得自动进入 D2D、参数调优、r11 或 Q0 策略修改，也不得输出 WDDM/driver/runtime/调度层根因结论。
+
 ## 3. 编译并准备不可覆盖运行目录
 
-> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案。必须先回传并审核 §2.15 的 GPU capability 证据；WDDM 或 diagnostic 参数绝不能加入本节标准 collection argv。
+> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案。必须先回传并审核 §2.16 的 D2H diagnostic；WDDM 或 diagnostic 参数绝不能加入本节标准 collection argv。
 
 ```powershell
 $Q0Root = Resolve-Path .

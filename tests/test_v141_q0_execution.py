@@ -142,6 +142,7 @@ def test_prepare_q0_run_writes_complete_nonexecuted_plan_with_structured_argv(
         assert "--trace=cuda,nvtx" in argv
         assert not any("wddm" in argument.lower() for argument in argv)
         assert "--diagnostic-h2d-bytes" not in argv
+        assert "--diagnostic-d2h-bytes" not in argv
         assert "--diagnostic-kernel-ms" not in argv
     assert not list(output_dir.rglob("*.nsys-rep"))
     for case in manifest["cases"]:
