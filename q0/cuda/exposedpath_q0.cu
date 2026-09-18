@@ -212,19 +212,27 @@ std::string cuda_module_loading_mode() {
   return mode == CU_MODULE_EAGER_LOADING ? "EAGER" : "LAZY";
 }
 
-// 独立 warm-up Engineering diagnostic 的机读记录行；正常 Q0 从不输出该行。
-// A'（warmup_enabled=false）与 B（warmup_enabled=true）都输出该行，因此两侧的
-// module loading mode 对称可读，便于约束根因解释。warmup_host_ns 是纯 Host 计时，
-// 不新增 CUDA event/gate。
-void print_warmup_diagnostic_line(bool warmup_enabled, long long warmup_host_ns) {
-  std::cout << "EXPOSEDPATH_DIAGNOSTIC_V1:{\"cuda_module_loading_mode\":\""
-            << cuda_module_loading_mode()
-            << "\",\"warmup_enabled\":" << (warmup_enabled ? "true" : "false")
-            << ",\"warmup_kernel_ms\":" << kKernelMemopWarmupMilliseconds
-            << ",\"warmup_host_ns\":" << warmup_host_ns
-            << ",\"warmup_status\":\""
-            << (warmup_enabled ? "PASS" : "NOT_APPLICABLE")
-            << "\",\"warmup_interleave\":\"OUTSIDE_CAPTURE_RANGE\"}\n";
+// 独立 warm-up Engineering diagnostic 唯一的 metadata transport：一条 NVTX mark
+// （单点事件，不是 range）。它写在 cudaProfilerStart() 之后、request 之前，因此
+// 不进入 Q0 的 request/S wait-set/terminal 语义；标签前缀刻意不同于 Q0
+// structured identity 前缀，Canonical/S 解析不会把它当作 identity。A'
+// （warmup_enabled=false）与 B（warmup_enabled=true）各写恰好一条，两侧 module
+// loading mode 对称可读。warmup_host_ns 是纯 Host 计时，不新增 CUDA event/gate。
+std::string warmup_diagnostic_label(bool warmup_enabled, long long warmup_host_ns) {
+  std::ostringstream payload;
+  payload << "EXPOSEDPATH_DIAGNOSTIC_V1:{\"arm\":\""
+          << (warmup_enabled ? "B_WARMUP" : "A_PRIME_NO_WARMUP")
+          << "\",\"cuda_module_loading_mode\":\"" << cuda_module_loading_mode()
+          << "\",\"warmup_host_ns\":" << warmup_host_ns
+          << ",\"warmup_interleave\":\"OUTSIDE_CAPTURE_RANGE\""
+          << ",\"warmup_status\":\""
+          << (warmup_enabled ? "PASS" : "NOT_APPLICABLE") << "\"}";
+  return payload.str();
+}
+
+// 写入单点 NVTX mark；mark 没有 rangeId/end 语义，因此不参与任何 range 归属推断。
+void emit_nvtx_mark(const std::string& text) {
+  nvtxMarkA(text.c_str());
 }
 
 template <typename Body>
@@ -669,22 +677,29 @@ int main(int argc, char** argv) {
             : kDefaultBufferBytes;
     Resources resources(buffer_bytes, diagnostic_kernel_ms,
                         diagnostic_copy_direction);
+    // A'（不启用 warm-up）与 B（启用 warm-up）各写恰好一条 NVTX mark，
+    // 保证两侧 module loading mode 对称可读。
+    const bool emit_warmup_diagnostic =
+        diagnostic_warmup || d2h_diagnostic_parameters;
+    long long warmup_host_ns = 0;
     if (diagnostic_warmup) {
       // 唯一构造变化：在 cudaProfilerStart()/request 之前完成一次同 kernel 预热。
       const auto warmup_begin = std::chrono::steady_clock::now();
       warmup_kernel_memop(resources);
       const auto warmup_end = std::chrono::steady_clock::now();
-      const auto warmup_host_ns =
+      warmup_host_ns = static_cast<long long>(
           std::chrono::duration_cast<std::chrono::nanoseconds>(warmup_end -
                                                                warmup_begin)
-              .count();
-      print_warmup_diagnostic_line(true, static_cast<long long>(warmup_host_ns));
-    } else if (d2h_diagnostic_parameters) {
-      // A' 侧（同 binary、不启用 warm-up）也输出该行，使 module loading mode 对称可读。
-      print_warmup_diagnostic_line(false, 0);
+              .count());
     }
     {
       CudaProfilerRange capture;
+      if (emit_warmup_diagnostic) {
+        // capture 已开始、request 尚未开始：只承担 metadata transport 的 NVTX mark。
+        const std::string diagnostic_label =
+            warmup_diagnostic_label(diagnostic_warmup, warmup_host_ns);
+        emit_nvtx_mark(diagnostic_label);
+      }
       selected->second(resources, case_id, run_id);
       // Q0 的请求范围已经结束；显式排空其余受控工作，避免
       // cudaProfilerStop 以无 runtime API 行的隐式 context sync 结束采集。

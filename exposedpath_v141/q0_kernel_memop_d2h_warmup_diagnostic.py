@@ -8,6 +8,10 @@
 * 唯一差异是 B 追加 ``--diagnostic-warmup-kernel``，在 ``cudaProfilerStart()``
   /request 之外对同一个 ``q0_spin_kernel`` 做一次固定预热。
 
+warm-up 元数据不经过 collection stdout，而是由目标程序在 capture 开始后、request
+开始前写入一条 NVTX mark；runner 只从导出的 SQLite 中唯一恢复该 mark，缺失、
+重复、eventType 不符或字段不合法一律 fail closed。
+
 不新增 event/gate，不升级 Q0，也不把结果解释为 lazy module loading、WDDM、
 driver 或 Runtime 的根因。
 """
@@ -42,7 +46,43 @@ FROZEN_RUN_ID_IDENTITY = "kernel-memop-d2h-diag-64m-10ms"
 RUN_ID_PATTERN = re.compile(
     r"q0-win-4090-\d{8}-kernel-memop-d2h-diag-64m-10ms-warmup-\d{2}"
 )
-DIAGNOSTIC_LINE_PREFIX = "EXPOSEDPATH_DIAGNOSTIC_V1:"
+# warm-up metadata 的唯一 transport：目标程序写入的 NVTX marker 标签前缀。
+# 该前缀刻意不同于 Q0 structured identity 前缀（EXPOSEDPATH_JSON_V1:），
+# 因此 Canonical/S 解析不会把它当作 request/phase/marker identity。
+NVTX_DIAGNOSTIC_PREFIX = "EXPOSEDPATH_DIAGNOSTIC_V1:"
+WARMUP_MARKER_REQUIRED_FIELDS = (
+    "arm",
+    "cuda_module_loading_mode",
+    "warmup_host_ns",
+    "warmup_interleave",
+    "warmup_status",
+)
+WARMUP_MARKER_INTERLEAVE = "OUTSIDE_CAPTURE_RANGE"
+# nsys SQLite 里 NVTX mark（NvtxMark）的 eventType；push/pop range 在本仓库真实
+# trace 中为 59，因此不会与 mark 混淆。
+NVTX_MARK_EVENT_TYPE = 34
+METADATA_TRANSPORT = {
+    "channel": "NVTX_MARK",
+    "nvtx_label_prefix": NVTX_DIAGNOSTIC_PREFIX,
+    "nvtx_event_type": NVTX_MARK_EVENT_TYPE,
+    "nvtx_event_kind": "NvtxMark",
+    "recovery": "TRACE_SQLITE_NVTX_UNIQUE_MARK",
+    "collection_stdout_is_authoritative": False,
+    "marker_placement": "AFTER_cudaProfilerStart_BEFORE_request",
+    "required_fields": list(WARMUP_MARKER_REQUIRED_FIELDS),
+}
+# warmup-01 的 metadata transport 依赖 collection stdout，已固定为无效输出通道。
+SUPERSEDED_RUN_ID_SUFFIX = "-warmup-01"
+PRIOR_RUN_DISPOSITION = {
+    "run_id_suffix": SUPERSEDED_RUN_ID_SUFFIX,
+    "disposition": "INVALID_INSTRUMENTATION_OUTPUT_CHANNEL",
+    "reason": (
+        "metadata transport 依赖 collection stdout：marker 写在 cudaProfilerStart() "
+        "之前，目标程序 stdout 未出现在 collection_stdout.txt，B 未执行"
+    ),
+    "usable_as_arm_result": False,
+    "rerun_allowed": False,
+}
 WARMUP_FLAG = "--diagnostic-warmup-kernel"
 ARM_A = "A_PRIME_NO_WARMUP"
 ARM_B = "B_WARMUP"
@@ -160,19 +200,108 @@ def build_pair_export_argv(nsys: Path, sqlite_path: Path, raw_path: Path) -> lis
     ]
 
 
-def _parse_diagnostic_line(stdout: str) -> dict[str, Any]:
-    """解析 A'/B 都必须输出的机读诊断行；缺失即 fail closed。"""
+def _warmup_marker_payload(label: str) -> dict[str, Any] | None:
+    """把一条候选 NVTX 标签还原为 marker payload；非本 diagnostic 标签返回 None。"""
 
-    for line in stdout.splitlines():
-        stripped = line.strip()
-        if stripped.startswith(DIAGNOSTIC_LINE_PREFIX):
-            payload = json.loads(stripped[len(DIAGNOSTIC_LINE_PREFIX):])
-            if not isinstance(payload, Mapping):
+    if not label.startswith(NVTX_DIAGNOSTIC_PREFIX):
+        return None
+    try:
+        payload = json.loads(label[len(NVTX_DIAGNOSTIC_PREFIX) :])
+    except json.JSONDecodeError as exc:
+        raise KernelMemopD2HWarmupDiagnosticError(
+            f"warm-up marker 不是合法 JSON: {exc}"
+        ) from exc
+    if not isinstance(payload, Mapping):
+        raise KernelMemopD2HWarmupDiagnosticError("warm-up marker 必须是 JSON 对象")
+    return dict(payload)
+
+
+def recover_warmup_diagnostic_marker(trace_sqlite: Path) -> dict[str, Any]:
+    """从导出的 SQLite 中唯一恢复 warm-up NVTX mark；缺失/重复即 fail closed。
+
+    只接受 ``eventType=NvtxMark`` 且带本 diagnostic 前缀的行；同前缀的 push/pop
+    range 不会被误认为 mark。mark provenance 只依赖 rowid/start/globalTid/text，
+    不使用 end。
+    """
+
+    with _open_readonly(trace_sqlite) as connection:
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
+        if not {"NVTX_EVENTS", "StringIds"}.issubset(tables):
+            raise KernelMemopD2HWarmupDiagnosticError(
+                "trace 缺少 warm-up marker 所需的 NVTX_EVENTS/StringIds 表"
+            )
+        matches: list[dict[str, Any]] = []
+        non_mark_prefix_rows = 0
+        for rowid, start, event_type, text, text_id, global_tid in connection.execute(
+            """
+            SELECT n.rowid, n.start, n.eventType, COALESCE(n.text, s.value, ''),
+                   n.textId, n.globalTid
+            FROM NVTX_EVENTS AS n
+            LEFT JOIN StringIds AS s ON s.id = n.textId
+            ORDER BY n.start, n.rowid
+            """
+        ):
+            label = str(text)
+            if not label.startswith(NVTX_DIAGNOSTIC_PREFIX):
+                continue
+            if event_type != NVTX_MARK_EVENT_TYPE:
+                # 同前缀但非 mark（例如 push/pop range 59）：不得被误认为 marker。
+                non_mark_prefix_rows += 1
+                continue
+            payload = _warmup_marker_payload(label)
+            if payload is None:  # pragma: no cover - 前缀已在上方判定
+                continue
+            missing = [
+                field
+                for field in WARMUP_MARKER_REQUIRED_FIELDS
+                if field not in payload
+            ]
+            if missing:
                 raise KernelMemopD2HWarmupDiagnosticError(
-                    "warm-up diagnostic 行必须是 JSON 对象"
+                    f"warm-up marker 缺少必需字段: {missing}"
                 )
-            return dict(payload)
-    raise KernelMemopD2HWarmupDiagnosticError("collection stdout 缺少 warm-up diagnostic 行")
+            if payload["warmup_interleave"] != WARMUP_MARKER_INTERLEAVE:
+                raise KernelMemopD2HWarmupDiagnosticError(
+                    "warm-up 不在 capture range 之外: "
+                    f"{payload['warmup_interleave']}"
+                )
+            if not isinstance(payload["warmup_host_ns"], int) or isinstance(
+                payload["warmup_host_ns"], bool
+            ):
+                raise KernelMemopD2HWarmupDiagnosticError(
+                    "warm-up marker 的 warmup_host_ns 必须是整数"
+                )
+            matches.append(
+                {
+                    "payload": payload,
+                    "nvtx": {
+                        "source_table": "NVTX_EVENTS",
+                        "source_rowid": rowid,
+                        "event_type": event_type,
+                        "event_kind": "NvtxMark",
+                        "text_id": text_id,
+                        "start_ns": start,
+                        "global_tid": global_tid,
+                        "text": label,
+                    },
+                }
+            )
+
+    if not matches:
+        raise KernelMemopD2HWarmupDiagnosticError(
+            "trace SQLite 缺少 warm-up diagnostic NVTX mark"
+            f"（同前缀非 mark 行 {non_mark_prefix_rows} 条）"
+        )
+    if len(matches) != 1:
+        raise KernelMemopD2HWarmupDiagnosticError(
+            f"warm-up diagnostic NVTX mark 必须唯一，实际 {len(matches)} 条"
+        )
+    return matches[0]
 
 
 def _open_readonly(path: Path) -> sqlite3.Connection:
@@ -350,26 +479,6 @@ def _run_one_arm(
             f"{arm}: Nsight 成功返回但未生成非空 Raw trace"
         )
 
-    # A' 与 B 都输出该行，使 module loading mode 对称可读。
-    warmup = _parse_diagnostic_line(collected.stdout or "")
-    if warmup.get("warmup_interleave") != "OUTSIDE_CAPTURE_RANGE":
-        raise KernelMemopD2HWarmupDiagnosticError("warm-up 不在 capture range 之外")
-    if arm == ARM_B:
-        if warmup.get("warmup_enabled") is not True:
-            raise KernelMemopD2HWarmupDiagnosticError("B 必须启用 warm-up")
-        if warmup.get("warmup_status") != "PASS":
-            raise KernelMemopD2HWarmupDiagnosticError(
-                f"warm-up 未成功完成: {warmup.get('warmup_status')}"
-            )
-    else:
-        if warmup.get("warmup_enabled") is not False:
-            raise KernelMemopD2HWarmupDiagnosticError("A' 不得启用 warm-up")
-        if warmup.get("warmup_status") != "NOT_APPLICABLE":
-            raise KernelMemopD2HWarmupDiagnosticError(
-                f"A' 的 warm-up 状态必须为 NOT_APPLICABLE: "
-                f"{warmup.get('warmup_status')}"
-            )
-
     sqlite_path = arm_output / "trace.sqlite"
     export_argv = build_pair_export_argv(nsys_path, sqlite_path, raw_path)
     exported = _run_text(process_runner, export_argv, environment=environment)
@@ -382,6 +491,22 @@ def _run_one_arm(
         )
         raise KernelMemopD2HWarmupDiagnosticError(f"{arm}: SQLite 导出失败")
 
+    # metadata transport 只从导出的 NVTX 记录恢复；collection stdout 不参与判定。
+    recovered = recover_warmup_diagnostic_marker(sqlite_path)
+    marker = recovered["payload"]
+    if marker["arm"] != arm:
+        raise KernelMemopD2HWarmupDiagnosticError(
+            f"warm-up marker 的 arm 与采集 arm 不一致: {marker['arm']} != {arm}"
+        )
+    expected_status = "PASS" if arm == ARM_B else "NOT_APPLICABLE"
+    if marker["warmup_status"] != expected_status:
+        raise KernelMemopD2HWarmupDiagnosticError(
+            f"{arm} 的 warm-up 状态必须为 {expected_status}: {marker['warmup_status']}"
+        )
+    warmup = {
+        **marker,
+        "warmup_marker_source": recovered["nvtx"],
+    }
     measured = summarize_warmup_diagnostic_sqlite(sqlite_path)
     eligibility = {
         "formal_evidence": False,
@@ -401,6 +526,7 @@ def _run_one_arm(
         "export_argv": export_argv,
         "environment": dict(snapshot),
         "warmup": warmup,
+        "metadata_transport": METADATA_TRANSPORT,
         "measured": measured,
         "source": {
             "binary": {"path": str(binary_path), "sha256": _sha256(binary_path)},
@@ -458,6 +584,11 @@ def run_kernel_memop_d2h_warmup_pair_diagnostic(
         raise KernelMemopD2HWarmupDiagnosticError(
             "run-id 必须匹配 kernel-memop-d2h-diag-64m-10ms-warmup-NN"
         )
+    if run_id.endswith(SUPERSEDED_RUN_ID_SUFFIX):
+        raise KernelMemopD2HWarmupDiagnosticError(
+            "warmup-01 已固定为 INVALID_INSTRUMENTATION_OUTPUT_CHANNEL，"
+            "不得补跑；修复后必须使用新的 run-id（...-warmup-02）"
+        )
     if not cuda_visible_device or "," in cuda_visible_device:
         raise KernelMemopD2HWarmupDiagnosticError("配对 diagnostic 必须绑定唯一 GPU")
     if not implementation_commit:
@@ -493,6 +624,8 @@ def run_kernel_memop_d2h_warmup_pair_diagnostic(
             "implementation_commit": implementation_commit,
             "baseline_reference_commit": baseline_reference_commit,
             "diagnostic_parameters": parameters,
+            "metadata_transport": METADATA_TRANSPORT,
+            "prior_run_disposition": PRIOR_RUN_DISPOSITION,
             "execution_order": [ARM_A, ARM_B],
             "single_variable": WARMUP_FLAG,
             "arms": {
@@ -507,6 +640,8 @@ def run_kernel_memop_d2h_warmup_pair_diagnostic(
                 "BOTH_ARMS_SAME_BINARY_AND_COMMIT",
                 "MEASURED_WORKLOAD_STREAMS_HOST_CONDVAR_NSYS_ARGV_IDENTICAL",
                 "FIXED_EXECUTION_ORDER_IS_A_KNOWN_LIMITATION",
+                "METADATA_TRANSPORT_IS_NVTX_MARKER_NOT_COLLECTION_STDOUT",
+                "SUPERSEDED_WARMUP_01_NOT_RERUNNABLE",
             ],
             "decision_policy": {
                 "primary_measure": "device_interval_overlap_ns",
@@ -679,6 +814,8 @@ def run_kernel_memop_d2h_warmup_pair_diagnostic(
         "implementation_commit": implementation_commit,
         "baseline_reference_commit": baseline_reference_commit,
         "diagnostic_parameters": parameters,
+        "metadata_transport": METADATA_TRANSPORT,
+        "prior_run_disposition": PRIOR_RUN_DISPOSITION,
         "environment": snapshot,
         "plan": {"name": plan_path.name, "sha256": _sha256(plan_path)},
         "arms": arms,
@@ -714,14 +851,20 @@ __all__ = [
     "CASE_ID",
     "DIAGNOSTIC_D2H_BYTES",
     "DIAGNOSTIC_KERNEL_MS",
+    "METADATA_TRANSPORT",
+    "NVTX_DIAGNOSTIC_PREFIX",
     "PAIR_OUTCOME_POLICY",
     "PAIR_OUTCOME_RULE",
+    "PRIOR_RUN_DISPOSITION",
+    "SUPERSEDED_RUN_ID_SUFFIX",
     "WARMUP_FLAG",
     "WARMUP_KERNEL_MS",
+    "WARMUP_MARKER_REQUIRED_FIELDS",
     "KernelMemopD2HWarmupDiagnosticError",
     "build_pair_arm_argv",
     "build_pair_export_argv",
     "classify_pair_outcome",
+    "recover_warmup_diagnostic_marker",
     "run_kernel_memop_d2h_warmup_pair_diagnostic",
     "summarize_warmup_diagnostic_sqlite",
 ]
