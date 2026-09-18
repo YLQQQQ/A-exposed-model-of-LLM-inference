@@ -264,8 +264,8 @@ Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，直至 §9 条件在同一 run 中�
    `0.2.1` 并在 case 记录中留存 policy
 5. `exposedpath_v141/q0_collection.py` — 兼容读取 run `0.2.0` 与 `0.2.1`
 6. `tests/test_v141_q0_execution.py` — policy / argv / schema 回归
-7. `tests/test_v141_q0_cuda_source.py` — 源码结构回归（predicate 驱动，非
-   case_id 特判）
+7. `tests/test_v141_q0_cuda_source.py` — 源码结构回归（manifest policy 驱动
+   warm-up，非 case_id 特判；review-time predicate 不进入 runtime）
 8. `tests/test_v141_q0_collection.py` — collection version regression：
    `0.2.1` accepted；unknown run version rejected；若保留 backward
    compatibility 则 `0.2.0` accepted
