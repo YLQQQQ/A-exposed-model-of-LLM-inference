@@ -20,16 +20,21 @@ from exposedpath_v141.q0_kernel_memop_d2h_warmup_diagnostic import (
     CASE_ID,
     DIAGNOSTIC_D2H_BYTES,
     DIAGNOSTIC_KERNEL_MS,
+    NVTX_DIAGNOSTIC_PREFIX,
+    NVTX_MARK_EVENT_TYPE,
+    SUPERSEDED_RUN_ID_SUFFIX,
     WARMUP_FLAG,
     KernelMemopD2HWarmupDiagnosticError,
     build_pair_arm_argv,
     classify_pair_outcome,
+    recover_warmup_diagnostic_marker,
     run_kernel_memop_d2h_warmup_pair_diagnostic,
     summarize_warmup_diagnostic_sqlite,
 )
 
 
-RUN_ID = "q0-win-4090-20260918-kernel-memop-d2h-diag-64m-10ms-warmup-01"
+RUN_ID = "q0-win-4090-20260918-kernel-memop-d2h-diag-64m-10ms-warmup-02"
+SUPERSEDED_RUN_ID = "q0-win-4090-20260918-kernel-memop-d2h-diag-64m-10ms-warmup-01"
 IMPL_COMMIT = "1" * 40
 
 
@@ -53,9 +58,48 @@ def _environment() -> dict[str, object]:
     }
 
 
-def _write_trace_sqlite(path: Path, *, kernel_duration_ns: int, launch_duration_ns: int) -> None:
+def _marker_label(
+    *,
+    arm: str,
+    status: str,
+    host_ns: int = 123_456,
+    interleave: str = "OUTSIDE_CAPTURE_RANGE",
+) -> str:
+    """构造与 binary 一致的 NVTX warm-up marker 标签。"""
+
+    payload = {
+        "arm": arm,
+        "cuda_module_loading_mode": "LAZY",
+        "warmup_host_ns": host_ns,
+        "warmup_interleave": interleave,
+        "warmup_status": status,
+    }
+    return NVTX_DIAGNOSTIC_PREFIX + json.dumps(payload, separators=(",", ":"))
+
+
+def _arm_marker_label(arm_output: Path) -> str:
+    """按 arm 目录返回该 arm 应当写入的 marker 标签。"""
+
+    if "arm-b-warmup" in str(arm_output):
+        return _marker_label(arm=ARM_B, status="PASS", host_ns=12_000_000)
+    return _marker_label(arm=ARM_A, status="NOT_APPLICABLE", host_ns=0)
+
+
+def _write_trace_sqlite(
+    path: Path,
+    *,
+    kernel_duration_ns: int,
+    launch_duration_ns: int,
+    marker_labels: tuple[str, ...] = (),
+    non_mark_labels: tuple[str, ...] = (),
+) -> None:
     connection = sqlite3.connect(path)
     connection.execute("CREATE TABLE StringIds (id INTEGER PRIMARY KEY, value TEXT)")
+    connection.execute(
+        "CREATE TABLE NVTX_EVENTS "
+        "(start INTEGER, \"end\" INTEGER, eventType INTEGER, text TEXT, "
+        "textId INTEGER, globalTid INTEGER)"
+    )
     connection.execute(
         "CREATE TABLE CUPTI_ACTIVITY_KIND_RUNTIME "
         "(start INTEGER, end INTEGER, nameId INTEGER, correlationId INTEGER, globalTid INTEGER)"
@@ -94,6 +138,18 @@ def _write_trace_sqlite(path: Path, *, kernel_duration_ns: int, launch_duration_
         "INSERT INTO CUPTI_ACTIVITY_KIND_KERNEL VALUES (?, ?, ?, ?, ?, ?)",
         (88_995_128, 88_995_128 + kernel_duration_ns, 128, 45, 45, 13),
     )
+    # mark：eventType=34，没有 end 语义（这里仍写入 end 以复现真实 schema）。
+    for index, label in enumerate(marker_labels):
+        connection.execute(
+            "INSERT INTO NVTX_EVENTS VALUES (?, ?, ?, ?, ?, ?)",
+            (1_000_000 + index, 1_000_000 + index, NVTX_MARK_EVENT_TYPE, label, None, 100),
+        )
+    # 同前缀但为 push/pop range（真实 trace 中 eventType=59）：不得被当作 mark。
+    for index, label in enumerate(non_mark_labels):
+        connection.execute(
+            "INSERT INTO NVTX_EVENTS VALUES (?, ?, ?, ?, ?, ?)",
+            (2_000_000 + index, 3_000_000 + index, 59, label, None, 101),
+        )
     connection.commit()
     connection.close()
 
@@ -202,35 +258,40 @@ def test_pair_outcome_policy_is_frozen():
     assert "PAIR_INVALID" in PAIR_OUTCOME_RULE
 
 
-def _diagnostic_stdout(*, enabled: bool, status: str) -> str:
-    """构造与 binary 一致的机读诊断行。"""
+def _runner(
+    seen: list[list[str]],
+    *,
+    arm_b_launch_ns: int = 45_000,
+    marker_labels: object = None,
+    non_mark_labels: tuple[str, ...] = (),
+    stdout: str = "",
+):
+    """伪 Nsight：export 阶段写出带 marker 的 SQLite；stdout 默认不参与任何判定。"""
 
-    return (
-        'EXPOSEDPATH_DIAGNOSTIC_V1:{"cuda_module_loading_mode":"LAZY",'
-        f'"warmup_enabled":{str(enabled).lower()},'
-        '"warmup_kernel_ms":10,"warmup_host_ns":123456,'
-        f'"warmup_status":"{status}",'
-        '"warmup_interleave":"OUTSIDE_CAPTURE_RANGE"}\n'
-    )
-
-
-def _runner(seen: list[list[str]], *, arm_b_launch_ns: int = 45_000):
     def run(argv, **_kwargs):
         command = [str(value) for value in argv]
         seen.append(command)
         if len(command) > 1 and command[1] == "profile":
-            is_b = command[-1] == WARMUP_FLAG
             Path(command[command.index("-o") + 1]).with_suffix(".nsys-rep").write_bytes(
                 b"warmup-pair-raw"
-            )
-            stdout = _diagnostic_stdout(
-                enabled=is_b, status="PASS" if is_b else "NOT_APPLICABLE"
             )
             return subprocess.CompletedProcess(command, 0, stdout, "")
         if len(command) > 1 and command[1] == "export":
             output = Path(command[command.index("--output") + 1])
             launch_ns = arm_b_launch_ns if "arm-b-warmup" in str(output) else 57_281_975
-            _write_trace_sqlite(output, kernel_duration_ns=10_000_869, launch_duration_ns=launch_ns)
+            if callable(marker_labels):
+                labels = tuple(marker_labels(output))
+            elif marker_labels is None:
+                labels = (_arm_marker_label(output),)
+            else:
+                labels = tuple(marker_labels)
+            _write_trace_sqlite(
+                output,
+                kernel_duration_ns=10_000_869,
+                launch_duration_ns=launch_ns,
+                marker_labels=labels,
+                non_mark_labels=non_mark_labels,
+            )
             return subprocess.CompletedProcess(command, 0, "export ok", "")
         raise AssertionError(command)
 
@@ -265,14 +326,39 @@ def test_pair_run_records_matched_arms_without_q0_upgrade(tmp_path):
     assert receipt["baseline_reference_commit"] == BASELINE_REFERENCE_COMMIT
     assert receipt["research_eligibility"]["formal_evidence"] is False
     assert [arm["arm"] for arm in receipt["arms"]] == [ARM_A, ARM_B]
+    assert receipt["metadata_transport"] == {
+        "channel": "NVTX_MARK",
+        "nvtx_label_prefix": NVTX_DIAGNOSTIC_PREFIX,
+        "nvtx_event_type": NVTX_MARK_EVENT_TYPE,
+        "nvtx_event_kind": "NvtxMark",
+        "recovery": "TRACE_SQLITE_NVTX_UNIQUE_MARK",
+        "collection_stdout_is_authoritative": False,
+        "marker_placement": "AFTER_cudaProfilerStart_BEFORE_request",
+        "required_fields": [
+            "arm",
+            "cuda_module_loading_mode",
+            "warmup_host_ns",
+            "warmup_interleave",
+            "warmup_status",
+        ],
+    }
+    assert receipt["prior_run_disposition"]["usable_as_arm_result"] is False
 
     arm_a, arm_b = receipt["arms"]
-    assert arm_a["warmup"]["warmup_enabled"] is False
+    assert arm_a["warmup"]["arm"] == ARM_A
     assert arm_a["warmup"]["warmup_status"] == "NOT_APPLICABLE"
     assert arm_a["warmup"]["cuda_module_loading_mode"] == "LAZY"
-    assert arm_b["warmup"]["warmup_enabled"] is True
+    assert arm_a["warmup"]["warmup_interleave"] == "OUTSIDE_CAPTURE_RANGE"
+    assert arm_a["warmup"]["warmup_host_ns"] == 0
+    # marker 只从导出的 NVTX 记录恢复，并带 provenance。
+    assert arm_a["warmup"]["warmup_marker_source"]["source_table"] == "NVTX_EVENTS"
+    assert arm_a["warmup"]["warmup_marker_source"]["source_rowid"] is not None
+    assert isinstance(arm_a["warmup"]["warmup_marker_source"]["start_ns"], int)
+    assert arm_b["warmup"]["arm"] == ARM_B
     assert arm_b["warmup"]["warmup_status"] == "PASS"
     assert arm_b["warmup"]["cuda_module_loading_mode"] == "LAZY"
+    assert arm_b["warmup"]["warmup_host_ns"] == 12_000_000
+    assert arm_b["warmup"]["warmup_marker_source"]["source_table"] == "NVTX_EVENTS"
     assert arm_a["measured"]["descriptive_class"] == "OVERLAP_ZERO_LAUNCH_LATENCY_STILL_HIGH"
     assert arm_b["measured"]["descriptive_class"] == "OVERLAP_ZERO_LAUNCH_LATENCY_REDUCED"
     assert arm_a["measured"]["overlap_ns"] == 0
@@ -300,6 +386,25 @@ def test_pair_run_records_matched_arms_without_q0_upgrade(tmp_path):
     assert plan["baseline_reference_commit"] == BASELINE_REFERENCE_COMMIT
     assert "NO_RETRY" in plan["preregistered_rules"]
     assert "FIXED_EXECUTION_ORDER_IS_A_KNOWN_LIMITATION" in plan["preregistered_rules"]
+    assert (
+        "METADATA_TRANSPORT_IS_NVTX_MARKER_NOT_COLLECTION_STDOUT"
+        in plan["preregistered_rules"]
+    )
+    assert "SUPERSEDED_WARMUP_01_NOT_RERUNNABLE" in plan["preregistered_rules"]
+    assert plan["metadata_transport"]["channel"] == "NVTX_MARK"
+    assert plan["metadata_transport"]["collection_stdout_is_authoritative"] is False
+    assert plan["metadata_transport"]["required_fields"] == [
+        "arm",
+        "cuda_module_loading_mode",
+        "warmup_host_ns",
+        "warmup_interleave",
+        "warmup_status",
+    ]
+    assert (
+        plan["prior_run_disposition"]["disposition"]
+        == "INVALID_INSTRUMENTATION_OUTPUT_CHANNEL"
+    )
+    assert plan["prior_run_disposition"]["rerun_allowed"] is False
     assert plan["interpretation_boundary"]["forbidden_attribution"] == [
         "LAZY_MODULE_LOADING",
         "WDDM",
@@ -345,69 +450,210 @@ def test_pair_run_records_matched_arms_without_q0_upgrade(tmp_path):
         )
 
 
-def test_pair_run_stops_when_b_warmup_not_completed(tmp_path):
+def _pair_kwargs(tmp_path, binary, nsys, process_runner, output_name="out"):
+    return dict(
+        output_dir=tmp_path / output_name,
+        binary=binary,
+        nsys=nsys,
+        run_id=RUN_ID,
+        cuda_visible_device="GPU-ABC",
+        implementation_commit=IMPL_COMMIT,
+        process_runner=process_runner,
+        environment_probe=lambda *_: _environment(),
+    )
+
+
+def test_recover_warmup_marker_reads_nvtx_records(tmp_path):
+    trace = tmp_path / "trace.sqlite"
+    label = _marker_label(arm=ARM_B, status="PASS", host_ns=12_345_678)
+    _write_trace_sqlite(
+        trace,
+        kernel_duration_ns=10_000_869,
+        launch_duration_ns=45_000,
+        marker_labels=(label,),
+    )
+
+    recovered = recover_warmup_diagnostic_marker(trace)
+
+    assert recovered["payload"] == {
+        "arm": ARM_B,
+        "cuda_module_loading_mode": "LAZY",
+        "warmup_host_ns": 12_345_678,
+        "warmup_interleave": "OUTSIDE_CAPTURE_RANGE",
+        "warmup_status": "PASS",
+    }
+    assert recovered["nvtx"]["source_table"] == "NVTX_EVENTS"
+    assert recovered["nvtx"]["event_type"] == NVTX_MARK_EVENT_TYPE
+    assert recovered["nvtx"]["event_kind"] == "NvtxMark"
+    assert recovered["nvtx"]["global_tid"] == 100
+    assert recovered["nvtx"]["text"] == label
+    assert "end_ns" not in recovered["nvtx"]
+
+
+def test_recover_warmup_marker_ignores_same_prefix_non_mark_rows(tmp_path):
+    """同前缀的 push/pop range（eventType=59）不得被当作 mark。"""
+
+    mark = _marker_label(arm=ARM_A, status="NOT_APPLICABLE", host_ns=0)
+    range_label = _marker_label(arm=ARM_B, status="PASS", host_ns=1)
+
+    only_range = tmp_path / "range-only.sqlite"
+    _write_trace_sqlite(
+        only_range,
+        kernel_duration_ns=10_000_869,
+        launch_duration_ns=45_000,
+        non_mark_labels=(range_label,),
+    )
+    with pytest.raises(
+        KernelMemopD2HWarmupDiagnosticError,
+        match="缺少 warm-up diagnostic NVTX mark.*非 mark 行 1 条",
+    ):
+        recover_warmup_diagnostic_marker(only_range)
+
+    both = tmp_path / "mark-and-range.sqlite"
+    _write_trace_sqlite(
+        both,
+        kernel_duration_ns=10_000_869,
+        launch_duration_ns=45_000,
+        marker_labels=(mark,),
+        non_mark_labels=(range_label,),
+    )
+    recovered = recover_warmup_diagnostic_marker(both)
+    assert recovered["payload"]["arm"] == ARM_A
+    assert recovered["nvtx"]["event_type"] == NVTX_MARK_EVENT_TYPE
+
+
+def test_recover_warmup_marker_fails_closed(tmp_path):
+    def write(name: str, labels: tuple[str, ...]) -> Path:
+        trace = tmp_path / name
+        _write_trace_sqlite(
+            trace,
+            kernel_duration_ns=10_000_869,
+            launch_duration_ns=45_000,
+            marker_labels=labels,
+        )
+        return trace
+
+    good = _marker_label(arm=ARM_A, status="NOT_APPLICABLE", host_ns=0)
+
+    with pytest.raises(KernelMemopD2HWarmupDiagnosticError, match="缺少 warm-up diagnostic"):
+        recover_warmup_diagnostic_marker(write("missing.sqlite", ()))
+
+    with pytest.raises(KernelMemopD2HWarmupDiagnosticError, match="必须唯一"):
+        recover_warmup_diagnostic_marker(write("duplicate.sqlite", (good, good)))
+
+    with pytest.raises(KernelMemopD2HWarmupDiagnosticError, match="不是合法 JSON"):
+        recover_warmup_diagnostic_marker(
+            write("malformed.sqlite", (NVTX_DIAGNOSTIC_PREFIX + "{not json",))
+        )
+
+    with pytest.raises(KernelMemopD2HWarmupDiagnosticError, match="缺少必需字段"):
+        recover_warmup_diagnostic_marker(
+            write(
+                "incomplete.sqlite",
+                (NVTX_DIAGNOSTIC_PREFIX + json.dumps({"arm": ARM_A}),),
+            )
+        )
+
+    wrong_interleave = _marker_label(
+        arm=ARM_A, status="NOT_APPLICABLE", host_ns=0, interleave="INSIDE_CAPTURE_RANGE"
+    )
+    with pytest.raises(KernelMemopD2HWarmupDiagnosticError, match="capture range 之外"):
+        recover_warmup_diagnostic_marker(write("interleave.sqlite", (wrong_interleave,)))
+
+
+def test_pair_run_uses_nvtx_marker_and_ignores_collection_stdout(tmp_path):
+    binary = tmp_path / "q0.exe"
+    nsys = tmp_path / "nsys.exe"
+    binary.write_bytes(b"q0")
+    nsys.write_bytes(b"nsys")
+    # collection stdout 里放一条伪造的、看起来有效的诊断行：不得被采信。
+    forged = (
+        'EXPOSEDPATH_DIAGNOSTIC_V1:{"arm":"B_WARMUP","cuda_module_loading_mode":"EAGER",'
+        '"warmup_host_ns":1,"warmup_interleave":"OUTSIDE_CAPTURE_RANGE",'
+        '"warmup_status":"PASS"}\n'
+    )
+
+    receipt_path = run_kernel_memop_d2h_warmup_pair_diagnostic(
+        **_pair_kwargs(
+            tmp_path, binary, nsys, _runner([], stdout=forged), "forged-stdout"
+        )
+    )
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert [arm["warmup"]["cuda_module_loading_mode"] for arm in receipt["arms"]] == [
+        "LAZY",
+        "LAZY",
+    ]
+
+    # 反过来：stdout 里有伪造行，但 trace 里没有 marker，必须 fail closed。
+    with pytest.raises(
+        KernelMemopD2HWarmupDiagnosticError, match="缺少 warm-up diagnostic"
+    ):
+        run_kernel_memop_d2h_warmup_pair_diagnostic(
+            **_pair_kwargs(
+                tmp_path,
+                binary,
+                nsys,
+                _runner([], marker_labels=(), stdout=forged),
+                "stdout-only",
+            )
+        )
+
+
+def test_pair_run_stops_when_b_warmup_status_not_pass(tmp_path):
     binary = tmp_path / "q0.exe"
     nsys = tmp_path / "nsys.exe"
     binary.write_bytes(b"q0")
     nsys.write_bytes(b"nsys")
 
-    def broken_runner(argv, **_kwargs):
-        command = [str(value) for value in argv]
-        if command[1] == "profile":
-            Path(command[command.index("-o") + 1]).with_suffix(".nsys-rep").write_bytes(b"raw")
-            is_b = command[-1] == WARMUP_FLAG
-            stdout = _diagnostic_stdout(
-                enabled=is_b, status="FAIL" if is_b else "NOT_APPLICABLE"
-            )
-            return subprocess.CompletedProcess(command, 0, stdout, "")
-        if command[1] == "export":
-            output = Path(command[command.index("--output") + 1])
-            _write_trace_sqlite(output, kernel_duration_ns=10_000_869, launch_duration_ns=45_000)
-            return subprocess.CompletedProcess(command, 0, "ok", "")
-        raise AssertionError(command)
+    def labels(arm_output: Path) -> tuple[str, ...]:
+        if "arm-b-warmup" in str(arm_output):
+            return (_marker_label(arm=ARM_B, status="FAIL", host_ns=12_000_000),)
+        return (_marker_label(arm=ARM_A, status="NOT_APPLICABLE", host_ns=0),)
 
-    with pytest.raises(KernelMemopD2HWarmupDiagnosticError, match="warm-up 未成功完成"):
+    with pytest.raises(KernelMemopD2HWarmupDiagnosticError, match="必须为 PASS"):
         run_kernel_memop_d2h_warmup_pair_diagnostic(
-            tmp_path / "out",
-            binary,
-            nsys,
-            run_id=RUN_ID,
-            cuda_visible_device="GPU-ABC",
-            implementation_commit=IMPL_COMMIT,
-            process_runner=broken_runner,
-            environment_probe=lambda *_: _environment(),
+            **_pair_kwargs(tmp_path, binary, nsys, _runner([], marker_labels=labels))
         )
 
 
-def test_pair_run_rejects_warmup_line_in_arm_a(tmp_path):
+def test_pair_run_rejects_marker_from_other_arm(tmp_path):
+    binary = tmp_path / "q0.exe"
+    nsys = tmp_path / "nsys.exe"
+    binary.write_bytes(b"q0")
+    nsys.write_bytes(b"nsys")
+    # A' 的 trace 里出现 B 的 marker：metadata transport 与 arm 不匹配。
+    mixed = (_marker_label(arm=ARM_B, status="PASS", host_ns=12_000_000),)
+
+    with pytest.raises(
+        KernelMemopD2HWarmupDiagnosticError, match="arm 与采集 arm 不一致"
+    ):
+        run_kernel_memop_d2h_warmup_pair_diagnostic(
+            **_pair_kwargs(tmp_path, binary, nsys, _runner([], marker_labels=mixed))
+        )
+
+
+def test_pair_diagnostic_rejects_superseded_warmup_01(tmp_path):
     binary = tmp_path / "q0.exe"
     nsys = tmp_path / "nsys.exe"
     binary.write_bytes(b"q0")
     nsys.write_bytes(b"nsys")
 
-    def leaking_runner(argv, **_kwargs):
-        command = [str(value) for value in argv]
-        if command[1] == "profile":
-            Path(command[command.index("-o") + 1]).with_suffix(".nsys-rep").write_bytes(b"raw")
-            stdout = (
-                'EXPOSEDPATH_DIAGNOSTIC_V1:{"cuda_module_loading_mode":"LAZY",'
-                '"warmup_enabled":true,"warmup_kernel_ms":10,"warmup_host_ns":1,'
-                '"warmup_status":"PASS","warmup_interleave":"OUTSIDE_CAPTURE_RANGE"}\n'
-            )
-            return subprocess.CompletedProcess(command, 0, stdout, "")
-        raise AssertionError(command)
-
-    with pytest.raises(KernelMemopD2HWarmupDiagnosticError, match="A' 不得启用 warm-up"):
+    with pytest.raises(
+        KernelMemopD2HWarmupDiagnosticError,
+        match="INVALID_INSTRUMENTATION_OUTPUT_CHANNEL",
+    ):
         run_kernel_memop_d2h_warmup_pair_diagnostic(
-            tmp_path / "out",
+            tmp_path / "superseded",
             binary,
             nsys,
-            run_id=RUN_ID,
+            run_id=SUPERSEDED_RUN_ID,
             cuda_visible_device="GPU-ABC",
             implementation_commit=IMPL_COMMIT,
-            process_runner=leaking_runner,
+            process_runner=_runner([]),
             environment_probe=lambda *_: _environment(),
         )
+
+    assert SUPERSEDED_RUN_ID_SUFFIX == "-warmup-01"
 
 
 @pytest.mark.parametrize(
@@ -476,10 +722,26 @@ def test_pair_cli_reports_both_arms_and_not_q0(monkeypatch, tmp_path, capsys):
                     "warmup_kernel_ms": 10,
                     "warmup_interleave": "OUTSIDE_CAPTURE_RANGE",
                 },
+                "metadata_transport": {
+                    "channel": "NVTX_MARK",
+                    "nvtx_event_type": NVTX_MARK_EVENT_TYPE,
+                    "nvtx_event_kind": "NvtxMark",
+                    "recovery": "TRACE_SQLITE_NVTX_UNIQUE_MARK",
+                    "collection_stdout_is_authoritative": False,
+                },
+                "prior_run_disposition": {
+                    "run_id_suffix": "-warmup-01",
+                    "disposition": "INVALID_INSTRUMENTATION_OUTPUT_CHANNEL",
+                    "rerun_allowed": False,
+                },
                 "arms": [
                     {
                         "arm": ARM_A,
-                        "warmup": None,
+                        "warmup": {
+                            "arm": ARM_A,
+                            "warmup_status": "NOT_APPLICABLE",
+                            "cuda_module_loading_mode": "LAZY",
+                        },
                         "source": {"binary": {"sha256": "AB" * 32}},
                         "measured": {
                             "measured_launch_kernel_api_ns": 57_281_975,
@@ -491,7 +753,11 @@ def test_pair_cli_reports_both_arms_and_not_q0(monkeypatch, tmp_path, capsys):
                     },
                     {
                         "arm": ARM_B,
-                        "warmup": {"warmup_status": "PASS", "cuda_module_loading_mode": "LAZY"},
+                        "warmup": {
+                            "arm": ARM_B,
+                            "warmup_status": "PASS",
+                            "cuda_module_loading_mode": "LAZY",
+                        },
                         "source": {"binary": {"sha256": "AB" * 32}},
                         "measured": {
                             "measured_launch_kernel_api_ns": 45_000,
@@ -553,6 +819,15 @@ def test_pair_cli_reports_both_arms_and_not_q0(monkeypatch, tmp_path, capsys):
     assert f"arm {ARM_A}:" in output
     assert f"arm {ARM_B}:" in output
     assert "construction_diff_evidence: same_binary=True, same_env=True" in output
+    assert (
+        "metadata_transport: NVTX_MARK "
+        "(recovery=TRACE_SQLITE_NVTX_UNIQUE_MARK, "
+        "collection_stdout_is_authoritative=False)" in output
+    )
+    assert (
+        "prior_run_disposition: *-warmup-01 = INVALID_INSTRUMENTATION_OUTPUT_CHANNEL "
+        "(rerun_allowed=False)" in output
+    )
     assert "claim_scope: ENGINEERING_CONTROLLED_ASSOCIATION_ONLY" in output
     assert "limitation: fixed_execution_order=" in output
     assert "pair_outcome: BOTH_ZERO" in output

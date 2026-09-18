@@ -300,14 +300,32 @@ def test_warmup_diagnostic_changes_only_the_precapture_warmup():
     # module loading mode 只做记录，不改变构造。
     assert "cuModuleGetLoadingMode" in source
     assert "cuda_module_loading_mode" in source
-    # A'（不启用 warm-up）也必须输出同一诊断行，保证两 arm 对称可读。
-    assert "print_warmup_diagnostic_line(false, 0);" in main
-    assert "else if (d2h_diagnostic_parameters)" in main
+    # metadata transport 必须走 NVTX marker，不再走 stdout。
+    assert "print_warmup_diagnostic_line" not in source
+    assert "EXPOSEDPATH_DIAGNOSTIC_V1:" in source
+    assert "A_PRIME_NO_WARMUP" in source and "B_WARMUP" in source
+    assert "warmup_interleave" in source and "OUTSIDE_CAPTURE_RANGE" in source
+    assert "warmup_status" in source and "warmup_host_ns" in source
+    # A'（不启用 warm-up）与 B 必须对称写入同一条 marker。
+    assert "const bool emit_warmup_diagnostic" in main
+    assert "diagnostic_warmup || d2h_diagnostic_parameters" in main
+    # metadata transport 必须是 NVTX mark（单点事件），不是 range。
+    assert "nvtxMarkA(text.c_str());" in source
+    assert "emit_nvtx_mark(diagnostic_label);" in main
+    assert "NvtxRange diagnostic(" not in main
 
     # warm-up 必须发生在 cudaProfilerStart()/request 之前。
     warmup_index = main.index("warmup_kernel_memop(resources);")
     capture_index = main.index("CudaProfilerRange capture;")
     assert warmup_index < capture_index
+    # mark 必须写在 capture 开始之后、request 开始之前（request 之外）。
+    marker_index = main.index(
+        "warmup_diagnostic_label(diagnostic_warmup, warmup_host_ns)"
+    )
+    request_index = main.index("selected->second(resources, case_id, run_id);")
+    assert capture_index < marker_index < request_index
+    mark_index = main.index("emit_nvtx_mark(diagnostic_label);")
+    assert marker_index < mark_index < request_index
     assert "--diagnostic-warmup-kernel" in main
 
     # 正常 Q0 argv 不含 warm-up 开关，且 warm-up 只允许出现在冻结 diagnostic identity 上。

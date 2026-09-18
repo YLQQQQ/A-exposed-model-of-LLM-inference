@@ -436,6 +436,18 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"binary_sha256: {arm_a['source']['binary']['sha256']}"
         )
+        transport = receipt["metadata_transport"]
+        print(
+            f"metadata_transport: {transport['channel']} "
+            f"(recovery={transport['recovery']}, "
+            f"collection_stdout_is_authoritative="
+            f"{transport['collection_stdout_is_authoritative']})"
+        )
+        prior = receipt["prior_run_disposition"]
+        print(
+            f"prior_run_disposition: *{prior['run_id_suffix']} = "
+            f"{prior['disposition']} (rerun_allowed={prior['rerun_allowed']})"
+        )
         for arm in (arm_a, arm_b):
             measured = arm["measured"]
             warmup = arm["warmup"] or {}
