@@ -522,6 +522,11 @@ def main(argv: list[str] | None = None) -> int:
                 f"terminal={semantics['terminal_label']}/{semantics['terminal_kind']}"
             )
         print(f"pair_outcome: {receipt['pair_interpretation']['outcome']}")
+        prior = receipt["prior_run_disposition"]
+        print(
+            f"prior_run_disposition: *{prior['run_id_suffix']} = "
+            f"{prior['disposition']} (rerun_allowed={prior['rerun_allowed']})"
+        )
         print("gate6_verdict: FAIL")
         print("q0_execution_status: NOT_RUN")
         if receipt["failure"]:

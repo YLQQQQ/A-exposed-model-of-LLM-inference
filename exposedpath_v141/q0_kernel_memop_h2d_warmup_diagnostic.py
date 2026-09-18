@@ -26,7 +26,7 @@ from .q0_execution import _source_manifest
 from .q0_kernel_memop_d2h_warmup_diagnostic import (
     ARM_A, ARM_B, ARM_OUTPUT_NAMES, BASELINE_REFERENCE_COMMIT, CASE_ID,
     METADATA_TRANSPORT, WARMUP_FLAG, WARMUP_KERNEL_MS,
-    build_pair_export_argv, recover_warmup_diagnostic_marker,
+    _open_readonly, build_pair_export_argv, recover_warmup_diagnostic_marker,
     summarize_warmup_diagnostic_sqlite,
 )
 from .q0_real import map_real_activity_labels
@@ -37,8 +37,20 @@ from .sync_semantics import load_canonical_bundle
 H2D_BYTES = 512 * 1024 * 1024
 KERNEL_MS = 10
 RUN_ID_PATTERN = re.compile(
-    r"q0-win-4090-\d{8}-kernel-memop-h2d-formalshape-warmup-\d{2}"
+    r"q0-win-4090-\d{8}-kernel-memop-h2d-formalshape-warmup-02"
 )
+NON_BLOCKING_STREAM_ENUM_NAME = "CUPTI_ACTIVITY_STREAM_CREATE_FLAG_NON_BLOCKING"
+SUPERSEDED_RUN_ID_SUFFIX = "-warmup-01"
+PRIOR_RUN_DISPOSITION = {
+    "run_id_suffix": SUPERSEDED_RUN_ID_SUFFIX,
+    "disposition": "INVALID_ANALYZER_STREAM_FLAG_ASSUMPTION",
+    "reason": (
+        "analyzer 把 CUPTI stream enum id 错当成 cudaStreamNonBlocking==1：Raw SQLite "
+        "中 flag=2 且 ENUM_CUPTI_STREAM_TYPE 为 NON_BLOCKING；B 未执行"
+    ),
+    "usable_as_arm_result": False,
+    "rerun_allowed": False,
+}
 ELIGIBILITY = {
     "formal_evidence": False, "q0_status": "NOT_RUN",
     "scope": "NATIVE_H2D_FORMALSHAPE_WARMUP_ENGINEERING_ONLY",
@@ -126,6 +138,81 @@ def _s_records(manifest_path: Path, canonical_path: Path) -> tuple[dict, list[di
     return manifest, records
 
 
+def _nonblocking_stream_provenance(
+    trace_sqlite: Path, activities: Mapping[str, Mapping[str, Any]]
+) -> dict[str, dict[str, Any]]:
+    """Resolve each target stream's CUPTI enum id rather than assuming a raw value."""
+
+    with _open_readonly(trace_sqlite) as connection:
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
+        required = {"TARGET_INFO_CUDA_STREAM", "ENUM_CUPTI_STREAM_TYPE"}
+        if not required.issubset(tables):
+            raise KernelMemopH2DWarmupDiagnosticError(
+                f"stream provenance tables missing: {sorted(required - tables)}"
+            )
+        enum_names: dict[int, str] = {}
+        for enum_id, enum_name in connection.execute(
+            "SELECT id, name FROM ENUM_CUPTI_STREAM_TYPE"
+        ):
+            if not isinstance(enum_id, int) or not isinstance(enum_name, str):
+                raise KernelMemopH2DWarmupDiagnosticError(
+                    "CUPTI stream enum row is not an id/name pair"
+                )
+            if enum_id in enum_names:
+                raise KernelMemopH2DWarmupDiagnosticError(
+                    f"CUPTI stream enum id is duplicated: {enum_id}"
+                )
+            enum_names[enum_id] = enum_name
+        if not enum_names:
+            raise KernelMemopH2DWarmupDiagnosticError("CUPTI stream enum table is empty")
+
+        provenance: dict[str, dict[str, Any]] = {}
+        for label, activity in activities.items():
+            process_id = activity.get("process_id")
+            if not isinstance(process_id, int):
+                raise KernelMemopH2DWarmupDiagnosticError(
+                    f"{label}: activity process identity is missing"
+                )
+            rows = list(
+                connection.execute(
+                    "SELECT streamId, contextId, flag FROM TARGET_INFO_CUDA_STREAM "
+                    "WHERE processId = ? AND contextId = ? AND streamId = ?",
+                    (process_id, activity["context_id"], activity["stream_id"]),
+                )
+            )
+            if len(rows) != 1:
+                raise KernelMemopH2DWarmupDiagnosticError(
+                    f"{label}: target stream row must be unique"
+                )
+            stream_id, context_id, flag = rows[0]
+            if stream_id != activity["stream_id"] or context_id != activity["context_id"]:
+                raise KernelMemopH2DWarmupDiagnosticError(
+                    f"{label}: target stream identity changed"
+                )
+            if flag not in enum_names:
+                raise KernelMemopH2DWarmupDiagnosticError(
+                    f"{label}: stream flag {flag!r} has no unique enum name"
+                )
+            enum_name = enum_names[flag]
+            if enum_name != NON_BLOCKING_STREAM_ENUM_NAME:
+                raise KernelMemopH2DWarmupDiagnosticError(
+                    f"{label}: stream flag is {enum_name}, not NON_BLOCKING"
+                )
+            provenance[label] = {
+                "process_id": process_id,
+                "stream_id": stream_id,
+                "context_id": context_id,
+                "flag": flag,
+                "enum_name": enum_name,
+            }
+    return provenance
+
+
 def _analyze_arm_evidence(trace_sqlite: Path, raw_path: Path, output_dir: Path, *,
                          arm: str, case_run_id: str, cuda_visible_device: str,
                          nsys_version: str) -> dict[str, Any]:
@@ -187,11 +274,9 @@ def _analyze_arm_evidence(trace_sqlite: Path, raw_path: Path, output_dir: Path, 
         if (len(apis) != 1 or apis[0]["source_table"] != "CUPTI_ACTIVITY_KIND_RUNTIME"
                 or re.sub(r"_v\d+$", "", apis[0]["api_name"]) != api_name):
             raise KernelMemopH2DWarmupDiagnosticError("Runtime/activity mapping is not unique or correct")
-    for activity in (kernel, copy):
-        streams = [row for row in records["stream"]
-                   if row["stream_id"] == activity["stream_id"] and row["context_id"] == activity["context_id"]]
-        if len(streams) != 1 or streams[0]["flag"] != 1:
-            raise KernelMemopH2DWarmupDiagnosticError("nonblocking stream provenance is not unique")
+    stream_provenance = _nonblocking_stream_provenance(
+        trace_sqlite, {"KERNEL_A": kernel, "MEMCPY_B": copy}
+    )
 
     s_path = analyze_canonical_to_s(canonical_path, output_dir / "s_v0_2")
     _, syncs = _s_records(s_path, canonical_path)
@@ -233,6 +318,7 @@ def _analyze_arm_evidence(trace_sqlite: Path, raw_path: Path, output_dir: Path, 
     return {
         "warmup": {**marker, "warmup_marker_source": recovered["nvtx"]},
         "measured": measured, "semantics": semantics,
+        "stream_provenance": stream_provenance,
         "lineage": {"source_manifest": _artifact(source, output_dir),
                     "canonical_manifest": _artifact(canonical_path, output_dir),
                     "s_manifest": _artifact(s_path, output_dir)},
@@ -263,8 +349,15 @@ def run_kernel_memop_h2d_warmup_pair_diagnostic(
 ) -> Path:
     """Pre-register then collect A -> B once. Any invalid arm prevents further collection."""
     output, binary, nsys = Path(output_dir).resolve(), Path(binary).resolve(), Path(nsys).resolve()
+    if run_id.endswith(SUPERSEDED_RUN_ID_SUFFIX):
+        raise KernelMemopH2DWarmupDiagnosticError(
+            "warmup-01 is fixed as INVALID_ANALYZER_STREAM_FLAG_ASSUMPTION; "
+            "rerun is forbidden and the corrected run-id must use warmup-02"
+        )
     if not RUN_ID_PATTERN.fullmatch(run_id):
-        raise KernelMemopH2DWarmupDiagnosticError("run-id must identify h2d-formalshape-warmup")
+        raise KernelMemopH2DWarmupDiagnosticError(
+            "run-id must be q0-win-4090-<date>-kernel-memop-h2d-formalshape-warmup-02"
+        )
     if output.exists():
         raise KernelMemopH2DWarmupDiagnosticError("refuse to overwrite an existing diagnostic")
     if (not cuda_visible_device.startswith("GPU-") or "," in cuda_visible_device
@@ -297,6 +390,7 @@ def run_kernel_memop_h2d_warmup_pair_diagnostic(
                          "warmup_kernel_ms": WARMUP_KERNEL_MS, "warmup_stream": "KERNEL_STREAM",
                          "warmup_interleave": "OUTSIDE_CAPTURE_RANGE"},
         "metadata_transport": METADATA_TRANSPORT, "execution_order": [ARM_A, ARM_B],
+        "prior_run_disposition": PRIOR_RUN_DISPOSITION,
         "command_argv": commands, "outcome_policy": OUTCOME_POLICY,
         "preregistered_rules": ["EACH_ARM_ONCE", "NO_RETRY", "NO_PARAMETER_TUNING",
                                  "S_DEVICE_VALID_NONEMPTY_EXACT_KERNEL_A_MEMCPY_B",
@@ -368,6 +462,7 @@ def run_kernel_memop_h2d_warmup_pair_diagnostic(
         "data_role": "Engineering", "diagnostic_only": True,
         "gate6_verdict": "FAIL", "q0_status": "NOT_RUN", "arms": arms,
         "failed_arm": failed_arm, "failure": failure,
+        "prior_run_disposition": PRIOR_RUN_DISPOSITION,
         "source_hashes": frozen_hashes, "tool_hashes": tool_hashes,
         "plan": _artifact(output / "pair_plan.json", output),
         "pair_interpretation": {"outcome": outcome, "arms_valid": failure is None and len(arms) == 2,
