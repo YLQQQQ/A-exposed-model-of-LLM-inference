@@ -272,6 +272,20 @@ def test_d2h_diagnostic_keeps_default_h2d_and_adds_no_cuda_dependency():
     assert body.count("cudaDeviceSynchronize") == 1
 
 
+def test_formalshape_diagnostic_keeps_native_measured_defaults():
+    source = SOURCE.read_text(encoding="utf-8")
+    main = source[source.index("int main("):]
+    assert 'const bool formalshape_diagnostic =' in main
+    assert 'kernel-memop-h2d-formalshape-warmup-' in main
+    assert 'positional_argc == 5 && case_id == "Q0-KERNEL-MEMOP-001"' in main
+    assert 'diagnostic_warmup || d2h_diagnostic_parameters || formalshape_diagnostic' in main
+    # No measured parameter is assigned inside the formalshape guard.
+    segment = main[main.index('const bool formalshape_diagnostic ='):main.index('try {', main.index('const bool formalshape_diagnostic ='))]
+    assert 'diagnostic_h2d_bytes =' not in segment
+    assert 'diagnostic_copy_direction =' not in segment
+    assert 'diagnostic_kernel_ms =' not in segment
+
+
 def test_warmup_diagnostic_changes_only_the_precapture_warmup():
     """warm-up diagnostic 不得改动 measured construction。"""
 

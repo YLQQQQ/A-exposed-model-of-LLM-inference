@@ -662,10 +662,17 @@ int main(int argc, char** argv) {
       diagnostic_copy_direction = KernelMemopCopyDirection::DEVICE_TO_HOST;
     }
   }
+  const bool formalshape_diagnostic =
+      positional_argc == 5 && case_id == "Q0-KERNEL-MEMOP-001" &&
+      std::regex_match(
+          run_id,
+          std::regex("^q0-win-4090-[0-9]{8}-kernel-memop-h2d-formalshape-warmup-"
+                     "[0-9]{2}\\.[ab]\\.q0-kernel-memop-001$"));
   if (diagnostic_warmup &&
-      (!diagnostic_parameters || case_id != "Q0-KERNEL-MEMOP-001")) {
+      ((!diagnostic_parameters && !formalshape_diagnostic) ||
+       case_id != "Q0-KERNEL-MEMOP-001")) {
     std::cerr << "--diagnostic-warmup-kernel is only supported for the frozen "
-                 "64 MiB D2H/H2D Engineering diagnostic\n";
+                 "64 MiB D2H/H2D or native 512 MiB H2D formalshape Engineering diagnostic\n";
     return 2;
   }
 
@@ -680,7 +687,7 @@ int main(int argc, char** argv) {
     // A'（不启用 warm-up）与 B（启用 warm-up）各写恰好一条 NVTX mark，
     // 保证两侧 module loading mode 对称可读。
     const bool emit_warmup_diagnostic =
-        diagnostic_warmup || d2h_diagnostic_parameters;
+        diagnostic_warmup || d2h_diagnostic_parameters || formalshape_diagnostic;
     long long warmup_host_ns = 0;
     if (diagnostic_warmup) {
       // 唯一构造变化：在 cudaProfilerStart()/request 之前完成一次同 kernel 预热。
