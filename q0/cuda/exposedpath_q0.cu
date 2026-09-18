@@ -33,6 +33,8 @@ constexpr const char* kRepeatId = "repeat-0";
 constexpr std::size_t kDefaultBufferBytes = 4096;
 constexpr std::size_t kKernelMemopBufferBytes = 512ULL * 1024ULL * 1024ULL;
 constexpr int kKernelMemopKernelMilliseconds = 10;
+// warm-up-only Engineering diagnostic 的固定预热时长；不是可调参数。
+constexpr int kKernelMemopWarmupMilliseconds = 10;
 
 enum class KernelMemopCopyDirection {
   HOST_TO_DEVICE,
@@ -189,6 +191,40 @@ void launch(Resources& resources, const std::string& case_id, const std::string&
   auto marker = marker_range(case_id, run_id, phase, label);
   q0_spin_kernel<<<1, 1, 0, stream>>>(resources.cycles(milliseconds));
   CUDA_CHECK(cudaGetLastError());
+}
+
+// 独立 warm-up-only Engineering diagnostic：在 capture/request 之外对同一个
+// q0_spin_kernel 做一次固定预热，使首次 kernel/module 初始化退出测量窗口。
+// 不新增 stream、event 或 gate，也不改变 run_kernel_memop 的构造。
+void warmup_kernel_memop(Resources& resources) {
+  q0_spin_kernel<<<1, 1, 0, resources.first>>>(
+      resources.cycles(kKernelMemopWarmupMilliseconds));
+  CUDA_CHECK(cudaGetLastError());
+  CUDA_CHECK(cudaStreamSynchronize(resources.first));
+}
+
+// 记录 CUDA module loading mode，用于区分首次 launch 是否包含 module 加载/JIT。
+std::string cuda_module_loading_mode() {
+  CUmoduleLoadingMode mode = CU_MODULE_LAZY_LOADING;
+  if (cuModuleGetLoadingMode(&mode) != CUDA_SUCCESS) {
+    return "UNKNOWN";
+  }
+  return mode == CU_MODULE_EAGER_LOADING ? "EAGER" : "LAZY";
+}
+
+// 独立 warm-up Engineering diagnostic 的机读记录行；正常 Q0 从不输出该行。
+// A'（warmup_enabled=false）与 B（warmup_enabled=true）都输出该行，因此两侧的
+// module loading mode 对称可读，便于约束根因解释。warmup_host_ns 是纯 Host 计时，
+// 不新增 CUDA event/gate。
+void print_warmup_diagnostic_line(bool warmup_enabled, long long warmup_host_ns) {
+  std::cout << "EXPOSEDPATH_DIAGNOSTIC_V1:{\"cuda_module_loading_mode\":\""
+            << cuda_module_loading_mode()
+            << "\",\"warmup_enabled\":" << (warmup_enabled ? "true" : "false")
+            << ",\"warmup_kernel_ms\":" << kKernelMemopWarmupMilliseconds
+            << ",\"warmup_host_ns\":" << warmup_host_ns
+            << ",\"warmup_status\":\""
+            << (warmup_enabled ? "PASS" : "NOT_APPLICABLE")
+            << "\",\"warmup_interleave\":\"OUTSIDE_CAPTURE_RANGE\"}\n";
 }
 
 template <typename Body>
@@ -564,19 +600,26 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
+  // 可选尾部开关：只在独立 warm-up Engineering diagnostic 中出现，正常 Q0 argv 不含它。
+  bool diagnostic_warmup = false;
+  if (argc > 1 && std::string(argv[argc - 1]) == "--diagnostic-warmup-kernel") {
+    diagnostic_warmup = true;
+    --argc;
+  }
+  const int positional_argc = argc;
   const bool h2d_diagnostic_parameters =
-      argc == 9 && std::string(argv[5]) == "--diagnostic-h2d-bytes" &&
+      positional_argc == 9 && std::string(argv[5]) == "--diagnostic-h2d-bytes" &&
       std::string(argv[7]) == "--diagnostic-kernel-ms";
   const bool d2h_diagnostic_parameters =
-      argc == 9 && std::string(argv[5]) == "--diagnostic-d2h-bytes" &&
+      positional_argc == 9 && std::string(argv[5]) == "--diagnostic-d2h-bytes" &&
       std::string(argv[7]) == "--diagnostic-kernel-ms";
   const bool diagnostic_parameters =
       h2d_diagnostic_parameters || d2h_diagnostic_parameters;
-  if ((argc != 5 && !diagnostic_parameters) ||
+  if ((positional_argc != 5 && !diagnostic_parameters) ||
       std::string(argv[1]) != "--case" || std::string(argv[3]) != "--run-id") {
     std::cerr << "usage: exposedpath_q0 --case CASE_ID --run-id RUN_ID "
                  "[--diagnostic-h2d-bytes BYTES | --diagnostic-d2h-bytes BYTES] "
-                 "[--diagnostic-kernel-ms MS]\n";
+                 "[--diagnostic-kernel-ms MS] [--diagnostic-warmup-kernel]\n";
     return 2;
   }
   const std::string case_id = argv[2];
@@ -611,6 +654,12 @@ int main(int argc, char** argv) {
       diagnostic_copy_direction = KernelMemopCopyDirection::DEVICE_TO_HOST;
     }
   }
+  if (diagnostic_warmup &&
+      (!diagnostic_parameters || case_id != "Q0-KERNEL-MEMOP-001")) {
+    std::cerr << "--diagnostic-warmup-kernel is only supported for the frozen "
+                 "64 MiB D2H/H2D Engineering diagnostic\n";
+    return 2;
+  }
 
   try {
     const std::size_t buffer_bytes =
@@ -620,6 +669,20 @@ int main(int argc, char** argv) {
             : kDefaultBufferBytes;
     Resources resources(buffer_bytes, diagnostic_kernel_ms,
                         diagnostic_copy_direction);
+    if (diagnostic_warmup) {
+      // 唯一构造变化：在 cudaProfilerStart()/request 之前完成一次同 kernel 预热。
+      const auto warmup_begin = std::chrono::steady_clock::now();
+      warmup_kernel_memop(resources);
+      const auto warmup_end = std::chrono::steady_clock::now();
+      const auto warmup_host_ns =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(warmup_end -
+                                                               warmup_begin)
+              .count();
+      print_warmup_diagnostic_line(true, static_cast<long long>(warmup_host_ns));
+    } else if (d2h_diagnostic_parameters) {
+      // A' 侧（同 binary、不启用 warm-up）也输出该行，使 module loading mode 对称可读。
+      print_warmup_diagnostic_line(false, 0);
+    }
     {
       CudaProfilerRange capture;
       selected->second(resources, case_id, run_id);

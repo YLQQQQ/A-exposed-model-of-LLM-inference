@@ -25,6 +25,10 @@ from .q0_kernel_memop_d2h_diagnostic import (
     KernelMemopD2HDiagnosticError,
     run_kernel_memop_d2h_diagnostic,
 )
+from .q0_kernel_memop_d2h_warmup_diagnostic import (
+    KernelMemopD2HWarmupDiagnosticError,
+    run_kernel_memop_d2h_warmup_pair_diagnostic,
+)
 from .q0_faults import Q0FaultError, apply_q0_fault
 from .q0_real import Q0RealObservedError, run_real_q0_case
 from .q0_gate import Q0GateError, write_q0_gate
@@ -134,6 +138,27 @@ def _build_parser() -> argparse.ArgumentParser:
     kernel_memop_d2h_diag_parser.add_argument("--nsys", required=True, type=Path)
     kernel_memop_d2h_diag_parser.add_argument("--run-id", required=True)
     kernel_memop_d2h_diag_parser.add_argument("--cuda-visible-device", required=True)
+    kernel_memop_d2h_warmup_diag_parser = subparsers.add_parser(
+        "run-q0-kernel-memop-d2h-warmup-diagnostic",
+        help="同 binary/同 commit 配对采集 A'(无 warm-up)/B(warm-up) Engineering diagnostic",
+    )
+    kernel_memop_d2h_warmup_diag_parser.add_argument(
+        "--output-dir", required=True, type=Path
+    )
+    kernel_memop_d2h_warmup_diag_parser.add_argument(
+        "--binary", required=True, type=Path
+    )
+    kernel_memop_d2h_warmup_diag_parser.add_argument("--nsys", required=True, type=Path)
+    kernel_memop_d2h_warmup_diag_parser.add_argument("--run-id", required=True)
+    kernel_memop_d2h_warmup_diag_parser.add_argument(
+        "--cuda-visible-device", required=True
+    )
+    kernel_memop_d2h_warmup_diag_parser.add_argument(
+        "--implementation-commit", required=True
+    )
+    kernel_memop_d2h_warmup_diag_parser.add_argument(
+        "--baseline-reference-commit", required=True
+    )
     fault_q0_parser = subparsers.add_parser(
         "apply-q0-fault", help="对 Canonical 派生副本应用预定义 Q0 故障"
     )
@@ -371,6 +396,80 @@ def main(argv: list[str] | None = None) -> int:
             f"{parameters['d2h_size_mib']} MiB D2H, "
             f"{parameters['kernel_duration_ms']} ms kernel"
         )
+        print("q0_execution_status: NOT_RUN")
+        return 0
+
+    if args.command == "run-q0-kernel-memop-d2h-warmup-diagnostic":
+        try:
+            receipt_path = run_kernel_memop_d2h_warmup_pair_diagnostic(
+                args.output_dir,
+                args.binary,
+                args.nsys,
+                run_id=args.run_id,
+                cuda_visible_device=args.cuda_visible_device,
+                implementation_commit=args.implementation_commit,
+                baseline_reference_commit=args.baseline_reference_commit,
+            )
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        except (
+            OSError,
+            KernelMemopD2HWarmupDiagnosticError,
+            ValueError,
+            json.JSONDecodeError,
+        ) as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        parameters = receipt["diagnostic_parameters"]
+        arm_a, arm_b = receipt["arms"]
+        measured_a = arm_a["measured"]
+        measured_b = arm_b["measured"]
+        print(f"diagnostic_receipt: {receipt_path}")
+        print("diagnostic_scope: ENGINEERING_ONLY")
+        print(
+            "diagnostic_parameters: "
+            f"{parameters['d2h_size_mib']} MiB D2H, "
+            f"{parameters['kernel_duration_ms']} ms kernel, "
+            f"warmup {parameters['warmup_kernel_ms']} ms ({parameters['warmup_interleave']})"
+        )
+        print(f"implementation_commit: {receipt['implementation_commit']}")
+        print(f"baseline_reference_commit: {receipt['baseline_reference_commit']}")
+        print(
+            f"binary_sha256: {arm_a['source']['binary']['sha256']}"
+        )
+        for arm in (arm_a, arm_b):
+            measured = arm["measured"]
+            warmup = arm["warmup"] or {}
+            print(
+                f"arm {arm['arm']}: launch_api_ns={measured['measured_launch_kernel_api_ns']}, "
+                f"overlap_ns={measured['overlap_ns']}, "
+                f"gap_ns={measured['gap_ns']}, "
+                f"completion_order={measured['completion_order']}, "
+                f"class={measured['descriptive_class']}, "
+                f"module_loading_mode={warmup.get('cuda_module_loading_mode', 'N/A')}"
+            )
+        evidence = receipt["construction_diff_evidence"]
+        print(
+            "construction_diff_evidence: "
+            f"same_binary={evidence['binary_sha256_equal']}, "
+            f"same_env={evidence['environment_equal']}, "
+            f"argv_only_warmup_flag="
+            f"{evidence['argv_equal_except_run_id_output_and_warmup_flag']}, "
+            f"intended_construction_diff={evidence['intended_construction_diff']}"
+        )
+        print(
+            "limitation: fixed_execution_order="
+            f"{evidence['execution_order']} -> "
+            f"{evidence['fixed_execution_order_limitation']}"
+        )
+        print(f"claim_scope: {evidence['claim_scope']}")
+        pair = receipt["pair_interpretation"]
+        print(
+            f"pair_outcome: {pair['pair_outcome']} "
+            f"(overlap_a_prime_ns={pair['overlap_a_prime_ns']}, "
+            f"overlap_b_ns={pair['overlap_b_ns']})"
+        )
+        print(f"pair_outcome_statement: {pair['pair_outcome_statement']}")
+        print(f"changes_gate6_or_q0: {pair['changes_gate6_or_q0']}")
         print("q0_execution_status: NOT_RUN")
         return 0
 

@@ -272,6 +272,49 @@ def test_d2h_diagnostic_keeps_default_h2d_and_adds_no_cuda_dependency():
     assert body.count("cudaDeviceSynchronize") == 1
 
 
+def test_warmup_diagnostic_changes_only_the_precapture_warmup():
+    """warm-up diagnostic 不得改动 measured construction。"""
+
+    source = SOURCE.read_text(encoding="utf-8")
+    body = _function_body(source, "run_kernel_memop")
+    main = source[source.index("int main("):]
+    warmup = _function_body(source, "warmup_kernel_memop")
+
+    # measured 构造不变：仍然没有 event/gate/query，仅一个 device sync。
+    assert body.count("cudaMemcpyAsync(") == 1
+    assert "cudaEventRecord" not in body
+    assert "cudaStreamWaitEvent" not in body
+    assert "cudaEventSynchronize" not in body
+    assert "cudaStreamQuery" not in body
+    assert "cudaEventQuery" not in body
+    assert "std::thread kernel_worker" in body
+    assert "start_condition.wait(" in body
+    assert body.count("sync_range(") == 1
+
+    # warm-up 复用同一个 kernel 与既有 stream，不新增 event/gate/stream。
+    assert "q0_spin_kernel<<<1, 1, 0, resources.first>>>" in warmup
+    assert "cudaStreamSynchronize(resources.first)" in warmup
+    assert "cudaEvent" not in source[source.index("void warmup_kernel_memop"):source.index("template <typename Body>")]
+    assert "cudaStreamWaitEvent" not in warmup
+    assert "cudaStreamCreate" not in warmup
+    # module loading mode 只做记录，不改变构造。
+    assert "cuModuleGetLoadingMode" in source
+    assert "cuda_module_loading_mode" in source
+    # A'（不启用 warm-up）也必须输出同一诊断行，保证两 arm 对称可读。
+    assert "print_warmup_diagnostic_line(false, 0);" in main
+    assert "else if (d2h_diagnostic_parameters)" in main
+
+    # warm-up 必须发生在 cudaProfilerStart()/request 之前。
+    warmup_index = main.index("warmup_kernel_memop(resources);")
+    capture_index = main.index("CudaProfilerRange capture;")
+    assert warmup_index < capture_index
+    assert "--diagnostic-warmup-kernel" in main
+
+    # 正常 Q0 argv 不含 warm-up 开关，且 warm-up 只允许出现在冻结 diagnostic identity 上。
+    assert 'std::string(argv[argc - 1]) == "--diagnostic-warmup-kernel"' in main
+    assert "is only supported for the frozen" in main
+
+
 @pytest.mark.parametrize(
     "function_name",
     ["run_ptds", "run_multithread", "run_overlapping_sync"],
