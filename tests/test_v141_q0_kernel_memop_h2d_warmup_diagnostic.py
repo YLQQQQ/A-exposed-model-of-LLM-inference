@@ -15,7 +15,7 @@ from test_v141_q0_kernel_memop_d2h_warmup_diagnostic import _environment
 
 
 MODULE = "exposedpath_v141.q0_kernel_memop_h2d_warmup_diagnostic"
-RUN_ID = "q0-win-4090-20260918-kernel-memop-h2d-formalshape-warmup-01"
+RUN_ID = "q0-win-4090-20260918-kernel-memop-h2d-formalshape-warmup-02"
 CASE = "Q0-KERNEL-MEMOP-001"
 IMPL = "1" * 40
 PREFIX = "EXPOSEDPATH_DIAGNOSTIC_V1:"
@@ -34,6 +34,9 @@ def _fixture(path, case_run_id, arm, *, overlap=True, kernel_terminal=False,
     """Hand-checked intervals; no CUDA or profiler process is executed."""
     c = sqlite3.connect(path)
     c.executescript(SQLITE_SCHEMA)
+    c.execute(
+        "CREATE TABLE ENUM_CUPTI_STREAM_TYPE(id INTEGER NOT NULL, name TEXT, label TEXT)"
+    )
     c.executemany("INSERT INTO META_DATA_EXPORT VALUES (?,?)", [
         ("EXPORT_PRODUCT_VERSION", "2026.2.1.210"),
         ("EXPORT_SCHEMA_VERSION", "3.25.0"), ("EXPORT_PARAM_LAZY", "false"),
@@ -82,9 +85,14 @@ def _fixture(path, case_run_id, arm, *, overlap=True, kernel_terminal=False,
     c.execute("INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
               (32, 109, 0, 1, None, 4294967295, 3, PID, None, 1, 4294967295, None))
     c.execute("INSERT INTO ENUM_CUPTI_SYNC_TYPE VALUES (1,'CONTEXT_SYNCHRONIZE','Context sync')")
+    c.executemany("INSERT INTO ENUM_CUPTI_STREAM_TYPE VALUES (?,?,?)", [
+        (1, "CUPTI_ACTIVITY_STREAM_CREATE_FLAG_DEFAULT", "Default"),
+        (2, "CUPTI_ACTIVITY_STREAM_CREATE_FLAG_NON_BLOCKING", "Non-blocking"),
+        (3, "CUPTI_ACTIVITY_STREAM_CREATE_FLAG_NULL", "Null"),
+    ])
     c.execute("INSERT INTO TARGET_INFO_CUDA_CONTEXT_INFO VALUES (0,0,0,100,0,1,NULL,0)")
     c.executemany("INSERT INTO TARGET_INFO_CUDA_STREAM VALUES (?,?,?,?,?,?,?)",
-                  [(13, 0, 0, 100, 1, 0, 1), (14, 0, 0, 100, 1, 0, 1)])
+                  [(13, 0, 0, 100, 1, 0, 2), (14, 0, 0, 100, 1, 0, 2)])
     c.execute("INSERT INTO TARGET_INFO_GPU VALUES (0,'NVIDIA GeForce RTX 4090')")
     c.commit()
     c.close()
@@ -167,12 +175,21 @@ def test_real_canonical_s_pipeline_records_wait_set_and_terminal(tmp_path):
         assert arm["lineage"]["canonical_manifest"]["sha256"]
         assert arm["lineage"]["s_manifest"]["sha256"]
         assert arm["measured"]["h2d_device_interval"]["bytes"] == BYTES
+        assert {item["flag"] for item in arm["stream_provenance"].values()} == {2}
+        assert {item["process_id"] for item in arm["stream_provenance"].values()} == {100}
+        assert {
+            item["enum_name"] for item in arm["stream_provenance"].values()
+        } == {"CUPTI_ACTIVITY_STREAM_CREATE_FLAG_NON_BLOCKING"}
     assert receipt["arms"][0]["measured"]["overlap_ns"] == 0
     assert receipt["arms"][1]["measured"]["overlap_ns"] == 20
     assert not list((tmp_path / "pair").rglob("ab_manifest.json"))
     plan = json.loads((tmp_path / "pair" / "pair_plan.json").read_text())
     assert plan["outcome_policy"]["AMENDMENT_REVIEW_ELIGIBLE"]["changes_gate6_or_q0"] is False
     assert plan["construction"]["h2d_size_bytes"] == BYTES
+    assert plan["prior_run_disposition"]["disposition"] == (
+        "INVALID_ANALYZER_STREAM_FLAG_ASSUMPTION"
+    )
+    assert plan["prior_run_disposition"]["rerun_allowed"] is False
 
 
 def test_valid_kernel_terminal_is_structure_stop_not_invalid_evidence(tmp_path):
@@ -223,11 +240,62 @@ def test_scope_rejects_old_d2h_run_identity_before_process_launch(tmp_path):
             process_runner=lambda *_: pytest.fail("must not execute"))
 
 
+def test_scope_rejects_superseded_formalshape_warmup_01_before_process_launch(tmp_path):
+    binary, nsys = _inputs(tmp_path)
+    with pytest.raises(_m().KernelMemopH2DWarmupDiagnosticError, match="warmup-02"):
+        _m().run_kernel_memop_h2d_warmup_pair_diagnostic(
+            tmp_path / "pair", binary, nsys,
+            run_id="q0-win-4090-20260918-kernel-memop-h2d-formalshape-warmup-01",
+            cuda_visible_device="GPU-ABC", implementation_commit=IMPL,
+            process_runner=lambda *_: pytest.fail("must not execute"))
+
+
+def test_scope_rejects_any_formalshape_run_id_other_than_warmup_02(tmp_path):
+    binary, nsys = _inputs(tmp_path)
+    with pytest.raises(_m().KernelMemopH2DWarmupDiagnosticError, match="warmup-02"):
+        _m().run_kernel_memop_h2d_warmup_pair_diagnostic(
+            tmp_path / "pair", binary, nsys,
+            run_id="q0-win-4090-20260918-kernel-memop-h2d-formalshape-warmup-03",
+            cuda_visible_device="GPU-ABC", implementation_commit=IMPL,
+            process_runner=lambda *_: pytest.fail("must not execute"))
+
+
+def test_stream_provenance_ignores_other_process_same_context_stream_decoy(tmp_path):
+    m = _m()
+    path = tmp_path / "trace.sqlite"
+    identity = f"{RUN_ID}.b.{CASE.lower()}"
+    _fixture(path, identity, m.ARM_B)
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "INSERT INTO TARGET_INFO_CUDA_STREAM VALUES (?,?,?,?,?,?,?)",
+            (13, 0, 0, 999, 1, 0, 1),
+        )
+    raw = tmp_path / "trace.nsys-rep"
+    raw.write_bytes(b"raw")
+    result = m.analyze_arm_evidence(
+        path, raw, tmp_path / "analysis", arm=m.ARM_B,
+        case_run_id=identity, cuda_visible_device="GPU-ABC",
+        nsys_version="2026.2.1.210",
+    )
+    assert result["stream_provenance"]["KERNEL_A"] == {
+        "process_id": 100,
+        "stream_id": 13,
+        "context_id": 1,
+        "flag": 2,
+        "enum_name": "CUPTI_ACTIVITY_STREAM_CREATE_FLAG_NON_BLOCKING",
+    }
+
+
 @pytest.mark.parametrize("sql", [
     "DELETE FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION",
     "UPDATE CUPTI_ACTIVITY_KIND_MEMCPY SET bytes=67108864",
     "UPDATE CUPTI_ACTIVITY_KIND_MEMCPY SET copyKind=2",
     "UPDATE TARGET_INFO_CUDA_STREAM SET flag=0",
+    "UPDATE TARGET_INFO_CUDA_STREAM SET flag=1",
+    "UPDATE ENUM_CUPTI_STREAM_TYPE SET name='WRONG' WHERE id=2",
+    "DELETE FROM ENUM_CUPTI_STREAM_TYPE WHERE id=2",
+    "INSERT INTO ENUM_CUPTI_STREAM_TYPE VALUES (2,'CUPTI_ACTIVITY_STREAM_CREATE_FLAG_NON_BLOCKING','Duplicate')",
+    "DROP TABLE ENUM_CUPTI_STREAM_TYPE",
     "UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET end=100",
     "UPDATE CUPTI_ACTIVITY_KIND_RUNTIME SET nameId=2 WHERE correlationId=1",
 ])
@@ -271,6 +339,7 @@ def test_cli_reports_native_shape_semantics_and_fail_closed_without_evaluator(
     assert status == (1 if invalid else 0)
     assert "q0_execution_status: NOT_RUN" in output
     assert "gate6_verdict: FAIL" in output
+    assert "INVALID_ANALYZER_STREAM_FLAG_ASSUMPTION" in output
     assert ("INVALID_STOP" if invalid else "AMENDMENT_REVIEW_ELIGIBLE") in output
     if not invalid:
         assert "terminal=MEMCPY_B/MEMOP" in output
