@@ -12,6 +12,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .q0_execution import (
+    LEGACY_RUN_SCHEMA_VERSION,
+    MEASUREMENT_INITIALIZATION_FIELD,
+    MEASUREMENT_INITIALIZATION_FLAG,
+    MEASUREMENT_INITIALIZATIONS,
+    RUN_SCHEMA_VERSION,
+)
+
 
 class Q0CollectionError(RuntimeError):
     """真实采集计划、环境或产物不满足 fail-closed 要求。"""
@@ -19,6 +27,11 @@ class Q0CollectionError(RuntimeError):
 
 ProcessRunner = Callable[..., subprocess.CompletedProcess[str]]
 EnvironmentProbe = Callable[..., Mapping[str, Any]]
+
+# 正式 run 由 execution path 产出 `0.2.1`；同时兼容读取历史 `0.2.0` run manifest。
+SUPPORTED_RUN_SCHEMA_VERSIONS = frozenset(
+    {LEGACY_RUN_SCHEMA_VERSION, RUN_SCHEMA_VERSION}
+)
 
 
 def _normalize_gpu_uuid(value: Any) -> str:
@@ -156,7 +169,8 @@ def execute_q0_case(
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise Q0CollectionError(f"Q0 run manifest 无法读取: {exc}") from exc
-    if manifest.get("schema_version") != "exposedpath-q0-run/0.2.0":
+    run_schema_version = manifest.get("schema_version")
+    if run_schema_version not in SUPPORTED_RUN_SCHEMA_VERSIONS:
         raise Q0CollectionError("Q0 run manifest schema 不受支持")
     if manifest.get("status") != "PREPARED_NOT_EXECUTED":
         raise Q0CollectionError("Q0 run manifest 不是可执行的预备状态")
@@ -175,6 +189,26 @@ def execute_q0_case(
             raise Q0CollectionError(f"{label} 文件缺失或哈希不一致")
     if argv[0] != str(nsys) or str(binary) not in argv:
         raise Q0CollectionError("采集 argv 与已哈希工具不一致")
+    if run_schema_version == RUN_SCHEMA_VERSION:
+        # 正式 run：argv 必须携带与 manifest policy 逐字一致的初始化 policy，
+        # 否则一份“缺少 measurement initialization”的正式采集会被静默当作合法证据。
+        policy = case.get(MEASUREMENT_INITIALIZATION_FIELD)
+        if policy not in MEASUREMENT_INITIALIZATIONS:
+            raise Q0CollectionError(
+                f"run 0.2.1 case 缺少显式 measurement initialization: {case_id}"
+            )
+        marker_positions = [
+            index for index, token in enumerate(argv)
+            if token == MEASUREMENT_INITIALIZATION_FLAG
+        ]
+        if (
+            len(marker_positions) != 1
+            or marker_positions[0] + 1 >= len(argv)
+            or argv[marker_positions[0] + 1] != policy
+        ):
+            raise Q0CollectionError(
+                f"{case_id} 采集 argv 的 measurement initialization 与 manifest policy 不一致"
+            )
 
     source_manifest = _inside(root / case["source_manifest"], root, "source manifest")
     if not source_manifest.is_file() or _sha256(source_manifest) != case["source_manifest_sha256"]:

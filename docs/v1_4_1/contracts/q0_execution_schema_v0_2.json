@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://exposedpath.local/schema/q0-execution-0.2.0.json",
+  "$id": "https://exposedpath.local/schema/q0-execution-0.2.1.json",
   "title": "ExposedPath Q0 pre-GPU execution manifest",
   "type": "object",
   "additionalProperties": false,
@@ -14,7 +14,7 @@
     "cases"
   ],
   "properties": {
-    "schema_version": {"const": "exposedpath-q0-execution/0.2.0"},
+    "schema_version": {"const": "exposedpath-q0-execution/0.2.1"},
     "oracle_version": {"const": "exposedpath-q0-oracle-0.2.0"},
     "contract_version": {"const": "exposedpath-measurement-contract-0.2.0"},
     "data_role": {"const": "Engineering"},
@@ -60,6 +60,7 @@
         "native_seed_case_id",
         "fault_injection",
         "synthetic_profile",
+        "measurement_initialization",
         "activity_labels",
         "sync_labels",
         "non_sync_api_labels"
@@ -84,6 +85,9 @@
           ]
         },
         "synthetic_profile": {"type": "string", "minLength": 1},
+        "measurement_initialization": {
+          "enum": ["NONE", "PRE_CAPTURE_SAME_KERNEL_WARMUP"]
+        },
         "activity_labels": {"$ref": "#/$defs/labels"},
         "sync_labels": {"$ref": "#/$defs/labels"},
         "non_sync_api_labels": {"$ref": "#/$defs/labels"}

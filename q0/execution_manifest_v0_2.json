@@ -1,5 +1,5 @@
 {
-  "schema_version": "exposedpath-q0-execution/0.2.0",
+  "schema_version": "exposedpath-q0-execution/0.2.1",
   "oracle_version": "exposedpath-q0-oracle-0.2.0",
   "contract_version": "exposedpath-measurement-contract-0.2.0",
   "data_role": "Engineering",
@@ -18,139 +18,162 @@
       "case_id": "Q0-STREAM-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-STREAM-001",
       "fault_injection": null, "synthetic_profile": "Q0-STREAM-001",
-      "activity_labels": ["K_S1_A", "K_S1_B", "K_OTHER"], "sync_labels": ["S_STREAM"], "non_sync_api_labels": []
+      "activity_labels": ["K_S1_A", "K_S1_B", "K_OTHER"], "sync_labels": ["S_STREAM"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-DEVICE-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-DEVICE-001",
       "fault_injection": null, "synthetic_profile": "Q0-DEVICE-001",
-      "activity_labels": ["K_A", "K_B"], "sync_labels": ["S_DEVICE"], "non_sync_api_labels": []
+      "activity_labels": ["K_A", "K_B"], "sync_labels": ["S_DEVICE"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-CONTEXT-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-CONTEXT-001",
       "fault_injection": null, "synthetic_profile": "Q0-CONTEXT-001",
-      "activity_labels": ["K_CTX_A", "K_CTX_B"], "sync_labels": ["S_CONTEXT"], "non_sync_api_labels": []
+      "activity_labels": ["K_CTX_A", "K_CTX_B"], "sync_labels": ["S_CONTEXT"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-EVENT-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-EVENT-001",
       "fault_injection": null, "synthetic_profile": "Q0-EVENT-001",
-      "activity_labels": ["K_BEFORE_RECORD", "K_AFTER_RECORD"], "sync_labels": ["S_EVENT"], "non_sync_api_labels": []
+      "activity_labels": ["K_BEFORE_RECORD", "K_AFTER_RECORD"], "sync_labels": ["S_EVENT"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-EVENT-XSTREAM-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-EVENT-XSTREAM-001",
       "fault_injection": null, "synthetic_profile": "Q0-EVENT-XSTREAM-001",
-      "activity_labels": ["K_PRODUCER", "K_CONSUMER"], "sync_labels": ["S_CONSUMER_STREAM"], "non_sync_api_labels": []
+      "activity_labels": ["K_PRODUCER", "K_CONSUMER"], "sync_labels": ["S_CONSUMER_STREAM"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-COMPLETED-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-COMPLETED-001",
       "fault_injection": null, "synthetic_profile": "Q0-COMPLETED-001",
-      "activity_labels": ["K_DONE"], "sync_labels": ["S_STREAM"], "non_sync_api_labels": []
+      "activity_labels": ["K_DONE"], "sync_labels": ["S_STREAM"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-EMPTY-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-EMPTY-001",
       "fault_injection": null, "synthetic_profile": "Q0-EMPTY-001",
-      "activity_labels": [], "sync_labels": ["S_EMPTY"], "non_sync_api_labels": []
+      "activity_labels": [], "sync_labels": ["S_EMPTY"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-KERNEL-MEMOP-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-KERNEL-MEMOP-001",
       "fault_injection": null, "synthetic_profile": "Q0-KERNEL-MEMOP-001",
-      "activity_labels": ["KERNEL_A", "MEMCPY_B"], "sync_labels": ["S_DEVICE"], "non_sync_api_labels": []
+      "activity_labels": ["KERNEL_A", "MEMCPY_B"], "sync_labels": ["S_DEVICE"], "non_sync_api_labels": [],
+      "measurement_initialization": "PRE_CAPTURE_SAME_KERNEL_WARMUP"
     },
     {
       "case_id": "Q0-TERMINAL-TIE-001", "required_for_q0": true,
       "execution_strategy": "SYNTHETIC_CANONICAL", "native_seed_case_id": null,
       "fault_injection": null, "synthetic_profile": "Q0-TERMINAL-TIE-001",
-      "activity_labels": ["K_TIE_A", "K_TIE_B"], "sync_labels": ["S_DEVICE"], "non_sync_api_labels": []
+      "activity_labels": ["K_TIE_A", "K_TIE_B"], "sync_labels": ["S_DEVICE"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-MISSING-EVENT-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-MISSING-EVENT-001",
       "fault_injection": null, "synthetic_profile": "Q0-MISSING-EVENT-001",
-      "activity_labels": ["K_EVENT"], "sync_labels": ["S_EVENT"], "non_sync_api_labels": []
+      "activity_labels": ["K_EVENT"], "sync_labels": ["S_EVENT"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-MISSING-CORR-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_WITH_CANONICAL_FAULT", "native_seed_case_id": "Q0-MISSING-CORR-001",
       "fault_injection": "REMOVE_ACTIVITY_CORRELATION", "synthetic_profile": "Q0-MISSING-CORR-001",
-      "activity_labels": ["K_UNMAPPED"], "sync_labels": ["S_STREAM"], "non_sync_api_labels": []
+      "activity_labels": ["K_UNMAPPED"], "sync_labels": ["S_STREAM"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-DROPPED-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_WITH_CANONICAL_FAULT", "native_seed_case_id": "Q0-DROPPED-001",
       "fault_injection": "MARK_TRACE_DROPPED", "synthetic_profile": "Q0-DROPPED-001",
-      "activity_labels": ["K_VISIBLE"], "sync_labels": ["S_DEVICE"], "non_sync_api_labels": []
+      "activity_labels": ["K_VISIBLE"], "sync_labels": ["S_DEVICE"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-EXTERNAL-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-EXTERNAL-001",
       "fault_injection": null, "synthetic_profile": "Q0-EXTERNAL-001",
-      "activity_labels": ["K_EXTERNAL"], "sync_labels": ["S_DEVICE"], "non_sync_api_labels": []
+      "activity_labels": ["K_EXTERNAL"], "sync_labels": ["S_DEVICE"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-SUBMISSION-RACE-001", "required_for_q0": true,
       "execution_strategy": "SYNTHETIC_CANONICAL", "native_seed_case_id": null,
       "fault_injection": null, "synthetic_profile": "Q0-SUBMISSION-RACE-001",
-      "activity_labels": ["K_RACE"], "sync_labels": ["S_STREAM"], "non_sync_api_labels": []
+      "activity_labels": ["K_RACE"], "sync_labels": ["S_STREAM"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-DEFAULT-LEGACY-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-DEFAULT-LEGACY-001",
       "fault_injection": null, "synthetic_profile": "Q0-DEFAULT-LEGACY-001",
-      "activity_labels": ["K_NONDEFAULT", "K_LEGACY_DEFAULT"], "sync_labels": ["S_DEFAULT"], "non_sync_api_labels": []
+      "activity_labels": ["K_NONDEFAULT", "K_LEGACY_DEFAULT"], "sync_labels": ["S_DEFAULT"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-DEFAULT-PTDS-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-DEFAULT-PTDS-001",
       "fault_injection": null, "synthetic_profile": "Q0-DEFAULT-PTDS-001",
-      "activity_labels": ["K_OTHER_THREAD", "K_PTDS"], "sync_labels": ["S_PTDS"], "non_sync_api_labels": []
+      "activity_labels": ["K_OTHER_THREAD", "K_PTDS"], "sync_labels": ["S_PTDS"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-MULTITHREAD-ORDERED-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-MULTITHREAD-ORDERED-001",
       "fault_injection": null, "synthetic_profile": "Q0-MULTITHREAD-ORDERED-001",
-      "activity_labels": ["K_THREAD_A", "K_THREAD_B"], "sync_labels": ["S_THREAD_B"], "non_sync_api_labels": []
+      "activity_labels": ["K_THREAD_A", "K_THREAD_B"], "sync_labels": ["S_THREAD_B"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-OVERLAPPING-HOST-SYNC-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-OVERLAPPING-HOST-SYNC-001",
       "fault_injection": null, "synthetic_profile": "Q0-OVERLAPPING-HOST-SYNC-001",
-      "activity_labels": ["K_A", "K_B"], "sync_labels": ["S_A", "S_B"], "non_sync_api_labels": []
+      "activity_labels": ["K_A", "K_B"], "sync_labels": ["S_A", "S_B"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-PHASE-SPILL-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-PHASE-SPILL-001",
       "fault_injection": null, "synthetic_profile": "Q0-PHASE-SPILL-001",
-      "activity_labels": ["K_PREFILL_ORIGIN"], "sync_labels": ["S_DECODE_OWNER"], "non_sync_api_labels": []
+      "activity_labels": ["K_PREFILL_ORIGIN"], "sync_labels": ["S_DECODE_OWNER"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-INVOCATION-BLEED-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-INVOCATION-BLEED-001",
       "fault_injection": null, "synthetic_profile": "Q0-INVOCATION-BLEED-001",
-      "activity_labels": ["K_PRIOR_INVOCATION"], "sync_labels": ["S_CURRENT"], "non_sync_api_labels": []
+      "activity_labels": ["K_PRIOR_INVOCATION"], "sync_labels": ["S_CURRENT"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-GRAPH-UNSUPPORTED-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_WITH_CANONICAL_FAULT", "native_seed_case_id": "Q0-GRAPH-UNSUPPORTED-001",
       "fault_injection": "REMOVE_GRAPH_NODE_MAPPING", "synthetic_profile": "Q0-GRAPH-UNSUPPORTED-001",
-      "activity_labels": ["GRAPH_NODE"], "sync_labels": ["S_GRAPH"], "non_sync_api_labels": []
+      "activity_labels": ["GRAPH_NODE"], "sync_labels": ["S_GRAPH"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-SYNC-D2H-UNSUPPORTED-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-SYNC-D2H-UNSUPPORTED-001",
       "fault_injection": null, "synthetic_profile": "Q0-SYNC-D2H-UNSUPPORTED-001",
-      "activity_labels": ["COPY_D2H"], "sync_labels": ["S_SYNC_COPY"], "non_sync_api_labels": []
+      "activity_labels": ["COPY_D2H"], "sync_labels": ["S_SYNC_COPY"], "non_sync_api_labels": [],
+      "measurement_initialization": "NONE"
     },
     {
       "case_id": "Q0-QUERY-001", "required_for_q0": true,
       "execution_strategy": "NATIVE_CUDA", "native_seed_case_id": "Q0-QUERY-001",
       "fault_injection": null, "synthetic_profile": "Q0-QUERY-001",
-      "activity_labels": ["K_RUNNING"], "sync_labels": [], "non_sync_api_labels": ["Q_EVENT"]
+      "activity_labels": ["K_RUNNING"], "sync_labels": [], "non_sync_api_labels": ["Q_EVENT"],
+      "measurement_initialization": "NONE"
     }
   ]
 }

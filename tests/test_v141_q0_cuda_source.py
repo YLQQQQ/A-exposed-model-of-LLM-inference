@@ -329,7 +329,7 @@ def test_warmup_diagnostic_changes_only_the_precapture_warmup():
     assert "NvtxRange diagnostic(" not in main
 
     # warm-up 必须发生在 cudaProfilerStart()/request 之前。
-    warmup_index = main.index("warmup_kernel_memop(resources);")
+    warmup_index = main.index("warmup_kernel_memop(resources, warmup_milliseconds);")
     capture_index = main.index("CudaProfilerRange capture;")
     assert warmup_index < capture_index
     # mark 必须写在 capture 开始之后、request 开始之前（request 之外）。
@@ -376,3 +376,167 @@ def test_build_cli_compiles_without_claiming_q0_pass(tmp_path, capsys):
     assert output.is_file()
     assert "compile_status: PASS" in printed
     assert "q0_execution_status: NOT_RUN" in printed
+
+
+def _main_section(source: str) -> str:
+    return source[source.index("int main("):]
+
+
+def test_formal_measurement_initialization_flag_and_enum_match_frozen_manifest():
+    """正式 argv 名称与两个 policy 取值必须与 Manifest/Schema 逐字一致。"""
+
+    source = SOURCE.read_text(encoding="utf-8")
+    manifest = load_q0_execution_manifest()
+    policies = {case["measurement_initialization"] for case in manifest["cases"]}
+
+    assert 'kMeasurementInitializationFlag = "--measurement-initialization"' in source
+    assert 'kMeasurementInitializationNone = "NONE"' in source
+    assert 'kMeasurementInitializationPreCaptureSameKernelWarmup =\n    "PRE_CAPTURE_SAME_KERNEL_WARMUP"' in source
+    assert policies == {"NONE", "PRE_CAPTURE_SAME_KERNEL_WARMUP"}
+    for policy in policies:
+        assert f'"{policy}"' in source
+
+
+def test_formal_warmup_decision_comes_from_manifest_policy_not_case_or_run_id():
+    """binary 不得用 case_id、run-id、oracle 或结果决定是否预热。"""
+
+    main = _main_section(SOURCE.read_text(encoding="utf-8"))
+    start = main.index("const bool policy_warmup =")
+    decision = main[start:main.index(";", start)]
+
+    assert "measurement_initialization_present" in decision
+    assert "measurement_initialization ==" in decision
+    assert "kMeasurementInitializationPreCaptureSameKernelWarmup" in decision
+    assert "case_id" not in decision
+    assert "run_id" not in decision
+    assert "regex" not in decision
+
+    # warm-up 触发点同时接受 Engineering 开关与正式 policy，两者互不替代。
+    assert "if (diagnostic_warmup || policy_warmup) {" in main
+
+
+def test_formal_path_emits_no_diagnostic_metadata_mark():
+    """正式路径不得写入 EXPOSEDPATH_DIAGNOSTIC_V1；mark 只属于 Engineering diagnostic。"""
+
+    source = SOURCE.read_text(encoding="utf-8")
+    main = _main_section(source)
+    start = main.index("const bool emit_warmup_diagnostic =")
+    emit = main[start:main.index(";", start)]
+
+    assert "diagnostic_warmup" in emit
+    assert "formalshape_diagnostic" in emit
+    assert "policy_warmup" not in emit
+    assert "measurement_initialization" not in emit
+
+
+def test_formal_policy_is_rejected_when_combined_with_diagnostic_arguments():
+    source = SOURCE.read_text(encoding="utf-8")
+    main = _main_section(source)
+    # 正式 policy 既出现在 parser 的未知取值检查里，也出现在互斥 guard 里；
+    # 用 guard 唯一 message 反查它自己的 `if (`，避免误取前一处。
+    anchor = main.index("is only valid for the formal native case argv")
+    start = main.rindex("if (", 0, anchor)
+    guard = main[start:main.index("return 2;", start)]
+
+    for token in (
+        "diagnostic_warmup",
+        "diagnostic_parameters",
+        "formalshape_diagnostic",
+        "positional_argc != 5",
+    ):
+        assert token in guard, token
+    assert "is only valid for the formal native case argv" in main
+
+
+def test_formal_policy_parser_fails_closed_on_missing_duplicate_or_unknown_value():
+    main = _main_section(SOURCE.read_text(encoding="utf-8"))
+
+    # 无值 / 重复出现 / 未知取值都必须以非零码退出。
+    assert "must appear exactly once" in main
+    assert "unknown " in main
+    assert "policy: " in main
+    # policy 必须在位置形态校验之前被摘除，因此 argv[5]/argv[7] 等既有索引语义不变。
+    parse_index = main.index("bool measurement_initialization_present = false;")
+    shape_index = main.index("const bool h2d_diagnostic_parameters =")
+    assert parse_index < shape_index
+
+    # 缺失 policy 必须真的 STOP：formal native argv 在进入 CUDA 初始化前被拒绝，
+    # 而不是静默按“无初始化”继续执行。
+    anchor = main.index("formal native case argv requires")
+    guard_start = main.rindex("if (", 0, anchor)
+    missing_guard = main[guard_start:main.index("return 2;", guard_start)]
+    assert "!measurement_initialization_present" in missing_guard
+    assert "!diagnostic_warmup" in missing_guard
+    assert "!diagnostic_parameters" in missing_guard
+    assert "!formalshape_diagnostic" in missing_guard
+    assert "kMeasurementInitializationFlag" in missing_guard
+
+
+def test_formal_native_invocation_without_policy_fails_closed(compiled_q0):
+    """真跑 binary：formal native argv 缺少 policy 必须在 CUDA 初始化前非零退出。"""
+
+    completed = subprocess.run(
+        [str(compiled_q0), "--case", "Q0-STREAM-001", "--run-id", "q0-formal-no-policy"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 2
+    assert "--measurement-initialization" in completed.stderr
+    assert "requires" in completed.stderr
+
+
+def test_formal_warmup_uses_existing_measured_kernel_stream_and_stream_sync_only():
+    source = SOURCE.read_text(encoding="utf-8")
+    warmup = _function_body(source, "warmup_kernel_memop")
+
+    assert "q0_spin_kernel<<<1, 1, 0, resources.first>>>" in warmup
+    assert "cudaStreamSynchronize(resources.first)" in warmup
+    # duration 由调用方显式传入，helper 自身不再绑定任何一种来源。
+    assert "void warmup_kernel_memop(Resources& resources, int milliseconds)" in source
+    assert "resources.cycles(milliseconds)" in warmup
+    # 不得用更宽 scope 的同步代替，也不得新增 stream/event。
+    assert "cudaDeviceSynchronize" not in warmup
+    assert "cudaStreamCreate" not in warmup
+    assert "cudaEvent" not in warmup
+    assert "cudaStreamWaitEvent" not in warmup
+
+
+def test_warmup_duration_source_differs_for_engineering_and_formal_paths():
+    """Engineering diagnostic 固定 10 ms；formal policy 与 measured kernel 同源。"""
+
+    source = SOURCE.read_text(encoding="utf-8")
+    main = _main_section(source)
+
+    assert "constexpr int kKernelMemopWarmupMilliseconds = 10;" in source
+    start = main.index("const int warmup_milliseconds =")
+    selection = main[start:main.index(";", start)]
+    assert "diagnostic_warmup ? kKernelMemopWarmupMilliseconds" in selection
+    assert "resources.kernel_memop_kernel_milliseconds" in selection
+    assert "warmup_kernel_memop(resources, warmup_milliseconds);" in main
+
+
+def test_list_cases_and_environment_json_stay_before_the_formal_policy_parser():
+    main = _main_section(SOURCE.read_text(encoding="utf-8"))
+    parse_index = main.index("bool measurement_initialization_present = false;")
+
+    assert main.index('argc == 2 && std::string(argv[1]) == "--list-cases"') < parse_index
+    assert main.index(
+        'argc == 2 && std::string(argv[1]) == "--environment-json"'
+    ) < parse_index
+
+
+def test_engineering_diagnostic_argv_shape_is_unchanged_by_the_formal_policy():
+    """Engineering diagnostic 不带正式 policy，因此摘除逻辑对它们是 no-op。"""
+
+    main = _main_section(SOURCE.read_text(encoding="utf-8"))
+
+    # 只有出现正式 policy 时才可能触发新的拒绝；缺失时沿用原 argv 语义。
+    assert "if (measurement_initialization_present &&" in main
+    assert 'std::string(argv[argc - 1]) == "--diagnostic-warmup-kernel"' in main
+    assert '"--diagnostic-h2d-bytes"' in main
+    assert '"--diagnostic-d2h-bytes"' in main
+    assert '"--diagnostic-kernel-ms"' in main
+    assert "diagnostic parameters are only supported" in main
+    assert "--diagnostic-warmup-kernel is only supported for the frozen" in main

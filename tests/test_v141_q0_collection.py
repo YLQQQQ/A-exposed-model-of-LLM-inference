@@ -58,6 +58,30 @@ def _successful_runner(seen: dict[str, object]):
     return run
 
 
+def _load_run_manifest(manifest: Path) -> dict:
+    return json.loads(manifest.read_text(encoding="utf-8"))
+
+
+def _save_run_manifest(manifest: Path, plan: dict) -> None:
+    manifest.write_text(
+        json.dumps(plan, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+
+
+def _case_entry(plan: dict, case_id: str) -> dict:
+    return next(case for case in plan["cases"] if case["case_id"] == case_id)
+
+
+def _collect(manifest: Path, case_id: str = "Q0-STREAM-001", seen=None) -> dict:
+    receipt_path = execute_q0_case(
+        manifest,
+        case_id,
+        process_runner=_successful_runner({} if seen is None else seen),
+        environment_probe=lambda *_: _environment(),
+    )
+    return json.loads(receipt_path.read_text(encoding="utf-8"))
+
+
 def test_execute_native_case_writes_hashed_receipt_and_preserves_gpu_mapping(tmp_path):
     manifest = _prepared(tmp_path)
     seen: dict[str, object] = {}
@@ -224,3 +248,81 @@ def test_execute_q0_case_cli_reports_collection_without_q0_upgrade(
     output = capsys.readouterr().out
     assert f"collection_receipt: {receipt}" in output
     assert "q0_execution_status: NOT_RUN" in output
+
+
+def test_formal_run_0_2_1_is_accepted_and_keeps_policy_provenance(tmp_path):
+    manifest = _prepared(tmp_path)
+    seen: dict[str, object] = {}
+
+    receipt = _collect(manifest, seen=seen)
+
+    assert receipt["status"] == "COLLECTED"
+    assert receipt["command_argv"][-2:] == ["--measurement-initialization", "NONE"]
+    assert seen["argv"] == receipt["command_argv"]
+    plan = _load_run_manifest(manifest)
+    assert plan["schema_version"] == "exposedpath-q0-run/0.2.1"
+    assert _case_entry(plan, "Q0-STREAM-001")["measurement_initialization"] == "NONE"
+
+
+def test_legacy_run_0_2_0_manifest_is_still_replayable(tmp_path):
+    """历史 run manifest 可以只读重放；该兼容窗口不授权任何新 run 使用 0.2.0。"""
+
+    manifest = _prepared(tmp_path / "legacy")
+    plan = _load_run_manifest(manifest)
+    plan["schema_version"] = "exposedpath-q0-run/0.2.0"
+    for case in plan["cases"]:
+        case.pop("measurement_initialization", None)
+        argv = case.get("command_argv")
+        if argv is not None:
+            index = argv.index("--measurement-initialization")
+            del argv[index:index + 2]
+    _save_run_manifest(manifest, plan)
+
+    receipt = _collect(manifest)
+
+    assert receipt["status"] == "COLLECTED"
+    assert "--measurement-initialization" not in receipt["command_argv"]
+
+
+def test_unknown_run_schema_version_is_rejected(tmp_path):
+    manifest = _prepared(tmp_path)
+    plan = _load_run_manifest(manifest)
+    plan["schema_version"] = "exposedpath-q0-run/0.2.2"
+    _save_run_manifest(manifest, plan)
+
+    with pytest.raises(Q0CollectionError, match="schema 不受支持"):
+        _collect(manifest)
+
+
+def test_formal_run_without_explicit_policy_is_rejected(tmp_path):
+    manifest = _prepared(tmp_path)
+    plan = _load_run_manifest(manifest)
+    _case_entry(plan, "Q0-STREAM-001").pop("measurement_initialization")
+    _save_run_manifest(manifest, plan)
+
+    with pytest.raises(Q0CollectionError, match="缺少显式 measurement initialization"):
+        _collect(manifest)
+
+
+def test_formal_run_argv_must_carry_the_manifest_policy(tmp_path):
+    manifest = _prepared(tmp_path)
+    plan = _load_run_manifest(manifest)
+    argv = _case_entry(plan, "Q0-STREAM-001")["command_argv"]
+    index = argv.index("--measurement-initialization")
+    del argv[index:index + 2]
+    _save_run_manifest(manifest, plan)
+
+    with pytest.raises(Q0CollectionError, match="不一致"):
+        _collect(manifest)
+
+
+def test_formal_run_argv_policy_mismatch_is_rejected(tmp_path):
+    manifest = _prepared(tmp_path)
+    plan = _load_run_manifest(manifest)
+    argv = _case_entry(plan, "Q0-STREAM-001")["command_argv"]
+    assert argv[-1] == "NONE"
+    argv[-1] = "PRE_CAPTURE_SAME_KERNEL_WARMUP"
+    _save_run_manifest(manifest, plan)
+
+    with pytest.raises(Q0CollectionError, match="不一致"):
+        _collect(manifest)

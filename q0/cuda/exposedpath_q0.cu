@@ -35,6 +35,12 @@ constexpr std::size_t kKernelMemopBufferBytes = 512ULL * 1024ULL * 1024ULL;
 constexpr int kKernelMemopKernelMilliseconds = 10;
 // warm-up-only Engineering diagnostic 的固定预热时长；不是可调参数。
 constexpr int kKernelMemopWarmupMilliseconds = 10;
+// 正式 measurement initialization policy：Gate 6 construction amendment 冻结的枚举。
+// 取值必须与 `q0/execution_manifest_v0_2.json` 中每个 case 的字段逐字一致。
+constexpr const char* kMeasurementInitializationFlag = "--measurement-initialization";
+constexpr const char* kMeasurementInitializationNone = "NONE";
+constexpr const char* kMeasurementInitializationPreCaptureSameKernelWarmup =
+    "PRE_CAPTURE_SAME_KERNEL_WARMUP";
 
 enum class KernelMemopCopyDirection {
   HOST_TO_DEVICE,
@@ -193,12 +199,15 @@ void launch(Resources& resources, const std::string& case_id, const std::string&
   CUDA_CHECK(cudaGetLastError());
 }
 
-// 独立 warm-up-only Engineering diagnostic：在 capture/request 之外对同一个
-// q0_spin_kernel 做一次固定预热，使首次 kernel/module 初始化退出测量窗口。
-// 不新增 stream、event 或 gate，也不改变 run_kernel_memop 的构造。
-void warmup_kernel_memop(Resources& resources) {
+// warm-up-only Engineering diagnostic 与正式 measurement initialization 共用同一实现：
+// 在 capture/request 之外对同一个 q0_spin_kernel 做一次预热，使首次 kernel/module
+// 初始化退出测量窗口。两套路径都使用同一 symbol、同一 launch configuration、既有
+// measured kernel stream，并且不新增 stream、event 或 gate。
+// duration 由调用方显式给出：Engineering diagnostic 固定 kKernelMemopWarmupMilliseconds，
+// 正式 PRE_CAPTURE_SAME_KERNEL_WARMUP 与 measured kernel 同源（measured duration/work 参数）。
+void warmup_kernel_memop(Resources& resources, int milliseconds) {
   q0_spin_kernel<<<1, 1, 0, resources.first>>>(
-      resources.cycles(kKernelMemopWarmupMilliseconds));
+      resources.cycles(milliseconds));
   CUDA_CHECK(cudaGetLastError());
   CUDA_CHECK(cudaStreamSynchronize(resources.first));
 }
@@ -608,6 +617,31 @@ int main(int argc, char** argv) {
       return 1;
     }
   }
+  // 正式 measurement initialization：由 execution manifest policy 驱动的 generic argv，
+  // 正式 native case 恰好携带一次。Engineering diagnostic argv 不使用它，因此先把它从
+  // 位置参数中摘除，再由既有位置形态校验判定这次调用属于哪条路径。
+  bool measurement_initialization_present = false;
+  std::string measurement_initialization;
+  for (int index = 1; index + 1 < argc; ++index) {
+    if (std::string(argv[index]) != kMeasurementInitializationFlag) continue;
+    if (measurement_initialization_present) {
+      std::cerr << kMeasurementInitializationFlag << " must appear exactly once\n";
+      return 2;
+    }
+    measurement_initialization = argv[index + 1];
+    measurement_initialization_present = true;
+    for (int move = index; move + 2 < argc; ++move) argv[move] = argv[move + 2];
+    argc -= 2;
+    index = 0;
+  }
+  if (measurement_initialization_present &&
+      measurement_initialization != kMeasurementInitializationNone &&
+      measurement_initialization !=
+          kMeasurementInitializationPreCaptureSameKernelWarmup) {
+    std::cerr << "unknown " << kMeasurementInitializationFlag
+              << " policy: " << measurement_initialization << '\n';
+    return 2;
+  }
   // 可选尾部开关：只在独立 warm-up Engineering diagnostic 中出现，正常 Q0 argv 不含它。
   bool diagnostic_warmup = false;
   if (argc > 1 && std::string(argv[argc - 1]) == "--diagnostic-warmup-kernel") {
@@ -626,6 +660,7 @@ int main(int argc, char** argv) {
   if ((positional_argc != 5 && !diagnostic_parameters) ||
       std::string(argv[1]) != "--case" || std::string(argv[3]) != "--run-id") {
     std::cerr << "usage: exposedpath_q0 --case CASE_ID --run-id RUN_ID "
+                 "[--measurement-initialization POLICY] "
                  "[--diagnostic-h2d-bytes BYTES | --diagnostic-d2h-bytes BYTES] "
                  "[--diagnostic-kernel-ms MS] [--diagnostic-warmup-kernel]\n";
     return 2;
@@ -675,6 +710,29 @@ int main(int argc, char** argv) {
                  "64 MiB D2H/H2D or native 512 MiB H2D formalshape Engineering diagnostic\n";
     return 2;
   }
+  if (measurement_initialization_present &&
+      (diagnostic_warmup || diagnostic_parameters || formalshape_diagnostic ||
+       positional_argc != 5)) {
+    // 正式 policy 与 Engineering diagnostic 必须互斥：正式路径不得写入 diagnostic
+    // metadata mark，也不得让两套 warm-up 语义叠加。
+    std::cerr << kMeasurementInitializationFlag
+              << " is only valid for the formal native case argv\n";
+    return 2;
+  }
+  // 正式 native case argv 必须显式携带一次 policy：缺失即 STOP，不得静默按“无初始化”
+  // 执行。Engineering diagnostic 走自己的 argv 形态，不要求该 policy。
+  if (!measurement_initialization_present && !diagnostic_warmup &&
+      !diagnostic_parameters && !formalshape_diagnostic) {
+    std::cerr << "formal native case argv requires "
+              << kMeasurementInitializationFlag << " <POLICY>\n";
+    return 2;
+  }
+  // 正式 warm-up 决策只来自 manifest policy；binary 不读取 case_id、run-id、oracle
+  // 或任何运行结果来决定是否预热。
+  const bool policy_warmup =
+      measurement_initialization_present &&
+      measurement_initialization ==
+          kMeasurementInitializationPreCaptureSameKernelWarmup;
 
   try {
     const std::size_t buffer_bytes =
@@ -689,10 +747,14 @@ int main(int argc, char** argv) {
     const bool emit_warmup_diagnostic =
         diagnostic_warmup || d2h_diagnostic_parameters || formalshape_diagnostic;
     long long warmup_host_ns = 0;
-    if (diagnostic_warmup) {
+    if (diagnostic_warmup || policy_warmup) {
       // 唯一构造变化：在 cudaProfilerStart()/request 之前完成一次同 kernel 预热。
+      // Engineering diagnostic 保持历史固定 10 ms；正式 policy 与 measured kernel 同源。
+      const int warmup_milliseconds =
+          diagnostic_warmup ? kKernelMemopWarmupMilliseconds
+                            : resources.kernel_memop_kernel_milliseconds;
       const auto warmup_begin = std::chrono::steady_clock::now();
-      warmup_kernel_memop(resources);
+      warmup_kernel_memop(resources, warmup_milliseconds);
       const auto warmup_end = std::chrono::steady_clock::now();
       warmup_host_ns = static_cast<long long>(
           std::chrono::duration_cast<std::chrono::nanoseconds>(warmup_end -

@@ -44,6 +44,34 @@ _FAULTS = {
 _RUN_ID = re.compile(r"^[A-Za-z0-9._-]+$")
 _CUDA_VISIBLE_DEVICE = re.compile(r"^[A-Za-z0-9._:-]+$")
 
+# Gate 6 construction amendment（`docs/v1_4_1/gate6_construction_amendment_v0_1.md`）冻结的
+# measurement initialization policy：每个 case 必须显式声明，缺失或未知值一律 fail closed。
+# 这里是唯一枚举来源，manifest、run provenance 与 collection 校验都引用它。
+MEASUREMENT_INITIALIZATIONS = frozenset(
+    {
+        "NONE",
+        "PRE_CAPTURE_SAME_KERNEL_WARMUP",
+    }
+)
+MEASUREMENT_INITIALIZATION_FIELD = "measurement_initialization"
+MEASUREMENT_INITIALIZATION_FLAG = "--measurement-initialization"
+
+# 只有 execution path 产生该版本；collection 兼容读取历史 `0.2.0` run manifest。
+RUN_SCHEMA_VERSION = "exposedpath-q0-run/0.2.1"
+LEGACY_RUN_SCHEMA_VERSION = "exposedpath-q0-run/0.2.0"
+
+
+def measurement_initialization_policy(case: Mapping[str, Any]) -> str:
+    """读取并校验单个 case 的初始化 policy；缺失或未知值 fail closed。"""
+
+    policy = case.get(MEASUREMENT_INITIALIZATION_FIELD)
+    case_id = case.get("case_id")
+    if policy not in MEASUREMENT_INITIALIZATIONS:
+        raise Q0ExecutionError(
+            f"{case_id}.{MEASUREMENT_INITIALIZATION_FIELD} 缺失或未知: {policy!r}"
+        )
+    return str(policy)
+
 
 def _root(root: Path | None) -> Path:
     return Path(__file__).resolve().parents[1] if root is None else Path(root)
@@ -119,6 +147,8 @@ def validate_q0_execution_manifest(
         if not isinstance(case, Mapping):
             raise Q0ExecutionError("execution case 必须是对象")
         case_id = case["case_id"]
+        # policy 必须显式且可识别；缺失或未知值一律 fail closed，不得隐式猜测。
+        measurement_initialization_policy(case)
         expected_case = oracle_by_id[case_id]
         if case.get("required_for_q0") is not expected_case.get("required_for_q0"):
             raise Q0ExecutionError(f"{case_id} required_for_q0 不匹配")
@@ -292,6 +322,7 @@ def prepare_q0_run(
     source_manifest_bytes: dict[str, bytes] = {}
     for case in execution["cases"]:
         case_id = case["case_id"]
+        policy = measurement_initialization_policy(case)
         case_run_id = f"{run_id}.{case_id.lower()}"
         native_seed = case["native_seed_case_id"]
         case_dir = output_path / "cases" / case_id
@@ -318,6 +349,8 @@ def prepare_q0_run(
                 native_seed,
                 "--run-id",
                 case_run_id,
+                MEASUREMENT_INITIALIZATION_FLAG,
+                policy,
             ]
         source_content = (
             json.dumps(
@@ -335,6 +368,7 @@ def prepare_q0_run(
                 "native_seed_case_id": native_seed,
                 "fault_injection": case["fault_injection"],
                 "synthetic_profile": case["synthetic_profile"],
+                "measurement_initialization": policy,
                 "source_manifest": str(Path("cases") / case_id / "source_manifest.json"),
                 "source_manifest_sha256": hashlib.sha256(source_content).hexdigest().upper(),
                 "trace_prefix": str(trace_prefix) if trace_prefix is not None else None,
@@ -344,7 +378,7 @@ def prepare_q0_run(
         )
 
     manifest = {
-        "schema_version": "exposedpath-q0-run/0.2.0",
+        "schema_version": RUN_SCHEMA_VERSION,
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "status": "PREPARED_NOT_EXECUTED",
         "run_id": run_id,
