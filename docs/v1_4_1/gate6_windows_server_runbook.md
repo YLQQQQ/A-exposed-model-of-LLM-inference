@@ -21,13 +21,16 @@ git status --short --branch
 $TrackedDirty = git status --porcelain=v1 --untracked-files=no
 if ($TrackedDirty) { throw "存在未保存的受跟踪修改，停止更新" }
 $BeforeUpdate = git rev-parse HEAD
+$ExpectedImplCommit = "2e81f6f9a9ec590d37fb01be9e31f2251645c5d1"
 git branch "backup/server-before-$($BeforeUpdate.Substring(0,8))" $BeforeUpdate
-git fetch "..\ExposedPath_Q0_实际文件名.bundle" codex/v141-analyzer
+git fetch "..\ExposedPath_Q0_实际文件名.bundle" codex/gate6-canonical-baseline
 git reset --hard FETCH_HEAD
-git rev-parse HEAD
+$Actual = (git rev-parse HEAD).Trim()
+if ($Actual -ne $ExpectedImplCommit) { throw "HEAD 不是本手册冻结的 canonical implementation commit：$Actual" }
+$Actual
 ```
 
-`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4、r5、r6、r7、r8、r9、r10`。严禁追加 `git clean`。更新后以最终交付消息记录的 commit 为核对值。
+`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4、r5、r6、r7、r8、r9、r10`。严禁追加 `git clean`。更新后必须核对 `git rev-parse HEAD` 等于本手册冻结的 `$ExpectedImplCommit`；不相等时 STOP，不得继续编译或采集。
 
 Q0 不加载模型，因此不用复制旧 `models`。服务器已有 GPU driver、CUDA Toolkit、`nvcc` 和 Nsight Systems 可以复用，但必须重新记录版本。旧 `.venv` 不必删除，也不要向其中追加依赖；在新版目录建立轻量独立环境：
 
@@ -45,11 +48,28 @@ $Python = (Resolve-Path ".\.venv\Scripts\python.exe").Path
 
 本轮在 **一张固定 GPU、一个固定软件栈** 上运行 Q0。输出只用于证明 analyzer 的 Correctness 资格，不是 N1/G1/G2 性能结果，也不是 Formal 数据。RTX 4090 或 RTX 6000 Ada 均可先做 Windows Engineering/Q0；同一轮不得混用两张卡。若论文正式平台改为 Linux，必须在 Linux 目标栈重新执行平台资格检查和 Q0，不能直接沿用 Windows Q0。
 
-开始前应确保工作区位于 `codex/v141-analyzer`，且至少包含本地准备完成提交。禁止覆盖已有输出；失败后使用新的 `run-id` 和新目录重跑，保留失败现场。
+开始前应确保工作区位于 `codex/gate6-canonical-baseline`，且 `git rev-parse HEAD` 等于本手册 §0 冻结的 `$ExpectedImplCommit = 2e81f6f9a9ec590d37fb01be9e31f2251645c5d1`。禁止覆盖已有输出；失败后使用新的 `run-id` 和新目录重跑，保留失败现场。禁止 retry/tuning：不得依据上一轮结果调整参数、时长、buffer、stream 或 policy 后重跑同一 case。
 
-> **当前状态：`Q0-KERNEL-MEMOP-001` platform construction blocked。** 512 MiB H2D、64 MiB H2D 与 64 MiB D2H 均未在当前 RTX 4090 上与 10 ms kernel 形成真实 device overlap，因此该 case 无法在当前平台构造为满足 oracle 的真实观测对象，Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`。
+> **当前状态：construction amendment 已 implementation，等待服务器验证与唯一一次完整 Q0。** implementation commit `2e81f6f9a9ec590d37fb01be9e31f2251645c5d1`（`docs/v1_4_1/gate6_construction_amendment_v0_1.md`，`APPLY = {Q0-KERNEL-MEMOP-001}`）；offline validation=`PASS`（targeted tests `70 passed`、Q0 offline regression `199 passed`、`--list-cases` 21/21），server validation=`NOT_STARTED`。此前“`Q0-KERNEL-MEMOP-001` platform construction blocked”的结论已被 formal-shape 配对 evidence 取代，原 construction failure 不再作为平台 incapable 证据。Gate 6 仍保持 `FAIL`、Q0 仍保持 `NOT_RUN`。
 >
-> 第 3 节及后续 r11 **当前仍一律禁止执行**。`EP-G6-06` 的批准只批准策略设计，不授权任何服务器实验。只有 `EP-G6-07` 在某一候选真实平台通过预注册 construction admission，并且随后取得用户对“在该平台执行完整 Q0”的单独书面批准，才允许更新并执行第 3 节。construction admission PASS 本身不等于 Gate 6 PASS、Q0 PASS 或 Gate 9 正式平台资格。
+> 第 3 节及后续 r11 **当前仍一律禁止执行**。amendment 只批准 `Q0-KERNEL-MEMOP-001` 的 pre-capture same-kernel warm-up policy，不授权任何服务器实验；只有取得用户对“在该平台执行完整 21 real + 2 synthetic Q0”的单独书面批准，才允许执行第 3 节。construction amendment 获批或 construction admission PASS 本身都不等于 Gate 6 PASS、Q0 PASS 或 Gate 9 正式平台资格。`EP-G6-07` Candidate 路线保持暂停。
+
+### 1.1 正式 native invocation 的 measurement initialization（amendment 冻结）
+
+execution manifest / run manifest 版本为 `exposedpath-q0-execution/0.2.1` / `exposedpath-q0-run/0.2.1`。正式 native case 必须显式携带且只携带一次：
+
+```text
+--measurement-initialization <POLICY>
+```
+
+- `Q0-KERNEL-MEMOP-001` → `PRE_CAPTURE_SAME_KERNEL_WARMUP`（capture/request 之前对同一个 `q0_spin_kernel` 做一次预热，duration 与 measured invocation 同源，完成后 `cudaStreamSynchronize(measured_kernel_stream)`；不新增 event/gate，正式路径不写 `EXPOSEDPATH_DIAGNOSTIC_V1`）。
+- 其余 20 个 native real case → `NONE`。
+- 2 个 synthetic boundary case 仍是 `NONE`，且不由本手册采集 raw。
+- `--list-cases` 与 `--environment-json` 不要求也不接受该 policy（保持 early-return）。
+- missing / unknown / duplicate policy = STOP（binary 以非零码退出），不得手工补写 argv、不得静默按“无初始化”执行。
+- policy 由 `prepare-q0-run` 依据 manifest 写入每个 case 的 `command_argv`，并记录进 case provenance；不要手工编辑 argv 或 receipt。
+
+Engineering diagnostic 命令继续使用原有 diagnostic argv（例如 §2.12～§2.16 的 `--diagnostic-h2d-bytes` / `--diagnostic-d2h-bytes` / `--diagnostic-kernel-ms` / `--diagnostic-warmup-kernel` 与 formalshape run-id），**不得混用 formal `--measurement-initialization`**；两者互斥，混用会被 binary 直接拒绝。这些 diagnostic 结果只属 Engineering，不能作为正式 Q0 证据，也不能替代任何 Q0 case。
 
 ## 2. 一次性环境检查
 
@@ -594,7 +614,7 @@ Get-Content -LiteralPath $D2HReceiptPath -Raw -Encoding UTF8
 
 ## 3. 编译并准备不可覆盖运行目录
 
-> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案，**当前仍一律禁止执行**。§2.16 的 D2H diagnostic 已回传、审核并按预注册判据停止，结论是当前 Windows/RTX 4090 上 `Q0-KERNEL-MEMOP-001` platform construction blocked；`EP-G6-06` 的批准只批准策略设计（不新增 synthetic、只做异平台 construction admission 设计、scope limitation 仅作 fallback），**不授权任何服务器实验**。只有 `EP-G6-07` 在某一候选真实平台通过预注册 construction admission，并且随后取得用户对“在该平台执行完整 Q0”的单独书面批准，才允许更新并执行本节。construction admission PASS 本身不等于 Gate 6 PASS、Q0 PASS 或 Gate 9 正式平台资格。WDDM 或 diagnostic 参数绝不能加入本节标准 collection argv。
+> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案，**当前仍一律禁止执行**：必须取得用户对“执行完整 21 real + 2 synthetic Q0”的单独书面批准（见 §1）。本节已按 construction amendment 更新：execution/run schema 为 `0.2.1`，正式 native invocation 必须显式携带且只携带一次 `--measurement-initialization <POLICY>`（§1.1）。WDDM、diagnostic 参数与 Engineering diagnostic argv 绝不能加入本节标准 collection argv；Engineering diagnostic 命令也不得混用 formal policy。禁止 retry/tuning。
 
 ```powershell
 $Q0Root = Resolve-Path .
@@ -608,6 +628,25 @@ $Nvcc = (Get-Command nvcc).Source
 cmd /d /s /c "`"$VcVars`" -vcvars_ver=14.39 && where cl && `"$Python`" -m exposedpath_v141 build-q0-microbench --nvcc `"$Nvcc`" --output `"$Binary`" --platform windows"
 if ($LASTEXITCODE -ne 0) { throw "Q0 CUDA 编译失败" }
 & $Python -m exposedpath_v141 prepare-q0-run --output-dir (Join-Path $Out "run") --binary $Binary --nsys $Nsys --platform windows --run-id $RunId --cuda-visible-device $GpuSelector
+
+# amendment 校验：冻结 commit、schema 与 formal policy 必须逐字一致，否则 STOP
+if ((git rev-parse HEAD).Trim() -ne "2e81f6f9a9ec590d37fb01be9e31f2251645c5d1") { throw "HEAD 不是冻结的 canonical implementation commit" }
+$ExecutionManifest = Get-Content -LiteralPath (Join-Path $Q0Root "q0\execution_manifest_v0_2.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($ExecutionManifest.schema_version -ne "exposedpath-q0-execution/0.2.1") { throw "execution manifest 必须为 0.2.1：$($ExecutionManifest.schema_version)" }
+$Run0 = Get-Content -LiteralPath (Join-Path $Out "run\q0_run_manifest.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($Run0.schema_version -ne "exposedpath-q0-run/0.2.1") { throw "run manifest 必须为 0.2.1：$($Run0.schema_version)" }
+$Policies = @($Run0.cases | ForEach-Object { $_.measurement_initialization })
+if ($Policies.Count -ne 23) { throw "23/23 case 必须全部显式声明 measurement_initialization" }
+if (@($Policies | Where-Object { $_ -notin @("NONE", "PRE_CAPTURE_SAME_KERNEL_WARMUP") }).Count -ne 0) { throw "出现未知 measurement_initialization 取值" }
+$WarmupCases = @($Run0.cases | Where-Object { $_.measurement_initialization -eq "PRE_CAPTURE_SAME_KERNEL_WARMUP" })
+if ($WarmupCases.Count -ne 1 -or $WarmupCases[0].case_id -ne "Q0-KERNEL-MEMOP-001") { throw "只允许 Q0-KERNEL-MEMOP-001 使用 PRE_CAPTURE_SAME_KERNEL_WARMUP" }
+foreach ($Case in @($Run0.cases | Where-Object { $null -ne $_.command_argv })) {
+    $FlagCount = @($Case.command_argv | Where-Object { $_ -eq "--measurement-initialization" }).Count
+    if ($FlagCount -ne 1) { throw "native case 必须恰好携带一次 --measurement-initialization：$($Case.case_id)" }
+    if ($Case.command_argv[-2] -ne "--measurement-initialization" -or $Case.command_argv[-1] -ne $Case.measurement_initialization) {
+        throw "native case 的 argv policy 与 manifest policy 不一致：$($Case.case_id)"
+    }
+}
 
 git rev-parse HEAD | Set-Content (Join-Path $Out "code_commit.txt")
 git status --porcelain=v1 | Set-Content (Join-Path $Out "git_status.txt")
@@ -624,7 +663,7 @@ if ($GraphFlagCount -ne 1) { throw "Graph case 必须恰好包含一次 node-lev
 if ($UnexpectedGraphFlags.Count -ne 0) { throw "普通 case 不得启用 node-level graph tracing" }
 ```
 
-验收：编译输出为 `PASS`；run manifest 为 `PREPARED_NOT_EXECUTED`；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。
+验收：编译输出为 `PASS`；run manifest 为 `PREPARED_NOT_EXECUTED` 且 schema 为 `exposedpath-q0-run/0.2.1`；23/23 case 显式声明 `measurement_initialization`（`Q0-KERNEL-MEMOP-001` = `PRE_CAPTURE_SAME_KERNEL_WARMUP`，其余 22 = `NONE`）；21 个 native case 的 `command_argv` 各自恰好一次 `--measurement-initialization` 且与 manifest policy 一致；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。任何缺失、未知、重复 policy 或 argv/manifest 不一致都必须 STOP，不得手工修补 argv。
 
 ## 4. 只采集 r11 单例
 
@@ -751,6 +790,8 @@ if ($LASTEXITCODE -ne 0) { throw "Gate 6 未通过" }
 
 只有 `q0_gate_report.json` 同时显示 `23/23`、`verdict=PASS`、`q0_status=PASS`，才能把 Gate 6 判为通过。该 PASS 只说明当前 analyzer 在这套目标 observation stack 上取得 Q0 资格；仍不能称 Engineering Pilot、Protocol Freeze 或正式实验已完成。
 
+同一轮 Gate 6 Q0 必须是一次完整的 21 real + 2 synthetic 采集，且全部使用同一 run、同一环境与同一 binary；不允许跨 run、跨平台或跨 binary 拼接，不允许 retry/tuning，也不允许用任何 Engineering diagnostic（含 §2.12～§2.16 与 formalshape warm-up-02）替代正式 Q0 case 或其证据。正式 Q0 的每个 native case 都必须带 §1.1 冻结的 `--measurement-initialization`；`Q0-KERNEL-MEMOP-001` 的 warm-up 只能来自该 formal policy，不得用 `--diagnostic-warmup-kernel` 或手工命令替代。
+
 ## 10. 完成后需要带回本地的内容
 
-保留并回传整个 `$Out` 目录，至少包括 `code_commit.txt`、`git_status.txt`、run manifest、21 份 Raw/SQLite/receipt、Canonical（含 3 个故障副本）、S、A/B、real evidence、synthetic 和唯一 gate report。不要只复制最后一张表。返回本地后先核对代码版本、Raw 哈希和 Gate report，再更新科研进度清单。
+保留并回传整个 `$Out` 目录，至少包括 `code_commit.txt`、`git_status.txt`、run manifest（含每个 case 的 `measurement_initialization` policy 与实际 `command_argv`）、21 份 Raw/SQLite/receipt、Canonical（含 3 个故障副本）、S、A/B、real evidence、synthetic 和唯一 gate report。不要只复制最后一张表。返回本地后先核对代码版本（必须等于 `2e81f6f9a9ec590d37fb01be9e31f2251645c5d1`）、Raw 哈希和 Gate report，再更新科研进度清单。
