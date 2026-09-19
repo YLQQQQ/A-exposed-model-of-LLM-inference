@@ -6,6 +6,8 @@
 
 本规格属于 Gate 6 的 Engineering/Q0 调试，不是 Protocol Freeze，也不产生 Pilot 或 Formal 证据。它修正 S v0.2 中跨 Host 线程 device activity 的 invocation/phase ownership 证据缺口，不修改 CUDA completion semantics、`W(s)`、terminal、A/B 定义或 Q0 oracle。
 
+> **Superseded（2026-09-19，Gate 6 Unified Marker Ownership amendment）**：本规格 §4 中「不得全局放宽现有 `_phase_ownership()`」与「`_normalize_sync()`、event record ownership 规则保持不变」两条限制，已由 `docs/v1_4_1/gate6_marker_ownership_amendment_v0_1.md` 明确 supersede。该 amendment 在保留同线程 request/phase 路径的前提下，为 Host blocking sync 与 `cudaEventRecord` 增加同线程 trusted structured marker（要求唯一 matching request/phase 按 identity 匹配、marker/API 被其时间包含）的**跨 Host 线程 ownership 传播 fallback**，并同时**收窄** activity marker 的 authority（identity 必须对应唯一 matching request 且 marker/API 被其时间包含；request 之前完全不相交的 launch 判 `EXTERNAL_OWNERSHIP_IN_SCOPE`）。本规格的其余历史原文不重写；上文的 activity-marker 基本规则仍是该 amendment 的基础。
+
 真实 concurrent-host-marker diagnostic 已确认：`KERNEL_A` 的 device activity 与 `cudaLaunchKernel` correlation 唯一，`KERNEL_A` 结构化 marker 也在同一 worker 线程完整覆盖该 Runtime API；但现有 S ownership resolver 只读取 `kind=request/phase`，忽略 `kind=marker`，因此把 activity 判为 `INVOCATION_BOUNDARY_INVALID`。立即结束的 `WORKER_KERNEL_MEMOP` marker 不覆盖 API，不能成为 ownership 证据；将它扩展为覆盖 launch 还会与 `KERNEL_A` 同时成为 Q0 activity-label 候选，造成标签不唯一，所以不采用该方案。
 
 ## 2. 术语与分层边界

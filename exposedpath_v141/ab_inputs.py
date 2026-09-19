@@ -476,12 +476,24 @@ def _discovery_result(
             )
         else:
             prefill = selected["prefill"][0]
-            boundaries_valid = (
-                full["start_ns"] == prefill["start_ns"]
-                and prefill["end_ns"] == decode["start_ns"]
-                and decode["end_ns"] == full["end_ns"]
-                and prefill["end_ns"] <= full["end_ns"]
-            )
+            if key[0] == "exposedpath-q0":
+                # Gate 6 Phase-Spill amendment：Q0 controlled three-window
+                # observational class 的边界由三次独立 NVTX push/pop 给出，
+                # 因此按 containment / order / non-overlap 判定，而不是要求
+                # 相邻窗口时间戳精确相等。`prefill.start <= prefill.end` 与
+                # `decode.start <= decode.end` 已由上面的 valid_times 保证。
+                boundaries_valid = (
+                    full["start_ns"] <= prefill["start_ns"]
+                    and prefill["end_ns"] <= decode["start_ns"]
+                    and decode["end_ns"] <= full["end_ns"]
+                )
+            else:
+                boundaries_valid = (
+                    full["start_ns"] == prefill["start_ns"]
+                    and prefill["end_ns"] == decode["start_ns"]
+                    and decode["end_ns"] == full["end_ns"]
+                    and prefill["end_ns"] <= full["end_ns"]
+                )
         if not boundaries_valid:
             for nvtx, _ in selected.values():
                 add_issue(key, "WINDOW_PHASE_BOUNDARY_INCONSISTENT", nvtx)

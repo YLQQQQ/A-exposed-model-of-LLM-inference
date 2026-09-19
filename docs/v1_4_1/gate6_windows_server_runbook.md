@@ -504,9 +504,13 @@ $Capability = $CapabilityRaw | ConvertFrom-Json
 $ExpectedUuid = $GpuSelector.ToUpper().Replace("-", "")
 $ObservedUuid = ([string]$Capability.uuid).ToUpper().Replace("-", "")
 if ($ObservedUuid -ne $ExpectedUuid) { throw "能力探针 GPU UUID 与目标 GPU 不一致" }
-foreach ($Field in @("async_engine_count", "device_overlap", "concurrent_kernels")) {
+foreach ($Field in @("async_engine_count", "device_overlap", "concurrent_kernels", "can_map_host_memory")) {
     if ($null -eq $Capability.$Field) { throw "能力字段缺失：$Field" }
 }
+# Gate 6 Q0 build contract amendment：`can_map_host_memory` 来自 `cudaDevAttrCanMapHostMemory`，
+# 是 mapped-host capability 的唯一 gate（不得用 unifiedAddressing 代替）。任何 Q0 正式 case
+# 之前该值必须为 1；为 0 即 STOP，不得调参、换平台假设或绕过。
+if ([int]$Capability.can_map_host_memory -ne 1) { throw "can_map_host_memory != 1；不得运行任何 Q0 case" }
 
 $Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 [System.IO.File]::WriteAllText(
@@ -531,7 +535,7 @@ $Receipt = [ordered]@{
 Get-Content -LiteralPath (Join-Path $CapabilityRoot "device_capabilities.json") -Raw -Encoding UTF8
 ```
 
-完成后只需回传整个 `$CapabilityRoot`。三项字段无论为 0 还是非 0 都必须原样保存，不得为满足 Q0 假设而改写。收到证据前，不实施 D2H/D2D，不建立 r11。
+完成后只需回传整个 `$CapabilityRoot`。四项字段无论为 0 还是非 0 都必须原样保存，不得为满足 Q0 假设而改写。收到证据前，不实施 D2H/D2D，不建立 r11。
 
 真实 GPU3 RTX 4090 结果为：`async_engine_count=5`、`device_overlap=1`、`concurrent_kernels=1`。这只证明设备声明支持相关并发能力，不能证明任意 workload 必然重叠，也不能把此前 overlap=0 归因于 WDDM、driver、runtime 或设备调度层。
 
@@ -625,12 +629,35 @@ $Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-wind
 $GpuSelector = "GPU-替换为nvidia-smi显示的完整UUID"
 
 $Nvcc = (Get-Command nvcc).Source
+# Gate 6 Q0 build contract amendment：codegen 只能来自冻结 argv，不得被 ambient 变量注入。
+foreach ($Injected in @("NVCC_APPEND_FLAGS", "NVCC_PREPEND_FLAGS")) {
+    if (Test-Path "env:$Injected") { throw "存在 ambient nvcc 注入变量：$Injected" }
+}
 cmd /d /s /c "`"$VcVars`" -vcvars_ver=14.39 && where cl && `"$Python`" -m exposedpath_v141 build-q0-microbench --nvcc `"$Nvcc`" --output `"$Binary`" --platform windows"
 if ($LASTEXITCODE -ne 0) { throw "Q0 CUDA 编译失败" }
+
+# Gate 6 Q0 build contract amendment：编译必须有可审计 provenance。
+if (-not ($(& $Nvcc --version | Out-String) -match "12\.4\.131")) { throw "nvcc 不是冻结的 CUDA 12.4.131" }
+
+$BuildReceiptPath = "$Binary.build_receipt.json"
+if (-not (Test-Path -LiteralPath $BuildReceiptPath)) { throw "缺少 Q0 build receipt" }
+$BuildReceipt = Get-Content -LiteralPath $BuildReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($BuildReceipt.receipt_version -ne "exposedpath-q0-build-receipt/0.1.0") { throw "build receipt 版本不受支持" }
+if ($BuildReceipt.gpu_arch -ne "sm_89") { throw "build receipt gpu_arch 不是 sm_89" }
+if (@($BuildReceipt.compile_command | Where-Object { $_ -eq "-arch=sm_89" }).Count -ne 1) { throw "compile argv 必须恰好包含一次 -arch=sm_89" }
+if ([string]$BuildReceipt.nvcc.version_output -notmatch "12\.4\.131") { throw "build receipt 记录的 nvcc 不是 12.4.131" }
+if (-not (Test-Path -LiteralPath $BuildReceipt.cuda_source.path)) { throw "build receipt 记录的 CUDA source 不存在" }
+$SourceSha = (Get-FileHash -LiteralPath $BuildReceipt.cuda_source.path -Algorithm SHA256).Hash
+if ($SourceSha -ne $BuildReceipt.cuda_source.sha256) { throw "CUDA source SHA 与 build receipt 不一致" }
+$BinaryShaAtBuild = (Get-FileHash -LiteralPath $Binary -Algorithm SHA256).Hash
+if ($BinaryShaAtBuild -ne $BuildReceipt.binary.sha256) { throw "binary SHA 与 build receipt 不一致" }
+
 & $Python -m exposedpath_v141 prepare-q0-run --output-dir (Join-Path $Out "run") --binary $Binary --nsys $Nsys --platform windows --run-id $RunId --cuda-visible-device $GpuSelector
 
 # amendment 校验：冻结 commit、schema 与 formal policy 必须逐字一致，否则 STOP
-if ((git rev-parse HEAD).Trim() -ne "2e81f6f9a9ec590d37fb01be9e31f2251645c5d1") { throw "HEAD 不是冻结的 canonical implementation commit" }
+$FrozenImplementation = "REPLACE_WITH_UNIFIED_IMPLEMENTATION_COMMIT"
+if ($FrozenImplementation -notmatch "^[0-9a-f]{40}$") { throw "冻结 implementation commit 未填写；不得运行正式 Q0" }
+if ((git rev-parse HEAD).Trim() -ne $FrozenImplementation) { throw "HEAD 不是冻结的 canonical implementation commit" }
 $ExecutionManifest = Get-Content -LiteralPath (Join-Path $Q0Root "q0\execution_manifest_v0_2.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($ExecutionManifest.schema_version -ne "exposedpath-q0-execution/0.2.1") { throw "execution manifest 必须为 0.2.1：$($ExecutionManifest.schema_version)" }
 $Run0 = Get-Content -LiteralPath (Join-Path $Out "run\q0_run_manifest.json") -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -663,7 +690,7 @@ if ($GraphFlagCount -ne 1) { throw "Graph case 必须恰好包含一次 node-lev
 if ($UnexpectedGraphFlags.Count -ne 0) { throw "普通 case 不得启用 node-level graph tracing" }
 ```
 
-验收：编译输出为 `PASS`；run manifest 为 `PREPARED_NOT_EXECUTED` 且 schema 为 `exposedpath-q0-run/0.2.1`；23/23 case 显式声明 `measurement_initialization`（`Q0-KERNEL-MEMOP-001` = `PRE_CAPTURE_SAME_KERNEL_WARMUP`，其余 22 = `NONE`）；21 个 native case 的 `command_argv` 各自恰好一次 `--measurement-initialization` 且与 manifest policy 一致；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。任何缺失、未知、重复 policy 或 argv/manifest 不一致都必须 STOP，不得手工修补 argv。
+验收：编译输出为 `PASS`；存在 `<binary>.build_receipt.json`，其中 `receipt_version=exposedpath-q0-build-receipt/0.1.0`、`gpu_arch=sm_89`、compile argv 恰好一次 `-arch=sm_89`、nvcc `12.4.131`，且 source SHA 与 checkout、binary SHA 与 receipt 双向一致；无 `NVCC_APPEND_FLAGS` / `NVCC_PREPEND_FLAGS` 等 ambient codegen 注入；HEAD 等于冻结的 unified implementation commit 且 tracked tree clean；run manifest 为 `PREPARED_NOT_EXECUTED` 且 schema 为 `exposedpath-q0-run/0.2.1`；23/23 case 显式声明 `measurement_initialization`（`Q0-KERNEL-MEMOP-001` = `PRE_CAPTURE_SAME_KERNEL_WARMUP`，其余 22 = `NONE`）；21 个 native case 的 `command_argv` 各自恰好一次 `--measurement-initialization` 且与 manifest policy 一致；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。任何缺失、未知、重复 policy、receipt 不匹配、ambient 注入或 argv/manifest 不一致都必须 STOP，不得手工修补 argv，不得补加 `-arch`、更换 arch 或改 flags 后重试。
 
 ## 4. 只采集 r11 单例
 

@@ -242,6 +242,18 @@ def _trusted_activity_marker_identity(
 ) -> Mapping[str, Any] | None:
     """返回可作为 activity ownership 证据的完整、未篡改 marker identity。"""
 
+    return _trusted_structured_identity(record, _TRUSTED_ACTIVITY_MARKER_KINDS)
+
+
+_TRUSTED_ACTIVITY_MARKER_KINDS = frozenset({"marker"})
+_TRUSTED_SYNC_MARKER_KINDS = frozenset({"sync"})
+
+
+def _trusted_structured_identity(
+    record: Mapping[str, Any], kinds: frozenset[str]
+) -> Mapping[str, Any] | None:
+    """重新解析 structured payload；不可信、不完整或 kind 不符即返回 None。"""
+
     text = record.get("text")
     cached = record.get("structured_identity")
     if not isinstance(text, str) or not text.startswith(_STRUCTURED_NVTX_PREFIX):
@@ -254,7 +266,7 @@ def _trusted_activity_marker_identity(
         not isinstance(payload, Mapping)
         or not isinstance(cached, Mapping)
         or dict(payload) != dict(cached)
-        or payload.get("kind") != "marker"
+        or payload.get("kind") not in kinds
     ):
         return None
     required = (*_INVOCATION_FIELDS, "phase", "callsite_id")
@@ -266,11 +278,174 @@ def _trusted_activity_marker_identity(
     return payload
 
 
+def _record_interval(record: Mapping[str, Any]) -> tuple[int, int] | None:
+    start = record.get("start_ns")
+    end = record.get("end_ns")
+    if (
+        isinstance(start, int)
+        and not isinstance(start, bool)
+        and isinstance(end, int)
+        and not isinstance(end, bool)
+    ):
+        return (start, end)
+    return None
+
+
+def _invalid_ownership(reason: str, range_record_ids: list[str]) -> dict[str, Any]:
+    return {
+        "status": "INVALID",
+        "identity": None,
+        "phase": None,
+        "range_record_ids": sorted(set(range_record_ids)),
+        "reasons": [reason],
+    }
+
+
+def _ambiguous_ownership(reason: str, range_record_ids: list[str]) -> dict[str, Any]:
+    return {
+        "status": "AMBIGUOUS",
+        "identity": None,
+        "phase": None,
+        "range_record_ids": sorted(set(range_record_ids)),
+        "reasons": [reason],
+    }
+
+
+def _matching_structured_ranges(
+    nvtx_records: list[Mapping[str, Any]],
+    identity: Mapping[str, Any],
+    kind: str,
+    phase: Any = None,
+) -> list[Mapping[str, Any]]:
+    """按 7-field identity（与可选 phase）查找匹配的 request/phase range。"""
+
+    key = _identity_key(identity)
+    matches: list[Mapping[str, Any]] = []
+    for record in nvtx_records:
+        candidate = record.get("structured_identity")
+        if not isinstance(candidate, Mapping) or candidate.get("kind") != kind:
+            continue
+        if _identity_key(candidate) != key:
+            continue
+        if phase is not None and candidate.get("phase") != phase:
+            continue
+        if _record_interval(record) is None:
+            continue
+        matches.append(record)
+    return matches
+
+
+def _matching_request_ranges(
+    nvtx_records: list[Mapping[str, Any]],
+    identity: Mapping[str, Any],
+) -> list[Mapping[str, Any]]:
+    """按 identity 查找唯一 matching `full_request` range（kind request/phase）。"""
+
+    key = _identity_key(identity)
+    matches: list[Mapping[str, Any]] = []
+    for record in nvtx_records:
+        candidate = record.get("structured_identity")
+        if (
+            not isinstance(candidate, Mapping)
+            or candidate.get("kind") not in {"request", "phase"}
+            or candidate.get("phase") != "full_request"
+        ):
+            continue
+        if _identity_key(candidate) != key:
+            continue
+        if _record_interval(record) is None:
+            continue
+        matches.append(record)
+    return matches
+
+
+def _marker_invocation_ownership(
+    interval: tuple[int, int],
+    identity: Mapping[str, Any],
+    *,
+    activity_interval: tuple[int, int] | None,
+    nvtx_records: list[Mapping[str, Any]],
+    range_record_ids: list[str],
+    external_reason: str = "EXTERNAL_OWNERSHIP_IN_SCOPE",
+) -> dict[str, Any]:
+    """统一 marker authority：marker 只在其 matching request/phase 内授权 ownership。
+
+    条件（Gate 6 Unified Marker Ownership amendment §2）：
+    same-thread API containment 已由调用方保证；此处要求 identity 对应唯一 matching
+    ``request`` range，并按 cross-thread temporal containment 判定。request 之前完全
+    不相交的 launch marker 只能给出 ``EXTERNAL_OWNERSHIP_IN_SCOPE``；partial overlap、
+    整体位于 request 之后、zero/multiple matching、phase 冲突一律 fail closed。
+    """
+
+    start_ns, end_ns = interval
+    requests = _matching_request_ranges(nvtx_records, identity)
+    if not requests:
+        return _invalid_ownership("INVOCATION_BOUNDARY_INVALID", range_record_ids)
+    if len(requests) > 1:
+        return _ambiguous_ownership("INVOCATION_OWNERSHIP_AMBIGUOUS", range_record_ids)
+    request_interval = _record_interval(requests[0])
+    if request_interval is None:  # pragma: no cover - guarded by matcher
+        return _invalid_ownership("INVOCATION_BOUNDARY_INVALID", range_record_ids)
+    request_start, request_end = request_interval
+    if end_ns <= request_start:
+        # marker/API 完全位于 matching request 之前：只有 device activity 延伸进入
+        # 该 request 时才是确定的外部 ownership。
+        if activity_interval is not None:
+            activity_start, activity_end = activity_interval
+            if activity_start < request_end and request_start < activity_end:
+                return _invalid_ownership(external_reason, range_record_ids)
+        return _invalid_ownership("INVOCATION_BOUNDARY_INVALID", range_record_ids)
+    if start_ns < request_start or request_end < end_ns:
+        # partial overlap 或整体位于 request 之后：本 amendment 不分类为 external。
+        return _invalid_ownership("INVOCATION_BOUNDARY_INVALID", range_record_ids)
+    phase = identity.get("phase")
+    phases = _matching_structured_ranges(nvtx_records, identity, "phase", phase)
+    if not phases:
+        return _invalid_ownership("INVOCATION_BOUNDARY_INVALID", range_record_ids)
+    if len(phases) > 1:
+        return _ambiguous_ownership("PHASE_OWNERSHIP_AMBIGUOUS", range_record_ids)
+    phase_interval = _record_interval(phases[0])
+    if phase_interval is None or not (
+        phase_interval[0] <= start_ns and end_ns <= phase_interval[1]
+    ):
+        return _invalid_ownership("INVOCATION_BOUNDARY_INVALID", range_record_ids)
+    return {
+        "status": "VALID",
+        "identity": dict(identity),
+        "phase": phase,
+        "range_record_ids": sorted(set(range_record_ids)),
+        "reasons": [],
+    }
+
+
+def _trusted_marker_candidates(
+    start_ns: int,
+    end_ns: int,
+    global_tid: Any,
+    nvtx_records: list[Mapping[str, Any]],
+    kinds: frozenset[str],
+) -> list[tuple[str, Mapping[str, Any]]]:
+    """同线程、完整覆盖 API interval 的可信 structured marker。"""
+
+    found: list[tuple[str, Mapping[str, Any]]] = []
+    for record in nvtx_records:
+        if global_tid is None or record.get("global_tid") != global_tid:
+            continue
+        interval = _record_interval(record)
+        if interval is None or interval[0] > start_ns or end_ns > interval[1]:
+            continue
+        payload = _trusted_structured_identity(record, kinds)
+        if payload is not None:
+            found.append((str(record.get("record_id")), payload))
+    return found
+
+
 def _activity_ownership(
     start_ns: int,
     end_ns: int,
     global_tid: int | None,
     nvtx_records: list[Mapping[str, Any]],
+    activity_interval: tuple[int, int] | None = None,
 ) -> dict[str, Any]:
     """恢复 enqueue API 的 invocation/phase；marker 仅提供 activity ownership。"""
 
@@ -368,14 +543,45 @@ def _activity_ownership(
             "reasons": ["PHASE_OWNERSHIP_AMBIGUOUS"],
         }
 
-    selected_identity = dict(selectable[0][1])
-    return {
-        "status": "VALID",
-        "identity": selected_identity,
-        "phase": selected_identity["phase"],
-        "range_record_ids": range_record_ids,
-        "reasons": [],
-    }
+    if any(
+        identity.get("kind") in {"request", "phase"} for _, identity in candidates
+    ):
+        # 原有同线程 request/phase ownership 路径保持不变。
+        selected_identity = dict(selectable[0][1])
+        return {
+            "status": "VALID",
+            "identity": selected_identity,
+            "phase": selected_identity["phase"],
+            "range_record_ids": range_record_ids,
+            "reasons": [],
+        }
+
+    # 只有 trusted marker 时，authority 由 matching request/phase 的 cross-thread
+    # temporal containment 决定（Gate 6 Unified Marker Ownership amendment）。
+    marker_record_ids = [str(record.get("record_id")) for record, _ in candidates]
+    resolved = [
+        _marker_invocation_ownership(
+            (start_ns, end_ns),
+            identity,
+            activity_interval=activity_interval,
+            nvtx_records=nvtx_records,
+            range_record_ids=marker_record_ids,
+        )
+        for _, identity in candidates
+    ]
+    statuses = {item["status"] for item in resolved}
+    resolved_phases = {item["phase"] for item in resolved}
+    if statuses == {"VALID"} and len(resolved_phases) == 1:
+        return {
+            "status": "VALID",
+            "identity": resolved[0]["identity"],
+            "phase": resolved[0]["phase"],
+            "range_record_ids": range_record_ids,
+            "reasons": [],
+        }
+    if len(resolved) == 1:
+        return resolved[0]
+    return _ambiguous_ownership("INVOCATION_OWNERSHIP_AMBIGUOUS", range_record_ids)
 
 
 def _manifest_input_status(manifest: Mapping[str, Any]) -> tuple[str, list[str]]:
@@ -415,11 +621,22 @@ def _normalize_activity(
         return result
 
     enqueue = enqueues[0]
+    activity_start = activity.get("start_ns")
+    activity_end = activity.get("end_ns")
+    activity_interval = (
+        (activity_start, activity_end)
+        if isinstance(activity_start, int)
+        and not isinstance(activity_start, bool)
+        and isinstance(activity_end, int)
+        and not isinstance(activity_end, bool)
+        else None
+    )
     ownership = _activity_ownership(
         int(enqueue["start_ns"]),
         int(enqueue["end_ns"]),
         enqueue.get("global_tid"),
         nvtx_records,
+        activity_interval=activity_interval,
     )
     identity = ownership["identity"]
     result.update(
@@ -483,6 +700,33 @@ def _normalize_sync(
     marker_status = "VALID" if marker_identity is not None else (
         "AMBIGUOUS" if marker_candidates else "INVALID"
     )
+    if ownership["status"] != "VALID" and host_start is not None and host_end is not None:
+        # Gate 6 Unified Marker Ownership amendment §4：worker thread 上的 trusted
+        # `kind=sync` marker 可以跨 host thread 通过 matching request/phase 的
+        # temporal containment 传播 request/repeat/owner phase。
+        trusted_sync_markers = _trusted_marker_candidates(
+            int(host_start),
+            int(host_end),
+            sync.get("runtime_global_tid"),
+            nvtx_records,
+            _TRUSTED_SYNC_MARKER_KINDS,
+        )
+        if len(trusted_sync_markers) > 1:
+            ownership = _ambiguous_ownership(
+                "INVOCATION_OWNERSHIP_AMBIGUOUS",
+                [record_id for record_id, _ in trusted_sync_markers],
+            )
+        elif len(trusted_sync_markers) == 1:
+            record_id, trusted_marker = trusted_sync_markers[0]
+            ownership = _marker_invocation_ownership(
+                (int(host_start), int(host_end)),
+                trusted_marker,
+                activity_interval=None,
+                nvtx_records=nvtx_records,
+                range_record_ids=[record_id],
+                external_reason="INVOCATION_BOUNDARY_INVALID",
+            )
+        identity = ownership["identity"]
     if marker_identity is not None and identity is not None:
         if _identity_key(marker_identity) != _identity_key(identity):
             marker_status = "AMBIGUOUS"
@@ -535,6 +779,31 @@ def _normalize_event_record(
     ownership = _phase_ownership(
         int(api["start_ns"]), int(api["end_ns"]), api.get("global_tid"), nvtx_records
     )
+    if ownership["status"] != "VALID":
+        # `cudaEventRecord` 的 ownership 与 activity 遵循同一 trusted marker authority：
+        # marker 必须完整覆盖 API、同线程，并在 matching request/phase 内。
+        trusted_event_markers = _trusted_marker_candidates(
+            int(api["start_ns"]),
+            int(api["end_ns"]),
+            api.get("global_tid"),
+            nvtx_records,
+            _TRUSTED_ACTIVITY_MARKER_KINDS,
+        )
+        if len(trusted_event_markers) > 1:
+            ownership = _ambiguous_ownership(
+                "INVOCATION_OWNERSHIP_AMBIGUOUS",
+                [record_id for record_id, _ in trusted_event_markers],
+            )
+        elif len(trusted_event_markers) == 1:
+            record_id, trusted_marker = trusted_event_markers[0]
+            ownership = _marker_invocation_ownership(
+                (int(api["start_ns"]), int(api["end_ns"])),
+                trusted_marker,
+                activity_interval=None,
+                nvtx_records=nvtx_records,
+                range_record_ids=[record_id],
+                external_reason="INVOCATION_BOUNDARY_INVALID",
+            )
     identity = ownership["identity"]
     result.update(
         host_start_ns=api["start_ns"],
@@ -1047,6 +1316,12 @@ def recover_wait_set(
     wait_nodes = cached["wait_nodes"]
     reasons.extend(cached["reasons"])
     for semantic_owner in cached["semantic_owners"]:
+        if semantic_owner.get("role") == "DEPENDENCY_EDGE":
+            # Gate 6 Unified Marker Ownership amendment §5：`cudaStreamWaitEvent`
+            # 等 dependency edge 不携带独立的 invocation ownership，因此不需要
+            # marker；边的归属由它等待的 event node 承担，而 event node 同样在
+            # semantic_owners 中并被单独校验（缺失或不匹配时 fail closed）。
+            continue
         relation = ownership_supported(semantic_owner, sync)
         if not relation["supported"]:
             reasons.extend(semantic_owner.get("ownership_reasons", []))

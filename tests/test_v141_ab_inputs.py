@@ -350,6 +350,137 @@ def test_q0_one_phase_trace_discovers_full_request_and_decode_windows(tmp_path):
     assert inputs.window_discovery_issues == ()
 
 
+def _as_q0(rows: list[dict]) -> list[dict]:
+    """把 fixture 行标记为 Q0 controlled observational class，并刷新可重解析 text。"""
+
+    for row in rows:
+        row["structured_identity"]["experiment_id"] = "exposedpath-q0"
+        row["text"] = "EXPOSEDPATH_JSON_V1:" + json.dumps(row["structured_identity"])
+    return rows
+
+
+def _three_window_rows(
+    full: tuple[int, int], prefill: tuple[int, int], decode: tuple[int, int]
+) -> list[dict]:
+    return [
+        _nvtx("nvtx:NVTX_EVENTS:1", full[0], full[1], "full_request", "request"),
+        _nvtx("nvtx:NVTX_EVENTS:2", prefill[0], prefill[1], "prefill", "phase"),
+        _nvtx("nvtx:NVTX_EVENTS:3", decode[0], decode[1], "decode", "phase"),
+    ]
+
+
+def test_q0_three_window_observational_boundary_accepts_independent_push_pop(tmp_path):
+    """Gate 6 Phase-Spill amendment：Q0 三段窗口由三次独立 NVTX push/pop 给出，
+    因此按 containment / order / non-overlap 判定，不要求相邻边界时间戳相等。"""
+
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    # frozen final-01 的实测形状：leading gap / phase gap / trailing gap 均非零。
+    _replace_nvtx(
+        canonical_manifest,
+        _as_q0(_three_window_rows((0, 100), (3, 60), (62, 97))),
+    )
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+
+    assert inputs.window_discovery_issues == ()
+    assert inputs.global_quality_reasons == ()
+    assert [(window.phase, window.start_ns, window.end_ns) for window in inputs.windows] == [
+        ("full_request", 0, 100),
+        ("prefill", 3, 60),
+        ("decode", 62, 97),
+    ]
+    assert inputs.windows[0].experiment_id == "exposedpath-q0"
+
+
+def test_q0_three_window_boundary_still_accepts_degenerate_equality(tmp_path):
+    """strict relaxation：旧的 ideal carve（边界恰好相等）必须继续被接受。"""
+
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    _replace_nvtx(
+        canonical_manifest, _as_q0(_three_window_rows((0, 100), (0, 60), (60, 100)))
+    )
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+
+    assert inputs.window_discovery_issues == ()
+    assert [(window.start_ns, window.end_ns) for window in inputs.windows] == [
+        (0, 100), (0, 60), (60, 100),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("full", "prefill", "decode", "reason"),
+    [
+        # prefill 起始早于 full_request：反转。
+        ((5, 100), (0, 60), (60, 100), "WINDOW_PHASE_BOUNDARY_INCONSISTENT"),
+        # decode 起始早于 prefill 结束：phase overlap。
+        ((0, 100), (0, 60), (50, 100), "WINDOW_PHASE_BOUNDARY_INCONSISTENT"),
+        # decode 越过 full_request 末尾。
+        ((0, 100), (0, 60), (60, 120), "WINDOW_PHASE_BOUNDARY_INCONSISTENT"),
+        # prefill 越过 decode 末尾且 full_request 未包含 prefill 结束。
+        ((0, 100), (0, 130), (60, 100), "WINDOW_PHASE_BOUNDARY_INCONSISTENT"),
+    ],
+)
+def test_q0_three_window_boundary_rejects_reversed_or_overlapping(
+    tmp_path, full, prefill, decode, reason
+):
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    _replace_nvtx(
+        canonical_manifest, _as_q0(_three_window_rows(full, prefill, decode))
+    )
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+
+    assert inputs.windows == ()
+    assert {issue.reasons[0] for issue in inputs.window_discovery_issues} == {reason}
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda rows: rows.pop(),
+        lambda rows: rows.append(deepcopy(rows[1])),
+        lambda rows: rows.append(deepcopy(rows[2])),
+    ],
+    ids=["missing", "duplicate-prefill", "duplicate-decode"],
+)
+def test_q0_three_window_boundary_fails_closed_without_exactly_one_of_each(
+    tmp_path, mutate
+):
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    rows = _as_q0(_three_window_rows((0, 100), (3, 60), (62, 97)))
+    mutate(rows)
+    _replace_nvtx(canonical_manifest, rows)
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+
+    assert inputs.windows == ()
+    assert {issue.reasons[0] for issue in inputs.window_discovery_issues} == {
+        "WINDOW_PHASE_MISSING_OR_DUPLICATE"
+    }
+
+
+def test_non_q0_three_window_trace_keeps_the_strict_equality_rule(tmp_path):
+    """relaxation 只覆盖 Q0 controlled observational class。"""
+
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    _replace_nvtx(
+        canonical_manifest, _three_window_rows((0, 100), (3, 60), (62, 97))
+    )
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest)
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+
+    assert inputs.windows == ()
+    assert {issue.reasons[0] for issue in inputs.window_discovery_issues} == {
+        "WINDOW_PHASE_BOUNDARY_INCONSISTENT"
+    }
+
+
 @pytest.mark.parametrize("mutation", [
     "terminal_time", "terminal_clock", "terminal_not_in_wait_set", "empty_wait_set",
     "terminal_not_in_frontier", "wait_status", "closure_status", "valid_reason",

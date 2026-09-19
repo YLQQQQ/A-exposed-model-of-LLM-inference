@@ -38,6 +38,7 @@ def _environment() -> dict[str, object]:
             "async_engine_count": 2,
             "device_overlap": 1,
             "concurrent_kernels": 1,
+            "can_map_host_memory": 1,
         },
         "driver_version": "999.1",
         "cuda_driver_version": 13000,
@@ -134,7 +135,12 @@ def test_different_gpu_uuids_are_not_equivalent(tmp_path):
 
 @pytest.mark.parametrize(
     "missing_field",
-    ["async_engine_count", "device_overlap", "concurrent_kernels"],
+    [
+        "async_engine_count",
+        "device_overlap",
+        "concurrent_kernels",
+        "can_map_host_memory",
+    ],
 )
 def test_execute_rejects_missing_gpu_concurrency_capability(tmp_path, missing_field):
     manifest = _prepared(tmp_path)
@@ -142,6 +148,22 @@ def test_execute_rejects_missing_gpu_concurrency_capability(tmp_path, missing_fi
     environment["selected_gpu"].pop(missing_field)
 
     with pytest.raises(Q0CollectionError, match=f"selected_gpu.{missing_field}"):
+        execute_q0_case(
+            manifest,
+            "Q0-STREAM-001",
+            process_runner=_successful_runner({}),
+            environment_probe=lambda *_: environment,
+        )
+
+
+def test_execute_rejects_unmappable_host_memory_capability(tmp_path):
+    """Gate 6 build contract：capability 位不是 1 时 fail closed，不降级、不替代。"""
+
+    manifest = _prepared(tmp_path)
+    environment = _environment()
+    environment["selected_gpu"]["can_map_host_memory"] = 0
+
+    with pytest.raises(Q0CollectionError, match="can_map_host_memory == 1"):
         execute_q0_case(
             manifest,
             "Q0-STREAM-001",
@@ -207,6 +229,7 @@ def test_default_environment_probe_is_part_of_real_execution(tmp_path):
                     "uuid": "GPU-ABC", "name": "RTX TEST", "memory_total_mib": 1024,
                     "async_engine_count": 2, "device_overlap": 1,
                     "concurrent_kernels": 1,
+                    "can_map_host_memory": 1,
                     "driver_version": 13000, "cuda_driver_version": 13000,
                     "cuda_runtime_version": 13000,
                 }),
@@ -229,6 +252,7 @@ def test_default_environment_probe_is_part_of_real_execution(tmp_path):
     assert receipt["environment"]["selected_gpu"]["async_engine_count"] == 2
     assert receipt["environment"]["selected_gpu"]["device_overlap"] == 1
     assert receipt["environment"]["selected_gpu"]["concurrent_kernels"] == 1
+    assert receipt["environment"]["selected_gpu"]["can_map_host_memory"] == 1
 
 
 def test_execute_q0_case_cli_reports_collection_without_q0_upgrade(

@@ -9,7 +9,7 @@
 - `q0/oracle_cases_v0_2.json`：人工标准答案，禁止由 analyzer 重算。
 - `q0/execution_manifest_v0_2.json`：23 个 case 的执行策略、稳定 label 和故障注入身份。
 - `q0/cuda/exposedpath_q0.cu`：21 个 native seed 的最小 CUDA/NVTX 程序。
-- `exposedpath_v141/q0_execution.py`：执行合同校验、编译命令和 dry-run manifest。
+- `exposedpath_v141/q0_execution.py`：执行合同校验、编译命令（固定 `-arch=sm_89`）和 dry-run manifest。
 - `docs/v1_4_1/contracts/q0_observed_schema_v0_2.json`：合成 observed 的严格输入合同。
 - `exposedpath_v141/q0_synthetic.py`：从显式 case profile 构造 Canonical 事实，并调用正式 S/A/B。
 - `exposedpath_v141/q0_evaluator.py`：不调用 S/A/B 的独立逐 case 对照器。
@@ -32,6 +32,16 @@ python -m exposedpath_v141 build-q0-microbench --nvcc "<nvcc路径>" --output "<
 ```
 
 Linux 将 `--platform` 改为 `linux`。该命令只编译，不运行 CUDA case；输出明确保持 `q0_execution_status: NOT_RUN`。
+
+Gate 6 Q0 build contract amendment 之后，编译 argv 由 `build_q0_compile_command()` 统一固定加入一次 `-arch=sm_89`（不新增可变 arch 参数、不读取默认 arch、不接受环境变量注入），并在编译成功后自动写出 `<二进制>.build_receipt.json`（`receipt_version=exposedpath-q0-build-receipt/0.1.0`、完整 compile argv、nvcc `--version`、`gpu_arch=sm_89`、CUDA source/binary 的 path 与 SHA256）。receipt 已存在时拒绝覆盖，避免 stale receipt 与新 binary 错配。该 receipt 只承载构建 provenance，不进入 run/execution manifest。
+
+设备能力探针同样已扩展：
+
+```powershell
+& "<Q0 binary>" --environment-json
+```
+
+输出新增 `can_map_host_memory`（来自 `cudaDevAttrCanMapHostMemory`）。它是 mapped-host capability 的唯一 gate；任何 Q0 正式 case 之前该值必须为 `1`，`unifiedAddressing` 不作为 gate。采集 receipt 的 `selected_gpu` 保存该字段，字段缺失或不为 1 一律 fail closed。
 
 生成 dry-run：
 

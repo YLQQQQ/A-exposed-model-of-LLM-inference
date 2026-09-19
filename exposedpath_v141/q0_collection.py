@@ -103,6 +103,9 @@ def _default_environment_probe(
         "async_engine_count": payload.get("async_engine_count"),
         "device_overlap": payload.get("device_overlap"),
         "concurrent_kernels": payload.get("concurrent_kernels"),
+        # Gate 6 Q0 build contract amendment：`cudaDevAttrCanMapHostMemory` 的正式
+        # target capability，缺一即 fail closed（见 `_validate_environment`）。
+        "can_map_host_memory": payload.get("can_map_host_memory"),
     }
     return {
         "selected_gpu": selected,
@@ -139,9 +142,19 @@ def _validate_environment(snapshot: Mapping[str, Any], selector: str) -> None:
             "async_engine_count",
             "device_overlap",
             "concurrent_kernels",
+            "can_map_host_memory",
         ):
             if selected.get(field) in {None, ""}:
                 missing.append(f"selected_gpu.{field}")
+        # 字段缺失走通用的 missing 分支（fail closed 且报出字段名）；字段存在但不是 1
+        # 时给出明确的 capability 拒绝。
+        if (
+            selected.get("can_map_host_memory") not in {None, ""}
+            and selected.get("can_map_host_memory") != 1
+        ):
+            raise Q0CollectionError(
+                "Q0 target 必须报告 can_map_host_memory == 1（mapped-host capability）"
+            )
         if selected.get("logical_index") != 0:
             raise Q0CollectionError("Q0 binary 必须运行在过滤后的逻辑设备 0")
         if (

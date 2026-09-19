@@ -174,6 +174,7 @@ def _sync_nvtx(record_id: str, start: int, end: int, phase: str = "decode") -> d
     return {
         "record_id": record_id, "start_ns": start, "end_ns": end,
         "global_tid": 1001, "structured_identity": identity,
+        "text": "EXPOSEDPATH_JSON_V1:" + json.dumps(identity, sort_keys=True),
     }
 
 
@@ -312,9 +313,13 @@ def test_cross_thread_activity_marker_can_feed_existing_stream_wait_set_semantic
 def test_activity_ownership_accepts_nested_markers_only_when_identity_and_phase_agree():
     worker_api = _api(start=20, end=30)
     worker_api["global_tid"] = 2002
+    # Gate 6 Unified Marker Ownership amendment：marker authority 必须落在 matching
+    # request/phase 的 cross-thread temporal containment 内。
     inventory = build_semantic_inventory(
         _bundle(
             nvtx=[
+                _nvtx("range:req", 0, 100, "full_request"),
+                _nvtx("range:decode", 5, 95, "decode"),
                 _activity_marker("marker:outer", 10, 40, callsite_id="WORKER"),
                 _activity_marker("marker:inner", 15, 35, callsite_id="KERNEL_A"),
             ],
@@ -328,6 +333,254 @@ def test_activity_ownership_accepts_nested_markers_only_when_identity_and_phase_
     assert activity["ownership_status"] == "VALID"
     assert activity["origin_phase"] == "decode"
     assert activity["ownership_range_record_ids"] == ["marker:inner", "marker:outer"]
+
+
+def test_activity_marker_without_matching_request_range_fails_closed():
+    worker_api = _api(start=20, end=30)
+    worker_api["global_tid"] = 2002
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=[
+                _nvtx("range:decode", 5, 95, "decode"),
+                _activity_marker("marker:kernel", 15, 35),
+            ],
+            cuda_api=[worker_api],
+            activities=[_activity()],
+            syncs=[],
+        )
+    )
+
+    activity = inventory["activities"][0]
+    assert activity["ownership_status"] == "INVALID"
+    assert activity["ownership_reasons"] == ["INVOCATION_BOUNDARY_INVALID"]
+
+
+def _request_nvtx(
+    record_id: str,
+    start: int,
+    end: int,
+    *,
+    kind: str = "request",
+    global_tid: int = 1001,
+    **identity_updates,
+) -> dict:
+    identity = _identity("full_request")
+    identity.update(kind=kind, **identity_updates)
+    return {
+        "record_id": record_id,
+        "start_ns": start,
+        "end_ns": end,
+        "global_tid": global_tid,
+        "text": "EXPOSEDPATH_JSON_V1:" + json.dumps(identity, sort_keys=True),
+        "structured_identity": identity,
+    }
+
+
+@pytest.mark.parametrize(
+    ("marker_interval", "api_interval", "expected_reason"),
+    [
+        ((25, 40), (26, 38), "INVOCATION_BOUNDARY_INVALID"),
+        ((140, 150), (141, 149), "INVOCATION_BOUNDARY_INVALID"),
+    ],
+)
+def test_launch_marker_outside_request_boundary_fails_closed(
+    marker_interval, api_interval, expected_reason
+):
+    marker = _activity_marker(
+        "marker:launch", marker_interval[0], marker_interval[1], callsite_id="K_EXTERNAL"
+    )
+    launch = _api("api:launch", start=api_interval[0], end=api_interval[1])
+    launch["global_tid"] = 2002
+    bundle = _bundle(
+        nvtx=[
+            marker,
+            _request_nvtx("range:req", 30, 130),
+            _nvtx("range:decode", 30, 130, "decode"),
+        ],
+        cuda_api=[launch],
+        activities=[_activity(start=40)],
+        syncs=[],
+    )
+
+    activity = build_semantic_inventory(bundle)["activities"][0]
+
+    assert activity["ownership_status"] == "INVALID"
+    assert activity["ownership_reasons"] == [expected_reason]
+
+
+def test_launch_marker_before_request_with_activity_in_scope_is_external():
+    marker = _activity_marker("marker:external", 10, 20, callsite_id="K_EXTERNAL")
+    launch = _api("api:external", start=11, end=19)
+    launch["global_tid"] = 2002
+    sync_nvtx = _sync_nvtx("marker:sync", 80, 120)
+    sync = _sync(start=80, end=120, runtime_api_name="cudaDeviceSynchronize")
+    sync_api = _api("api:sync", correlation_id=77, start=80, end=120)
+    sync_api["api_name"] = "cudaDeviceSynchronize"
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=[
+                marker,
+                _request_nvtx("range:req", 30, 130),
+                _nvtx("range:decode", 30, 130, "decode"),
+                sync_nvtx,
+            ],
+            cuda_api=[launch, sync_api],
+            activities=[_activity(start=40)],
+            syncs=[sync],
+        )
+    )
+
+    activity = inventory["activities"][0]
+    assert activity["ownership_status"] == "INVALID"
+    assert activity["ownership_reasons"] == ["EXTERNAL_OWNERSHIP_IN_SCOPE"]
+    assert activity["origin_phase"] is None
+
+    result = analyze_sync_semantics(inventory, inventory["syncs"][0])
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == "EXTERNAL_OWNERSHIP_IN_SCOPE"
+    assert result["wait_set_status"] == "INVALID"
+    assert result["wait_set_activity_ids"] == []
+    assert result["terminal"] == {
+        "status": "INVALID",
+        "kind": "NONE",
+        "activity_id": None,
+        "end_ns": None,
+        "clock_domain_id": None,
+    }
+
+
+def test_launch_marker_before_request_without_scope_overlap_is_not_external():
+    marker = _activity_marker("marker:completed", 10, 20, callsite_id="K_OLD")
+    launch = _api("api:old", start=11, end=19)
+    launch["global_tid"] = 2002
+    completed = _activity(start=21)
+    completed["end_ns"] = 25
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=[
+                marker,
+                _request_nvtx("range:req", 30, 130),
+                _nvtx("range:decode", 30, 130, "decode"),
+            ],
+            cuda_api=[launch],
+            activities=[completed],
+            syncs=[],
+        )
+    )
+
+    activity = inventory["activities"][0]
+    assert activity["ownership_status"] == "INVALID"
+    assert activity["ownership_reasons"] == ["INVOCATION_BOUNDARY_INVALID"]
+
+
+def test_launch_marker_with_multiple_matching_requests_is_ambiguous():
+    marker = _activity_marker("marker:launch", 10, 20, callsite_id="K_DUP")
+    launch = _api("api:launch", start=11, end=19)
+    launch["global_tid"] = 2002
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=[
+                marker,
+                _request_nvtx("range:req-a", 30, 130),
+                _request_nvtx("range:req-b", 132, 200),
+            ],
+            cuda_api=[launch],
+            activities=[_activity(start=40)],
+            syncs=[],
+        )
+    )
+
+    activity = inventory["activities"][0]
+    assert activity["ownership_status"] == "AMBIGUOUS"
+    assert activity["ownership_reasons"] == ["INVOCATION_OWNERSHIP_AMBIGUOUS"]
+
+
+def test_worker_thread_sync_marker_propagates_ownership_cross_thread():
+    sync_marker = _sync_nvtx("marker:worker-sync", 60, 95)
+    sync_marker["global_tid"] = 3003
+    sync = _sync(start=60, end=95)
+    sync["runtime_global_tid"] = 3003
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=[
+                _request_nvtx("range:req", 0, 100),
+                _nvtx("range:decode", 0, 100, "decode"),
+                sync_marker,
+            ],
+            cuda_api=[],
+            activities=[],
+            syncs=[sync],
+        )
+    )
+
+    normalized = inventory["syncs"][0]
+    assert normalized["ownership_status"] == "VALID"
+    assert normalized["request_id"] == "req-0"
+    assert normalized["repeat_id"] == "r0"
+    assert normalized["sync_owner_phase"] == "decode"
+    assert normalized["sync_origin"] == "natural_token_ready"
+
+    result = analyze_sync_semantics(inventory, normalized)
+    assert result["primary_reason"] is None
+    assert result["secondary_reasons"] == []
+    assert result["validity"] == "VALID_EMPTY"
+
+
+def test_worker_thread_sync_marker_outside_request_fails_closed():
+    sync_marker = _sync_nvtx("marker:worker-sync", 120, 160)
+    sync_marker["global_tid"] = 3003
+    sync = _sync(start=120, end=160)
+    sync["runtime_global_tid"] = 3003
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=[
+                _request_nvtx("range:req", 0, 100),
+                _nvtx("range:decode", 0, 100, "decode"),
+                sync_marker,
+            ],
+            cuda_api=[],
+            activities=[],
+            syncs=[sync],
+        )
+    )
+
+    normalized = inventory["syncs"][0]
+    assert normalized["ownership_status"] == "INVALID"
+    assert normalized["request_id"] is None
+    assert normalized["sync_owner_phase"] is None
+
+
+def test_event_record_ownership_uses_trusted_marker_inside_request():
+    event_marker = _activity_marker(
+        "marker:event-record", 20, 30, callsite_id="EVENT_RECORD_THREAD_A"
+    )
+    event_marker["global_tid"] = 3003
+    record_api = _api("api:event-record", correlation_id=8, start=21, end=29)
+    record_api["global_tid"] = 3003
+    record_api["api_name"] = "cudaEventRecord"
+    event = {
+        "record_id": "event:1", "correlation_id": 8, "timestamp_ns": 25,
+        "device_id": 0, "context_id": 1, "stream_id": 2,
+        "event_id": 7, "event_sync_id": 70,
+    }
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=[
+                _request_nvtx("range:req", 0, 100),
+                _nvtx("range:decode", 0, 100, "decode"),
+                event_marker,
+            ],
+            cuda_api=[record_api],
+            activities=[],
+            syncs=[],
+            cuda_events=[event],
+        )
+    )
+
+    normalized = inventory["event_records"][0]
+    assert normalized["ownership_status"] == "VALID"
+    assert normalized["request_id"] == "req-0"
+    assert normalized["host_start_ns"] == 21
 
 
 @pytest.mark.parametrize(

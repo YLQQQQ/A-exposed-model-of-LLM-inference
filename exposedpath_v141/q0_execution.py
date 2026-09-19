@@ -60,6 +60,13 @@ MEASUREMENT_INITIALIZATION_FLAG = "--measurement-initialization"
 RUN_SCHEMA_VERSION = "exposedpath-q0-run/0.2.1"
 LEGACY_RUN_SCHEMA_VERSION = "exposedpath-q0-run/0.2.0"
 
+# Q0 build contract amendment（`docs/v1_4_1/gate6_q0_build_contract_amendment_v0_1.md`）
+# 冻结的 codegen architecture：整份 Q0 binary 统一使用显式 target，不依赖 nvcc 默认值、
+# 不依赖 build host 可见 GPU，也不允许通过环境变量注入。
+Q0_GPU_ARCH = "sm_89"
+Q0_BUILD_RECEIPT_VERSION = "exposedpath-q0-build-receipt/0.1.0"
+Q0_BUILD_RECEIPT_SUFFIX = ".build_receipt.json"
+
 
 def measurement_initialization_policy(case: Mapping[str, Any]) -> str:
     """读取并校验单个 case 的初始化 policy；缺失或未知值 fail closed。"""
@@ -207,6 +214,7 @@ def build_q0_compile_command(
         raise ValueError("platform 必须是 windows 或 linux")
     command = [
         str(Path(nvcc)),
+        f"-arch={Q0_GPU_ARCH}",
         "-std=c++17",
         "-O2",
         "-lineinfo",
@@ -221,6 +229,55 @@ def build_q0_compile_command(
     return tuple(command)
 
 
+def q0_build_receipt_path(output: Path) -> Path:
+    """返回 `<binary>.build_receipt.json` 的冻结路径。"""
+
+    return Path(f"{Path(output)}{Q0_BUILD_RECEIPT_SUFFIX}")
+
+
+def _nvcc_version_output(
+    nvcc: Path, environment: Mapping[str, str]
+) -> str:
+    """读取 nvcc `--version` 的完整输出；失败即 fail closed。"""
+
+    completed = subprocess.run(
+        [str(nvcc), "--version"],
+        cwd=_root(None),
+        env=dict(environment),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise Q0ExecutionError(
+            f"nvcc --version 失败 ({completed.returncode}): "
+            f"{(completed.stdout + completed.stderr).strip()}"
+        )
+    version_output = (completed.stdout + completed.stderr).strip()
+    if not version_output:
+        raise Q0ExecutionError("nvcc --version 未返回版本信息")
+    return version_output
+
+
+def _write_json_document(path: Path, payload: Mapping[str, Any]) -> None:
+    """原子写入 JSON 文档，避免留下半成品产物。"""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        temporary.replace(path)
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
 def compile_q0_microbench(
     nvcc: Path,
     output: Path,
@@ -233,20 +290,29 @@ def compile_q0_microbench(
     source_path = _root(None) / _CUDA_SOURCE_PATH if source is None else Path(source)
     output_path = Path(output)
     nvcc_path = Path(nvcc)
+    receipt_path = q0_build_receipt_path(output_path)
     if not nvcc_path.is_file():
         raise Q0ExecutionError(f"nvcc 不存在: {nvcc_path}")
     if not source_path.is_file():
         raise Q0ExecutionError(f"Q0 CUDA 源文件不存在: {source_path}")
     if output_path.exists():
         raise Q0ExecutionError(f"拒绝覆盖已有 Q0 binary: {output_path}")
+    if receipt_path.exists():
+        raise Q0ExecutionError(f"拒绝覆盖已有 Q0 build receipt: {receipt_path}")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     environment = os.environ.copy()
     environment.pop("CL", None)
     environment.pop("_CL_", None)
+    # Gate 6 Q0 build contract amendment §2/§8：codegen 只能来自本文件的冻结 argv。
+    # ambient nvcc flag 注入变量一律摘除，避免 arch / 编译选项被静默追加或覆盖。
+    for injected in ("NVCC_APPEND_FLAGS", "NVCC_PREPEND_FLAGS"):
+        environment.pop(injected, None)
+    command = build_q0_compile_command(
+        nvcc_path, source_path, output_path, platform=platform
+    )
+    version_output = _nvcc_version_output(nvcc_path, environment)
     completed = subprocess.run(
-        build_q0_compile_command(
-            nvcc_path, source_path, output_path, platform=platform
-        ),
+        command,
         cwd=_root(None),
         env=environment,
         capture_output=True,
@@ -260,6 +326,24 @@ def compile_q0_microbench(
         raise Q0ExecutionError(f"Q0 CUDA 编译失败 ({completed.returncode}): {detail}")
     if not output_path.is_file():
         raise Q0ExecutionError("nvcc 返回成功但未生成 Q0 binary")
+    receipt = {
+        "receipt_version": Q0_BUILD_RECEIPT_VERSION,
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "platform": platform,
+        "gpu_arch": Q0_GPU_ARCH,
+        "cuda_source": {
+            "path": str(source_path),
+            "sha256": _sha256(source_path),
+        },
+        "nvcc": {"path": str(nvcc_path), "version_output": version_output},
+        "compile_command": list(command),
+        "binary": {
+            "path": str(output_path),
+            "size_bytes": output_path.stat().st_size,
+            "sha256": _sha256(output_path),
+        },
+    }
+    _write_json_document(receipt_path, receipt)
     return output_path
 
 

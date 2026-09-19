@@ -47,6 +47,9 @@ def test_compile_command_is_structured_and_preserves_paths_with_spaces(tmp_path)
 
     assert isinstance(command, tuple)
     assert command[0] == str(nvcc)
+    # Gate 6 Q0 build contract amendment：codegen target 只能来自冻结 argv。
+    assert command[1] == "-arch=sm_89"
+    assert command.count("-arch=sm_89") == 1
     assert str(source) in command
     assert command[-2:] == ("-o", str(output))
     assert all('"' not in argument for argument in command)
@@ -540,3 +543,153 @@ def test_engineering_diagnostic_argv_shape_is_unchanged_by_the_formal_policy():
     assert '"--diagnostic-kernel-ms"' in main
     assert "diagnostic parameters are only supported" in main
     assert "--diagnostic-warmup-kernel is only supported for the frozen" in main
+
+
+# --- Gate 6 Q0 build contract amendment：environment capability ---
+
+
+def test_environment_probe_reports_can_map_host_memory_capability_only():
+    """capability gate 只认 `cudaDevAttrCanMapHostMemory`。"""
+
+    source = SOURCE.read_text(encoding="utf-8")
+    start = source.index("int print_environment_json()")
+    opening = source.index("{", start)
+    depth = 0
+    for index in range(opening, len(source)):
+        if source[index] == "{":
+            depth += 1
+        elif source[index] == "}":
+            depth -= 1
+            if depth == 0:
+                body = source[opening + 1:index]
+                break
+    else:  # pragma: no cover - defensive
+        raise AssertionError("无法解析 print_environment_json")
+
+    assert "cudaDevAttrCanMapHostMemory" in body
+    assert '\\"can_map_host_memory\\"' in body
+    # `unifiedAddressing` 是环境事实，不是 capability gate：不得出现在 probe 输出里。
+    assert '\\"unifiedAddressing\\"' not in body
+    assert body.index("cudaGetDeviceProperties(&properties, 0)") < body.index(
+        "cudaDevAttrCanMapHostMemory"
+    )
+
+
+# --- Gate 6 Marker Ownership amendment：EVENT_RECORD_THREAD_A ---
+
+
+def test_multithread_event_record_has_covering_marker_on_the_producer_thread():
+    body = _function_body(SOURCE.read_text(encoding="utf-8"), "run_multithread")
+    marker = 'marker_range(c, id, "decode", "EVENT_RECORD_THREAD_A")'
+
+    assert marker in body
+    assert '"K_THREAD_A"' in body
+    assert '"EVENT_RECORD_THREAD_A"' in body
+    assert (
+        body.index('"K_THREAD_A"')
+        < body.index(marker)
+        < body.index("cudaEventRecord(r.event, r.first)")
+    )
+    # 同 producer thread：marker 必须出现在 producer lambda 内。
+    producer = body.index("std::thread producer")
+    assert producer < body.index(marker)
+    # 纯 host-side provenance instrumentation：不新增 CUDA API / event / sync。
+    assert body.count("cudaEventRecord(") == 1
+    assert body.count("cudaStreamWaitEvent(") == 1
+    assert body.count("cudaStreamSynchronize(") == 1
+    # 两个 kernel 仍各自只经由既有的 `launch()` helper 提交。
+    assert body.count('launch(r, c, id, "decode"') == 2
+
+
+# --- Gate 6 Missing-Corr amendment：same-activity mapped sentinel handshake ---
+
+
+def test_missing_corr_signaling_kernel_is_additive_and_leaves_spin_kernel_unchanged():
+    source = SOURCE.read_text(encoding="utf-8")
+
+    assert "#include <cuda/atomic>" in source
+    assert "q0_spin_kernel_signaled" in source
+    # 新增 symbol 只有定义与唯一调用点；其余 22 个 case 的 kernel symbol 不变。
+    assert source.count("q0_spin_kernel_signaled") == 2
+
+    # `q0_spin_kernel` 保持 zero-change：仍是原来的纯 spin body。
+    assert " ".join(_function_body(source, "q0_spin_kernel").split()) == (
+        "const std::uint64_t start = clock64(); while (clock64() - start < cycles) { }"
+    )
+    # warm-up helper 继续使用 `q0_spin_kernel`，不受 Missing-Corr 影响。
+    assert "q0_spin_kernel<<<1, 1, 0, resources.first>>>" in _function_body(
+        source, "warmup_kernel_memop"
+    )
+
+
+def test_missing_corr_signaling_kernel_uses_system_scope_release_store_without_fallback():
+    source = SOURCE.read_text(encoding="utf-8")
+    body = _function_body(source, "q0_spin_kernel_signaled")
+
+    assert "cuda::atomic_ref<unsigned int, cuda::thread_scope_system>" in body
+    assert "flag.store(1u, cuda::memory_order_release)" in body
+    # 只使用 load/store，不使用 RMW；没有 volatile fallback，也没有系统 fence。
+    assert "fetch_" not in body
+    assert "compare_exchange" not in body
+    assert "volatile" not in source
+    assert "__threadfence_system" not in source
+
+
+def test_missing_corr_measured_activity_shape_is_unchanged():
+    """唯一 measured GPU activity：单 block / 单 thread / measured stream / 35 ms。"""
+
+    body = _function_body(SOURCE.read_text(encoding="utf-8"), "run_missing_corr")
+
+    assert 'marker_range(c, id, "decode", "K_UNMAPPED")' in body
+    assert "q0_spin_kernel_signaled<<<1, 1, 0, r.first>>>" in body
+    assert "r.cycles(35)" in body
+    assert body.count("<<<") == 1
+    assert body.count("one_phase(c, id, [&] {") == 1
+    assert body.count("sync_range(") == 1
+    assert "request_range(" not in body
+    assert "phase_range(" not in body
+
+
+def test_missing_corr_handshake_opens_sync_only_after_started_observation():
+    body = _function_body(SOURCE.read_text(encoding="utf-8"), "run_missing_corr")
+
+    launch = body.index("q0_spin_kernel_signaled<<<1, 1, 0, r.first>>>")
+    observe = body.index("started.load(cuda::memory_order_acquire)")
+    sync_range_index = body.index('"S_STREAM"')
+    blocking_sync = body.index("cudaStreamSynchronize(r.first)")
+
+    assert launch < observe < sync_range_index < blocking_sync
+    assert "cuda::atomic_ref<unsigned int, cuda::thread_scope_system>" in body
+    # no second kernel / event / query / device gate / extra dependency / sleep tuning
+    assert "cudaEvent" not in body
+    assert "cudaStreamQuery" not in body
+    assert "cudaEventQuery" not in body
+    assert "cudaDeviceSynchronize" not in body
+    assert "cudaStreamCreate" not in body
+    assert "sleep_for" not in body
+    # watchdog 只是 fail-closed operational ceiling，不参与 PASS 判定。
+    assert "kMissingCorrSentinelWatchdogSeconds" in body
+    assert "throw std::runtime_error" in body
+
+
+def test_missing_corr_sentinel_is_precapture_and_case_scoped_in_main():
+    source = SOURCE.read_text(encoding="utf-8")
+    main = _main_section(source)
+
+    scope = main.index('const bool missing_corr_case = case_id == "Q0-MISSING-CORR-001";')
+    flags = main.index("cudaSetDeviceFlags(cudaDeviceMapHost)")
+    construction = main.index("Resources resources(")
+    allocation = main.index("cudaHostAlloc(")
+    device_pointer = main.index("cudaHostGetDevicePointer(")
+    capability = main.index("canMapHostMemory == 0")
+    capture = main.index("CudaProfilerRange capture;")
+
+    # case-scoped：先判 case，再设置 flags，且 flags 早于首个 context-creating call；
+    # capability gate 在 allocation 之前 fail closed。
+    assert scope < flags < construction < capability < allocation < device_pointer
+    assert device_pointer < capture
+    assert "cudaHostAllocMapped" in main
+    assert "cudaFreeHost(missing_corr_sentinel)" in source
+    assert "unifiedAddressing" not in main
+    # formal path 不新增 device-wide drain。
+    assert main.count("cudaDeviceSynchronize()") == 1

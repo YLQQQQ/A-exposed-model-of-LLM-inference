@@ -18,7 +18,12 @@ from .b_provenance import calculate_b_syncs
 from .canonical_raw import load_canonical_raw_schema
 from .q0_execution import load_q0_execution_manifest
 from .q0_oracle import load_oracle_bundle
-from .sync_semantics import analyze_sync_semantics, classify_cuda_api
+from .sync_semantics import (
+    analyze_semantic_inventory,
+    analyze_sync_semantics,
+    build_semantic_inventory,
+    classify_cuda_api,
+)
 
 
 _CLOCK = "NSYS_TRACE_RELATIVE_NS"
@@ -190,17 +195,7 @@ def _profile(case: Mapping[str, Any]) -> tuple[dict[str, Any], list[dict[str, An
     activities: list[dict[str, Any]] = []
     for spec in specs:
         kwargs: dict[str, Any] = {}
-        if case_id == "Q0-MISSING-CORR-001":
-            kwargs.update(
-                ownership_status="INVALID",
-                ownership_reasons=("MISSING_ACTIVITY_CORRELATION",),
-            )
-        elif case_id == "Q0-EXTERNAL-001":
-            kwargs.update(
-                ownership_status="INVALID",
-                ownership_reasons=("EXTERNAL_OWNERSHIP_IN_SCOPE",),
-            )
-        elif case_id == "Q0-INVOCATION-BLEED-001":
+        if case_id == "Q0-INVOCATION-BLEED-001":
             kwargs.update(request_id="req-prior")
         elif case_id == "Q0-SUBMISSION-RACE-001":
             sync_start = int(sync_specs[0]["start_ns"])
@@ -264,14 +259,21 @@ def _profile(case: Mapping[str, Any]) -> tuple[dict[str, Any], list[dict[str, An
     return inventory, syncs
 
 
-def _nvtx(identity: Mapping[str, Any], start: int, end: int, record_id: str) -> dict[str, Any]:
+def _nvtx(
+    identity: Mapping[str, Any],
+    start: int,
+    end: int,
+    record_id: str,
+    *,
+    global_tid: int = 1001,
+) -> dict[str, Any]:
     payload = dict(identity)
     text = "EXPOSEDPATH_JSON_V1:" + json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return {
         "record_id": record_id,
         "start_ns": start,
         "end_ns": end,
-        "global_tid": 1001,
+        "global_tid": global_tid,
         "structured_identity": payload,
         "text": text,
     }
@@ -282,11 +284,19 @@ def _ab_inputs(
     inventory: Mapping[str, Any],
     raw_syncs: Sequence[Mapping[str, Any]],
     s_records: Sequence[Mapping[str, Any]],
+    *,
+    window_start: int = 0,
+    window_end: int | None = None,
 ) -> ABInputs:
-    end = max([100, *[int(sync["host_end_ns"]) for sync in raw_syncs]])
+    start = int(window_start)
+    end = (
+        max([start + 100, *[int(sync["host_end_ns"]) for sync in raw_syncs]])
+        if window_end is None
+        else int(window_end)
+    )
     request_identity = _identity("full_request")
     request_identity["kind"] = "request"
-    nvtx = [_nvtx(request_identity, 0, end, "nvtx:request")]
+    nvtx = [_nvtx(request_identity, start, end, "nvtx:request")]
     for sync in raw_syncs:
         sync_identity = _identity(str(sync["sync_owner_phase"]))
         sync_identity.update(
@@ -350,7 +360,7 @@ def _ab_inputs(
         request_id="req-0",
         repeat_id="repeat-0",
         phase="full_request",
-        start_ns=0,
+        start_ns=start,
         end_ns=end,
         nvtx_record_id="nvtx:request",
     )
@@ -365,11 +375,346 @@ def _ab_inputs(
     )
 
 
+# Gate 6 amendment 冻结的 in-scope case：Unified Marker Ownership amendment 的
+# External / Multithread-Ordered / Overlapping-Host-Sync，以及 Missing-Corr
+# amendment 的 Missing-Corr。这些 proxy 只允许输入结构事实（request/phase range、
+# covering structured marker、CUDA API、device activity、event record / wait-event、
+# physical sync），最终 ownership / wait set / terminal / validity 必须由
+# `sync_semantics` 正常化与推导链得出。
+_STRUCTURAL_CASE_IDS = frozenset(
+    {
+        "Q0-EXTERNAL-001",
+        "Q0-MULTITHREAD-ORDERED-001",
+        "Q0-OVERLAPPING-HOST-SYNC-001",
+        "Q0-MISSING-CORR-001",
+    }
+)
+
+
+def _structural_identity(
+    kind: str,
+    phase: str,
+    *,
+    callsite_id: str | None = None,
+    sync_origin: str | None = None,
+    sync_ordinal: int | None = None,
+) -> dict[str, Any]:
+    identity: dict[str, Any] = {
+        "kind": kind,
+        "experiment_id": "exposedpath-q0-synthetic",
+        "wmpc_id": "q0-controlled",
+        "run_id": "synthetic-run",
+        "run_role": "Engineering",
+        "pass_id": "Pass1",
+        "request_id": "req-0",
+        "repeat_id": "repeat-0",
+        "phase": phase,
+    }
+    if callsite_id is not None:
+        identity["callsite_id"] = callsite_id
+    if sync_origin is not None:
+        identity["sync_origin"] = sync_origin
+    if sync_ordinal is not None:
+        identity["sync_ordinal"] = sync_ordinal
+    return identity
+
+
+def _structural_bundle(case_id: str) -> tuple[dict[str, Any], int, int]:
+    """构造 in-scope case 的 Canonical 结构事实与 (A/B window 边界)。"""
+
+    nvtx: list[dict[str, Any]] = []
+    cuda_api: list[dict[str, Any]] = []
+    cuda_sync: list[dict[str, Any]] = []
+    device_activity: list[dict[str, Any]] = []
+    cuda_event: list[dict[str, Any]] = []
+
+    def add_range(
+        kind: str,
+        phase: str,
+        start: int,
+        end: int,
+        record_id: str,
+        *,
+        global_tid: int = 1001,
+        **extra: Any,
+    ) -> None:
+        nvtx.append(
+            _nvtx(
+                _structural_identity(kind, phase, **extra),
+                start,
+                end,
+                record_id,
+                global_tid=global_tid,
+            )
+        )
+
+    def add_api(
+        record_id: str,
+        api_name: str,
+        start: int,
+        end: int,
+        *,
+        global_tid: int = 1001,
+        correlation_id: int | None = None,
+        event_id: int | None = None,
+    ) -> None:
+        cuda_api.append(
+            {
+                "record_id": record_id,
+                "start_ns": start,
+                "end_ns": end,
+                "global_tid": global_tid,
+                "correlation_id": correlation_id,
+                "api_name": api_name,
+                "event_id": event_id,
+                "return_value": 0,
+            }
+        )
+
+    def add_activity(
+        label: str,
+        start: int,
+        end: int,
+        *,
+        correlation_id: int | None,
+        stream_id: int,
+    ) -> None:
+        device_activity.append(
+            {
+                "record_id": label,
+                "start_ns": start,
+                "end_ns": end,
+                "clock_domain_id": _CLOCK,
+                "device_id": 0,
+                "context_id": 1,
+                "stream_id": stream_id,
+                "activity_kind": "KERNEL",
+                "name": label,
+                "correlation_id": correlation_id,
+                "attributes": {},
+            }
+        )
+
+    def add_sync(
+        label: str,
+        api_name: str,
+        start: int,
+        end: int,
+        *,
+        global_tid: int = 1001,
+        stream_id: int = 2,
+        ordinal: int = 0,
+        event_id: int | None = None,
+        event_sync_id: int | None = None,
+    ) -> None:
+        add_range(
+            "sync",
+            "decode",
+            start,
+            end,
+            f"nvtx:sync:{label}",
+            global_tid=global_tid,
+            callsite_id=label,
+            sync_origin="q0_controlled",
+            sync_ordinal=ordinal,
+        )
+        cuda_sync.append(
+            {
+                "record_id": label,
+                "start_ns": start,
+                "end_ns": end,
+                "global_tid": global_tid,
+                "device_id": 0,
+                "context_id": 1,
+                "stream_id": stream_id,
+                "sync_type_id": 1,
+                "sync_type_name": "SYNC",
+                "sync_type_label": "SYNC",
+                "runtime_mapping_count": 1,
+                "runtime_api_name": api_name,
+                "runtime_start_ns": start,
+                "runtime_end_ns": end,
+                "runtime_global_tid": global_tid,
+                "runtime_record_id": f"api:{label}",
+                "event_id": event_id,
+                "event_sync_id": event_sync_id,
+            }
+        )
+
+    if case_id == "Q0-EXTERNAL-001":
+        # launch marker/API 完全位于 request 之前，device activity 延伸进入 request。
+        add_range("request", "full_request", 30, 130, "nvtx:request")
+        add_range("phase", "decode", 30, 130, "nvtx:decode")
+        add_range(
+            "marker", "decode", 10, 20, "nvtx:marker:K_EXTERNAL",
+            callsite_id="K_EXTERNAL",
+        )
+        add_api("api:K_EXTERNAL", "cudaLaunchKernel", 11, 19, correlation_id=7)
+        add_activity("K_EXTERNAL", 40, 110, correlation_id=7, stream_id=2)
+        add_sync("S_DEVICE", "cudaDeviceSynchronize", 80, 120)
+        window_start, window_end = 30, 130
+    elif case_id == "Q0-MISSING-CORR-001":
+        # correlation 真实缺失；activity 仍早于 sync host start。
+        add_range("request", "full_request", 0, 100, "nvtx:request")
+        add_range("phase", "decode", 0, 100, "nvtx:decode")
+        add_activity("K_UNMAPPED", 20, 80, correlation_id=None, stream_id=2)
+        add_sync("S_STREAM", "cudaStreamSynchronize", 50, 90)
+        window_start, window_end = 0, 100
+    elif case_id == "Q0-MULTITHREAD-ORDERED-001":
+        add_range("request", "full_request", 0, 100, "nvtx:request")
+        add_range("phase", "decode", 0, 100, "nvtx:decode")
+        add_range(
+            "marker", "decode", 1, 9, "nvtx:marker:WORKER_THREAD_A",
+            global_tid=2002, callsite_id="WORKER_THREAD_A",
+        )
+        add_range(
+            "marker", "decode", 1, 9, "nvtx:marker:K_THREAD_A",
+            global_tid=2002, callsite_id="K_THREAD_A",
+        )
+        add_api(
+            "api:K_THREAD_A", "cudaLaunchKernel", 2, 8,
+            global_tid=2002, correlation_id=127,
+        )
+        add_activity("K_THREAD_A", 10, 45, correlation_id=127, stream_id=2)
+        add_range(
+            "marker", "decode", 11, 15, "nvtx:marker:EVENT_RECORD_THREAD_A",
+            global_tid=2002, callsite_id="EVENT_RECORD_THREAD_A",
+        )
+        add_api(
+            "api:EVENT_RECORD_THREAD_A", "cudaEventRecord", 12, 14,
+            global_tid=2002, correlation_id=129, event_id=1,
+        )
+        add_range(
+            "marker", "decode", 15, 19, "nvtx:marker:WORKER_THREAD_B",
+            global_tid=3003, callsite_id="WORKER_THREAD_B",
+        )
+        add_range(
+            "marker", "decode", 20, 26, "nvtx:marker:K_THREAD_B",
+            global_tid=3003, callsite_id="K_THREAD_B",
+        )
+        add_api(
+            "api:K_THREAD_B", "cudaLaunchKernel", 21, 25,
+            global_tid=3003, correlation_id=131,
+        )
+        add_activity("K_THREAD_B", 50, 85, correlation_id=131, stream_id=4)
+        add_sync("S_THREAD_B", "cudaStreamSynchronize", 60, 95, global_tid=3003, stream_id=4)
+        # cudaStreamWaitEvent 是 DEPENDENCY_EDGE：没有 marker，边只依赖 event node。
+        cuda_sync.append(
+            {
+                "record_id": "edge:S_THREAD_B",
+                "start_ns": 15,
+                "end_ns": 19,
+                "global_tid": 3003,
+                "device_id": 0,
+                "context_id": 1,
+                "stream_id": 4,
+                "sync_type_id": 2,
+                "sync_type_name": "STREAM_WAIT_EVENT",
+                "sync_type_label": "STREAM_WAIT_EVENT",
+                "runtime_mapping_count": 1,
+                "runtime_api_name": "cudaStreamWaitEvent",
+                "runtime_start_ns": 15,
+                "runtime_end_ns": 19,
+                "runtime_global_tid": 3003,
+                "runtime_record_id": "api:EVENT_MT_WAIT",
+                "event_id": 1,
+                "event_sync_id": 1,
+            }
+        )
+        cuda_event.append(
+            {
+                "record_id": "event:EVENT_MT",
+                "correlation_id": 129,
+                "timestamp_ns": 13,
+                "device_id": 0,
+                "context_id": 1,
+                "stream_id": 2,
+                "event_id": 1,
+                "event_sync_id": 1,
+            }
+        )
+        window_start, window_end = 0, 100
+    elif case_id == "Q0-OVERLAPPING-HOST-SYNC-001":
+        add_range("request", "full_request", 0, 100, "nvtx:request")
+        add_range("phase", "decode", 0, 100, "nvtx:decode")
+        add_range(
+            "marker", "decode", 10, 18, "nvtx:marker:K_A", callsite_id="K_A",
+        )
+        add_api("api:K_A", "cudaLaunchKernel", 11, 17, correlation_id=127)
+        add_activity("K_A", 20, 85, correlation_id=127, stream_id=2)
+        add_range(
+            "marker", "decode", 19, 27, "nvtx:marker:K_B", callsite_id="K_B",
+        )
+        add_api("api:K_B", "cudaLaunchKernel", 20, 26, correlation_id=129)
+        add_activity("K_B", 30, 95, correlation_id=129, stream_id=4)
+        add_range(
+            "marker", "decode", 49, 50, "nvtx:marker:WORKER_SYNC_A",
+            global_tid=2002, callsite_id="WORKER_SYNC_A",
+        )
+        add_sync("S_A", "cudaStreamSynchronize", 50, 90, global_tid=2002, stream_id=2)
+        add_range(
+            "marker", "decode", 59, 60, "nvtx:marker:WORKER_SYNC_B",
+            global_tid=3003, callsite_id="WORKER_SYNC_B",
+        )
+        add_sync(
+            "S_B", "cudaStreamSynchronize", 60, 100,
+            global_tid=3003, stream_id=4, ordinal=1,
+        )
+        window_start, window_end = 0, 100
+    else:  # pragma: no cover - guarded by _STRUCTURAL_CASE_IDS
+        raise ValueError(f"未支持的结构化 synthetic case: {case_id}")
+
+    bundle = {
+        "manifest": {
+            "identity": {"status": "VALID", "issues": []},
+            "observation_validity": {"status": "valid", "issues": []},
+            "clock": {"clock_domain_id": _CLOCK},
+            "execution_context": {
+                "default_stream_mode": "PER_THREAD",
+                "selected_device_id": 0,
+            },
+        },
+        "records": {
+            "nvtx": nvtx,
+            "cuda_api": cuda_api,
+            "cuda_sync": cuda_sync,
+            "device_activity": device_activity,
+            "cuda_event": cuda_event,
+            "context": [{"context_id": 1, "device_id": 0, "null_stream_id": 0}],
+            "stream": [
+                {"context_id": 1, "stream_id": 2, "flag": 0},
+                {"context_id": 1, "stream_id": 4, "flag": 0},
+            ],
+            "diagnostic": [],
+        },
+    }
+    return bundle, window_start, window_end
+
+
+def _structural_inventory(case_id: str) -> tuple[dict[str, Any], int, int]:
+    """把 in-scope case 的结构事实交给生产 `sync_semantics` 正常化链。"""
+
+    bundle, window_start, window_end = _structural_bundle(case_id)
+    return build_semantic_inventory(bundle), window_start, window_end
+
+
 def _observed_case(case: Mapping[str, Any]) -> dict[str, Any]:
     case_id = str(case["case_id"])
-    inventory, syncs = _profile(case)
-    s_records = [analyze_sync_semantics(inventory, sync) for sync in syncs]
-    inputs = _ab_inputs(case_id, inventory, syncs, s_records)
+    if case_id in _STRUCTURAL_CASE_IDS:
+        inventory, window_start, window_end = _structural_inventory(case_id)
+        s_records = analyze_semantic_inventory(inventory)
+        inputs = _ab_inputs(
+            case_id,
+            inventory,
+            inventory["syncs"],
+            s_records,
+            window_start=window_start,
+            window_end=window_end,
+        )
+    else:
+        inventory, syncs = _profile(case)
+        s_records = [analyze_sync_semantics(inventory, sync) for sync in syncs]
+        inputs = _ab_inputs(case_id, inventory, syncs, s_records)
     a_records = calculate_a_windows(inputs)
     b_records = calculate_b_syncs(inputs)
     a_record = dict(a_records[0]) if a_records else None

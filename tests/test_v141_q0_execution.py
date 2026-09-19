@@ -5,14 +5,20 @@ from __future__ import annotations
 from copy import deepcopy
 import hashlib
 import json
+import subprocess
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
 
+from exposedpath_v141 import q0_execution
 from exposedpath_v141.q0_execution import (
     Q0ExecutionError,
+    build_q0_compile_command,
+    compile_q0_microbench,
     load_q0_execution_manifest,
     prepare_q0_run,
+    q0_build_receipt_path,
     validate_q0_execution_manifest,
 )
 from exposedpath_v141.cli import main
@@ -381,3 +387,164 @@ def test_prepare_q0_run_records_the_policy_it_actually_passed(tmp_path):
         argv_policy = case["command_argv"][-1]
         assert case["measurement_initialization"] == argv_policy
         assert case["command_argv"][-2] == "--measurement-initialization"
+
+# --- Gate 6 Q0 build contract amendment：显式 sm_89 codegen 与 build receipt ---
+
+
+@pytest.mark.parametrize("platform", ["windows", "linux"])
+def test_compile_command_freezes_exactly_one_explicit_sm89_arch(tmp_path, platform):
+    """Q0 build 不得依赖 nvcc 默认 arch，也不得暴露可变 arch 参数。"""
+
+    command = build_q0_compile_command(
+        tmp_path / "nvcc", tmp_path / "exposedpath_q0.cu", tmp_path / "q0",
+        platform=platform,
+    )
+
+    assert command.count("-arch=sm_89") == 1
+    assert command[1] == "-arch=sm_89"
+    assert all(not argument.startswith("-gencode") for argument in command)
+    assert all(not argument.startswith("--gpu-architecture") for argument in command)
+    assert all(
+        argument == "-arch=sm_89"
+        for argument in command
+        if argument.startswith("-arch=")
+    )
+
+
+def _fake_nvcc(monkeypatch, *, version="nvcc: NVIDIA (R) Cuda compiler driver\n"
+                                        "Cuda compilation tools, release 12.4, V12.4.131",
+               binary_bytes=b"q0-compiled-binary"):
+    """替换 module-level subprocess，使 receipt 语义可离线验证。"""
+
+    calls: list[list[str]] = []
+
+    def run(argv, **_kwargs):
+        recorded = [str(value) for value in argv]
+        calls.append(recorded)
+        if "--version" in recorded:
+            return subprocess.CompletedProcess(recorded, 0, version, "")
+        Path(recorded[recorded.index("-o") + 1]).write_bytes(binary_bytes)
+        return subprocess.CompletedProcess(recorded, 0, "", "")
+
+    monkeypatch.setattr(q0_execution, "subprocess", SimpleNamespace(run=run))
+    return calls
+
+
+def test_compile_q0_microbench_writes_source_and_binary_provenance_receipt(
+    tmp_path, monkeypatch
+):
+    nvcc = tmp_path / "nvcc.exe"
+    nvcc.write_bytes(b"nvcc-placeholder")
+    source = tmp_path / "exposedpath_q0.cu"
+    source.write_text("// frozen Q0 CUDA source\n", encoding="utf-8")
+    output = tmp_path / "q0.exe"
+    calls = _fake_nvcc(monkeypatch)
+
+    compiled = compile_q0_microbench(nvcc, output, platform="windows", source=source)
+
+    assert compiled == output
+    receipt_path = q0_build_receipt_path(output)
+    assert receipt_path == tmp_path / "q0.exe.build_receipt.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+
+    assert receipt["receipt_version"] == "exposedpath-q0-build-receipt/0.1.0"
+    assert receipt["platform"] == "windows"
+    assert receipt["gpu_arch"] == "sm_89"
+    assert receipt["generated_at_utc"]
+    assert receipt["cuda_source"]["path"] == str(source)
+    assert receipt["cuda_source"]["sha256"] == hashlib.sha256(
+        source.read_bytes()
+    ).hexdigest().upper()
+    assert receipt["binary"]["path"] == str(output)
+    assert receipt["binary"]["size_bytes"] == len(b"q0-compiled-binary")
+    assert receipt["binary"]["sha256"] == hashlib.sha256(
+        b"q0-compiled-binary"
+    ).hexdigest().upper()
+    assert receipt["nvcc"]["path"] == str(nvcc)
+    assert "V12.4.131" in receipt["nvcc"]["version_output"]
+    assert receipt["compile_command"].count("-arch=sm_89") == 1
+    # builder 不得自行读取/推断 Git commit。
+    assert "commit" not in json.dumps(receipt).lower()
+    # 实际编译 argv 与 receipt 记录一致，且 nvcc 版本与编译各调用一次。
+    assert calls[-1] == receipt["compile_command"]
+    assert sum(1 for call in calls if "--version" in call) == 1
+
+
+def test_compile_q0_microbench_rejects_existing_binary_or_receipt(
+    tmp_path, monkeypatch
+):
+    nvcc = tmp_path / "nvcc.exe"
+    nvcc.write_bytes(b"nvcc-placeholder")
+    source = tmp_path / "exposedpath_q0.cu"
+    source.write_text("// frozen Q0 CUDA source\n", encoding="utf-8")
+    output = tmp_path / "q0.exe"
+    _fake_nvcc(monkeypatch)
+
+    compile_q0_microbench(nvcc, output, platform="windows", source=source)
+
+    with pytest.raises(Q0ExecutionError, match="拒绝覆盖已有 Q0 binary"):
+        compile_q0_microbench(nvcc, output, platform="windows", source=source)
+
+    # stale binary 已被删除但 receipt 仍在时，也必须拒绝，避免 receipt 与新 binary 错配。
+    output.unlink()
+    with pytest.raises(Q0ExecutionError, match="拒绝覆盖已有 Q0 build receipt"):
+        compile_q0_microbench(nvcc, output, platform="windows", source=source)
+
+
+def test_compile_q0_microbench_strips_ambient_nvcc_flag_injection(
+    tmp_path, monkeypatch
+):
+    """ambient nvcc 变量不得追加或覆盖冻结 codegen。"""
+
+    nvcc = tmp_path / "nvcc.exe"
+    nvcc.write_bytes(b"nvcc-placeholder")
+    source = tmp_path / "exposedpath_q0.cu"
+    source.write_text("// frozen Q0 CUDA source\n", encoding="utf-8")
+    output = tmp_path / "q0.exe"
+    seen_environments: list[dict] = []
+
+    def run(argv, **kwargs):
+        recorded = [str(value) for value in argv]
+        seen_environments.append(dict(kwargs["env"]))
+        if "--version" in recorded:
+            return subprocess.CompletedProcess(recorded, 0, "nvcc release 12.4", "")
+        Path(recorded[recorded.index("-o") + 1]).write_bytes(b"q0-compiled-binary")
+        return subprocess.CompletedProcess(recorded, 0, "", "")
+
+    monkeypatch.setenv("NVCC_APPEND_FLAGS", "-arch=sm_75")
+    monkeypatch.setenv("NVCC_PREPEND_FLAGS", "-arch=sm_75")
+    monkeypatch.setattr(q0_execution, "subprocess", SimpleNamespace(run=run))
+
+    compile_q0_microbench(nvcc, output, platform="windows", source=source)
+
+    assert seen_environments
+    for environment in seen_environments:
+        assert "NVCC_APPEND_FLAGS" not in environment
+        assert "NVCC_PREPEND_FLAGS" not in environment
+
+
+def test_compile_q0_microbench_fails_closed_without_nvcc_version(
+    tmp_path, monkeypatch
+):
+    """nvcc 版本信息取不到时 receipt 不得静默跳过。"""
+
+    nvcc = tmp_path / "nvcc.exe"
+    nvcc.write_bytes(b"nvcc-placeholder")
+    source = tmp_path / "exposedpath_q0.cu"
+    source.write_text("// frozen Q0 CUDA source\n", encoding="utf-8")
+    output = tmp_path / "q0.exe"
+
+    def run(argv, **kwargs):
+        recorded = [str(value) for value in argv]
+        if "--version" in recorded:
+            return subprocess.CompletedProcess(recorded, 1, "", "nvcc exploded")
+        Path(recorded[recorded.index("-o") + 1]).write_bytes(b"q0-compiled-binary")
+        return subprocess.CompletedProcess(recorded, 0, "", "")
+
+    monkeypatch.setattr(q0_execution, "subprocess", SimpleNamespace(run=run))
+
+    with pytest.raises(Q0ExecutionError, match="--version"):
+        compile_q0_microbench(nvcc, output, platform="windows", source=source)
+
+    assert not q0_build_receipt_path(output).exists()
+    assert not output.exists()

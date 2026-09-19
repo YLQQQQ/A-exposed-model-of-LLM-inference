@@ -30,6 +30,7 @@ def _environment() -> dict[str, object]:
             "async_engine_count": 5,
             "device_overlap": 1,
             "concurrent_kernels": 1,
+            "can_map_host_memory": 1,
         },
         "driver_version": 12050,
         "cuda_driver_version": 12050,
