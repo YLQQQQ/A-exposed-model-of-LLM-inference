@@ -21,16 +21,24 @@ git status --short --branch
 $TrackedDirty = git status --porcelain=v1 --untracked-files=no
 if ($TrackedDirty) { throw "存在未保存的受跟踪修改，停止更新" }
 $BeforeUpdate = git rev-parse HEAD
-$ExpectedImplCommit = "2e81f6f9a9ec590d37fb01be9e31f2251645c5d1"
+$FrozenImplementation = "97054163b661870fe98db0cedff5657f71d69500"
 git branch "backup/server-before-$($BeforeUpdate.Substring(0,8))" $BeforeUpdate
 git fetch "..\ExposedPath_Q0_实际文件名.bundle" codex/gate6-canonical-baseline
 git reset --hard FETCH_HEAD
-$Actual = (git rev-parse HEAD).Trim()
-if ($Actual -ne $ExpectedImplCommit) { throw "HEAD 不是本手册冻结的 canonical implementation commit：$Actual" }
-$Actual
+$CheckoutCommit = (git rev-parse HEAD).Trim()
+# unified provenance：不再要求 HEAD == FrozenImplementation；checkout 允许是 frozen 之后的 runbook-only docs commit
+if (@(git status --porcelain=v1 --untracked-files=no).Count -ne 0) { throw "tracked working tree 不 clean" }
+git merge-base --is-ancestor $FrozenImplementation $CheckoutCommit
+if ($LASTEXITCODE -ne 0) { throw "frozen implementation 不是 checkout HEAD 的 ancestor：$FrozenImplementation" }
+$ProvenanceDelta = @(git diff --name-only "$FrozenImplementation..$CheckoutCommit")
+if ($ProvenanceDelta.Count -ne 1 -or $ProvenanceDelta[0] -ne "docs/v1_4_1/gate6_windows_server_runbook.md") {
+    throw "frozen..checkout 的 committed delta 必须且只能是 docs/v1_4_1/gate6_windows_server_runbook.md：$($ProvenanceDelta -join ', ')"
+}
+$FrozenImplementation
+$CheckoutCommit
 ```
 
-`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4、r5、r6、r7、r8、r9、r10`。严禁追加 `git clean`。更新后必须核对 `git rev-parse HEAD` 等于本手册冻结的 `$ExpectedImplCommit`；不相等时 STOP，不得继续编译或采集。
+`git reset --hard` 只能在上述 tracked-dirty 检查为空、备份分支已建立后执行；它不会删除未跟踪的 `engineering_evidence/r1、r2、r3、r4、r5、r6、r7、r8、r9、r10`。严禁追加 `git clean`。更新后必须核对 unified provenance：tracked tree clean（`git status --porcelain=v1 --untracked-files=no` 为空，`engineering_evidence/*` 等 untracked evidence 不构成失败）、`$FrozenImplementation` 是 checkout HEAD 的 ancestor，且 `frozen..checkout` committed delta 恰好只有 `docs/v1_4_1/gate6_windows_server_runbook.md`。任一不满足即 STOP，不得继续编译或采集。不再要求 `HEAD == $FrozenImplementation`，也不得把后续 runbook-only docs commit 当作 implementation commit。
 
 Q0 不加载模型，因此不用复制旧 `models`。服务器已有 GPU driver、CUDA Toolkit、`nvcc` 和 Nsight Systems 可以复用，但必须重新记录版本。旧 `.venv` 不必删除，也不要向其中追加依赖；在新版目录建立轻量独立环境：
 
@@ -48,9 +56,9 @@ $Python = (Resolve-Path ".\.venv\Scripts\python.exe").Path
 
 本轮在 **一张固定 GPU、一个固定软件栈** 上运行 Q0。输出只用于证明 analyzer 的 Correctness 资格，不是 N1/G1/G2 性能结果，也不是 Formal 数据。RTX 4090 或 RTX 6000 Ada 均可先做 Windows Engineering/Q0；同一轮不得混用两张卡。若论文正式平台改为 Linux，必须在 Linux 目标栈重新执行平台资格检查和 Q0，不能直接沿用 Windows Q0。
 
-开始前应确保工作区位于 `codex/gate6-canonical-baseline`，且 `git rev-parse HEAD` 等于本手册 §0 冻结的 `$ExpectedImplCommit = 2e81f6f9a9ec590d37fb01be9e31f2251645c5d1`。禁止覆盖已有输出；失败后使用新的 `run-id` 和新目录重跑，保留失败现场。禁止 retry/tuning：不得依据上一轮结果调整参数、时长、buffer、stream 或 policy 后重跑同一 case。
+开始前应确保工作区位于 `codex/gate6-canonical-baseline`，并满足 §0 冻结的 unified provenance：`$FrozenImplementation = 97054163b661870fe98db0cedff5657f71d69500` 是 checkout HEAD 的 ancestor、tracked tree clean（`git status --porcelain=v1 --untracked-files=no` 为空）、且 `frozen..checkout` committed delta 恰好只有 `docs/v1_4_1/gate6_windows_server_runbook.md`。checkout HEAD 允许是 frozen implementation 之后的 approved runbook-only docs commit，不要求等于 frozen，也不得被当作 implementation commit。禁止覆盖已有输出；失败后使用新的 `run-id` 和新目录重跑，保留失败现场。禁止 retry/tuning：不得依据上一轮结果调整参数、时长、buffer、stream 或 policy 后重跑同一 case。
 
-> **当前状态：construction amendment 已 implementation，等待服务器验证与唯一一次完整 Q0。** implementation commit `2e81f6f9a9ec590d37fb01be9e31f2251645c5d1`（`docs/v1_4_1/gate6_construction_amendment_v0_1.md`，`APPLY = {Q0-KERNEL-MEMOP-001}`）；offline validation=`PASS`（targeted tests `70 passed`、Q0 offline regression `199 passed`、`--list-cases` 21/21），server validation=`NOT_STARTED`。此前“`Q0-KERNEL-MEMOP-001` platform construction blocked”的结论已被 formal-shape 配对 evidence 取代，原 construction failure 不再作为平台 incapable 证据。Gate 6 仍保持 `FAIL`、Q0 仍保持 `NOT_RUN`。
+> **历史记录（2026-09-17 construction amendment 轮次，非当前 provenance 断言）：** 该轮 implementation commit 为 `2e81f6f9a9ec590d37fb01be9e31f2251645c5d1`（`docs/v1_4_1/gate6_construction_amendment_v0_1.md`，`APPLY = {Q0-KERNEL-MEMOP-001}`）；offline validation=`PASS`（targeted tests `70 passed`、Q0 offline regression `199 passed`、`--list-cases` 21/21），server validation=`NOT_STARTED`。此前“`Q0-KERNEL-MEMOP-001` platform construction blocked”的结论已被 formal-shape 配对 evidence 取代，原 construction failure 不再作为平台 incapable 证据。Gate 6 仍保持 `FAIL`、Q0 仍保持 `NOT_RUN`。当前正式 provenance 已改为 unified provenance：`$FrozenImplementation = 97054163b661870fe98db0cedff5657f71d69500`（见 §0/§1/§3）；上面这个旧 implementation commit 仅作历史记录，不得用作当前 workflow 的 identity 断言。
 >
 > 第 3 节及后续 r11 **当前仍一律禁止执行**。amendment 只批准 `Q0-KERNEL-MEMOP-001` 的 pre-capture same-kernel warm-up policy，不授权任何服务器实验；只有取得用户对“在该平台执行完整 21 real + 2 synthetic Q0”的单独书面批准，才允许执行第 3 节。construction amendment 获批或 construction admission PASS 本身都不等于 Gate 6 PASS、Q0 PASS 或 Gate 9 正式平台资格。`EP-G6-07` Candidate 路线保持暂停。
 
@@ -835,4 +843,4 @@ if ($LASTEXITCODE -ne 0) { throw "Gate 6 未通过" }
 
 ## 10. 完成后需要带回本地的内容
 
-保留并回传整个 `$Out` 目录，至少包括 `code_commit.txt`、`git_status.txt`、run manifest（含每个 case 的 `measurement_initialization` policy 与实际 `command_argv`）、21 份 Raw/SQLite/receipt、Canonical（含 3 个故障副本）、S、A/B、real evidence、synthetic 和唯一 gate report。不要只复制最后一张表。返回本地后先核对代码版本（必须等于 `2e81f6f9a9ec590d37fb01be9e31f2251645c5d1`）、Raw 哈希和 Gate report，再更新科研进度清单。
+保留并回传整个 `$Out` 目录，至少包括 `frozen_implementation_commit.txt`、`code_commit.txt`、`git_status.txt`、run manifest（含每个 case 的 `measurement_initialization` policy 与实际 `command_argv`）、21 份 Raw/SQLite/receipt、Canonical（含 3 个故障副本）、S、A/B、real evidence、synthetic 和唯一 gate report。不要只复制最后一张表。返回本地后先核对 provenance（`frozen_implementation_commit.txt` 必须等于 `97054163b661870fe98db0cedff5657f71d69500`；`code_commit.txt` 是该 run 的 checkout commit，允许是 frozen implementation 之后的 approved runbook-only docs commit，不要求与 frozen 相等）、Raw 哈希和 Gate report，再更新科研进度清单。
