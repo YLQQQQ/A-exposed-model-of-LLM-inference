@@ -655,10 +655,18 @@ if ($BinaryShaAtBuild -ne $BuildReceipt.binary.sha256) { throw "binary SHA 与 b
 & $Python -m exposedpath_v141 prepare-q0-run --output-dir (Join-Path $Out "run") --binary $Binary --nsys $Nsys --platform windows --run-id $RunId --cuda-visible-device $GpuSelector
 
 # amendment 校验：冻结 commit、schema 与 formal policy 必须逐字一致，否则 STOP
-# frozen unified implementation commit：正式 server checkout/HEAD 必须精确等于该 SHA
+# frozen unified implementation commit：implementation identity 由该 SHA 定义
 $FrozenImplementation = "97054163b661870fe98db0cedff5657f71d69500"
 if ($FrozenImplementation -notmatch "^[0-9a-f]{40}$") { throw "冻结 implementation commit 未填写；不得运行正式 Q0" }
-if ((git rev-parse HEAD).Trim() -ne $FrozenImplementation) { throw "HEAD 不是冻结的 canonical implementation commit" }
+# provenance gate：tracked tree clean + frozen implementation 是 HEAD 的 ancestor + 二者之间只允许 runbook-only provenance 修订
+if (@(git status --porcelain=v1).Count -ne 0) { throw "tracked working tree 不 clean；不得运行正式 Q0" }
+$CheckoutCommit = (git rev-parse HEAD).Trim()
+git merge-base --is-ancestor $FrozenImplementation $CheckoutCommit
+if ($LASTEXITCODE -ne 0) { throw "冻结的 unified implementation commit 不是当前 HEAD 的 ancestor：$FrozenImplementation" }
+$ProvenanceDelta = @(git diff --name-only "$FrozenImplementation..$CheckoutCommit")
+if ($ProvenanceDelta.Count -ne 1 -or $ProvenanceDelta[0] -ne "docs/v1_4_1/gate6_windows_server_runbook.md") {
+    throw "frozen implementation 之后的 committed delta 必须且只能是 docs/v1_4_1/gate6_windows_server_runbook.md：$($ProvenanceDelta -join ', ')"
+}
 $ExecutionManifest = Get-Content -LiteralPath (Join-Path $Q0Root "q0\execution_manifest_v0_2.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($ExecutionManifest.schema_version -ne "exposedpath-q0-execution/0.2.1") { throw "execution manifest 必须为 0.2.1：$($ExecutionManifest.schema_version)" }
 $Run0 = Get-Content -LiteralPath (Join-Path $Out "run\q0_run_manifest.json") -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -676,7 +684,8 @@ foreach ($Case in @($Run0.cases | Where-Object { $null -ne $_.command_argv })) {
     }
 }
 
-git rev-parse HEAD | Set-Content (Join-Path $Out "code_commit.txt")
+$FrozenImplementation | Set-Content (Join-Path $Out "frozen_implementation_commit.txt")
+$CheckoutCommit | Set-Content (Join-Path $Out "code_commit.txt")
 git status --porcelain=v1 | Set-Content (Join-Path $Out "git_status.txt")
 
 $Run = Get-Content -LiteralPath (Join-Path $Out "run\q0_run_manifest.json") -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -691,7 +700,7 @@ if ($GraphFlagCount -ne 1) { throw "Graph case 必须恰好包含一次 node-lev
 if ($UnexpectedGraphFlags.Count -ne 0) { throw "普通 case 不得启用 node-level graph tracing" }
 ```
 
-验收：编译输出为 `PASS`；存在 `<binary>.build_receipt.json`，其中 `receipt_version=exposedpath-q0-build-receipt/0.1.0`、`gpu_arch=sm_89`、compile argv 恰好一次 `-arch=sm_89`、nvcc `12.4.131`，且 source SHA 与 checkout、binary SHA 与 receipt 双向一致；无 `NVCC_APPEND_FLAGS` / `NVCC_PREPEND_FLAGS` 等 ambient codegen 注入；HEAD 等于冻结的 unified implementation commit 且 tracked tree clean；run manifest 为 `PREPARED_NOT_EXECUTED` 且 schema 为 `exposedpath-q0-run/0.2.1`；23/23 case 显式声明 `measurement_initialization`（`Q0-KERNEL-MEMOP-001` = `PRE_CAPTURE_SAME_KERNEL_WARMUP`，其余 22 = `NONE`）；21 个 native case 的 `command_argv` 各自恰好一次 `--measurement-initialization` 且与 manifest policy 一致；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。任何缺失、未知、重复 policy、receipt 不匹配、ambient 注入或 argv/manifest 不一致都必须 STOP，不得手工修补 argv，不得补加 `-arch`、更换 arch 或改 flags 后重试。
+验收：编译输出为 `PASS`；存在 `<binary>.build_receipt.json`，其中 `receipt_version=exposedpath-q0-build-receipt/0.1.0`、`gpu_arch=sm_89`、compile argv 恰好一次 `-arch=sm_89`、nvcc `12.4.131`，且 source SHA 与 checkout、binary SHA 与 receipt 双向一致；无 `NVCC_APPEND_FLAGS` / `NVCC_PREPEND_FLAGS` 等 ambient codegen 注入；tracked working tree clean、frozen unified implementation commit `97054163b661870fe98db0cedff5657f71d69500` 是当前 HEAD 的 ancestor，且二者之间 committed delta 恰好只有 `docs/v1_4_1/gate6_windows_server_runbook.md` 一个文件（implementation identity 由 frozen commit 定义；checkout commit 只允许额外包含 implementation 之后的 approved runbook-only provenance 修订，不要求与 frozen commit 相等；实际编译产物仍由 build receipt、CUDA source SHA 与 binary SHA 证明）；run manifest 为 `PREPARED_NOT_EXECUTED` 且 schema 为 `exposedpath-q0-run/0.2.1`；23/23 case 显式声明 `measurement_initialization`（`Q0-KERNEL-MEMOP-001` = `PRE_CAPTURE_SAME_KERNEL_WARMUP`，其余 22 = `NONE`）；21 个 native case 的 `command_argv` 各自恰好一次 `--measurement-initialization` 且与 manifest policy 一致；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。任何缺失、未知、重复 policy、receipt 不匹配、ambient 注入或 argv/manifest 不一致都必须 STOP，不得手工修补 argv，不得补加 `-arch`、更换 arch 或改 flags 后重试。
 
 ## 4. 只采集 r11 单例
 
