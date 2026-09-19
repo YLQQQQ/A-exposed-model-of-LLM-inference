@@ -616,15 +616,18 @@ Get-Content -LiteralPath $D2HReceiptPath -Raw -Encoding UTF8
 
 结论与停止条件：改变 H2D→D2H 方向仍未恢复真实 device overlap，`Q0-KERNEL-MEMOP-001` 在当前 Windows/RTX 4090 上判定为 **platform construction blocked**；Q0 保持 `NOT_RUN`，Gate 6 保持 `FAIL`。当前证据不能区分 WDDM、driver、Runtime 或其他层，任何根因结论都不成立。不得进入 D2D，不得运行 64 MiB/1 ms，不得建立 r11，不得在该平台继续参数搜索，也不得修改 oracle、Canonical、S、A/B、evaluator 或 Measurement Contract。后续处置只能通过 `docs/v1_4_1/gate6_strategy_review_v0_1.md` 提出；该审查已于 2026-09-17 定稿，决定为“不新增 synthetic、只做异平台 construction admission 设计、scope limitation 仅作 fallback”。
 
-## 3. 编译并准备不可覆盖运行目录
+## 3. 复用冻结 binary 并准备不可覆盖运行目录
 
-> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案，**当前仍一律禁止执行**：必须取得用户对“执行完整 21 real + 2 synthetic Q0”的单独书面批准（见 §1）。本节已按 construction amendment 更新：execution/run schema 为 `0.2.1`，正式 native invocation 必须显式携带且只携带一次 `--measurement-initialization <POLICY>`（§1.1）。WDDM、diagnostic 参数与 Engineering diagnostic argv 绝不能加入本节标准 collection argv；Engineering diagnostic 命令也不得混用 formal policy。禁止 retry/tuning。
+> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案，**当前仍一律禁止执行**：必须取得用户对“执行完整 21 real + 2 synthetic Q0”的单独书面批准（见 §1）。本节已按 construction amendment 更新：execution/run schema 为 `0.2.1`，正式 native invocation 必须显式携带且只携带一次 `--measurement-initialization <POLICY>`（§1.1）。本节固定复用已完成并审计通过的冻结 build（`engineering_evidence/q0_diagnostic_builds/gate6-unified-97054163/exposedpath_q0.exe`），**不重新编译、不复制、不覆盖**；clean-tree gate 只针对 tracked tree（`git status --porcelain=v1 --untracked-files=no`），`engineering_evidence/*` 允许作为 untracked evidence 存在，不得因此 STOP，也不得执行 `git clean`。WDDM、diagnostic 参数与 Engineering diagnostic argv 绝不能加入本节标准 collection argv；Engineering diagnostic 命令也不得混用 formal policy。禁止 retry/tuning。
 
 ```powershell
 $Q0Root = Resolve-Path .
-$RunId = "q0-win-4090-YYYYMMDD-r11"  # 执行时替换日期；必须是全新目录
+$Python = Join-Path $Q0Root ".venv\Scripts\python.exe"   # formal Python 固定为仓库 venv，不使用 Get-Command python
+$RunId = "q0-win-4090-20260919-gate6-final-02"  # 必须是全新目录；final-01 保持冻结，不重跑、不续跑
 $Out = Join-Path $Q0Root "engineering_evidence\q0_real\$RunId"
-$Binary = Join-Path $Out "bin\exposedpath_q0.exe"
+# 复用冻结 build：不复制、不重编、不覆盖该 binary。
+$Binary = Join-Path $Q0Root "engineering_evidence\q0_diagnostic_builds\gate6-unified-97054163\exposedpath_q0.exe"
+$FrozenBinarySha256 = "D64871B3AC55A0C36123F8AC19D66C7F25EE40AC2AEE373F092CF4E06A68A2D6"
 $Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
 $GpuSelector = "GPU-替换为nvidia-smi显示的完整UUID"
 
@@ -633,12 +636,12 @@ $Nvcc = (Get-Command nvcc).Source
 foreach ($Injected in @("NVCC_APPEND_FLAGS", "NVCC_PREPEND_FLAGS")) {
     if (Test-Path "env:$Injected") { throw "存在 ambient nvcc 注入变量：$Injected" }
 }
-cmd /d /s /c "`"$VcVars`" -vcvars_ver=14.39 && where cl && `"$Python`" -m exposedpath_v141 build-q0-microbench --nvcc `"$Nvcc`" --output `"$Binary`" --platform windows"
-if ($LASTEXITCODE -ne 0) { throw "Q0 CUDA 编译失败" }
 
-# Gate 6 Q0 build contract amendment：编译必须有可审计 provenance。
+# Gate 6 Q0 build contract amendment：编译必须有可审计 provenance，本节只验证既有 build，不产生新 build。
 if (-not ($(& $Nvcc --version | Out-String) -match "12\.4\.131")) { throw "nvcc 不是冻结的 CUDA 12.4.131" }
 
+if (-not (Test-Path -LiteralPath $Binary)) { throw "冻结 Q0 binary 不存在：$Binary" }
+if ((Get-FileHash -LiteralPath $Binary -Algorithm SHA256).Hash -ne $FrozenBinarySha256) { throw "binary SHA 与冻结值不一致" }
 $BuildReceiptPath = "$Binary.build_receipt.json"
 if (-not (Test-Path -LiteralPath $BuildReceiptPath)) { throw "缺少 Q0 build receipt" }
 $BuildReceipt = Get-Content -LiteralPath $BuildReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -659,7 +662,8 @@ if ($BinaryShaAtBuild -ne $BuildReceipt.binary.sha256) { throw "binary SHA 与 b
 $FrozenImplementation = "97054163b661870fe98db0cedff5657f71d69500"
 if ($FrozenImplementation -notmatch "^[0-9a-f]{40}$") { throw "冻结 implementation commit 未填写；不得运行正式 Q0" }
 # provenance gate：tracked tree clean + frozen implementation 是 HEAD 的 ancestor + 二者之间只允许 runbook-only provenance 修订
-if (@(git status --porcelain=v1).Count -ne 0) { throw "tracked working tree 不 clean；不得运行正式 Q0" }
+# clean-tree 只针对 tracked tree；engineering_evidence/* 允许作为 untracked evidence 存在，不得因此 STOP，也不得 git clean
+if (@(git status --porcelain=v1 --untracked-files=no).Count -ne 0) { throw "tracked working tree 不 clean；不得运行正式 Q0" }
 $CheckoutCommit = (git rev-parse HEAD).Trim()
 git merge-base --is-ancestor $FrozenImplementation $CheckoutCommit
 if ($LASTEXITCODE -ne 0) { throw "冻结的 unified implementation commit 不是当前 HEAD 的 ancestor：$FrozenImplementation" }
@@ -700,7 +704,7 @@ if ($GraphFlagCount -ne 1) { throw "Graph case 必须恰好包含一次 node-lev
 if ($UnexpectedGraphFlags.Count -ne 0) { throw "普通 case 不得启用 node-level graph tracing" }
 ```
 
-验收：编译输出为 `PASS`；存在 `<binary>.build_receipt.json`，其中 `receipt_version=exposedpath-q0-build-receipt/0.1.0`、`gpu_arch=sm_89`、compile argv 恰好一次 `-arch=sm_89`、nvcc `12.4.131`，且 source SHA 与 checkout、binary SHA 与 receipt 双向一致；无 `NVCC_APPEND_FLAGS` / `NVCC_PREPEND_FLAGS` 等 ambient codegen 注入；tracked working tree clean、frozen unified implementation commit `97054163b661870fe98db0cedff5657f71d69500` 是当前 HEAD 的 ancestor，且二者之间 committed delta 恰好只有 `docs/v1_4_1/gate6_windows_server_runbook.md` 一个文件（implementation identity 由 frozen commit 定义；checkout commit 只允许额外包含 implementation 之后的 approved runbook-only provenance 修订，不要求与 frozen commit 相等；实际编译产物仍由 build receipt、CUDA source SHA 与 binary SHA 证明）；run manifest 为 `PREPARED_NOT_EXECUTED` 且 schema 为 `exposedpath-q0-run/0.2.1`；23/23 case 显式声明 `measurement_initialization`（`Q0-KERNEL-MEMOP-001` = `PRE_CAPTURE_SAME_KERNEL_WARMUP`，其余 22 = `NONE`）；21 个 native case 的 `command_argv` 各自恰好一次 `--measurement-initialization` 且与 manifest policy 一致；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。任何缺失、未知、重复 policy、receipt 不匹配、ambient 注入或 argv/manifest 不一致都必须 STOP，不得手工修补 argv，不得补加 `-arch`、更换 arch 或改 flags 后重试。
+验收：本节不重新编译，直接复用冻结 build `engineering_evidence/q0_diagnostic_builds/gate6-unified-97054163/exposedpath_q0.exe`，其 binary SHA256 必须等于 `D64871B3AC55A0C36123F8AC19D66C7F25EE40AC2AEE373F092CF4E06A68A2D6`，且同目录 `<binary>.build_receipt.json` 存在，其中 `receipt_version=exposedpath-q0-build-receipt/0.1.0`、`gpu_arch=sm_89`、compile argv 恰好一次 `-arch=sm_89`、nvcc `12.4.131`，且 source SHA 与 checkout、binary SHA 与 receipt 双向一致；binary 不被复制、重编或覆盖；无 `NVCC_APPEND_FLAGS` / `NVCC_PREPEND_FLAGS` 等 ambient codegen 注入；tracked working tree clean（`git status --porcelain=v1 --untracked-files=no` 为空，`engineering_evidence/*` 等 untracked evidence 不构成失败）、frozen unified implementation commit `97054163b661870fe98db0cedff5657f71d69500` 是当前 HEAD 的 ancestor，且二者之间 committed delta 恰好只有 `docs/v1_4_1/gate6_windows_server_runbook.md` 一个文件（implementation identity 由 frozen commit 定义；checkout commit 只允许额外包含 implementation 之后的 approved runbook-only provenance 修订，不要求与 frozen commit 相等；实际编译产物仍由 build receipt、CUDA source SHA 与 binary SHA 证明）；run manifest 为 `PREPARED_NOT_EXECUTED` 且 schema 为 `exposedpath-q0-run/0.2.1`；23/23 case 显式声明 `measurement_initialization`（`Q0-KERNEL-MEMOP-001` = `PRE_CAPTURE_SAME_KERNEL_WARMUP`，其余 22 = `NONE`）；21 个 native case 的 `command_argv` 各自恰好一次 `--measurement-initialization` 且与 manifest policy 一致；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。任何缺失、未知、重复 policy、receipt 不匹配、ambient 注入或 argv/manifest 不一致都必须 STOP，不得手工修补 argv，不得补加 `-arch`、更换 arch 或改 flags 后重试。
 
 ## 4. 只采集 r11 单例
 
