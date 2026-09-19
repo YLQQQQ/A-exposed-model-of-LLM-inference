@@ -655,7 +655,8 @@ if ($BinaryShaAtBuild -ne $BuildReceipt.binary.sha256) { throw "binary SHA 与 b
 & $Python -m exposedpath_v141 prepare-q0-run --output-dir (Join-Path $Out "run") --binary $Binary --nsys $Nsys --platform windows --run-id $RunId --cuda-visible-device $GpuSelector
 
 # amendment 校验：冻结 commit、schema 与 formal policy 必须逐字一致，否则 STOP
-$FrozenImplementation = "REPLACE_WITH_UNIFIED_IMPLEMENTATION_COMMIT"
+# frozen unified implementation commit：正式 server checkout/HEAD 必须精确等于该 SHA
+$FrozenImplementation = "97054163b661870fe98db0cedff5657f71d69500"
 if ($FrozenImplementation -notmatch "^[0-9a-f]{40}$") { throw "冻结 implementation commit 未填写；不得运行正式 Q0" }
 if ((git rev-parse HEAD).Trim() -ne $FrozenImplementation) { throw "HEAD 不是冻结的 canonical implementation commit" }
 $ExecutionManifest = Get-Content -LiteralPath (Join-Path $Q0Root "q0\execution_manifest_v0_2.json") -Raw -Encoding UTF8 | ConvertFrom-Json
