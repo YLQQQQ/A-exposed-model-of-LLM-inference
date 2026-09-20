@@ -29,6 +29,8 @@
 - 本地不可变传输件：仓库外 `ExposedPath_Server_Evidence_20260920\gate6-final04\`（tar.gz + handoff manifest）
 - 本地解包副本：仓库外 `ExposedPath_Server_Evidence_20260920\gate6-final04-extracted\`
 
+**行尾 provenance 说明（2026-09-20 复核发现，必须保留）：** 上表中的 CUDA source SHA256 `7D0260CA3D4F62E6A2D1AFFE4943A32E84063B19DE3DCBD823205BAD5160E32D` 是**服务器 checkout 字节**的哈希（Windows 行尾：`q0/cuda/exposedpath_q0.cu` 为 `34278` bytes，含 808 个 CRLF）。仓库内同一 blob 的本地字节不同（LF：`33470` bytes，SHA256 `CE8562A120C670D99366F7F0EB1C9C7C1FB2E4280C4130C0F03CED31F159C6B7`）。二者是同一内容的不同行尾表示；在本地以 `core.autocrlf=false` 复核 build receipt 时会得到 LF 哈希，这**不是** source 与 receipt 不一致。复核 source 身份时以 runbook §3 冻结的服务器字节身份与 exact compile argv 为准，不得据此修改 build contract 或重编 binary。
+
 ### 1.1 Provenance caveat（必须保留的边界）
 
 final-04 在 prepare 阶段**没有生成** `code_commit.txt`、`frozen_implementation_commit.txt`、`git_status.txt` 三个 sidecar。`post_gate_handoff_provenance.json`（SHA256 `C97678BF0749E7A9C384DBA8694C55AB981E4F11263DE830FC7CDAC0A8AB05B5`，`record_scope=POST_GATE_HANDOFF_ONLY`）明确声明：
