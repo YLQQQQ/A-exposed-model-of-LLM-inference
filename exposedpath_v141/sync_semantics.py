@@ -7,7 +7,8 @@ import hashlib
 import json
 import re
 from collections import defaultdict
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,10 @@ _INVOCATION_FIELDS = (
     "request_id",
     "repeat_id",
 )
+# Gate 6 Sync Projection Amendment v0.1 §2：registry role 决定 semantic sync 成员。
+# `DEPENDENCY_EDGE` 只作为设备依赖边；`NON_SYNC`（非阻塞查询）只作为 non-sync API 事实。
+_NON_SEMANTIC_SYNC_ROLES = frozenset({"DEPENDENCY_EDGE", "NON_SYNC"})
+_API_BACKED_SYNC_PREFIX = "cuda_api_sync"
 
 
 def _sha256(path: Path) -> str:
@@ -97,6 +102,72 @@ def classify_cuda_api(
         "registry_rule_id": None,
         "required_evidence": [],
     }
+
+
+def is_semantic_sync_role(role: Any) -> bool:
+    """Gate 6 Sync Projection Amendment §2：registry role 决定 semantic sync 成员。
+
+    唯一权威是``classify_cuda_api()``给出的 role：`HOST_BLOCKING_SYNC` 与 `UNSUPPORTED`
+    属于 semantic sync，`NON_SYNC` 与 `DEPENDENCY_EDGE` 不属于，`UNCLASSIFIED` 维持既有
+    fail-closed 行为。本函数是 S 层与 A/B loader 共用的成员判定，禁止在别处复制。
+    """
+
+    return isinstance(role, str) and role not in _NON_SEMANTIC_SYNC_ROLES
+
+
+def api_backed_sync_id(source_table: Any, source_rowid: Any) -> str | None:
+    """Gate 6 Sync Projection Amendment §3.2 冻结的 API-backed `sync_id` 格式。
+
+    格式固定为 ``cuda_api_sync:{source_table}:{source_rowid}``，与 `cuda_sync:…` 前缀不可能
+    冲突；缺少 Canonical record identity 时返回 ``None``（调用方必须放弃构造，不得猜 id）。
+    """
+
+    if not isinstance(source_table, str) or not source_table:
+        return None
+    if isinstance(source_rowid, bool) or not isinstance(source_rowid, (int, str)):
+        return None
+    if source_rowid == "":
+        return None
+    return f"{_API_BACKED_SYNC_PREFIX}:{source_table}:{source_rowid}"
+
+
+@dataclass(frozen=True)
+class SemanticSyncCandidate:
+    """registry-role-preserving semantic sync 候选（S 层与 A/B loader 的唯一权威）。
+
+    ``origin`` 为 ``"PHYSICAL"``（CUPTI synchronization activity 映射到的 runtime API）或
+    ``"API_BACKED"``（属于同步 universe 但平台不产生 synchronization row 的 unsupported
+    API，由 canonical runtime API interval + 唯一权威 `kind=sync` marker 构造）。
+    """
+
+    sync_id: str
+    origin: str
+    classification: Mapping[str, Any]
+    host_start_ns: Any
+    host_end_ns: Any
+    clock_domain_id: Any
+    device_id: Any
+    context_id: Any
+    stream_id: Any
+    event_id: Any
+    record: Mapping[str, Any]
+    marker: Mapping[str, Any] | None = None
+
+    def expected_identity(self) -> dict[str, Any]:
+        """S 记录必须与之匹配的 registry / host / scope identity 字段。"""
+
+        return {
+            "registry_rule_id": self.classification["registry_rule_id"],
+            "sync_universe_class": self.classification["universe_class"],
+            "sync_kind": self.classification["sync_kind"],
+            "completion_scope": self.classification["completion_scope"],
+            "host_start_ns": self.host_start_ns,
+            "host_end_ns": self.host_end_ns,
+            "device_id": self.device_id,
+            "context_id": self.context_id,
+            "stream_id": self.stream_id,
+            "event_id": self.event_id,
+        }
 
 
 def _validate_loaded_record(
@@ -655,59 +726,107 @@ def _normalize_activity(
     return result
 
 
-def _normalize_sync(
-    sync: Mapping[str, Any],
+def _covering_sync_marker_records(
+    start_ns: int,
+    end_ns: int,
+    global_tid: Any,
     nvtx_records: list[Mapping[str, Any]],
-) -> dict[str, Any]:
-    result = dict(sync)
-    classification = classify_cuda_api(str(sync.get("runtime_api_name", "")))
-    host_start = sync.get("runtime_start_ns")
-    host_end = sync.get("runtime_end_ns")
-    if host_start is None or host_end is None:
-        ownership = {
+) -> list[Mapping[str, Any]]:
+    """同线程、完整包围（或 exact mark）的半开 `kind=sync` marker 记录。"""
+
+    covering: list[Mapping[str, Any]] = []
+    for record in nvtx_records:
+        marker = record.get("structured_identity")
+        if not isinstance(marker, Mapping) or marker.get("kind") != "sync":
+            continue
+        if record.get("global_tid") != global_tid:
+            continue
+        marker_start = record.get("start_ns")
+        if not isinstance(marker_start, int) or isinstance(marker_start, bool):
+            continue
+        marker_end = record.get("end_ns")
+        contains = (
+            isinstance(marker_end, int)
+            and not isinstance(marker_end, bool)
+            and marker_start <= start_ns
+            and end_ns <= marker_end
+        )
+        exact_mark = marker_end is None and marker_start == start_ns
+        if contains or exact_mark:
+            covering.append(record)
+    return covering
+
+
+def _touching_sync_marker_records(
+    start_ns: int,
+    end_ns: int,
+    nvtx_records: list[Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    """任意线程上与 ``[start_ns, end_ns]`` 相交的 `kind=sync` marker 记录。"""
+
+    touching: list[Mapping[str, Any]] = []
+    for record in nvtx_records:
+        marker = record.get("structured_identity")
+        if not isinstance(marker, Mapping) or marker.get("kind") != "sync":
+            continue
+        marker_start = record.get("start_ns")
+        if not isinstance(marker_start, int) or isinstance(marker_start, bool):
+            continue
+        marker_end = record.get("end_ns")
+        if marker_end is None:
+            intersects = marker_start <= end_ns
+        elif isinstance(marker_end, bool) or not isinstance(marker_end, int):
+            continue
+        else:
+            intersects = marker_start <= end_ns and start_ns <= marker_end
+        if intersects:
+            touching.append(record)
+    return touching
+
+
+def _resolve_sync_identity(
+    host_start_ns: Any,
+    host_end_ns: Any,
+    global_tid: Any,
+    nvtx_records: list[Mapping[str, Any]],
+) -> tuple[dict[str, Any], Mapping[str, Any] | None, str]:
+    """physical 与 API-backed semantic sync 共用的 marker / ownership 解析。
+
+    该函数是 sync identity 恢复的唯一实现：`_normalize_sync()` 与
+    `_normalize_api_backed_sync()` 都调用它，不得各自复制 marker 或 ownership 规则。
+    """
+
+    interval_known = host_start_ns is not None and host_end_ns is not None
+    if not interval_known:
+        ownership: dict[str, Any] = {
             "status": "INVALID",
             "identity": None,
             "phase": None,
             "range_record_ids": [],
             "reasons": ["INVOCATION_BOUNDARY_INVALID"],
         }
+        marker_candidates: list[Mapping[str, Any]] = []
     else:
-        ownership = _phase_ownership(
-            int(host_start),
-            int(host_end),
-            sync.get("runtime_global_tid"),
-            nvtx_records,
-        )
-    identity = ownership["identity"]
-    marker_candidates: list[Mapping[str, Any]] = []
-    if host_start is not None and host_end is not None:
-        for record in nvtx_records:
+        start_ns, end_ns = int(host_start_ns), int(host_end_ns)
+        ownership = _phase_ownership(start_ns, end_ns, global_tid, nvtx_records)
+        marker_candidates: list[Mapping[str, Any]] = []
+        for record in _covering_sync_marker_records(start_ns, end_ns, global_tid, nvtx_records):
             marker = record.get("structured_identity")
-            if not isinstance(marker, Mapping) or marker.get("kind") != "sync":
-                continue
-            if record.get("global_tid") != sync.get("runtime_global_tid"):
-                continue
-            marker_end = record.get("end_ns")
-            contains = (
-                marker_end is not None
-                and record.get("start_ns") <= host_start
-                and host_end <= marker_end
-            )
-            exact_mark = marker_end is None and record.get("start_ns") == host_start
-            if contains or exact_mark:
+            if isinstance(marker, Mapping):
                 marker_candidates.append(marker)
+    identity = ownership["identity"]
     marker_identity = marker_candidates[0] if len(marker_candidates) == 1 else None
     marker_status = "VALID" if marker_identity is not None else (
         "AMBIGUOUS" if marker_candidates else "INVALID"
     )
-    if ownership["status"] != "VALID" and host_start is not None and host_end is not None:
+    if ownership["status"] != "VALID" and interval_known:
         # Gate 6 Unified Marker Ownership amendment §4：worker thread 上的 trusted
         # `kind=sync` marker 可以跨 host thread 通过 matching request/phase 的
         # temporal containment 传播 request/repeat/owner phase。
         trusted_sync_markers = _trusted_marker_candidates(
-            int(host_start),
-            int(host_end),
-            sync.get("runtime_global_tid"),
+            int(host_start_ns),
+            int(host_end_ns),
+            global_tid,
             nvtx_records,
             _TRUSTED_SYNC_MARKER_KINDS,
         )
@@ -719,7 +838,7 @@ def _normalize_sync(
         elif len(trusted_sync_markers) == 1:
             record_id, trusted_marker = trusted_sync_markers[0]
             ownership = _marker_invocation_ownership(
-                (int(host_start), int(host_end)),
+                (int(host_start_ns), int(host_end_ns)),
                 trusted_marker,
                 activity_interval=None,
                 nvtx_records=nvtx_records,
@@ -731,24 +850,93 @@ def _normalize_sync(
         if _identity_key(marker_identity) != _identity_key(identity):
             marker_status = "AMBIGUOUS"
             marker_identity = None
+    return ownership, marker_identity, marker_status
+
+
+def _sync_identity_fields(
+    ownership: Mapping[str, Any],
+    marker_identity: Mapping[str, Any] | None,
+    marker_status: str,
+) -> dict[str, Any]:
+    identity = ownership["identity"]
+    return {
+        "request_id": identity.get("request_id") if identity else None,
+        "repeat_id": identity.get("repeat_id") if identity else None,
+        "sync_owner_phase": ownership["phase"],
+        "invocation_identity": identity,
+        "ownership_status": ownership["status"],
+        "ownership_reasons": ownership["reasons"],
+        "ownership_range_record_ids": ownership["range_record_ids"],
+        "sync_identity_status": marker_status,
+        "sync_origin": marker_identity.get("sync_origin") if marker_identity else None,
+        "callsite_id": marker_identity.get("callsite_id") if marker_identity else None,
+        "sync_ordinal": marker_identity.get("sync_ordinal") if marker_identity else None,
+        "token_index": marker_identity.get("token_index") if marker_identity else None,
+    }
+
+
+def _normalize_sync(
+    sync: Mapping[str, Any],
+    nvtx_records: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    result = dict(sync)
+    classification = classify_cuda_api(str(sync.get("runtime_api_name", "")))
+    host_start = sync.get("runtime_start_ns")
+    host_end = sync.get("runtime_end_ns")
+    ownership, marker_identity, marker_status = _resolve_sync_identity(
+        host_start, host_end, sync.get("runtime_global_tid"), nvtx_records
+    )
     result.update(
         host_start_ns=host_start,
         host_end_ns=host_end,
-        request_id=identity.get("request_id") if identity else None,
-        repeat_id=identity.get("repeat_id") if identity else None,
-        sync_owner_phase=ownership["phase"],
-        invocation_identity=identity,
-        ownership_status=ownership["status"],
-        ownership_reasons=ownership["reasons"],
-        ownership_range_record_ids=ownership["range_record_ids"],
-        sync_identity_status=marker_status,
-        sync_origin=marker_identity.get("sync_origin") if marker_identity else None,
-        callsite_id=marker_identity.get("callsite_id") if marker_identity else None,
-        sync_ordinal=marker_identity.get("sync_ordinal") if marker_identity else None,
-        token_index=marker_identity.get("token_index") if marker_identity else None,
+        **_sync_identity_fields(ownership, marker_identity, marker_status),
         **classification,
     )
     return result
+
+
+def _normalize_api_backed_sync(
+    candidate: SemanticSyncCandidate,
+    nvtx_records: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """把 API-backed candidate 标准化为 S 层 semantic sync 记录。
+
+    Gate 6 Sync Projection Amendment §3：host 区间取 runtime API 自己的完整调用区间，
+    device/context/stream/event identity 保持 ``None``（API 行不携带这些标识，且该
+    `sync_kind` 已按合同整段 fail closed）。
+    """
+
+    api = candidate.record
+    ownership, marker_identity, marker_status = _resolve_sync_identity(
+        candidate.host_start_ns,
+        candidate.host_end_ns,
+        api.get("global_tid"),
+        nvtx_records,
+    )
+    if candidate.marker is None:
+        # Gate 6 Sync Projection Amendment §3.3：marker 重复、仅跨线程或只部分相交时
+        # 不得使用任何 label；仍构造确定性记录，由 S 层 fail closed。
+        marker_identity = None
+        marker_status = "AMBIGUOUS"
+    return {
+        "record_id": candidate.sync_id,
+        "registry_rule_id": candidate.classification["registry_rule_id"],
+        "universe_class": candidate.classification["universe_class"],
+        "role": candidate.classification["role"],
+        "sync_kind": candidate.classification["sync_kind"],
+        "completion_scope": candidate.classification["completion_scope"],
+        "original_api_name": candidate.classification["original_api_name"],
+        "normalized_api_name": candidate.classification["normalized_api_name"],
+        "required_evidence": list(candidate.classification["required_evidence"]),
+        "host_start_ns": candidate.host_start_ns,
+        "host_end_ns": candidate.host_end_ns,
+        "device_id": None,
+        "context_id": None,
+        "stream_id": None,
+        "event_id": None,
+        "event_sync_id": None,
+        **_sync_identity_fields(ownership, marker_identity, marker_status),
+    }
 
 
 def _normalize_event_record(
@@ -818,6 +1006,124 @@ def _normalize_event_record(
     return result
 
 
+def _api_backed_marker_evidence(
+    start_ns: int,
+    end_ns: int,
+    global_tid: Any,
+    nvtx_records: list[Mapping[str, Any]],
+) -> tuple[bool, Mapping[str, Any] | None]:
+    """API-backed semantic sync 的同步 marker 证据判定。
+
+    返回 ``(has_evidence, authoritative_marker)``：
+
+    - 完全没有包围或相交的 `kind=sync` marker -> ``(False, None)``：不构造记录，不伪造同步事实；
+    - 唯一同线程完整包围的 marker 且无其它冲突证据 -> ``(True, marker)``；
+    - marker 重复、仅跨线程或只部分相交 -> ``(True, None)``：仍构造确定性记录，但身份不可用，
+      S 层因此输出 `INVOCATION_BOUNDARY_INVALID`（不猜 label）。
+    """
+
+    covering = _covering_sync_marker_records(start_ns, end_ns, global_tid, nvtx_records)
+    touching = _touching_sync_marker_records(start_ns, end_ns, nvtx_records)
+    if not covering and not touching:
+        return False, None
+    covering_ids = {str(record.get("record_id")) for record in covering}
+    conflicting = [
+        record for record in touching if str(record.get("record_id")) not in covering_ids
+    ]
+    if len(covering) == 1 and not conflicting:
+        marker = covering[0].get("structured_identity")
+        if isinstance(marker, Mapping):
+            return True, marker
+    return True, None
+
+
+def build_semantic_sync_candidates(
+    records: Mapping[str, Sequence[Mapping[str, Any]]],
+    nvtx_records: Sequence[Mapping[str, Any]],
+) -> list[SemanticSyncCandidate]:
+    """registry-role-preserving semantic sync universe（Gate 6 Sync Projection Amendment）。
+
+    本函数是 S 层与 A/B loader 共用的唯一候选权威：按 registry role 决定成员（
+    `HOST_BLOCKING_SYNC` / `UNSUPPORTED` 进入，`NON_SYNC` / `DEPENDENCY_EDGE` 不进入，
+    `UNCLASSIFIED` 维持既有 fail-closed 行为），按 `runtime_record_id` 去重，并在
+    unsupported API 缺少 mapped `cuda_sync` 行时，从 canonical runtime API interval +
+    唯一权威 `kind=sync` marker 构造 API-backed semantic sync。不读取 S 输出，也不读取
+    oracle expected。
+    """
+
+    nvtx = list(nvtx_records)
+    physical_rows = list(records.get("cuda_sync", ()))
+    mapped_api_ids: set[str] = set()
+    for sync in physical_rows:
+        runtime_record_id = sync.get("runtime_record_id")
+        if isinstance(runtime_record_id, str) and runtime_record_id:
+            mapped_api_ids.add(runtime_record_id)
+    candidates: list[SemanticSyncCandidate] = []
+    for sync in physical_rows:
+        classification = classify_cuda_api(str(sync.get("runtime_api_name", "")))
+        if not is_semantic_sync_role(classification["role"]):
+            continue
+        sync_id = sync.get("record_id")
+        if not isinstance(sync_id, str) or not sync_id:
+            continue
+        candidates.append(
+            SemanticSyncCandidate(
+                sync_id=sync_id,
+                origin="PHYSICAL",
+                classification=classification,
+                host_start_ns=sync.get("runtime_start_ns"),
+                host_end_ns=sync.get("runtime_end_ns"),
+                clock_domain_id=sync.get("clock_domain_id"),
+                device_id=sync.get("device_id"),
+                context_id=sync.get("context_id"),
+                stream_id=sync.get("stream_id"),
+                event_id=sync.get("event_id"),
+                record=sync,
+            )
+        )
+    for api in records.get("cuda_api", ()):
+        classification = classify_cuda_api(str(api.get("api_name", "")))
+        if classification["role"] != "UNSUPPORTED":
+            continue
+        record_id = api.get("record_id")
+        if not isinstance(record_id, str) or not record_id or record_id in mapped_api_ids:
+            # 有 mapped `cuda_sync` 行时 physical row 是唯一权威，绝不重复构造。
+            continue
+        sync_id = api_backed_sync_id(api.get("source_table"), api.get("source_rowid"))
+        if sync_id is None:
+            continue
+        start_ns, end_ns = api.get("start_ns"), api.get("end_ns")
+        if isinstance(start_ns, bool) or isinstance(end_ns, bool):
+            continue
+        if not isinstance(start_ns, int) or not isinstance(end_ns, int):
+            continue
+        if end_ns < start_ns:
+            continue
+        has_evidence, marker = _api_backed_marker_evidence(
+            start_ns, end_ns, api.get("global_tid"), nvtx
+        )
+        if not has_evidence:
+            continue
+        candidates.append(
+            SemanticSyncCandidate(
+                sync_id=sync_id,
+                origin="API_BACKED",
+                classification=classification,
+                host_start_ns=start_ns,
+                host_end_ns=end_ns,
+                clock_domain_id=api.get("clock_domain_id"),
+                device_id=None,
+                context_id=None,
+                stream_id=None,
+                event_id=None,
+                record=api,
+                marker=marker,
+            )
+        )
+    candidates.sort(key=lambda candidate: (candidate.origin != "PHYSICAL", candidate.sync_id))
+    return candidates
+
+
 def build_semantic_inventory(bundle: Mapping[str, Any]) -> dict[str, Any]:
     """把 Canonical Raw 事实标准化为 S 层待建图对象，不恢复依赖。"""
 
@@ -830,6 +1136,10 @@ def build_semantic_inventory(bundle: Mapping[str, Any]) -> dict[str, Any]:
     for api in cuda_api:
         cuda_apis_by_correlation[api.get("correlation_id")].append(api)
     normalized_syncs = [_normalize_sync(sync, nvtx) for sync in records["cuda_sync"]]
+    candidates = build_semantic_sync_candidates(records, nvtx)
+    physical_sync_ids = {
+        candidate.sync_id for candidate in candidates if candidate.origin == "PHYSICAL"
+    }
     normalized_activities = (
         [
             _normalize_activity(activity, cuda_apis_by_correlation, nvtx)
@@ -844,7 +1154,18 @@ def build_semantic_inventory(bundle: Mapping[str, Any]) -> dict[str, Any]:
         "execution_context": dict(manifest.get("execution_context", {})),
         "activity_count_observed": len(records["device_activity"]),
         "activities": normalized_activities,
-        "syncs": [sync for sync in normalized_syncs if sync["role"] != "DEPENDENCY_EDGE"],
+        "syncs": [
+            *[
+                sync
+                for sync in normalized_syncs
+                if str(sync.get("record_id")) in physical_sync_ids
+            ],
+            *[
+                _normalize_api_backed_sync(candidate, nvtx)
+                for candidate in candidates
+                if candidate.origin == "API_BACKED"
+            ],
+        ],
         "dependency_events": [
             sync for sync in normalized_syncs if sync["role"] == "DEPENDENCY_EDGE"
         ],

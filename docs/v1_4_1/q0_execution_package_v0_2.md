@@ -41,7 +41,7 @@ Gate 6 Q0 build contract amendment 之后，编译 argv 由 `build_q0_compile_co
 & "<Q0 binary>" --environment-json
 ```
 
-输出新增 `can_map_host_memory`（来自 `cudaDevAttrCanMapHostMemory`）。它是 mapped-host capability 的唯一 gate；任何 Q0 正式 case 之前该值必须为 `1`，`unifiedAddressing` 不作为 gate。采集 receipt 的 `selected_gpu` 保存该字段，字段缺失或不为 1 一律 fail closed。
+输出新增 `can_map_host_memory`（来自 `cudaDevAttrCanMapHostMemory`）。Gate 6 Missing-Corr oracle amendment v0.2 撤销 mapped-sentinel construction 后，该字段不再是正式 Q0 的准入 gate：environment JSON 与 collection receipt 的 `selected_gpu` 继续记录它、字段缺失仍 fail closed，但值为 `0` 不再自动拒绝 collection，也不得据此调参、更换平台假设或绕过其它前置检查；`unifiedAddressing` 同样不作为 gate。
 
 生成 dry-run：
 
@@ -71,3 +71,11 @@ python -m exposedpath_v141 run-q0-synthetic --output-dir "<新目录>"
 ## 已知环境边界
 
 Windows 的 `CL` 和 `_CL_` 是 MSVC 保留的隐式参数变量。本机 `CL` 当前被外部环境误设为编译器目录，因此编译入口只在 nvcc 子进程中移除这两个变量，不修改系统配置。正式平台资格检查必须重新记录该环境。
+
+## package version 与 S 成员判定
+
+package / analyzer version 为 `0.2.2`（Marker Ownership 的 `0.2.0 → 0.2.1` 之后，由 Gate 6 Sync Projection Amendment v0.1 提升 `0.2.1 → 0.2.2`）。`canonical_manifest.json` / `s_manifest.json` / `ab_manifest.json` 内嵌的 `analyzer_version` 取该值，因此 `0.2.1` 及更早 run 的 S/A-B/real evidence 不得与 `0.2.2` 产物混用。
+
+analyzer `0.2.2` 起，S 层 semantic sync 集合由 sync registry role 决定（`HOST_BLOCKING_SYNC` / `UNSUPPORTED` 进入；`NON_SYNC` / `DEPENDENCY_EDGE` 不进入；`UNCLASSIFIED` 维持既有 fail closed），并允许在 `UNSUPPORTED` 调用缺少 mapped `cuda_sync` 行时，由 canonical runtime API 区间 + 唯一权威 `kind=sync` marker 构造 API-backed semantic sync（`sync_id = cuda_api_sync:{source_table}:{source_rowid}`）。成员判定与 correspondence 由共享 helper 单点定义，S 层与 A/B loader 必须给出同一集合。
+
+本变更不修改 Measurement Contract、sync registry、Canonical/S/A/B schema、oracle expected（`oracle_version` 保持 `exposedpath-q0-oracle-0.2.0`）、execution/run schema 与 23-case composition。`final-03` 及更早 run 保持 frozen incomplete；下一正式 run 必须为新 run id 下的 fresh collection 并完整重派生（`SQLite -> Canonical -> faults -> S -> A/B -> real -> synthetic -> gate`），不得复用旧 Raw。

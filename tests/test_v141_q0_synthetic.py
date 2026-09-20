@@ -9,6 +9,7 @@ from exposedpath_v141.q0_synthetic import (
     _STRUCTURAL_CASE_IDS,
     _structural_bundle,
     _structural_inventory,
+    build_synthetic_observed,
     run_synthetic_q0,
 )
 from exposedpath_v141.sync_semantics import (
@@ -160,3 +161,36 @@ def test_missing_corr_structural_proxy_exposes_submission_order_from_timing():
     assert record["primary_reason"] == "MISSING_ACTIVITY_CORRELATION"
     assert record["secondary_reasons"] == []
     assert record["submission_evidence"]["K_UNMAPPED"]["proof"] == "GPU_STARTED_BEFORE_SYNC"
+
+
+def test_sync_d2h_unsupported_synthetic_keeps_single_unsupported_sync():
+    """Gate 6 Sync Projection Amendment v0.1：synthetic 的 UNSUPPORTED 期望保持不变。"""
+
+    observed = build_synthetic_observed()
+    case = next(
+        item for item in observed["cases"] if item["case_id"] == "Q0-SYNC-D2H-UNSUPPORTED-001"
+    )
+
+    assert [row["sync_label"] for row in case["syncs"]] == ["S_SYNC_COPY"]
+    record = case["syncs"][0]
+    assert record["validity"] == "INVALID"
+    assert record["primary_reason"] == "UNSUPPORTED_SYNC_API"
+    assert record["wait_set_activity_labels"] == []
+    assert record["terminal"] == {
+        "status": "INVALID",
+        "kind": "NONE",
+        "activity_label": None,
+    }
+
+
+def test_synthetic_projection_never_fabricates_api_backed_duplicate_syncs():
+    """synthetic 构造只输入结构事实：不得额外合成 API-backed semantic sync。"""
+
+    observed = build_synthetic_observed()
+
+    assert not [
+        (case["case_id"], row["sync_label"])
+        for case in observed["cases"]
+        for row in case["syncs"]
+        if str(row["sync_label"]).startswith("cuda_api_sync:")
+    ]

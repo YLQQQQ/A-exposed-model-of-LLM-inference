@@ -35,6 +35,24 @@ terminal 先从 `W(s)` 的语义最大节点求 frontier。frontier 唯一时直
 
 Q0 observation 已唯一恢复目标 request 时，Canonical 仍会保留 request 结束后的 harness 尾部同步。若这类记录没有唯一 runtime 映射，S 不补造 Host API 时间或 ownership，而是输出 `INVALID` 行、空 `W(s)` 和空 terminal；无 Host 时间的行按稳定 sync identity 排在有时间记录之后。A 只忽略同时满足“无 Host 时间、无 request ownership、S=INVALID”的行，B 则保留一一对应的 `B_INVALID` 行并令时间字段为 `null`。该规则只保证目标 request 不被外部 harness 污染，不会放宽 request 内同步的 fail-closed 条件。
 
-## 5. 当前验证边界
+## 5. sync universe 成员判定（Gate 6 Sync Projection Amendment v0.1）
+
+S 的 semantic sync 集合由 sync registry 的 `universe_class`（及其导出的 role）唯一决定，不由 CUPTI 是否产生 `CUPTI_ACTIVITY_KIND_SYNCHRONIZATION` 行决定：
+
+| registry role | 进入 S semantic sync | 说明 |
+| --- | --- | --- |
+| `HOST_BLOCKING_SYNC` | 是 | 现有 stream / device / context / event synchronize 路径 |
+| `UNSUPPORTED` | 是 | 有 mapped `cuda_sync` 行时该 physical 行是唯一权威；否则按 API-backed 规则构造 |
+| `NON_SYNC` | 否 | 只作为 A 的非提交事实与 `q0_real` 的 `non_sync_api_labels` 证据 |
+| `DEPENDENCY_EDGE` | 否 | 只作为设备依赖边（`dependency_events` 路径） |
+| `UNCLASSIFIED` | 维持现状 | 继续 `UNCLASSIFIED_CUDA_API` fail closed，既不合成分解也不静默丢弃 |
+
+对 role 为 `UNSUPPORTED` 且 Canonical 中不存在 `runtime_record_id == record_id` 映射行的调用，S 由「runtime API 的完整调用区间 + 唯一权威 `kind=sync` structured marker」构造 deterministic API-backed semantic sync：`sync_id` 固定为 `cuda_api_sync:{source_table}:{source_rowid}`，`host_start_ns`/`host_end_ns` 取 runtime API 区间，`request_id`/`repeat_id`/`sync_owner_phase` 由唯一包含该区间的 request/phase 范围与 marker identity 联合确定，`callsite_id`/`sync_origin`/`sync_ordinal` 只来自该唯一权威 marker，device/context/stream/event identity 为 `null`（该 `sync_kind` 按合同整段 fail closed）。marker 完全缺失时不构造记录、不伪造同步事实；marker 重复、仅跨线程或只部分相交时仍构造确定性记录，但身份不可用并输出 `INVOCATION_BOUNDARY_INVALID`。成员判定与去重由 `sync_semantics.build_semantic_sync_candidates()` 单点实现，S 层与 A/B loader 共用同一 helper，禁止按 case id、API 名或 oracle expected 特判。
+
+`NON_SYNC` 的排除是成员判定而非 reason suppression：它仍由 A 层与非同步标签路径继续承担，不得通过删记录让任何事实消失。A/B 的 correspondence 与 S 必须给出同一集合，缺、多、重复或 identity 冲突一律 fail closed。
+
+> **Amendment 注记（2026-09-20）**：本节由 Gate 6 Sync Projection Amendment v0.1（`docs/v1_4_1/gate6_sync_projection_amendment_v0_1.md`）引入；`s_layer_schema_v0_2.json`（仍为 `exposedpath-s-layer/0.2.0`）、`sync_semantics_registry_v0_2.json` 与 Measurement Contract 均未改变。变更后的 analyzer 语义由 package `0.2.2` 标识，`0.2.1` 及更早 run 的 S/A-B 产物不得与本版本混用。
+
+## 6. 当前验证边界
 
 离线测试覆盖 stream/device/context/event、event record 唯一性与 scope 冲突、跨流 wait-event、completed-before、无关重叠、legacy/PTDS、nonblocking stream、提交竞态、缺失 correlation、跨 phase、invocation bleed、跨线程 activity marker 的同线程/完整覆盖/identity 完整性及冲突判定、terminal frontier/tie/after-return、valid-empty、原因优先级和 Q0 核心 expected 对照。事件和 wait 前缀查找已经按 context/stream 建立索引，同 scope 结果带缓存；event/default-stream 密集型真实 trace 的规模性能仍需在 Engineering Pilot 单独验收，不能由合成测试推断。上述离线测试只证明实现符合当前合成语义合同，不替代真实 CUDA/Nsight Q0；Gate 6 仍为 `FAIL`，Q0 仍为 `NOT_RUN`。

@@ -12,6 +12,7 @@ import pytest
 from exposedpath_v141.canonical_raw import load_canonical_raw_schema
 from exposedpath_v141.sync_semantics import (
     SyncSemanticsError,
+    analyze_semantic_inventory,
     analyze_sync_semantics,
     build_semantic_inventory,
     classify_cuda_api,
@@ -1674,3 +1675,224 @@ def test_s_layer_matches_frozen_q0_expected_for_core_cases(case_id):
         assert result["terminal"]["activity_id"] == expected["terminal"]["activity_label"]
     else:
         assert result["terminal"]["status"] == expected["terminal"]["status"]
+
+
+# Gate 6 Sync Projection Amendment v0.1：registry-role-preserving semantic sync 投影。
+
+
+def _cuda_api_row(
+    record_id: str,
+    api_name: str,
+    start: int,
+    end: int,
+    *,
+    global_tid: int = 1001,
+    source_table: str | None = "CUPTI_ACTIVITY_KIND_RUNTIME",
+    source_rowid: int | None = 12,
+) -> dict:
+    """Canonical `cuda_api` 行：`source_table`/`source_rowid` 是 API-backed `sync_id` 的唯一依据。"""
+
+    row: dict = {
+        "record_id": record_id,
+        "start_ns": start,
+        "end_ns": end,
+        "global_tid": global_tid,
+        "correlation_id": 99,
+        "api_name": api_name,
+    }
+    if source_table is not None:
+        row["source_table"] = source_table
+    if source_rowid is not None:
+        row["source_rowid"] = source_rowid
+    return row
+
+
+def _sync_request_and_phase_ranges() -> list[dict]:
+    return [
+        _request_nvtx("range:req", 0, 100),
+        _nvtx("range:decode", 0, 100, "decode"),
+    ]
+
+
+def test_non_sync_query_is_excluded_from_semantic_sync_universe():
+    """`cudaEventQuery`（`NON_BLOCKING_QUERY`）不得进入 `inventory["syncs"]` 或 S 记录。"""
+
+    query = _sync(start=20, end=40, runtime_api_name="cudaEventQuery_v3020")
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=[
+                *_sync_request_and_phase_ranges(),
+                _activity_marker("marker:query", 19, 41, global_tid=1001, callsite_id="Q_EVENT"),
+            ],
+            cuda_api=[_cuda_api_row("api:query", "cudaEventQuery_v3020", 20, 40)],
+            activities=[],
+            syncs=[query],
+        )
+    )
+
+    assert inventory["syncs"] == []
+    assert inventory["dependency_events"] == []
+    assert analyze_semantic_inventory(inventory) == []
+
+
+def test_unsupported_api_without_physical_row_builds_api_backed_semantic_sync():
+    """UNSUPPORTED 调用无 mapped `cuda_sync` 时，由 runtime API 区间 + 唯一 `kind=sync` marker 构造。"""
+
+    from exposedpath_v141.s_bundle import load_s_layer_schema
+
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=[
+                *_sync_request_and_phase_ranges(),
+                _sync_nvtx("nvtx:sync:copy", 10, 85),
+            ],
+            cuda_api=[_cuda_api_row("api:copy", "cudaMemcpy_v3020", 10, 85)],
+            activities=[],
+            syncs=[],
+        )
+    )
+
+    assert [record["record_id"] for record in inventory["syncs"]] == [
+        "cuda_api_sync:CUPTI_ACTIVITY_KIND_RUNTIME:12"
+    ]
+    record = inventory["syncs"][0]
+    assert record["host_start_ns"] == 10
+    assert record["host_end_ns"] == 85
+    assert record["registry_rule_id"] == "SYNC-COPY-IMPLICIT-001"
+    assert record["universe_class"] == "IN_UNIVERSE_UNSUPPORTED"
+    assert record["role"] == "UNSUPPORTED"
+    assert record["sync_kind"] == "SYNCHRONOUS_COPY_OR_IMPLICIT_BLOCK"
+    assert record["request_id"] == "req-0"
+    assert record["repeat_id"] == "r0"
+    assert record["sync_owner_phase"] == "decode"
+    assert record["callsite_id"] == "decode.token_ready"
+    assert (
+        record["device_id"],
+        record["context_id"],
+        record["stream_id"],
+        record["event_id"],
+        record["event_sync_id"],
+    ) == (None, None, None, None, None)
+
+    result = analyze_sync_semantics(inventory, record)
+
+    assert set(result) == set(load_s_layer_schema()["sync_record_fields"])
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == "UNSUPPORTED_SYNC_API"
+    assert result["wait_set_activity_ids"] == []
+    assert result["terminal"] == {
+        "status": "INVALID",
+        "kind": "NONE",
+        "activity_id": None,
+        "end_ns": None,
+        "clock_domain_id": None,
+    }
+
+
+def test_unsupported_api_with_mapped_physical_row_is_not_duplicated():
+    """有 mapped `cuda_sync` 行时 physical row 是唯一权威，绝不追加 API-backed 记录。"""
+
+    physical = _sync(start=10, end=85, runtime_api_name="cudaMemcpy_v3020")
+    physical["record_id"] = "cuda_sync:CUPTI_ACTIVITY_KIND_SYNCHRONIZATION:9"
+    physical["runtime_record_id"] = "api:copy"
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=[
+                *_sync_request_and_phase_ranges(),
+                _sync_nvtx("nvtx:sync:copy", 10, 85),
+            ],
+            cuda_api=[_cuda_api_row("api:copy", "cudaMemcpy_v3020", 10, 85)],
+            activities=[],
+            syncs=[physical],
+        )
+    )
+
+    assert [record["record_id"] for record in inventory["syncs"]] == [
+        "cuda_sync:CUPTI_ACTIVITY_KIND_SYNCHRONIZATION:9"
+    ]
+    assert not any(
+        str(record["record_id"]).startswith("cuda_api_sync:") for record in inventory["syncs"]
+    )
+
+
+def test_api_backed_sync_is_not_fabricated_without_sync_marker():
+    """完全没有包围/相交的 `kind=sync` marker 时不构造记录，不伪造同步事实。"""
+
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=_sync_request_and_phase_ranges(),
+            cuda_api=[_cuda_api_row("api:copy", "cudaMemcpy_v3020", 10, 85)],
+            activities=[],
+            syncs=[],
+        )
+    )
+
+    assert inventory["syncs"] == []
+
+
+def test_api_backed_sync_without_canonical_row_identity_is_not_fabricated():
+    """缺少 Canonical record identity 时不得猜 `sync_id`，因此不构造记录。"""
+
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=[
+                *_sync_request_and_phase_ranges(),
+                _sync_nvtx("nvtx:sync:copy", 10, 85),
+            ],
+            cuda_api=[
+                _cuda_api_row(
+                    "api:copy",
+                    "cudaMemcpy_v3020",
+                    10,
+                    85,
+                    source_table=None,
+                    source_rowid=None,
+                )
+            ],
+            activities=[],
+            syncs=[],
+        )
+    )
+
+    assert inventory["syncs"] == []
+
+
+@pytest.mark.parametrize(
+    ("markers", "expected_reason"),
+    [
+        # 重复覆盖：identity 不唯一
+        ([("nvtx:sync:a", 10, 85), ("nvtx:sync:b", 10, 85)], "INVOCATION_BOUNDARY_INVALID"),
+        # 仅部分相交：不得使用任何 label
+        ([("nvtx:sync:partial", 5, 60)], "INVOCATION_BOUNDARY_INVALID"),
+        # 只有跨线程 marker：同线程覆盖不存在
+        ([("nvtx:sync:worker", 10, 85, 3003)], "INVOCATION_BOUNDARY_INVALID"),
+    ],
+)
+def test_api_backed_sync_marker_conflicts_fail_closed(markers, expected_reason):
+    nvtx = _sync_request_and_phase_ranges()
+    for marker in markers:
+        record_id, start, end = str(marker[0]), int(marker[1]), int(marker[2])
+        marker_record = _sync_nvtx(record_id, start, end)
+        if len(marker) == 4:
+            marker_record["global_tid"] = int(marker[3])
+        nvtx.append(marker_record)
+    inventory = build_semantic_inventory(
+        _bundle(
+            nvtx=nvtx,
+            cuda_api=[_cuda_api_row("api:copy", "cudaMemcpy_v3020", 10, 85)],
+            activities=[],
+            syncs=[],
+        )
+    )
+
+    assert len(inventory["syncs"]) == 1
+    record = inventory["syncs"][0]
+    assert record["sync_identity_status"] == "AMBIGUOUS"
+    assert record["callsite_id"] is None
+
+    result = analyze_sync_semantics(inventory, record)
+
+    assert result["validity"] == "INVALID"
+    assert result["primary_reason"] == expected_reason
+    assert result["wait_set_activity_ids"] == []
+    assert result["terminal"]["status"] == "INVALID"

@@ -17,7 +17,12 @@ from typing import Any, Mapping
 from .canonical_raw import load_canonical_raw_schema
 from .contract import load_contract_bundle
 from .s_bundle import load_s_layer_schema
-from .sync_semantics import SyncSemanticsError, classify_cuda_api, load_canonical_bundle
+from .sync_semantics import (
+    SemanticSyncCandidate,
+    SyncSemanticsError,
+    build_semantic_sync_candidates,
+    load_canonical_bundle,
+)
 
 
 class ABInputError(ValueError):
@@ -41,14 +46,26 @@ _REGISTRY_PATH = Path("docs") / "v1_4_1" / "contracts" / "sync_semantics_registr
 
 @dataclass(frozen=True)
 class CanonicalBundle:
-    """经 Canonical loader 校验后的公开事实及只读事实索引。"""
+    """经 Canonical loader 校验后的公开事实及只读事实索引。
+
+    ``physical_sync_by_id`` 自 Gate 6 Sync Projection Amendment v0.1 起保存
+    registry-role-preserving semantic sync universe（physical 与 API-backed 候选），
+    而不是全部 CUPTI synchronization activity 行；字段名保留以限制改动范围，
+    语义请通过 ``semantic_sync_by_id`` 读取。
+    """
 
     manifest: dict[str, Any]
     records: dict[str, tuple[dict[str, Any], ...]]
     schema: dict[str, Any]
     cuda_api_by_id: dict[str, dict[str, Any]]
     activity_by_id: dict[str, dict[str, Any]]
-    physical_sync_by_id: dict[str, dict[str, Any]]
+    physical_sync_by_id: dict[str, SemanticSyncCandidate]
+
+    @property
+    def semantic_sync_by_id(self) -> dict[str, SemanticSyncCandidate]:
+        """semantic sync universe：与 S bundle 必须一一对应的唯一权威集合。"""
+
+        return self.physical_sync_by_id
 
 
 @dataclass(frozen=True)
@@ -132,15 +149,11 @@ def _load_canonical(manifest_path: Path) -> CanonicalBundle:
         kind: tuple(dict(record) for record in rows)
         for kind, rows in loaded["records"].items()
     }
-    physical_syncs: dict[str, dict[str, Any]] = {}
-    for sync in records["cuda_sync"]:
-        classification = classify_cuda_api(str(sync["runtime_api_name"]))
-        if classification["role"] == "DEPENDENCY_EDGE":
-            continue
-        sync_id = str(sync["record_id"])
-        if sync_id in physical_syncs:
-            raise ABInputError(f"Canonical physical sync_id 重复: {sync_id}")
-        physical_syncs[sync_id] = sync
+    semantic_syncs: dict[str, SemanticSyncCandidate] = {}
+    for candidate in build_semantic_sync_candidates(records, records["nvtx"]):
+        if candidate.sync_id in semantic_syncs:
+            raise ABInputError(f"Canonical semantic sync_id 重复: {candidate.sync_id}")
+        semantic_syncs[candidate.sync_id] = candidate
     activity_by_id = {str(record["record_id"]): record for record in records["device_activity"]}
     if len(activity_by_id) != len(records["device_activity"]):
         raise ABInputError("Canonical device activity record_id 重复")
@@ -153,7 +166,7 @@ def _load_canonical(manifest_path: Path) -> CanonicalBundle:
         schema=dict(loaded["schema"]),
         cuda_api_by_id=cuda_api_by_id,
         activity_by_id=activity_by_id,
-        physical_sync_by_id=physical_syncs,
+        physical_sync_by_id=semantic_syncs,
     )
 
 
@@ -247,23 +260,10 @@ def _validate_lineage(
 
 def _validate_s_record_identity(canonical: CanonicalBundle, record: Mapping[str, Any]) -> None:
     sync_id = _as_text(record.get("sync_id"), "S sync_id")
-    raw_sync = canonical.physical_sync_by_id.get(sync_id)
-    if raw_sync is None:
-        raise ABInputError(f"S sync_id 多余或不属于 Canonical physical sync: {sync_id}")
-    expected = classify_cuda_api(str(raw_sync["runtime_api_name"]))
-    expected_identity = {
-        "registry_rule_id": expected["registry_rule_id"],
-        "sync_universe_class": expected["universe_class"],
-        "sync_kind": expected["sync_kind"],
-        "completion_scope": expected["completion_scope"],
-        "host_start_ns": raw_sync["runtime_start_ns"],
-        "host_end_ns": raw_sync["runtime_end_ns"],
-        "device_id": raw_sync["device_id"],
-        "context_id": raw_sync["context_id"],
-        "stream_id": raw_sync["stream_id"],
-        "event_id": raw_sync["event_id"],
-    }
-    for field, expected_value in expected_identity.items():
+    candidate = canonical.semantic_sync_by_id.get(sync_id)
+    if candidate is None:
+        raise ABInputError(f"S sync_id 多余或不属于语义 sync universe: {sync_id}")
+    for field, expected_value in candidate.expected_identity().items():
         if record.get(field) != expected_value:
             raise ABInputError(f"S sync {sync_id} 的 {field} 与 Canonical 不匹配")
 
@@ -311,7 +311,7 @@ def _validate_s_record_identity(canonical: CanonicalBundle, record: Mapping[str,
         if terminal["kind"] == "COMPLETION_BOUNDARY":
             if terminal.get("activity_id") is not None:
                 raise ABInputError(f"S sync {sync_id} 的 completion boundary 不得带 activity_id")
-            if clock != raw_sync.get("clock_domain_id"):
+            if clock != candidate.clock_domain_id:
                 raise ABInputError(
                     f"S sync {sync_id} 的 completion boundary clock_domain_id 与 Canonical 不匹配"
                 )
@@ -344,13 +344,13 @@ def _validate_s_join(canonical: CanonicalBundle, records: tuple[dict[str, Any], 
             raise ABInputError(f"S sync_id 重复: {sync_id}")
         seen.add(sync_id)
         _validate_s_record_identity(canonical, record)
-    canonical_ids = set(canonical.physical_sync_by_id)
+    canonical_ids = set(canonical.semantic_sync_by_id)
     missing = sorted(canonical_ids - seen)
     if missing:
-        raise ABInputError(f"S 缺少 Canonical physical sync: {missing}")
+        raise ABInputError(f"S 缺少 semantic sync: {missing}")
     extra = sorted(seen - canonical_ids)
     if extra:
-        raise ABInputError(f"S 多余 Canonical physical sync: {extra}")
+        raise ABInputError(f"S 多余 semantic sync: {extra}")
 
 
 def _window_key(identity: Mapping[str, Any]) -> tuple[str, ...]:

@@ -18,7 +18,11 @@ from exposedpath_v141.ab_inputs import (
 from exposedpath_v141.a_accounting import calculate_a_windows
 from exposedpath_v141.canonical_raw import load_canonical_raw_schema
 from exposedpath_v141.s_bundle import load_s_layer_schema
-from exposedpath_v141.sync_semantics import classify_cuda_api, load_sync_registry
+from exposedpath_v141.sync_semantics import (
+    classify_cuda_api,
+    load_canonical_bundle,
+    load_sync_registry,
+)
 
 
 def _sha256(path: Path) -> str:
@@ -912,3 +916,157 @@ def test_all_missing_text_prefixes_are_one_unkeyed_machine_readable_issue(tmp_pa
         "nvtx:NVTX_EVENTS:2",
         "nvtx:NVTX_EVENTS:3",
     )
+
+
+# Gate 6 Sync Projection Amendment v0.1：role-preserving correspondence。
+
+_API_BACKED_SYNC_ID = "cuda_api_sync:CUPTI_ACTIVITY_KIND_RUNTIME:2"
+
+
+def _replace_records(canonical_manifest: Path, kind: str, rows: list[dict]) -> None:
+    """按 kind 整体替换 Canonical 记录文件并同步 manifest 哈希。"""
+
+    manifest = json.loads(canonical_manifest.read_text(encoding="utf-8"))
+    target = canonical_manifest.parent / manifest["files"][kind]["filename"]
+    replacement = target.with_name(f"replacement-{kind}.jsonl.gz")
+    entry = _write_gzip_jsonl(replacement, rows)
+    replacement.replace(target)
+    entry["filename"] = target.name
+    manifest["files"][kind] = entry
+    canonical_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def _add_unsupported_api_backed_call(canonical_manifest: Path) -> None:
+    """追加一条属于同步 universe、但 CUPTI 不产生 synchronization row 的 `cudaMemcpy` 调用。"""
+
+    records = load_canonical_bundle(canonical_manifest)["records"]
+    copy_call = deepcopy(records["cuda_api"][0])
+    copy_call.update(
+        record_id="cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:2",
+        source_rowid=2,
+        api_name="cudaMemcpy_v3020",
+        correlation_id=8,
+        start_ns=90,
+        end_ns=96,
+    )
+    _replace_records(canonical_manifest, "cuda_api", [*records["cuda_api"], copy_call])
+    marker = _nvtx("nvtx:NVTX_EVENTS:4", 89, 97, "decode", "sync")
+    _replace_records(canonical_manifest, "nvtx", [*records["nvtx"], marker])
+
+
+def _add_non_sync_query_sync(canonical_manifest: Path) -> None:
+    """追加一条 `NON_SYNC`（非阻塞 query）Canonical cuda_sync 行。"""
+
+    records = load_canonical_bundle(canonical_manifest)["records"]
+    query = deepcopy(records["cuda_sync"][0])
+    query.update(
+        record_id="cuda_sync:CUPTI_ACTIVITY_KIND_SYNCHRONIZATION:5",
+        source_rowid=5,
+        runtime_api_name="cudaEventQuery_v3020",
+        runtime_record_id="cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:9",
+    )
+    _replace_records(canonical_manifest, "cuda_sync", [*records["cuda_sync"], query])
+
+
+def _api_backed_s_record() -> dict:
+    rule = classify_cuda_api("cudaMemcpy_v3020")
+    record = deepcopy(_s_record())
+    record.update(
+        sync_id=_API_BACKED_SYNC_ID,
+        registry_rule_id=rule["registry_rule_id"],
+        sync_universe_class=rule["universe_class"],
+        sync_kind=rule["sync_kind"],
+        completion_scope=rule["completion_scope"],
+        sync_origin=None,
+        callsite_id=None,
+        sync_ordinal=None,
+        host_start_ns=90,
+        host_end_ns=96,
+        device_id=None,
+        context_id=None,
+        stream_id=None,
+        event_id=None,
+        submission_evidence=[],
+        dependency_closure_status="AMBIGUOUS",
+        dependency_edges=[],
+        event_record_id=None,
+        wait_set_status="INVALID",
+        wait_set_activity_ids=[],
+        semantic_frontier_activity_ids=[],
+        terminal={
+            "status": "INVALID",
+            "kind": "NONE",
+            "activity_id": None,
+            "end_ns": None,
+            "clock_domain_id": None,
+        },
+        validity="INVALID",
+        primary_reason="UNSUPPORTED_SYNC_API",
+        secondary_reasons=[],
+        activity_origin_phases=[],
+        terminal_origin_phase=None,
+        cross_phase_dependency=False,
+        invocation_bleed=False,
+    )
+    return record
+
+
+def test_unsupported_api_backed_sync_must_be_present_in_s_bundle(tmp_path):
+    """API-backed semantic sync 属于 correspondence：S 缺失必须 fail closed。"""
+
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    _add_unsupported_api_backed_call(canonical_manifest)
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest, [_s_record()])
+
+    with pytest.raises(ABInputError, match="缺少 semantic sync"):
+        load_ab_inputs(canonical_manifest, s_manifest)
+
+
+def test_unsupported_api_backed_sync_binds_through_semantic_universe(tmp_path):
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    _add_unsupported_api_backed_call(canonical_manifest)
+    s_manifest = _write_s_bundle(
+        tmp_path / "s", canonical_manifest, [_s_record(), _api_backed_s_record()]
+    )
+
+    inputs = load_ab_inputs(canonical_manifest, s_manifest)
+
+    assert sorted(inputs.canonical.semantic_sync_by_id) == [
+        _API_BACKED_SYNC_ID,
+        "cuda_sync:CUPTI_ACTIVITY_KIND_SYNCHRONIZATION:1",
+    ]
+    candidate = inputs.canonical.semantic_sync_by_id[_API_BACKED_SYNC_ID]
+    assert candidate.origin == "API_BACKED"
+    assert candidate.classification["role"] == "UNSUPPORTED"
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (lambda record: record.__setitem__("host_start_ns", 91), "host_start_ns"),
+        (lambda record: record.__setitem__("sync_kind", "STREAM"), "sync_kind"),
+        (lambda record: record.__setitem__("device_id", 0), "device_id"),
+    ],
+)
+def test_api_backed_sync_identity_conflicts_are_rejected(tmp_path, mutate, message):
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    _add_unsupported_api_backed_call(canonical_manifest)
+    record = _api_backed_s_record()
+    mutate(record)
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest, [_s_record(), record])
+
+    with pytest.raises(ABInputError, match=message):
+        load_ab_inputs(canonical_manifest, s_manifest)
+
+
+def test_non_sync_row_is_not_part_of_semantic_correspondence(tmp_path):
+    """`NON_SYNC` 行不得产生 semantic sync；S 中出现该 sync_id 必须被拒绝。"""
+
+    canonical_manifest = _write_canonical(tmp_path / "canonical")
+    _add_non_sync_query_sync(canonical_manifest)
+    record = _s_record()
+    record["sync_id"] = "cuda_sync:CUPTI_ACTIVITY_KIND_SYNCHRONIZATION:5"
+    s_manifest = _write_s_bundle(tmp_path / "s", canonical_manifest, [_s_record(), record])
+
+    with pytest.raises(ABInputError, match="多余"):
+        load_ab_inputs(canonical_manifest, s_manifest)

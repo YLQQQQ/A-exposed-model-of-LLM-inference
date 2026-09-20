@@ -12,6 +12,7 @@ from typing import Any
 from .ab_bundle import load_ab_bundle
 from .ab_inputs import ABInputs, load_ab_inputs
 from .q0_oracle import load_oracle_bundle
+from .sync_semantics import classify_cuda_api
 
 
 class Q0RealObservedError(ValueError):
@@ -70,8 +71,17 @@ def map_real_activity_labels(
 
 
 def _non_sync_api_labels(records: Mapping[str, Sequence[Mapping[str, Any]]], excluded: set[str]) -> list[str]:
+    """只恢复 registry role 为 `NON_SYNC` 的 API 标签。
+
+    Gate 6 Sync Projection Amendment v0.1 §4：`DEPENDENCY_EDGE`（event record /
+    stream wait event）与 `UNSUPPORTED`（同步 copy 等）不是非同步 API，其 marker
+    一律不得进入 `non_sync_api_labels`；判定只依赖冻结的 registry role。
+    """
+
     labels: set[str] = set()
     for api in records.get("cuda_api", ()):
+        if classify_cuda_api(str(api.get("api_name", "")))["role"] != "NON_SYNC":
+            continue
         for marker in records.get("nvtx", ()):
             identity = _marker_identity(marker)
             label = identity.get("callsite_id") if identity else None
