@@ -21,7 +21,7 @@ git status --short --branch
 $TrackedDirty = git status --porcelain=v1 --untracked-files=no
 if ($TrackedDirty) { throw "存在未保存的受跟踪修改，停止更新" }
 $BeforeUpdate = git rev-parse HEAD
-$FrozenImplementation = "97054163b661870fe98db0cedff5657f71d69500"
+$FrozenImplementation = "e44777e8e8ae0eb4d4dcf3f74980954dc6627bf1"
 git branch "backup/server-before-$($BeforeUpdate.Substring(0,8))" $BeforeUpdate
 git fetch "..\ExposedPath_Q0_实际文件名.bundle" codex/gate6-canonical-baseline
 git reset --hard FETCH_HEAD
@@ -56,9 +56,9 @@ $Python = (Resolve-Path ".\.venv\Scripts\python.exe").Path
 
 本轮在 **一张固定 GPU、一个固定软件栈** 上运行 Q0。输出只用于证明 analyzer 的 Correctness 资格，不是 N1/G1/G2 性能结果，也不是 Formal 数据。RTX 4090 或 RTX 6000 Ada 均可先做 Windows Engineering/Q0；同一轮不得混用两张卡。若论文正式平台改为 Linux，必须在 Linux 目标栈重新执行平台资格检查和 Q0，不能直接沿用 Windows Q0。
 
-开始前应确保工作区位于 `codex/gate6-canonical-baseline`，并满足 §0 冻结的 unified provenance：`$FrozenImplementation = 97054163b661870fe98db0cedff5657f71d69500` 是 checkout HEAD 的 ancestor、tracked tree clean（`git status --porcelain=v1 --untracked-files=no` 为空）、且 `frozen..checkout` committed delta 恰好只有 `docs/v1_4_1/gate6_windows_server_runbook.md`。checkout HEAD 允许是 frozen implementation 之后的 approved runbook-only docs commit，不要求等于 frozen，也不得被当作 implementation commit。禁止覆盖已有输出；失败后使用新的 `run-id` 和新目录重跑，保留失败现场。禁止 retry/tuning：不得依据上一轮结果调整参数、时长、buffer、stream 或 policy 后重跑同一 case。
+开始前应确保工作区位于 `codex/gate6-canonical-baseline`，并满足 §0 冻结的 unified provenance：`$FrozenImplementation = e44777e8e8ae0eb4d4dcf3f74980954dc6627bf1`（Gate 6 Missing-Corr oracle amendment v0.2 的 unified implementation commit）是 checkout HEAD 的 ancestor、tracked tree clean（`git status --porcelain=v1 --untracked-files=no` 为空）、且 `frozen..checkout` committed delta 恰好只有 `docs/v1_4_1/gate6_windows_server_runbook.md`。checkout HEAD 允许是 frozen implementation 之后的 approved runbook-only docs commit，不要求等于 frozen，也不得被当作 implementation commit。禁止覆盖已有输出；失败后使用新的 `run-id` 和新目录重跑，保留失败现场。禁止 retry/tuning：不得依据上一轮结果调整参数、时长、buffer、stream 或 policy 后重跑同一 case。
 
-> **历史记录（2026-09-17 construction amendment 轮次，非当前 provenance 断言）：** 该轮 implementation commit 为 `2e81f6f9a9ec590d37fb01be9e31f2251645c5d1`（`docs/v1_4_1/gate6_construction_amendment_v0_1.md`，`APPLY = {Q0-KERNEL-MEMOP-001}`）；offline validation=`PASS`（targeted tests `70 passed`、Q0 offline regression `199 passed`、`--list-cases` 21/21），server validation=`NOT_STARTED`。此前“`Q0-KERNEL-MEMOP-001` platform construction blocked”的结论已被 formal-shape 配对 evidence 取代，原 construction failure 不再作为平台 incapable 证据。Gate 6 仍保持 `FAIL`、Q0 仍保持 `NOT_RUN`。当前正式 provenance 已改为 unified provenance：`$FrozenImplementation = 97054163b661870fe98db0cedff5657f71d69500`（见 §0/§1/§3）；上面这个旧 implementation commit 仅作历史记录，不得用作当前 workflow 的 identity 断言。
+> **历史记录（2026-09-17 construction amendment 轮次，非当前 provenance 断言）：** 该轮 implementation commit 为 `2e81f6f9a9ec590d37fb01be9e31f2251645c5d1`（`docs/v1_4_1/gate6_construction_amendment_v0_1.md`，`APPLY = {Q0-KERNEL-MEMOP-001}`）；offline validation=`PASS`（targeted tests `70 passed`、Q0 offline regression `199 passed`、`--list-cases` 21/21），server validation=`NOT_STARTED`。此前“`Q0-KERNEL-MEMOP-001` platform construction blocked”的结论已被 formal-shape 配对 evidence 取代，原 construction failure 不再作为平台 incapable 证据。Gate 6 仍保持 `FAIL`、Q0 仍保持 `NOT_RUN`。当前正式 provenance 为 unified provenance：`$FrozenImplementation = e44777e8e8ae0eb4d4dcf3f74980954dc6627bf1`（Gate 6 Missing-Corr oracle amendment v0.2 的 unified implementation commit，见 §0/§1/§3）；上面这个旧 implementation commit 仅作历史记录，不得用作当前 workflow 的 identity 断言。
 >
 > 第 3 节及后续 r11 **当前仍一律禁止执行**。amendment 只批准 `Q0-KERNEL-MEMOP-001` 的 pre-capture same-kernel warm-up policy，不授权任何服务器实验；只有取得用户对“在该平台执行完整 21 real + 2 synthetic Q0”的单独书面批准，才允许执行第 3 节。construction amendment 获批或 construction admission PASS 本身都不等于 Gate 6 PASS、Q0 PASS 或 Gate 9 正式平台资格。`EP-G6-07` Candidate 路线保持暂停。
 
@@ -626,16 +626,17 @@ Get-Content -LiteralPath $D2HReceiptPath -Raw -Encoding UTF8
 
 ## 3. 复用冻结 binary 并准备不可覆盖运行目录
 
-> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案，**当前仍一律禁止执行**：必须取得用户对“执行完整 21 real + 2 synthetic Q0”的单独书面批准（见 §1）。本节已按 construction amendment 更新：execution/run schema 为 `0.2.1`，正式 native invocation 必须显式携带且只携带一次 `--measurement-initialization <POLICY>`（§1.1）。本节固定复用已完成并审计通过的冻结 build（`engineering_evidence/q0_diagnostic_builds/gate6-unified-97054163/exposedpath_q0.exe`），**不重新编译、不复制、不覆盖**；clean-tree gate 只针对 tracked tree（`git status --porcelain=v1 --untracked-files=no`），`engineering_evidence/*` 允许作为 untracked evidence 存在，不得因此 STOP，也不得执行 `git clean`。WDDM、diagnostic 参数与 Engineering diagnostic argv 绝不能加入本节标准 collection argv；Engineering diagnostic 命令也不得混用 formal policy。禁止 retry/tuning。
+> **当前禁止执行。** 第 3 节及后续 r11 步骤只保留为未来流程草案，**当前仍一律禁止执行**：必须取得用户对“执行完整 21 real + 2 synthetic Q0”的单独书面批准（见 §1）。本节已按 construction amendment 与 Missing-Corr oracle amendment v0.2 更新：execution/run schema 为 `0.2.1`，正式 native invocation 必须显式携带且只携带一次 `--measurement-initialization <POLICY>`（§1.1），Missing-Corr 不再使用 sentinel/watchdog。本节固定复用已完成并审计通过的冻结 build（`engineering_evidence/q0_diagnostic_builds/gate6-missingcorr-v02-e44777/exposedpath_q0.exe`，即 final-03 冻结身份），**不重新编译、不复制、不覆盖**；clean-tree gate 只针对 tracked tree（`git status --porcelain=v1 --untracked-files=no`），`engineering_evidence/*` 允许作为 untracked evidence 存在，不得因此 STOP，也不得执行 `git clean`。WDDM、diagnostic 参数与 Engineering diagnostic argv 绝不能加入本节标准 collection argv；Engineering diagnostic 命令也不得混用 formal policy。禁止 retry/tuning。
 
 ```powershell
 $Q0Root = Resolve-Path .
 $Python = Join-Path $Q0Root ".venv\Scripts\python.exe"   # formal Python 固定为仓库 venv，不使用 Get-Command python
-$RunId = "q0-win-4090-20260919-gate6-final-02"  # 必须是全新目录；final-01 保持冻结，不重跑、不续跑
+$RunId = "q0-win-4090-20260920-gate6-final-03"  # 必须是全新目录；final-01 / final-02 为 frozen historical incomplete run，不重跑、不续跑、不拼接
 $Out = Join-Path $Q0Root "engineering_evidence\q0_real\$RunId"
 # 复用冻结 build：不复制、不重编、不覆盖该 binary。
-$Binary = Join-Path $Q0Root "engineering_evidence\q0_diagnostic_builds\gate6-unified-97054163\exposedpath_q0.exe"
-$FrozenBinarySha256 = "D64871B3AC55A0C36123F8AC19D66C7F25EE40AC2AEE373F092CF4E06A68A2D6"
+$Binary = Join-Path $Q0Root "engineering_evidence\q0_diagnostic_builds\gate6-missingcorr-v02-e44777\exposedpath_q0.exe"
+$FrozenBinarySha256 = "6A6DD4340058462E0F4F6CEA36D82B37B9C72D0ACC031F606A1372A4673BB56B"
+$FrozenSourceSha256 = "7D0260CA3D4F62E6A2D1AFFE4943A32E84063B19DE3DCBD823205BAD5160E32D"
 $Nsys = "C:\Program Files\NVIDIA Corporation\Nsight Systems 2026.2.1\target-windows-x64\nsys.exe"
 $GpuSelector = "GPU-替换为nvidia-smi显示的完整UUID"
 
@@ -660,6 +661,7 @@ if ([string]$BuildReceipt.nvcc.version_output -notmatch "12\.4\.131") { throw "b
 if (-not (Test-Path -LiteralPath $BuildReceipt.cuda_source.path)) { throw "build receipt 记录的 CUDA source 不存在" }
 $SourceSha = (Get-FileHash -LiteralPath $BuildReceipt.cuda_source.path -Algorithm SHA256).Hash
 if ($SourceSha -ne $BuildReceipt.cuda_source.sha256) { throw "CUDA source SHA 与 build receipt 不一致" }
+if ($SourceSha -ne $FrozenSourceSha256) { throw "CUDA source SHA 与 final-03 冻结值不一致" }
 $BinaryShaAtBuild = (Get-FileHash -LiteralPath $Binary -Algorithm SHA256).Hash
 if ($BinaryShaAtBuild -ne $BuildReceipt.binary.sha256) { throw "binary SHA 与 build receipt 不一致" }
 
@@ -667,7 +669,7 @@ if ($BinaryShaAtBuild -ne $BuildReceipt.binary.sha256) { throw "binary SHA 与 b
 
 # amendment 校验：冻结 commit、schema 与 formal policy 必须逐字一致，否则 STOP
 # frozen unified implementation commit：implementation identity 由该 SHA 定义
-$FrozenImplementation = "97054163b661870fe98db0cedff5657f71d69500"
+$FrozenImplementation = "e44777e8e8ae0eb4d4dcf3f74980954dc6627bf1"
 if ($FrozenImplementation -notmatch "^[0-9a-f]{40}$") { throw "冻结 implementation commit 未填写；不得运行正式 Q0" }
 # provenance gate：tracked tree clean + frozen implementation 是 HEAD 的 ancestor + 二者之间只允许 runbook-only provenance 修订
 # clean-tree 只针对 tracked tree；engineering_evidence/* 允许作为 untracked evidence 存在，不得因此 STOP，也不得 git clean
@@ -712,7 +714,7 @@ if ($GraphFlagCount -ne 1) { throw "Graph case 必须恰好包含一次 node-lev
 if ($UnexpectedGraphFlags.Count -ne 0) { throw "普通 case 不得启用 node-level graph tracing" }
 ```
 
-验收：本节不重新编译，直接复用冻结 build `engineering_evidence/q0_diagnostic_builds/gate6-unified-97054163/exposedpath_q0.exe`，其 binary SHA256 必须等于 `D64871B3AC55A0C36123F8AC19D66C7F25EE40AC2AEE373F092CF4E06A68A2D6`，且同目录 `<binary>.build_receipt.json` 存在，其中 `receipt_version=exposedpath-q0-build-receipt/0.1.0`、`gpu_arch=sm_89`、compile argv 恰好一次 `-arch=sm_89`、nvcc `12.4.131`，且 source SHA 与 checkout、binary SHA 与 receipt 双向一致；binary 不被复制、重编或覆盖；无 `NVCC_APPEND_FLAGS` / `NVCC_PREPEND_FLAGS` 等 ambient codegen 注入；tracked working tree clean（`git status --porcelain=v1 --untracked-files=no` 为空，`engineering_evidence/*` 等 untracked evidence 不构成失败）、frozen unified implementation commit `97054163b661870fe98db0cedff5657f71d69500` 是当前 HEAD 的 ancestor，且二者之间 committed delta 恰好只有 `docs/v1_4_1/gate6_windows_server_runbook.md` 一个文件（implementation identity 由 frozen commit 定义；checkout commit 只允许额外包含 implementation 之后的 approved runbook-only provenance 修订，不要求与 frozen commit 相等；实际编译产物仍由 build receipt、CUDA source SHA 与 binary SHA 证明）；run manifest 为 `PREPARED_NOT_EXECUTED` 且 schema 为 `exposedpath-q0-run/0.2.1`；23/23 case 显式声明 `measurement_initialization`（`Q0-KERNEL-MEMOP-001` = `PRE_CAPTURE_SAME_KERNEL_WARMUP`，其余 22 = `NONE`）；21 个 native case 的 `command_argv` 各自恰好一次 `--measurement-initialization` 且与 manifest policy 一致；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。任何缺失、未知、重复 policy、receipt 不匹配、ambient 注入或 argv/manifest 不一致都必须 STOP，不得手工修补 argv，不得补加 `-arch`、更换 arch 或改 flags 后重试。
+验收：本节不重新编译，直接复用 final-03 冻结 build `engineering_evidence/q0_diagnostic_builds/gate6-missingcorr-v02-e44777/exposedpath_q0.exe`，其 binary SHA256 必须等于 `6A6DD4340058462E0F4F6CEA36D82B37B9C72D0ACC031F606A1372A4673BB56B`、CUDA source SHA256 必须等于 `7D0260CA3D4F62E6A2D1AFFE4943A32E84063B19DE3DCBD823205BAD5160E32D`，且同目录 `<binary>.build_receipt.json` 存在，其中 `receipt_version=exposedpath-q0-build-receipt/0.1.0`、`gpu_arch=sm_89`、compile argv 恰好一次 `-arch=sm_89`、nvcc `12.4.131`，且 source SHA 与 checkout、binary SHA 与 receipt 双向一致；binary 不被复制、重编或覆盖；无 `NVCC_APPEND_FLAGS` / `NVCC_PREPEND_FLAGS` 等 ambient codegen 注入；tracked working tree clean（`git status --porcelain=v1 --untracked-files=no` 为空，`engineering_evidence/*` 等 untracked evidence 不构成失败）、frozen unified implementation commit `e44777e8e8ae0eb4d4dcf3f74980954dc6627bf1` 是当前 HEAD 的 ancestor，且二者之间 committed delta 恰好只有 `docs/v1_4_1/gate6_windows_server_runbook.md` 一个文件（implementation identity 由 frozen commit 定义；checkout commit 只允许额外包含 implementation 之后的 approved runbook-only provenance 修订，不要求与 frozen commit 相等；实际编译产物仍由 build receipt、CUDA source SHA 与 binary SHA 证明）；run manifest 为 `PREPARED_NOT_EXECUTED` 且 schema 为 `exposedpath-q0-run/0.2.1`；23/23 case 显式声明 `measurement_initialization`（`Q0-KERNEL-MEMOP-001` = `PRE_CAPTURE_SAME_KERNEL_WARMUP`，其余 22 = `NONE`）；21 个 native case 的 `command_argv` 各自恰好一次 `--measurement-initialization` 且与 manifest policy 一致；每个 source manifest 中 logical device 都是 `0`，物理 GPU 由同一个 UUID 显式绑定；只有 `Q0-GRAPH-UNSUPPORTED-001` 恰好包含一次 `--cuda-graph-trace=node`。任何缺失、未知、重复 policy、receipt 不匹配、ambient 注入或 argv/manifest 不一致都必须 STOP，不得手工修补 argv，不得补加 `-arch`、更换 arch 或改 flags 后重试。
 
 ## 4. 只采集 r11 单例
 
@@ -843,4 +845,4 @@ if ($LASTEXITCODE -ne 0) { throw "Gate 6 未通过" }
 
 ## 10. 完成后需要带回本地的内容
 
-保留并回传整个 `$Out` 目录，至少包括 `frozen_implementation_commit.txt`、`code_commit.txt`、`git_status.txt`、run manifest（含每个 case 的 `measurement_initialization` policy 与实际 `command_argv`）、21 份 Raw/SQLite/receipt、Canonical（含 3 个故障副本）、S、A/B、real evidence、synthetic 和唯一 gate report。不要只复制最后一张表。返回本地后先核对 provenance（`frozen_implementation_commit.txt` 必须等于 `97054163b661870fe98db0cedff5657f71d69500`；`code_commit.txt` 是该 run 的 checkout commit，允许是 frozen implementation 之后的 approved runbook-only docs commit，不要求与 frozen 相等）、Raw 哈希和 Gate report，再更新科研进度清单。
+保留并回传整个 `$Out` 目录，至少包括 `frozen_implementation_commit.txt`、`code_commit.txt`、`git_status.txt`、run manifest（含每个 case 的 `measurement_initialization` policy 与实际 `command_argv`）、21 份 Raw/SQLite/receipt、Canonical（含 3 个故障副本）、S、A/B、real evidence、synthetic 和唯一 gate report。不要只复制最后一张表。返回本地后先核对 provenance（`frozen_implementation_commit.txt` 必须等于 `e44777e8e8ae0eb4d4dcf3f74980954dc6627bf1`；`code_commit.txt` 是该 run 的 checkout commit，允许是 frozen implementation 之后的 approved runbook-only docs commit，不要求与 frozen 相等）、Raw 哈希和 Gate report，再更新科研进度清单。
