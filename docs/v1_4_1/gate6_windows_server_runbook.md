@@ -1,6 +1,6 @@
 # Gate 6 Windows GPU 服务器操作手册
 
-> **状态（2026-09-20）：本节所述 Gate 6 流程已于 `q0-win-4090-20260920-gate6-final-04` 上执行完成，Gate 6 = `PASS`、Q0 = `PASS`。** 身份、哈希、证据位置与收口结论见 `docs/v1_4_1/gate6_closeout_v0_1.md`。§3 及其后的“当前禁止执行/禁止 r11”表述是执行前撰写的历史约束，**不得据此认为 Gate 6 尚未完成**；与此同时，final-04 已完成，**不允许重跑、续跑、拼接或重新聚合**，也不得回填 final-04 缺失的 prepare-time sidecar。本手册保留为 Gate 6 的执行与复核记录，以及未来在新平台重做 Q0 时的参考流程；任何再次执行都属于新的 run-id 与新授权。
+> **状态（2026-09-20）：本节所述 Gate 6 流程已于 `q0-win-4090-20260920-gate6-final-04` 上执行完成，Gate 6 = `PASS`、Q0 = `PASS`。** 身份、哈希、证据位置与收口结论见 `docs/v1_4_1/gate6_closeout_v0_1.md`。§3 及其后的“当前禁止执行/禁止 r11”表述是执行前撰写的历史约束，**不得据此认为 Gate 6 尚未完成**；与此同时，final-04 已完成，**不允许重跑、续跑、拼接或重新聚合**，也不得回填 final-04 缺失的 prepare-time sidecar。本手册保留为 Gate 6 的执行与复核记录，以及未来在新平台重做 Q0 时的参考流程；任何再次执行都属于新的 run-id 与新授权。**Provenance 边界（2026-09-20 closeout 之后）：** Gate 6 closeout 提交之后，当前 HEAD 相对 `ec945a67f048ff624e3701229d287894b9701ea3` 的 committed delta 已不再只有本 runbook（新增了 closeout、Gate 7 计划与其他 v1.4.1 状态修订）。因此 §0/§1/§3 的 provenance gate 会对任何“以 `ec945a67...` 为 frozen implementation”的新 checkout 正确 STOP；这是预期的 fail-closed 行为，不是缺陷，也不得通过放宽该规则来绕过。任何新的正式采集必须先冻结新的 implementation identity，并为其重新定义 provenance 规则。
 
 ## 0. 从本机部署到已有服务器
 
