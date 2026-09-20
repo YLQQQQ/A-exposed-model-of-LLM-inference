@@ -601,16 +601,78 @@ def test_multithread_event_record_has_covering_marker_on_the_producer_thread():
     assert body.count('launch(r, c, id, "decode"') == 2
 
 
-# --- Gate 6 Missing-Corr amendment：same-activity mapped sentinel handshake ---
+# --- Gate 6 Missing-Corr oracle amendment v0.2：sentinel handshake 已撤销 ---
 
 
-def test_missing_corr_signaling_kernel_is_additive_and_leaves_spin_kernel_unchanged():
+def test_missing_corr_sentinel_construction_is_fully_removed():
+    """v0.1 的 handshake / sentinel / watchdog / system-scope atomic 必须全部消失。"""
+
     source = SOURCE.read_text(encoding="utf-8")
 
-    assert "#include <cuda/atomic>" in source
-    assert "q0_spin_kernel_signaled" in source
-    # 新增 symbol 只有定义与唯一调用点；其余 22 个 case 的 kernel symbol 不变。
-    assert source.count("q0_spin_kernel_signaled") == 2
+    assert "q0_spin_kernel_signaled" not in source
+    assert "missing_corr_sentinel" not in source
+    assert "cudaHostAlloc" not in source
+    assert "cudaHostGetDevicePointer" not in source
+    assert "cudaDeviceMapHost" not in source
+    assert "cudaSetDeviceFlags" not in source
+    assert "properties.canMapHostMemory" not in source
+    assert "canMapHostMemory == 0" not in source
+    assert "kMissingCorrSentinelWatchdogSeconds" not in source
+    assert "cuda::atomic_ref" not in source
+    assert "#include <cuda/atomic>" not in source
+
+
+def test_missing_corr_measured_activity_shape_is_unchanged():
+    """唯一 measured GPU activity：单 block / 单 thread / measured stream / 35 ms。"""
+
+    body = _function_body(SOURCE.read_text(encoding="utf-8"), "run_missing_corr")
+
+    assert body.count("<<<") == 0
+    assert 'launch(r, c, id, "decode", "K_UNMAPPED", r.first, 35)' in body
+    assert 'sync_range(c, id, "decode", "S_STREAM", 0)' in body
+    assert "cudaStreamSynchronize(r.first)" in body
+    assert body.count("one_phase(c, id, [&] {") == 1
+    assert body.count("sync_range(") == 1
+    assert "request_range(" not in body
+    assert "phase_range(" not in body
+    assert "marker_range(" not in body
+
+
+def test_missing_corr_construction_is_plain_launch_then_sync():
+    body = _function_body(SOURCE.read_text(encoding="utf-8"), "run_missing_corr")
+
+    launch = body.index('launch(r, c, id, "decode", "K_UNMAPPED", r.first, 35)')
+    sync_range_index = body.index('"S_STREAM"')
+    blocking_sync = body.index("cudaStreamSynchronize(r.first)")
+
+    assert launch < sync_range_index < blocking_sync
+    # no handshake / second kernel / event / query / device gate / sleep tuning
+    assert "started" not in body
+    assert "cudaEvent" not in body
+    assert "cudaStreamQuery" not in body
+    assert "cudaEventQuery" not in body
+    assert "cudaDeviceSynchronize" not in body
+    assert "cudaStreamCreate" not in body
+    assert "sleep_for" not in body
+    assert "throw std::runtime_error" not in body
+
+
+def test_missing_corr_has_no_case_scoped_main_special_case():
+    source = SOURCE.read_text(encoding="utf-8")
+    main = _main_section(source)
+
+    assert 'case_id == "Q0-MISSING-CORR-001"' not in main
+    assert "cudaSetDeviceFlags" not in main
+    assert "cudaHostAlloc" not in main
+    assert "cudaHostGetDevicePointer" not in main
+    assert "canMapHostMemory" not in main
+    assert "unifiedAddressing" not in main
+    # formal path 不新增 device-wide drain。
+    assert main.count("cudaDeviceSynchronize()") == 1
+
+
+def test_missing_corr_kernel_and_warmup_helpers_are_unchanged():
+    source = SOURCE.read_text(encoding="utf-8")
 
     # `q0_spin_kernel` 保持 zero-change：仍是原来的纯 spin body。
     assert " ".join(_function_body(source, "q0_spin_kernel").split()) == (
@@ -620,76 +682,3 @@ def test_missing_corr_signaling_kernel_is_additive_and_leaves_spin_kernel_unchan
     assert "q0_spin_kernel<<<1, 1, 0, resources.first>>>" in _function_body(
         source, "warmup_kernel_memop"
     )
-
-
-def test_missing_corr_signaling_kernel_uses_system_scope_release_store_without_fallback():
-    source = SOURCE.read_text(encoding="utf-8")
-    body = _function_body(source, "q0_spin_kernel_signaled")
-
-    assert "cuda::atomic_ref<unsigned int, cuda::thread_scope_system>" in body
-    assert "flag.store(1u, cuda::memory_order_release)" in body
-    # 只使用 load/store，不使用 RMW；没有 volatile fallback，也没有系统 fence。
-    assert "fetch_" not in body
-    assert "compare_exchange" not in body
-    assert "volatile" not in source
-    assert "__threadfence_system" not in source
-
-
-def test_missing_corr_measured_activity_shape_is_unchanged():
-    """唯一 measured GPU activity：单 block / 单 thread / measured stream / 35 ms。"""
-
-    body = _function_body(SOURCE.read_text(encoding="utf-8"), "run_missing_corr")
-
-    assert 'marker_range(c, id, "decode", "K_UNMAPPED")' in body
-    assert "q0_spin_kernel_signaled<<<1, 1, 0, r.first>>>" in body
-    assert "r.cycles(35)" in body
-    assert body.count("<<<") == 1
-    assert body.count("one_phase(c, id, [&] {") == 1
-    assert body.count("sync_range(") == 1
-    assert "request_range(" not in body
-    assert "phase_range(" not in body
-
-
-def test_missing_corr_handshake_opens_sync_only_after_started_observation():
-    body = _function_body(SOURCE.read_text(encoding="utf-8"), "run_missing_corr")
-
-    launch = body.index("q0_spin_kernel_signaled<<<1, 1, 0, r.first>>>")
-    observe = body.index("started.load(cuda::memory_order_acquire)")
-    sync_range_index = body.index('"S_STREAM"')
-    blocking_sync = body.index("cudaStreamSynchronize(r.first)")
-
-    assert launch < observe < sync_range_index < blocking_sync
-    assert "cuda::atomic_ref<unsigned int, cuda::thread_scope_system>" in body
-    # no second kernel / event / query / device gate / extra dependency / sleep tuning
-    assert "cudaEvent" not in body
-    assert "cudaStreamQuery" not in body
-    assert "cudaEventQuery" not in body
-    assert "cudaDeviceSynchronize" not in body
-    assert "cudaStreamCreate" not in body
-    assert "sleep_for" not in body
-    # watchdog 只是 fail-closed operational ceiling，不参与 PASS 判定。
-    assert "kMissingCorrSentinelWatchdogSeconds" in body
-    assert "throw std::runtime_error" in body
-
-
-def test_missing_corr_sentinel_is_precapture_and_case_scoped_in_main():
-    source = SOURCE.read_text(encoding="utf-8")
-    main = _main_section(source)
-
-    scope = main.index('const bool missing_corr_case = case_id == "Q0-MISSING-CORR-001";')
-    flags = main.index("cudaSetDeviceFlags(cudaDeviceMapHost)")
-    construction = main.index("Resources resources(")
-    allocation = main.index("cudaHostAlloc(")
-    device_pointer = main.index("cudaHostGetDevicePointer(")
-    capability = main.index("canMapHostMemory == 0")
-    capture = main.index("CudaProfilerRange capture;")
-
-    # case-scoped：先判 case，再设置 flags，且 flags 早于首个 context-creating call；
-    # capability gate 在 allocation 之前 fail closed。
-    assert scope < flags < construction < capability < allocation < device_pointer
-    assert device_pointer < capture
-    assert "cudaHostAllocMapped" in main
-    assert "cudaFreeHost(missing_corr_sentinel)" in source
-    assert "unifiedAddressing" not in main
-    # formal path 不新增 device-wide drain。
-    assert main.count("cudaDeviceSynchronize()") == 1

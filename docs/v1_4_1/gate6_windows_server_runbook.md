@@ -515,10 +515,10 @@ if ($ObservedUuid -ne $ExpectedUuid) { throw "能力探针 GPU UUID 与目标 GP
 foreach ($Field in @("async_engine_count", "device_overlap", "concurrent_kernels", "can_map_host_memory")) {
     if ($null -eq $Capability.$Field) { throw "能力字段缺失：$Field" }
 }
-# Gate 6 Q0 build contract amendment：`can_map_host_memory` 来自 `cudaDevAttrCanMapHostMemory`，
-# 是 mapped-host capability 的唯一 gate（不得用 unifiedAddressing 代替）。任何 Q0 正式 case
-# 之前该值必须为 1；为 0 即 STOP，不得调参、换平台假设或绕过。
-if ([int]$Capability.can_map_host_memory -ne 1) { throw "can_map_host_memory != 1；不得运行任何 Q0 case" }
+# Gate 6 Missing-Corr oracle amendment v0.2：`can_map_host_memory` 来自
+# `cudaDevAttrCanMapHostMemory`，只作为被记录的平台能力事实（字段缺失仍 STOP）。
+# sentinel handshake 撤销后该值不再是正式 Q0 的准入 gate：为 0 不阻止 collection，
+# 也不得据此调参、换平台假设或绕过其它前置检查。
 
 $Utf8NoBom = [System.Text.UTF8Encoding]::new($false)
 [System.IO.File]::WriteAllText(

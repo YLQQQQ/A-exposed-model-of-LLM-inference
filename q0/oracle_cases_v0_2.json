@@ -305,7 +305,7 @@
       "features": ["MISSING_CORRELATION"],
       "required_contract_rules": ["MC-S-002", "MC-S-013"],
       "construction": {
-        "activities": [{"activity_label": "K_UNMAPPED", "activity_type": "KERNEL", "start_ns": 20, "end_ns": 80}],
+        "activities": [{"activity_label": "K_UNMAPPED", "activity_type": "KERNEL", "start_ns": 60, "end_ns": 95}],
         "syncs": [{"sync_label": "S_STREAM", "sync_kind": "STREAM", "start_ns": 50, "end_ns": 90}],
         "dependency_edges": []
       },
@@ -314,7 +314,7 @@
         "wait_set_activity_labels": [],
         "terminal": {"status": "INVALID", "kind": "NONE", "activity_label": null},
         "validity": "INVALID", "primary_reason": "MISSING_ACTIVITY_CORRELATION",
-        "secondary_reasons": [], "b_status": "B_INVALID",
+        "secondary_reasons": ["SUBMISSION_ORDER_AMBIGUOUS"], "b_status": "B_INVALID",
         "a_relations": ["whole_sync=A_unattributed"], "b_relations": []
       }]}
     },

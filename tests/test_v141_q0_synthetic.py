@@ -132,12 +132,31 @@ def test_structural_proxies_without_native_marker_fail_closed():
     assert multithread["validity"] == "INVALID"
 
 
-def test_missing_corr_structural_proxy_exposes_submission_order_from_timing():
+def test_missing_corr_structural_proxy_derives_frozen_reason_pair():
+    """v0.2 冻结的形状：correlation 缺失 + activity.start >= sync.host_start。"""
+
     bundle, _, _ = _structural_bundle("Q0-MISSING-CORR-001")
-    for row in bundle["records"]["device_activity"]:
-        row["start_ns"] = 95
-        row["end_ns"] = 99
     record = analyze_semantic_inventory(build_semantic_inventory(bundle))[0]
 
     assert record["primary_reason"] == "MISSING_ACTIVITY_CORRELATION"
     assert record["secondary_reasons"] == ["SUBMISSION_ORDER_AMBIGUOUS"]
+    assert record["validity"] == "INVALID"
+    assert record["submission_evidence"]["K_UNMAPPED"] == {
+        "status": "AMBIGUOUS",
+        "proof": None,
+        "reason": "SUBMISSION_ORDER_AMBIGUOUS",
+    }
+
+
+def test_missing_corr_structural_proxy_exposes_submission_order_from_timing():
+    """secondary 由时间关系推导：一旦 activity 早于 sync 入口，ambiguity 必须消失。"""
+
+    bundle, _, _ = _structural_bundle("Q0-MISSING-CORR-001")
+    for row in bundle["records"]["device_activity"]:
+        row["start_ns"] = 20
+        row["end_ns"] = 30
+    record = analyze_semantic_inventory(build_semantic_inventory(bundle))[0]
+
+    assert record["primary_reason"] == "MISSING_ACTIVITY_CORRELATION"
+    assert record["secondary_reasons"] == []
+    assert record["submission_evidence"]["K_UNMAPPED"]["proof"] == "GPU_STARTED_BEFORE_SYNC"

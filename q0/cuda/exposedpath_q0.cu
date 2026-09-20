@@ -1,5 +1,4 @@
 #include <cuda.h>
-#include <cuda/atomic>
 #include <cuda_profiler_api.h>
 #include <cuda_runtime.h>
 #include <nvtx3/nvToolsExt.h>
@@ -36,10 +35,6 @@ constexpr std::size_t kKernelMemopBufferBytes = 512ULL * 1024ULL * 1024ULL;
 constexpr int kKernelMemopKernelMilliseconds = 10;
 // warm-up-only Engineering diagnostic 的固定预热时长；不是可调参数。
 constexpr int kKernelMemopWarmupMilliseconds = 10;
-// Missing-Corr handshake 的 host 轮询 watchdog。它只是防止无限轮询的 operational
-// ceiling（fail closed 后 STOP），不是 construction 参数，不参与任何语义判定，
-// 也不得在失败后被调大重试。
-constexpr int kMissingCorrSentinelWatchdogSeconds = 30;
 // 正式 measurement initialization policy：Gate 6 construction amendment 冻结的枚举。
 // 取值必须与 `q0/execution_manifest_v0_2.json` 中每个 case 的字段逐字一致。
 constexpr const char* kMeasurementInitializationFlag = "--measurement-initialization";
@@ -153,20 +148,6 @@ __global__ void q0_spin_kernel(std::uint64_t cycles) {
   }
 }
 
-// Missing-Corr 专用 signaling 版本：唯一的 measured GPU activity 仍是同一个 spin
-// kernel，只有一处附加行为 —— 开始执行后先把 STARTED sentinel 置 1（system-scope
-// release store），随后才进入 spin loop。sentinel 只证明“该 kernel 已开始执行”，
-// 不承载 completion / overlap / exposure 语义。`q0_spin_kernel` 保持 zero-change。
-__global__ void q0_spin_kernel_signaled(std::uint64_t cycles, unsigned int* started) {
-  if (threadIdx.x == 0 && blockIdx.x == 0) {
-    cuda::atomic_ref<unsigned int, cuda::thread_scope_system> flag(*started);
-    flag.store(1u, cuda::memory_order_release);
-  }
-  const std::uint64_t start = clock64();
-  while (clock64() - start < cycles) {
-  }
-}
-
 struct Resources {
   cudaDeviceProp properties{};
   int clock_rate_khz{};
@@ -175,10 +156,6 @@ struct Resources {
   cudaEvent_t event{};
   void* device_buffer{};
   void* host_buffer{};
-  // Missing-Corr amendment 的 case-scoped 4-byte mapped sentinel；其余 case 保持
-  // nullptr。allocation / mapping / 初始化全部发生在 cudaProfilerStart() 之前。
-  unsigned int* missing_corr_sentinel{};
-  unsigned int* missing_corr_sentinel_device{};
   std::size_t buffer_capacity_bytes{};
   int kernel_memop_kernel_milliseconds{kKernelMemopKernelMilliseconds};
   KernelMemopCopyDirection kernel_memop_copy_direction{
@@ -202,7 +179,6 @@ struct Resources {
 
   ~Resources() {
     cudaDeviceSynchronize();
-    if (missing_corr_sentinel) cudaFreeHost(missing_corr_sentinel);
     if (host_buffer) cudaFreeHost(host_buffer);
     if (device_buffer) cudaFree(device_buffer);
     if (event) cudaEventDestroy(event);
@@ -427,40 +403,15 @@ void run_external(Resources& r, const std::string& c, const std::string& id) {
   });
 }
 
-// Missing-Corr amendment 冻结的 one-way same-activity mapped-sentinel handshake。
-// 唯一 measured GPU activity 仍是 label=`K_UNMAPPED` 的单 block / 单 thread kernel，
-// stream / 时长 / NVTX identity 与既有 `launch(... "K_UNMAPPED" ...)` 完全一致；
-// 差别只有两处：kernel symbol 换成 signaling 版本，以及 host 在观察到同一 kernel
-// 写出的 STARTED 之后才打开 `S_STREAM`。不新增 event / query / device gate。
+// Gate 6 Missing-Corr oracle amendment v0.2：v0.1 的 mapped-sentinel handshake 被
+// diagnostic evidence 否决（pure host poll queue ≈30 s、pre-capture warm-up 与
+// cudaStreamGetFlags 均 ≈5 s），因此本 case 回退为普通 construction：
+//   launch K_UNMAPPED -> S_STREAM -> cudaStreamSynchronize(r.first)
+// 唯一 measured GPU activity 仍是 label=`K_UNMAPPED` 的单 block / 单 thread kernel。
+// 该形状下 submission proof 落在 SUBMISSION_ORDER_AMBIGUOUS，这是本 case 冻结的期望。
 void run_missing_corr(Resources& r, const std::string& c, const std::string& id) {
-  if (r.missing_corr_sentinel == nullptr ||
-      r.missing_corr_sentinel_device == nullptr) {
-    throw std::runtime_error(
-        "missing-corr sentinel was not allocated/mapped before cudaProfilerStart()");
-  }
-  cuda::atomic_ref<unsigned int, cuda::thread_scope_system> started(
-      *r.missing_corr_sentinel);
   one_phase(c, id, [&] {
-    {
-      // 与 `launch(r, c, id, "decode", "K_UNMAPPED", r.first, 35)` 逐字同形。
-      auto marker = marker_range(c, id, "decode", "K_UNMAPPED");
-      q0_spin_kernel_signaled<<<1, 1, 0, r.first>>>(
-          r.cycles(35), r.missing_corr_sentinel_device);
-      CUDA_CHECK(cudaGetLastError());
-    }
-    // host 观察 STARTED（system-scope acquire load）之后才打开 S_STREAM，从而
-    // 结构性保证 K_UNMAPPED.start < S_STREAM.host_start。
-    const auto deadline =
-        std::chrono::steady_clock::now() +
-        std::chrono::seconds(kMissingCorrSentinelWatchdogSeconds);
-    while (started.load(cuda::memory_order_acquire) == 0u) {
-      if (std::chrono::steady_clock::now() >= deadline) {
-        throw std::runtime_error(
-            "missing-corr sentinel handshake timeout: K_UNMAPPED did not start "
-            "before the operational watchdog ceiling");
-      }
-      std::this_thread::yield();
-    }
+    launch(r, c, id, "decode", "K_UNMAPPED", r.first, 35);
     auto sync = sync_range(c, id, "decode", "S_STREAM", 0);
     CUDA_CHECK(cudaStreamSynchronize(r.first));
   });
@@ -815,34 +766,8 @@ int main(int argc, char** argv) {
             ? (diagnostic_parameters ? diagnostic_h2d_bytes
                                      : kKernelMemopBufferBytes)
             : kDefaultBufferBytes;
-    // Gate 6 Missing-Corr amendment：只有该 case 需要一个 4-byte mapped sentinel。
-    // `cudaHostAllocMapped` 生效前必须设置 `cudaDeviceMapHost`，且该设置必须早于
-    // 任何会初始化 CUDA context / runtime state 的调用 —— 因此插在首个
-    // context-creating call（`Resources` 构造中的 `cudaGetDeviceProperties`）之前，
-    // 并且只对本 case 生效，不做全局设置。
-    const bool missing_corr_case = case_id == "Q0-MISSING-CORR-001";
-    if (missing_corr_case) {
-      CUDA_CHECK(cudaSetDeviceFlags(cudaDeviceMapHost));
-    }
     Resources resources(buffer_bytes, diagnostic_kernel_ms,
                         diagnostic_copy_direction);
-    if (missing_corr_case) {
-      // capability gate 只认 canMapHostMemory；两者都在 flags 设置之后读取。
-      if (resources.properties.canMapHostMemory == 0) {
-        throw std::runtime_error(
-            "device reports canMapHostMemory == 0; missing-corr sentinel cannot "
-            "be mapped");
-      }
-      CUDA_CHECK(cudaHostAlloc(
-          reinterpret_cast<void**>(&resources.missing_corr_sentinel),
-          sizeof(unsigned int), cudaHostAllocMapped));
-      *resources.missing_corr_sentinel = 0u;
-      // 即使 UVA 下 host/device 指针数值相同，仍显式取得 device 指针做
-      // fail-closed mapping 验证，不依赖指针相等假设。
-      CUDA_CHECK(cudaHostGetDevicePointer(
-          reinterpret_cast<void**>(&resources.missing_corr_sentinel_device),
-          resources.missing_corr_sentinel, 0));
-    }
     // A'（不启用 warm-up）与 B（启用 warm-up）各写恰好一条 NVTX mark，
     // 保证两侧 module loading mode 对称可读。
     const bool emit_warmup_diagnostic =

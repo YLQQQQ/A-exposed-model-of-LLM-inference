@@ -554,10 +554,13 @@ def _structural_bundle(case_id: str) -> tuple[dict[str, Any], int, int]:
         add_sync("S_DEVICE", "cudaDeviceSynchronize", 80, 120)
         window_start, window_end = 30, 130
     elif case_id == "Q0-MISSING-CORR-001":
-        # correlation 真实缺失；activity 仍早于 sync host start。
+        # Gate 6 Missing-Corr oracle amendment v0.2 冻结的结构事实：
+        # correlation 与 enqueue provenance 都缺失，且 activity.start >=
+        # sync.host_start（目标 Windows/WDDM 栈上普通 launch->sync 的真实形状）。
+        # 只输入结构事实，最终 reason / wait set / terminal / B 状态由正常化链推导。
         add_range("request", "full_request", 0, 100, "nvtx:request")
         add_range("phase", "decode", 0, 100, "nvtx:decode")
-        add_activity("K_UNMAPPED", 20, 80, correlation_id=None, stream_id=2)
+        add_activity("K_UNMAPPED", 60, 95, correlation_id=None, stream_id=2)
         add_sync("S_STREAM", "cudaStreamSynchronize", 50, 90)
         window_start, window_end = 0, 100
     elif case_id == "Q0-MULTITHREAD-ORDERED-001":

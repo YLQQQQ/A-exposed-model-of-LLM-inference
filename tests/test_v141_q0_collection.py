@@ -156,20 +156,22 @@ def test_execute_rejects_missing_gpu_concurrency_capability(tmp_path, missing_fi
         )
 
 
-def test_execute_rejects_unmappable_host_memory_capability(tmp_path):
-    """Gate 6 build contract：capability 位不是 1 时 fail closed，不降级、不替代。"""
+def test_execute_records_unmappable_host_memory_capability_without_gating(tmp_path):
+    """Gate 6 Missing-Corr amendment v0.2：该 capability 只记录，不再是准入 gate。"""
 
     manifest = _prepared(tmp_path)
     environment = _environment()
     environment["selected_gpu"]["can_map_host_memory"] = 0
 
-    with pytest.raises(Q0CollectionError, match="can_map_host_memory == 1"):
-        execute_q0_case(
-            manifest,
-            "Q0-STREAM-001",
-            process_runner=_successful_runner({}),
-            environment_probe=lambda *_: environment,
-        )
+    receipt = execute_q0_case(
+        manifest,
+        "Q0-STREAM-001",
+        process_runner=_successful_runner({}),
+        environment_probe=lambda *_: environment,
+    )
+    payload = json.loads(Path(receipt).read_text(encoding="utf-8"))
+
+    assert payload["environment"]["selected_gpu"]["can_map_host_memory"] == 0
 
 
 def test_execute_rejects_tool_hash_change_existing_output_and_synthetic_case(tmp_path):

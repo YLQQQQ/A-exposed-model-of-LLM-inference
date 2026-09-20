@@ -146,15 +146,9 @@ def _validate_environment(snapshot: Mapping[str, Any], selector: str) -> None:
         ):
             if selected.get(field) in {None, ""}:
                 missing.append(f"selected_gpu.{field}")
-        # 字段缺失走通用的 missing 分支（fail closed 且报出字段名）；字段存在但不是 1
-        # 时给出明确的 capability 拒绝。
-        if (
-            selected.get("can_map_host_memory") not in {None, ""}
-            and selected.get("can_map_host_memory") != 1
-        ):
-            raise Q0CollectionError(
-                "Q0 target 必须报告 can_map_host_memory == 1（mapped-host capability）"
-            )
+        # `can_map_host_memory` 只是被记录的平台能力事实：字段缺失仍走上面的 missing
+        # 分支 fail closed（并报出字段名），但取值本身不再作为正式 Q0 的准入 gate
+        # （Gate 6 Missing-Corr oracle amendment v0.2 已删除 sentinel construction）。
         if selected.get("logical_index") != 0:
             raise Q0CollectionError("Q0 binary 必须运行在过滤后的逻辑设备 0")
         if (
