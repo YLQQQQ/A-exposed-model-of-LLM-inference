@@ -1,5 +1,7 @@
 # Gate 6 真实 Q0 执行设计
 
+> **HISTORICAL / SUPERSEDED FOR CURRENT EXECUTION** — 本设计已实现并被 `EP-G6-11` 收口，仅作追溯保留。正文中的 `真实 Gate6 仍保持 BLOCKED`、`q0_status = NOT_RUN` 等均为当时状态，不得作为当前执行依据。当前 Gate 状态见 `docs/v1_4_1/research_progress.md`；Gate 6 结论见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+
 ## 目标与边界
 
 在不改变 Measurement Contract v0.2 和 Gate 2 人工 oracle 的前提下，把现有 GPU 前执行包补全为可在 Windows/Linux 单 GPU 上逐 case 运行、可恢复、不可覆盖且可独立判定的真实 Q0 工具链。所有采集仍属于 Engineering；只有完整 Q0 报告可以把 `q0_status` 从 `NOT_RUN` 改为 `PASS/FAIL`，且永远不能自动授予 Formal 资格。

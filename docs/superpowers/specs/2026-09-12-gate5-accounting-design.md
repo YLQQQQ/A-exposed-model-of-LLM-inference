@@ -1,5 +1,7 @@
 # Gate 5：A/B 与派生层设计
 
+> **HISTORICAL / SUPERSEDED FOR CURRENT EXECUTION** — 本规格是历史设计记录，仅作追溯保留。正文中的 `Q0 = NOT_RUN` 等为当时状态，不得作为当前执行依据。当前 Gate 状态见 `docs/v1_4_1/research_progress.md`；Gate 6 结论见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+
 ## 1. 状态与目标
 
 本设计遵循 `exposedpath-measurement-contract-0.2.0`、Canonical Raw v0.2 和 S v0.2，属于 Engineering/Pre-Pilot。它不修改 Measurement Contract，不表示 Q0 已执行，也不产生 Pilot 或 Formal 证据。

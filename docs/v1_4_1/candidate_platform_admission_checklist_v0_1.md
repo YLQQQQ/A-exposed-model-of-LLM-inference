@@ -1,5 +1,7 @@
 # Candidate Platform Qualification / Construction Admission Checklist v0.1（冻结）
 
+> **后记（2026-09-20）：** 本清单是冻结的准入判据来源，条目内容不变。它现在**不是** Gate 6 的前序条件：Gate 6 / Q0 已在当前声明的 Windows/RTX 4090 目标栈上 `PASS`，`EP-G6-07` 候选平台路线随之暂停，仅在需要第二平台（含 Linux Formal 平台）时按 Gate 9 的流程重启。正文中的 `Q0 = NOT_RUN` 是“诊断/准入运行只记录 Engineering 资格、不得声称 Q0”的模板要求，不是当前整体 Q0 状态；当前状态见 `docs/v1_4_1/research_progress.md` 与 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+
 ## 0. 状态、冻结声明与使用规则
 
 状态：**冻结**。本清单依据 `docs/v1_4_1/gate6_strategy_review_v0_1.md` §5.2 起草，并在确认任何具体候选平台**之前**冻结，用于避免按候选平台事后调整准入标准。

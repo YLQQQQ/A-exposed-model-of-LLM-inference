@@ -1,5 +1,7 @@
 # Q0 独立标准答案实施计划
 
+> **HISTORICAL / SUPERSEDED FOR CURRENT EXECUTION** — 本计划是历史实施记录，仅作追溯保留。正文中的 `Gate 6 继续保持 BLOCKED`、`Q0 = NOT_RUN` 等均为当时状态，不得作为当前执行依据。当前 Gate 状态见 `docs/v1_4_1/research_progress.md`；Gate 6 结论见 `docs/v1_4_1/gate6_closeout_v0_1.md`；当前 Gate 7 计划见 `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`。
+
 > **供执行代理使用：** 必须按 `executing-plans` 逐任务执行；每个任务均遵循测试先行，步骤使用复选框记录。
 
 **目标：** 完成 ExposedPath Gate 2，为 Q0 受控案例预先写定、可机器校验且独立于正式 analyzer 的标准答案。

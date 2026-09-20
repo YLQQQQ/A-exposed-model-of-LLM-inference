@@ -23,7 +23,7 @@
 | handoff manifest | SHA256 `6304061BD68115FEF83F8088BC6E318139AA8E5D04E924C96796221A9806B3EF` |
 | 本地解包复核 | 524/524 文件、`28169328` bytes，与 handoff manifest 一致 |
 
-证据位置：
+证据位置（2026-09-20 收件时记录的本地位置；若该目录在本机被移动或清理，Gate 6 的证据身份仍以本表中 build receipt／binary SHA／CUDA source SHA／run manifest／唯一 gate report 的 SHA256 为准——本地副本的存续不是 Gate 6 判据）：
 
 - 服务器原始输出：`YLQ_test_q0_v141\engineering_evidence\q0_real\q0-win-4090-20260920-gate6-final-04\`（服务器工作目录见 runbook §1）
 - 本地不可变传输件：仓库外 `ExposedPath_Server_Evidence_20260920\gate6-final04\`（tar.gz + handoff manifest）
@@ -40,7 +40,22 @@ final-04 在 prepare 阶段**没有生成** `code_commit.txt`、`frozen_implemen
 
 因此这三个 sidecar 视为**缺失**，任何人不得回填、伪造或把它们当作 run 前产物。final-04 的 identity 由 build receipt、CUDA source SHA、binary SHA、run manifest、collection receipt 与唯一 gate report 共同证明。
 
-## 2. Gate 6 建立了什么 / 没有建立什么
+## 2. 目标 observation stack、建立了什么 / 没有建立什么
+
+### 2.1 目标 observation stack（本 PASS 的适用范围）
+
+| 项 | 值 |
+|---|---|
+| OS / 机器 | Windows（实验室服务器） |
+| GPU | RTX 4090，UUID `GPU-0d8fafe6-a1e9-33cc-25fb-632316736455` |
+| CUDA / Toolchain | CUDA 12.4.131（`nvcc -arch=sm_89`，VC14.39 / v143） |
+| Profiler | Nsight 2026.2.1（导出器 3.25.0，`--lazy=false`） |
+| Analyzer | package `0.2.2` |
+| 数据角色 | `Engineering` / `Q0_QUALIFICATION_ONLY`（`formal_evidence=false`） |
+
+Q0 资格只在这个栈上成立。第二平台（含 Linux）的等价性未被建立，其 launcher、smoke、平台资格检查与 Q0 属 Gate 9。
+
+### 2.2 建立了什么 / 没有建立什么
 
 **建立了：** 在单一目标 observation stack（Windows + RTX 4090 UUID `GPU-0d8fafe6-a1e9-33cc-25fb-632316736455` + CUDA 12.4.131 + Nsight 2026.2.1 + package 0.2.2）上，analyzer 对 23 个必需 Q0 case 的 `W(s)`、terminal、validity、A/B、守恒与 fail-closed 行为与**独立 oracle** 一致，并产出唯一一份 `23/23 + verdict=PASS + q0_status=PASS` 的 gate report。这是**正确性资格**证据。
 
@@ -53,19 +68,29 @@ final-04 在 prepare 阶段**没有生成** `code_commit.txt`、`frozen_implemen
 - 不解释 `EP-ISSUE-16` 的底层机制（WDDM/driver/Runtime/调度层仍不作根因归因）；
 - 不把 final-01/02/03 的任何结果追溯升级。
 
-## 3. Root-cause → amendment → implementation → verification 映射
+## 3. 根因 → amendment → implementation → verification 映射
 
-Gate 6 的失败簇收敛为五类，逐类给出已采纳的修复与验证位置。历史诊断细节保留在 runbook 与计划调整记录中，不在此复述。
+Gate 6 的失败簇收敛为四类。为避免把不同性质的问题混在一起，类别定义如下：
 
-| # | 失败表现（case） | 根因分类 | 冻结 amendment | implementation | 验证 |
-|---|---|---|---|---|---|
-| 1 | `Q0-PHASE-SPILL-001` 在 evaluator 前失败 | 观测窗口发现规则过严（construction/观测边界） | `gate6_phase_spill_amendment_v0_1.md` | Q0 controlled 三窗口改用 containment/order/non-overlap rule | final-04 real `REAL_CASE_PASS`；A/B 不出现 `WINDOW_DISCOVERY_INVALID` |
-| 2 | `Q0-EXTERNAL-001` | marker authority 过强：request 外 activity marker 携带当前 identity，把外部 activity 吸进 invocation | `gate6_marker_ownership_amendment_v0_1.md` | trusted marker authority + External real reason producer | final-04 real `REAL_CASE_PASS` |
-| 3 | `Q0-MULTITHREAD-ORDERED-001`、`Q0-OVERLAPPING-HOST-SYNC-001` | marker authority 过弱：worker sync/event marker 无法跨线程传播 request/repeat/phase ownership | 同上 | worker sync/event 跨线程 ownership；Multithread 增加纯 host-side `EVENT_RECORD_THREAD_A` marker；External/Multithread/Overlapping synthetic 走真实 semantics 推导链 | final-04 real 均 `REAL_CASE_PASS` |
-| 4 | Q0 build/CUDA 编译与 capability 记录 | build contract 缺 arch 与 provenance；Windows 上 CUDA 12.4 的 system-scope `atomic_ref` 需要 `sm_70+` 显式 arch | `gate6_q0_build_contract_amendment_v0_1.md` | 固定 `-arch=sm_89`、生成 `<binary>.build_receipt.json`、`can_map_host_memory` 记录（v0.2 后不再作为 hard gate） | final-04 build receipt PASS；compile argv 恰一次 `-arch=sm_89` |
-| 5 | `Q0-QUERY-001`、`Q0-SYNC-D2H-UNSUPPORTED-001`、`Q0-MULTITHREAD-ORDERED-001`（投影侧） | semantic projection 未按 registry role 过滤：`NON_SYNC`/`DEPENDENCY_EDGE` 被当作 semantic sync；无 mapped `cuda_sync` 的 `UNSUPPORTED` API 无 candidate | `gate6_sync_projection_amendment_v0_1.md` | registry-role-preserving projection（`HOST_BLOCKING_SYNC`/`UNSUPPORTED` → semantic sync；`NON_SYNC` → `non_sync_api_labels`；`DEPENDENCY_EDGE` → 仅依赖边；`UNCLASSIFIED` → 原 fail-closed）＋ UNSUPPORTED API-backed semantic sync（唯一权威 `kind=sync` marker）；`sync_semantics.py` 与 `ab_inputs.py` 复用同一 helper | final-04 real 三者均 `REAL_CASE_PASS` |
+- **测量/构造问题**：被测构造本身没有产生 oracle 所需的可观察形态（改微程序或 manifest policy）。
+- **观测适配问题**：真实 trace 的 Nsight/schema/scope 与已冻结合同不一致（条件化 adapter，不放宽语义）。
+- **语义/analyzer 问题**：S 层对 ownership、phase、sync role 的投影规则错误（需 amendment 修正投影语义）。
+- **evaluator/证据聚合问题**：判定或聚合规则错，而非被测语义错（修正比较与窗口规则）。
 
-Missing-Corr 的修复路径单独记录：`gate6_missing_corr_amendment_v0_1.md` 的 mapped-sentinel deterministic handshake 被诊断证据否决（pure host poll queue ≈30 s；单次 query 可推进 submission 但污染 synchronization activity；pre-capture same-kernel warm-up 与 `cudaStreamGetFlags` 均无效），由 `gate6_missing_corr_amendment_v0_2.md` supersede：construction 回退为 `launch K_UNMAPPED → S_STREAM → cudaStreamSynchronize`，oracle 接受 `primary = MISSING_ACTIVITY_CORRELATION` + `secondary = [SUBMISSION_ORDER_AMBIGUOUS]`，sentinel/watchdog/system-scope atomic 全部删除，`can_map_host_memory` 降级为“继续记录且必填、值为 0 不再拒绝 collection”。final-04 的 `Q0-MISSING-CORR-001 = REAL_CASE_PASS` 是该 v0.2 语义的验证。
+历史诊断细节保留在 runbook 与 `research_progress.md` 的压缩记录中，不在此复述。
+
+| 类别 | 失败表现（case） | 根因 | 冻结 amendment | implementation | 验证 | 剩余限制 |
+|---|---|---|---|---|---|---|
+| 测量/构造 | `Q0-KERNEL-MEMOP-001` | 无 warm-up 时 512 MiB H2D 与 10 ms kernel 在真实 device timeline 上串行（overlap=`0`）；证据只支持与 pre-capture same-kernel 条件化强相关，不支持“平台 incapable” | `gate6_construction_amendment_v0_1.md` | manifest policy：仅该 case 使用 `PRE_CAPTURE_SAME_KERNEL_WARMUP`，其余 20 real 为 `NONE`，runtime 完全由 policy 驱动 | final-04 `REAL_CASE_PASS`，A/B `VALID` | 底层机制仍未归因（`EP-ISSUE-16`）；禁止在该平台继续参数搜索或诊断 |
+| 观测适配 | r2～r8 系列（Nsight 版本与可选表、`lazy` 零行 KERNEL 表、request scope、target identity 唯一性、graph node tracing） | 真实 SQLite 的 schema/scope 与已冻结 observation contract 不一致 | 无（adapter 修复，随 `EP-G6-02C`～`EP-G6-02I`） | 条件化 adapter + fail closed；不删除 Raw、不放宽语义、不伪造 runtime 映射 | final-04 21/21 real PASS；r2～r8 现场永久 frozen incomplete | 只覆盖已审查的 Nsight 2026.2.1 / 3.25.0 schema；未知 schema 继续 fail closed |
+| 语义/analyzer（marker authority 过强） | `Q0-EXTERNAL-001` | request 外的 activity marker 携带当前 request identity，把外部活动错误恢复成当前 invocation | `gate6_marker_ownership_amendment_v0_1.md` | trusted marker authority + External real reason producer | final-04 real PASS | 外部 ownership 只能由满足 trusted marker 条件的证据表达 |
+| 语义/analyzer（worker ownership 过弱） | `Q0-MULTITHREAD-ORDERED-001`、`Q0-OVERLAPPING-HOST-SYNC-001` | worker sync/event marker 无法跨线程传播 request/repeat/phase ownership | 同上 | worker sync/event 跨线程 ownership；Multithread 增加纯 host-side `EVENT_RECORD_THREAD_A` marker；External/Multithread/Overlapping 的 synthetic 改走真实 semantics 推导链 | final-04 real 均 PASS | ownership 证据仍必须同线程且完整覆盖 enqueue API |
+| 语义/analyzer（registry role 投影） | `Q0-QUERY-001`、`Q0-SYNC-D2H-UNSUPPORTED-001`、`Q0-MULTITHREAD-ORDERED-001`（投影侧） | `NON_SYNC`/`DEPENDENCY_EDGE` 被投影成 semantic sync；无 mapped `cuda_sync` 的 `UNSUPPORTED` API 没有 candidate | `gate6_sync_projection_amendment_v0_1.md` | registry-role-preserving projection（`sync_semantics.py` 与 `ab_inputs.py` 复用同一 helper）＋ UNSUPPORTED API-backed semantic sync（唯一权威 `kind=sync` marker；缺失/重复/冲突 fail closed） | final-04 real 三者均 PASS | 无 case-id / API-name 特判；sync registry 与 oracle expected 均未改动 |
+| evaluator/证据聚合 | `Q0-PHASE-SPILL-001`、`Q0-DEVICE-001`（r9 wait-set 顺序） | 窗口发现规则过严（exact boundary equality）；wait-set 成员比较误用 list 顺序 | `gate6_phase_spill_amendment_v0_1.md` ＋ evaluator 集合比较修正 | Q0 controlled 三窗口改用 containment/order/non-overlap rule；仅 `wait_set_activity_labels` 改用无序、无重复的精确成员比较 | final-04 无 `WINDOW_DISCOVERY_INVALID`；21/21 real PASS | 三窗口规则只适用于 Q0 controlled 形态；普通 workload 仍要求 full_request/prefill/decode 三段 |
+| evaluator/oracle（Missing-Corr） | `Q0-MISSING-CORR-001` | 删除 correlation 后 submission proof 只剩 GPU-start-before-sync，在目标栈上无法确定性成立 | `gate6_missing_corr_amendment_v0_2.md`（v0.1 superseded） | 回退为 `launch K_UNMAPPED → S_STREAM → cudaStreamSynchronize`；oracle 期望 `primary = MISSING_ACTIVITY_CORRELATION` + `secondary = [SUBMISSION_ORDER_AMBIGUOUS]`；删除 sentinel/watchdog/system-scope atomic 路径 | final-04 real PASS | 新 run 若出现 `submission_evidence = PROVEN`（secondary 不再是 ambiguous）必须 STOP 并重新评审；`can_map_host_memory` 继续必填但值为 `0` 不再拒绝 collection |
+| build/provenance 合同 | 全部 case | build contract 缺少 arch 与 provenance；CUDA 12.4 的 system-scope `atomic_ref` 需要显式 `sm_70+` arch | `gate6_q0_build_contract_amendment_v0_1.md` | 固定 `-arch=sm_89`；生成 `<binary>.build_receipt.json`；记录 `can_map_host_memory` | final-04 build receipt PASS；compile argv 恰一次 `-arch=sm_89` | 服务器字节（CRLF）与仓库 blob（LF）是同一内容的不同行尾表示，见 §1 行尾说明 |
+
+Missing-Corr 的修复路径单独说明：`gate6_missing_corr_amendment_v0_1.md` 的 mapped-sentinel deterministic handshake 被诊断证据否决（pure host poll queue ≈30 s；单次 `cudaStreamQuery` 可推进 submission 但污染 synchronization activity；pre-capture same-kernel warm-up 与 `cudaStreamGetFlags` 均无效），由 v0.2 supersede 为上述普通 construction。final-04 的 `Q0-MISSING-CORR-001 = REAL_CASE_PASS` 即该 v0.2 语义的验证。
 
 ## 4. 实现成熟度
 
@@ -83,3 +108,14 @@ Missing-Corr 的修复路径单独记录：`gate6_missing_corr_amendment_v0_1.md
 - Candidate Platform admission 路线（`EP-G6-07`）——Windows/RTX 4090 已在自身 Q0 上通过，该路线不再阻塞前进；仅在需要第二平台（含 Linux Formal 平台）时按 Gate 9 重新启用。
 
 **遗留未决（不影响 Gate 6 verdict）：** `EP-ISSUE-16` 的底层机制未归因；`tests/test_server_smoke_script.py::test_dry_run` 与 `::test_spaces` 两项既有的本地 PowerShell smoke 失败（并入 Gate 7 平台适配步骤处理）；final-01/02/03 永久保持 frozen incomplete。
+
+### 4.1 剩余限制与未来平台资格
+
+| 限制 | 当前边界 | 下一步归属 |
+|---|---|---|
+| `EP-ISSUE-16` 的底层机制未归因 | 只声明 pre-capture same-kernel warm-up 与该构造恢复强相关；不作 WDDM/driver/Runtime/调度层归因 | 保留为科学记录，不产生新任务 |
+| 第二平台（含 Linux）等价性 | 未建立，不声明支持 | Gate 9（平台资格检查：launcher、真实 smoke、Q0） |
+| 观测版本敏感性 | adapter 只覆盖已审查的 Nsight `2026.2.1 / 3.25.0` schema；未知 schema 继续 fail closed | Nsight/Toolkit 升级时重新审查 |
+| runner/launcher 语义与 parity | token 就绪边界、Pass0/Pass1 parity、平台适配隔离均未完成 | Gate 7（`EP-G7-08`～`EP-G7-11`） |
+| 数据资格 | final-04 的 `Engineering` / `Q0_QUALIFICATION_ONLY` 只用于 Q0 正确性资格 | 不得升级为 Pilot/Formal；Pilot 属 Gate 11，Formal 需 Protocol Freeze |
+| provenance caveat | 缺失的 prepare-time sidecar 不得回填（见 §1.1） | 永久边界 |

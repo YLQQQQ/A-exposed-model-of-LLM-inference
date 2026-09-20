@@ -1,5 +1,7 @@
 # Gate 6 GPU 前 Q0 执行包 Implementation Plan
 
+> **HISTORICAL / SUPERSEDED FOR CURRENT EXECUTION** — 本计划已完成并被 `EP-G6-11` 收口，仅作追溯保留。正文中的 `Gate 6 保持 BLOCKED`、`Q0 = NOT_RUN` 等均为当时状态，不得作为当前执行依据。当前 Gate 状态见 `docs/v1_4_1/research_progress.md`；Gate 6 结论见 `docs/v1_4_1/gate6_closeout_v0_1.md`；Q0 正式操作以 `docs/v1_4_1/gate6_windows_server_runbook.md` 为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 在没有真实 GPU 执行证据的条件下，完成可编译、可 dry-run、可机器核验的 Q0 执行包，并保持 Gate 6 为 `BLOCKED`。

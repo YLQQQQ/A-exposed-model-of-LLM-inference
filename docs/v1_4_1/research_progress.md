@@ -1,8 +1,61 @@
 # ExposedPath 科研进度清单
 
-## 当前快照
+> 一句话状态：**Gate 0～6 = `PASS`（Gate 6 / Q0 已完成）；当前唯一下一步是 Gate 7 的 `EP-G7-08`。**
+> 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
-- 清单版本：`7.0`
+## 0. 项目速览与交接入口（第一次接手请先读本节）
+
+### 0.1 研究对象、立意与目标
+
+- **研究对象**：单 GPU、单请求内部的异步 Host 与加速器执行，如何经由同步与完成行为形成**用户可感知的纯模型推理时延**。
+- **核心区分**：`Activity Cost ≠ Request-Visible Exposure`。kernel 时长、API 时长、GPU 利用率、时间重叠都不能直接解释为延迟贡献。
+- **目标**：建立可机器验证的 `Raw → S → {A, B} → D / Exposure Signature` 证据链，并用 `Correctness → Information Gain → Decision Gain` 三段证据回答三个问题：暴露在哪里、这些暴露是否可解释或可预测、能否指导决策。
+- **范围边界（未经明确批准不得扩张）**：单 GPU、请求内部 Host-device exposure。不扩展到多 GPU、分布式 serving、并发 ownership、硬件因果归因或通用性能预测。
+
+### 0.2 方法链与不变量
+
+| 层 | 回答的问题 | 关键不变量 |
+|---|---|---|
+| Raw / Canonical | 观测到了什么事实 | 只记录可观察事实与 identity/clock/lineage；缺证据 fail closed，不补零 |
+| S | 同步点 `s` 返回前**必须**完成哪些活动 | `W(s)` 由 CUDA 完成语义决定，不由时间重叠决定；terminal 只在证据充分时唯一 |
+| A | 用户可见墙钟暴露在哪里 | 按 request/phase 互斥、保守、整数纳秒守恒；窗口只来自结构化 request/phase |
+| B | 单次同步内部发生了什么 | per-sync provenance，validity 未通过时全部为 null；不得跨同步求和 |
+| D / Exposure Signature | 顶层导航与机制摘要 | 只从冻结后的 A/B 纯派生，不构成硬件根因结论 |
+
+### 0.3 数据角色与平台边界
+
+- **数据角色**：`Prototype` / `Engineering` / `Pilot` / `Formal` 严格分开；复制、改名或重新分析都不能提升资格。当前只有 `Prototype` 与 `Engineering` 数据，**无合格 Pilot/Formal 数据**。
+- **当前唯一声明的目标 observation stack**：Windows + RTX 4090（UUID `GPU-0d8fafe6-a1e9-33cc-25fb-632316736455`）+ CUDA 12.4.131 + Nsight 2026.2.1 + package/analyzer `0.2.2`。Q0 资格只在该栈上取得。
+- **第二平台（含 Linux）**：不声明支持；其 launcher、smoke、平台资格检查与 Q0 属 Gate 9。任一平台未通过该平台的真实 smoke 前不得声称受支持。
+
+### 0.4 文档地图（按接手顺序）
+
+| 路径 | 作用 |
+|---|---|
+| `docs/current/ExposedPath_研究设计.docx`（文内版本 v7.1） | 研究主体：背景、立意、目标、方法与成败判据 |
+| `docs/current/ExposedPath_实验协议.docx`（文内版本 v2.1） | 当前执行依据（仍为 `Pre-Pilot`，不是 Protocol Freeze） |
+| `AGENTS.md`、`.agents/skills/exposedpath-research-protocol/` | 仓库协作规范与研究协议 skill（含 `references/method-semantics.md`、`references/stage-gates.md`） |
+| `CONTEXT.md` | 统一研究语言：该说与不该说的术语表 |
+| `docs/v1_4_1/measurement_contract_v0_2.md` + `docs/v1_4_1/contracts/*.json` | 机器合同与版本化 schema（Measurement Contract / Canonical / S / A-B / Derived / Q0） |
+| `docs/v1_4_1/q0_oracle_design_v0_2.md`、`q0/oracle_cases_v0_2.json` | Q0 独立标准答案（23 个必需 case） |
+| `docs/v1_4_1/gate6_closeout_v0_1.md` | **Gate 6 论文级技术总结**：身份/哈希、根因→amendment→implementation→verification 映射、成熟度与遗留限制 |
+| `docs/v1_4_1/gate6_windows_server_runbook.md` | Q0 正式服务器采集／导出／派生／provenance 操作手册 |
+| `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md` | 当前 Gate 7 执行计划（`EP-G7-08`～`EP-G7-11`） |
+| `docs/v1_4_1/candidate_platform_inventory_v0_1.md`、`candidate_platform_admission_checklist_v0_1.md` | 第二平台静态盘点与冻结的准入判据（仅在 Gate 9 需要时启用） |
+| `docs/prototype_archive/README.md` | 旧 Prototype 封存说明（历史数据只能用于回归，不能作为 v1.4.1 证据） |
+
+### 0.5 30 分钟接手路径
+
+1. 读本文件 §0～§2 与 §6～§7：当前状态、Gate 状态、下一步。
+2. 读 `docs/current/ExposedPath_研究设计.docx` 第 1 章（背景与立意）与 `docs/current/ExposedPath_实验协议.docx`（执行语义）。
+3. 读 `CONTEXT.md` 统一术语，再读 `AGENTS.md` 与 research protocol skill 的 `method-semantics.md`。
+4. 需要看实现时：`exposedpath_v141/`（Canonical/S/A/B/D/Q0 计算与 CLI）、`q0/`（微程序、manifest、oracle）、`tests/`。
+5. 需要复现 Gate 6 结论时读 `gate6_closeout_v0_1.md`；需要重跑 Q0 时读 runbook（**不得**在未获批准时重跑 Gate 6 采集）。
+6. 开始新工作时读 `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`，从 `EP-G7-08` 开始。
+
+## 1. 当前快照
+
+- 清单版本：`7.1`
 - 最近更新：`2026-09-20`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
@@ -10,205 +63,206 @@
 - 当前工作分支：`codex/gate6-canonical-baseline`（Gate 6 canonical baseline；历史 `codex/v141-analyzer` 与 `gate6-warmup-clean` 已收敛到该分支）
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～6 = `PASS`；Gate 7 = `NOT_RUN`（已解锁，待执行）；Gate 8 = `NOT_RUN`（不得在 Gate 7 acceptance 前启动）；Gate 9～11 = `BLOCKED`（Formal 平台未确定/未接入）；Gate 12～14 = `NOT_RUN`
-- 当前最高优先级：Gate 7 `EP-G7-08`（旧编号 `EP-G7-01`/`EP-G7-02` 已合并）——统一 Token 就绪边界并分离 G1 自然逐 Token 同步与 N1 人为干预模式；完整步骤、acceptance 与 STOP 条件见 §Gate 7 与 `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`
-- 当前总体判断（2026-09-20 更新）：Gate 6 / Q0 已正式 `PASS`。frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21/21 `REAL_CASE_PASS`、2 个 synthetic-only case（`Q0-TERMINAL-TIE-001`、`Q0-SUBMISSION-RACE-001`）PASS、23/23 `SYNTHETIC_PASS`，且存在唯一一份 `q0_gate_report.json`（schema `exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`）。身份、哈希、provenance caveat、根因映射与实现成熟度见 `docs/v1_4_1/gate6_closeout_v0_1.md`。该 PASS 只说明当前 analyzer 在本目标 observation stack 上取得 Q0 正确性资格；不等于 Pilot、Formal、Protocol Freeze，也不建立第二平台等价性。
+- 当前最高优先级：Gate 7 `EP-G7-08`（旧编号 `EP-G7-01`/`EP-G7-02` 已合并）——统一 Token 就绪边界并分离 G1 自然逐 Token 同步与 N1 人为干预模式；完整步骤、acceptance 与 STOP 条件见 §5 与 `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`
+- 当前总体判断（2026-09-20）：Gate 6 / Q0 已正式 `PASS`。frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21/21 `REAL_CASE_PASS`、2 个 synthetic-only case（`Q0-TERMINAL-TIE-001`、`Q0-SUBMISSION-RACE-001`）PASS、23/23 `SYNTHETIC_PASS`，且存在唯一一份 `q0_gate_report.json`（schema `exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`）。该 PASS 只说明当前 analyzer 在本目标 observation stack 上取得 **Q0 正确性资格**；不等于 Engineering Pilot、Pilot、Protocol Freeze 或 Formal 结果，也不建立第二平台等价性。身份、哈希、provenance caveat、根因映射与实现成熟度见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
 - 当前到达点（`EP-G6-11`）：Gate 6 已收口并落账，下一步是本清单 Gate 7 的第一个实现步骤，而不是新的 Gate 6 清理或诊断周期。
 
-历史快照（保留，不覆盖；以下条目描述 2026-09-19 及更早的当时状态，均已由 2026-09-20 Gate 6 PASS 取代）：
+历史快照（保留，不覆盖；以下描述 2026-09-19 及更早的当时状态，均已由 2026-09-20 Gate 6 PASS 取代，详细过程见 `docs/v1_4_1/gate6_closeout_v0_1.md`）：
 
-- 历史快照（2026-09-19，Gate 6 `final-01`）：frozen run `q0-win-4090-20260919-gate6-final-01` 已跑完采集链与 16 个 real evaluator —— `Q0-KERNEL-MEMOP-001 = REAL_CASE_PASS`，4 例 semantic FAIL（`Q0-MISSING-CORR-001`、`Q0-EXTERNAL-001`、`Q0-MULTITHREAD-ORDERED-001`、`Q0-OVERLAPPING-HOST-SYNC-001`），`Q0-PHASE-SPILL-001` 因 analyzer blocker 未完成。该 run 为 frozen incomplete Engineering run：不续跑、不重跑、不拼接、不升级为 Gate PASS，且无 `q0_gate_report.json`。4 例 FAIL 的 root triage 已全部完成并记录于 `EP-G6-10`；当时下一步为起草统一 Marker Ownership amendment。`EP-G6-07` Candidate Platform qualification 当时继续暂停；资格与判据冻结于 `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`，盘点见 `docs/v1_4_1/candidate_platform_inventory_v0_1.md`（CP-03 为第一候选且 `NEEDS_INFORMATION`：A2 pending + A7 unknown）。**当时状态**：Gate 6 `FAIL`、Q0 `NOT_RUN`、Gate 7 `BLOCKED/暂停`、Gate 8 未启动。（现已由 Gate 6 PASS 取代）
-- 历史快照（2026-09-18）：64 MiB D2H/10 ms diagnostic（commit `a607645e9c4fcd7df4b05d4e97fa8bf788763e47`）曾显示改变 H2D→D2H 方向仍未恢复真实 device overlap；随后 formal-shape 配对 diagnostic（`q0-win-4090-20260918-kernel-memop-h2d-formalshape-warmup-02`）证明该构造失败可由 pre-capture same-kernel warm-up 恢复：A' 为 overlap=`0`、terminal=`KERNEL_A/KERNEL`；B 为 overlap=`10000741 ns`、`S_DEVICE=VALID_NONEMPTY`、wait set=`{KERNEL_A,MEMCPY_B}`、terminal=`MEMCPY_B/MEMOP`，pair outcome=`AMENDMENT_REVIEW_ELIGIBLE`。因此原 construction failure 不再作为“平台 incapable”证据，`Q0-KERNEL-MEMOP-001` 不再记为 platform construction blocked；历史失败现场保留在 Gate 6 条目与计划调整记录 6.2/6.6。证据支持 pre-capture same-kernel preconditioning/warm-up 与 construction 恢复存在强受控关联，但不声明底层 root cause 已唯一确定，仍禁止归因到 LAZY/WDDM/driver/Runtime。**当时状态**：Q0 `NOT_RUN`、Gate 6 `FAIL`。（现已由 Gate 6 PASS 取代）
-- 历史策略决定（`EP-G6-06`，2026-09-17；后续进展见 `EP-G6-09`）：synthetic 只允许作为 Engineering regression strengthening，且差异矩阵未发现新增覆盖价值，因此不实施新增 synthetic profile，只固化现有 coverage 与边界说明（`EP-G6-08` 已完成）；批准进入“候选平台 + construction admission”**设计**（不代表授权任何外部平台实验）；scope limitation 当时不批准、仅作 fallback；第 3 节及后续 r11 当时一律禁止执行。后续 `EP-G6-09` 已批准 construction amendment，但仅限 `Q0-KERNEL-MEMOP-001` 的 pre-capture same-kernel warm-up。（该策略背景已由 final-04 PASS 与 `docs/v1_4_1/gate6_closeout_v0_1.md` 收口）
+- 2026-09-19（Gate 6 `final-01`）：frozen run `q0-win-4090-20260919-gate6-final-01` 跑完采集链与 16 个 real evaluator，`Q0-KERNEL-MEMOP-001 = REAL_CASE_PASS`，4 例 semantic FAIL（`Q0-MISSING-CORR-001`、`Q0-EXTERNAL-001`、`Q0-MULTITHREAD-ORDERED-001`、`Q0-OVERLAPPING-HOST-SYNC-001`），`Q0-PHASE-SPILL-001` 因 analyzer blocker 未完成，无 `q0_gate_report.json`。该 run 为 frozen incomplete Engineering run：不续跑、不重跑、不拼接、不升级为 Gate PASS。**当时状态**：Gate 6 `FAIL`、Q0 `NOT_RUN`、Gate 7 `BLOCKED/暂停`、Gate 8 未启动。
+- 2026-09-18：formal-shape 配对 diagnostic（`q0-win-4090-20260918-kernel-memop-h2d-formalshape-warmup-02`）证明 `Q0-KERNEL-MEMOP-001` 的构造失败可由 pre-capture same-kernel warm-up 恢复（B：overlap `10000741 ns`、`S_DEVICE=VALID_NONEMPTY`、wait set `{KERNEL_A,MEMCPY_B}`、terminal `MEMCPY_B/MEMOP`），推翻“平台 incapable”解释；不作 LAZY/WDDM/driver/Runtime 机制归因。**当时状态**：Gate 6 `FAIL`、Q0 `NOT_RUN`。
+- 2026-09-17（`EP-G6-06` 策略决定）：synthetic 只允许作为 Engineering regression strengthening；差异矩阵未发现新增覆盖价值，故不新增 synthetic profile，只固化 coverage 与边界（`EP-G6-08`）；批准进入“候选平台 + construction admission”**设计**（不代表授权任何外部平台实验）；scope limitation 不批准、仅作 fallback；该轮 r11 及后续当时一律禁止执行。
 
-本文件是仓库内唯一的科研进度事实源。设计文档说明“应该怎样做”，本文件记录“现在做到哪里、证据在哪里、下一步是什么”。
+## 2. 使用与更新规则
 
-## 使用与更新规则
-
-1. 每项任务使用稳定编号；计划调整时不得重排或复用旧编号。取消的任务保留并标记“取消”，不得直接删除历史。
+1. 每项任务使用稳定编号；计划调整时不得重排或复用旧编号。取消或合并的任务保留并标注状态，不得直接删除历史。
 2. 任何实质性的研究定义、代码、测试、实验、证据资格或执行计划变化，都必须在同一次提交中更新本清单。
 3. 完成项必须同时给出可复查证据。只有文档、代码或测试存在但尚未满足完成条件时，不得勾选完成。
 4. Gate 只能使用 `PASS`、`FAIL`、`BLOCKED`、`NOT_RUN`。局部测试通过、mock 通过或无法运行 GPU 测试，不能写成 Gate `PASS`。
 5. `Prototype`、`Engineering`、`Pilot`、`Formal` 数据资格分开记录；复制、改名或重新分析不能提升数据资格。
-6. 计划改变时同步更新“计划调整记录”，说明原因、受影响编号、顺序变化，以及是否影响已冻结协议或 Formal 数据。
+6. 计划改变时同步更新 §8「计划调整记录」，说明原因、受影响编号、顺序变化，以及是否影响已冻结协议或 Formal 数据。
 7. 每次结束实质性工作前，至少核对：完成状态、Gate verdict、证据、阻塞原因、当前最高优先级和下一项任务。
 
 状态标记：`[x]` 表示完成；`[ ]` 后注明“进行中、未开始、受阻或取消”。Gate verdict 与任务勾选相互独立。
 
-## 基础工作
+## 3. Gate 0～6 完成摘要
 
-- [x] `EP-FND-01` 建立仓库级中文协作规范和 ExposedPath 专用研究协议 skill。证据：`AGENTS.md`、`.agents/skills/exposedpath-research-protocol/`。
-- [x] `EP-FND-02` 隔离新版 analyzer 工作。证据：分支 `codex/v141-analyzer`，独立 worktree `.worktrees/v141-analyzer`；旧入口未被替换。
-- [x] `EP-FND-03` 记录核心术语和研究边界。证据：`CONTEXT.md`。
-- [x] `EP-FND-04` 明确 GPU 前可完成范围和验收边界。证据：`docs/v1_4_1/pre_gpu_readiness_design_v0_1.md`。
-- [x] `EP-FND-05` 验证新版 Nsight 能只读处理三份历史报告，并区分采集器与导出器版本。证据：`docs/prototype_archive/README.md`、`engineering_evidence/observation_v0_1/`。
-- [x] `EP-FND-06` 审计并固定研究文档权威层级。证据：`docs/v1_4_1/document_consolidation_plan.md`；确认实验协议 v2.0 才是协议修订底稿，WMPC v1.5 仅作候选配置来源，原件均保留并记录 SHA-256。
-- [x] `EP-FND-07` 形成研究设计主体 v7.0 Pre-Pilot 摘要候选版。该文件现仅保留为阶段性整合记录，已被完整母版修订版取代。
-- [x] `EP-FND-08` 形成实验与分析协议 v2.1 Pre-Pilot 摘要候选版。该文件现仅保留为阶段性整合记录，已被完整母版修订版取代。
-- [x] `EP-FND-09` 完成 v7.0/v2.1 初版 DOCX 的结构、关键方法语义与页面视觉验收。后续审计发现该检查未覆盖研究背景的完整论证链，v7.0 已被 v7.1 取代。
-- [x] `EP-FND-10` 按用户明确要求将完整修订版提升为当前研究主体与 Pre-Pilot 执行依据。该升级不代表 Gate 1 或 Protocol Freeze 通过。
-- [x] `EP-FND-11` 基于 v6.0 与 v2.0 母版完成第一轮整合，保留 36/39 张表、原章节、图片和横纵节。后续确认该轮主要覆盖方法语义，背景与研究立意仍不完整。
-- [x] `EP-FND-12` 重写研究设计第一章，补齐 v1.4.1 的背景、立意、单 GPU 基础域、信息增量与成败判据；同步简化两份交付文件名并完成结构、语义和全页视觉验收。证据：`docs/current/ExposedPath_研究设计.docx`（40 页）、`docs/current/ExposedPath_实验协议.docx`（27 页）、`docs/v1_4_1/document_build/verify_full_revision.py` 与 `revision_lineage_full.json`。
-
-## Gate 0：封存旧 Prototype
+### Gate 0：封存旧 Prototype
 
 **Gate verdict：`PASS`。** 只表示旧实现、Raw 身份、基线和限制已封存，不表示 v1.4.1 方法正确或 Q0 已通过。
 
 - [x] `EP-G0-01` 固定旧 prototype 提交和标签。证据：标签 `prototype-windows-v0.1`，提交 `abab013c5483109007ab5a2a232438d46bbaf02b`。
 - [x] `EP-G0-02` 固定三份历史 `.nsys-rep` 的文件大小和 SHA-256。证据：`docs/prototype_archive/raw_trace_manifest_v1.json`。
 - [x] `EP-G0-03` 记录采集/读取环境、测试基线和已知失败。证据：`docs/prototype_archive/README.md`。
-- [x] `EP-G0-04` 明确历史数据只能用于 Prototype/Engineering 回归，不能作为 Q0、Pilot 或 Formal 证据。
+- [x] `EP-G0-04` 历史数据只能用于 Prototype/Engineering 回归，不能作为 Q0、Pilot 或 Formal 证据。
 
-## Gate 1：Measurement Contract v0.2
+### Gate 1：Measurement Contract v0.2
 
 **Gate verdict：`PASS`。** 只表示 phase/Token、同步身份、completion scope、`W(s)`、terminal、validity、A/B 和派生规则已形成版本化、机器可检查且无未决语义占位的合同；不表示实现正确或 Q0 已通过。
 
 - [x] `EP-G1-01` 完成 `Nsight SQLite -> observation report` 合同草案 0.1。证据：`docs/v1_4_1/analyzer_contract_v0_1.md`。
-- [x] `EP-G1-02` 定义 Request、Prefill、Decode、首 Token 和后续 Token 的可观察完成边界。证据：`measurement_contract_v0_2.md` 第 3～4 节及机器合同 `phase_boundaries`。
-- [x] `EP-G1-03` 定义自然逐 Token 同步、N1 人为同步与仅标记版本的互斥身份，并冻结 Pass0/Pass1 完成行为等价。证据：合同第 5 节及 `sync_identity`、`pass_parity`。
-- [x] `EP-G1-04` 冻结 stream、device、context、event synchronization 的 completion scope；同步 copy 保持透明 unsupported。证据：合同第 6～7 节及 `sync_semantics_registry_v0_2.json`。
-- [x] `EP-G1-05` 冻结 `W(s)` 的提交证明、同流/event/default-stream 传递依赖、ownership 和排除规则。证据：合同第 7 节及机器合同 `s_layer`。
-- [x] `EP-G1-06` 冻结 terminal 的 semantic frontier 优先规则、并列候选及 0 ns 语义容差；Pilot 统计比较容差不得改变身份。证据：合同第 8 节及 `s_layer.terminal`。
-- [x] `EP-G1-07` 冻结 `VALID_NONEMPTY/VALID_EMPTY/AMBIGUOUS/INVALID`、原因码优先级和 A/B fail-closed 传播。证据：合同第 9 节及 `s_layer.validity/reason_priority`。
-- [x] `EP-G1-08` 冻结 A/B 字段、互斥/守恒、B per-sync 生命周期，以及 D/Exposure Signature 的纯派生规则。证据：合同第 10～12 节及机器合同 `a_layer/b_layer/derived`。
-- [x] `EP-G1-09` 为 37 条合同规则建立 25 个验证案例映射并完成内部合同审查。证据：`measurement_contract_test_map_v0_2.json`、`tests/test_v141_contract.py`；`python -m exposedpath_v141 validate-contract` 输出 `37/37 (100%)` 与 `PASS`。
+- [x] `EP-G1-02` 定义 Request、Prefill、Decode、首 Token 和后续 Token 的可观察完成边界。
+- [x] `EP-G1-03` 定义自然逐 Token 同步、N1 人为同步与仅标记版本的互斥身份，并冻结 Pass0/Pass1 完成行为等价。
+- [x] `EP-G1-04` 冻结 stream、device、context、event 的 completion scope；同步 copy 保持透明 unsupported。证据：`docs/v1_4_1/contracts/sync_semantics_registry_v0_2.json`。
+- [x] `EP-G1-05` 冻结 `W(s)` 的提交证明、同流/event/default-stream 传递依赖、ownership 和排除规则。
+- [x] `EP-G1-06` 冻结 terminal 的 semantic frontier 优先规则、并列候选及 0 ns 语义容差。
+- [x] `EP-G1-07` 冻结 `VALID_NONEMPTY/VALID_EMPTY/AMBIGUOUS/INVALID`、原因码优先级和 A/B fail-closed 传播。
+- [x] `EP-G1-08` 冻结 A/B 字段、互斥/守恒、B per-sync 生命周期，以及 D/Exposure Signature 的纯派生规则。
+- [x] `EP-G1-09` 为 37 条合同规则建立 25 个验证案例映射并完成内部合同审查。证据：`docs/v1_4_1/contracts/measurement_contract_test_map_v0_2.json`、`tests/test_v141_contract.py`；`python -m exposedpath_v141 validate-contract` 输出 `37/37 (100%)` 与 `PASS`。
 
-**下一项：**Gate 2～5 已完成；Gate 6 的 GPU 前准备、执行链路与合成对照均已完成，`Q0-KERNEL-MEMOP-001` 的构造失败已由 formal-shape 配对 diagnostic 证明可由 pre-capture same-kernel warm-up 恢复（`EP-G6-09`），construction amendment 已完成 implementation 并在 frozen run `q0-win-4090-20260919-gate6-final-01` 生效（`Q0-KERNEL-MEMOP-001 = REAL_CASE_PASS`），但该 run 为 frozen incomplete Engineering run、无 `q0_gate_report.json`（详见 `EP-G6-10`）。下一步先完成统一 Marker Ownership amendment 与 Missing-Corr deterministic construction，再统一 implementation 与唯一一次完整 21 real + 2 synthetic Q0；未获单独批准前不得运行任何外部平台实验、不得建立 r11。
+**后续状态（2026-09-20）：** Gate 2～6 已全部完成，Gate 6 / Q0 已 `PASS`。本 Gate 不再有待办或前序条件；当前状态以 §1 与 §5 为准。
 
-## Gate 2：设计 Q0 独立标准答案
+### Gate 2：设计 Q0 独立标准答案
 
-**Gate verdict：`PASS`。** 只表示 23 个受控案例的 expected/oracle 已预先写定、可机器校验且独立于被测 analyzer；不表示 CUDA 微程序已实现、真实 trace 已采集或 Q0 已执行。
+**Gate verdict：`PASS`。** 只表示 23 个受控案例的 expected/oracle 已预先写定、可机器校验且独立于被测 analyzer。
 
-- [x] `EP-G2-01` 建立 stream、device/context、event 等受控用例定义目录。证据：`q0/oracle_cases_v0_2.json`。这里只是微程序设计输入，可执行 CUDA 微程序仍属于 `EP-G6-01`。
-- [x] `EP-G2-02` 覆盖提前完成、同步期间完成、跨流重叠但无依赖、terminal 唯一/并列、外部 ownership、缺失映射和 dropped records。
-- [x] `EP-G2-03` 为 23 个必需用例预先写定 `W(s)`、terminal、validity 和 A/B 关系。
-- [x] `EP-G2-04` 建立 AST 独立性检查，禁止 oracle 导入旧 analyzer 或未来 Raw/S/A/B 实现，并禁止区间函数读取 dependency edges。证据：`scripts/verify_q0_oracle_independence.py`。
-- [x] `EP-G2-05` 完成 7 个正例、7 个边界例、2 个含糊例、7 个负例及 25 个特性的覆盖审查。证据：`docs/v1_4_1/q0_oracle_design_v0_2.md`、`tests/test_v141_q0_oracle.py`；CLI 输出 `DESIGN_ONLY_PASS`。
+- [x] `EP-G2-01`～`EP-G2-03` 建立 23 个必需受控用例并预写 `W(s)`、terminal、validity 和 A/B 关系。证据：`q0/oracle_cases_v0_2.json`。
+- [x] `EP-G2-04` AST 独立性检查：禁止 oracle 导入旧 analyzer 或未来 Raw/S/A/B 实现，禁止区间函数读取 dependency edges。证据：`scripts/verify_q0_oracle_independence.py`。
+- [x] `EP-G2-05` 完成 7 正例、7 边界例、2 含糊例、7 负例及 25 特性覆盖审查。证据：`docs/v1_4_1/q0_oracle_design_v0_2.md`、`tests/test_v141_q0_oracle.py`；CLI 输出 `DESIGN_ONLY_PASS`。
 
-## Gate 3：Canonical Raw 层
+### Gate 3：Canonical Raw 层
 
-**Gate verdict：`PASS`。** 只表示唯一、版本化 Canonical Raw schema、只读转换器、identity/fail-closed 边界和三份历史 trace Engineering 回归通过；不表示 S/A/B 已实现或 Q0 已通过。
+**Gate verdict：`PASS`。** 只表示唯一、版本化 Canonical Raw schema、只读转换器、identity/fail-closed 边界和三份历史 trace Engineering 回归通过。
 
-- [x] `EP-G3-01` 建立独立新版入口 `python -m exposedpath_v141 inspect-sqlite`，未覆盖旧 analyzer。
-- [x] `EP-G3-02` 对支持的 Nsight schema、必需表/字段、sync correlation 和 dropped-record 诊断执行 fail-closed 检查。
-- [x] `EP-G3-03` 三份历史 trace 的 observation 回归稳定；因缺 source manifest 保持 `ambiguous`。证据：`engineering_evidence/observation_v0_1/`。
-- [x] `EP-G3-04` 新版 observation 定向测试通过。证据：最近记录为 `12 passed`，测试文件 `tests/test_v141_observation.py`。
-- [x] `EP-G3-05` 冻结 Canonical Raw v0.2 的八类记录、结构化 NVTX、单 trace 相对纳秒时钟、source-row identity、lineage、诊断和研究资格字段。证据：`canonical_raw_schema_v0_2.json`、`canonical_raw_v0_2.md`。
-- [x] `EP-G3-06` 实现 SQLite 到确定性 gzip JSONL bundle 的只读转换器；已有输出拒绝覆盖，临时目录成功后原子改名。
-- [x] `EP-G3-07` 建立合成 SQLite、未知 schema、缺表/重复 correlation/dropped/逆序时间等测试，并完成三份历史 trace 回归。证据：`tests/test_v141_canonical_raw.py`、`engineering_evidence/canonical_raw_v0_2/historical_regression.json`。
-- [x] `EP-G3-08` 建立下游边界静态检查，禁止未来 S/A/B 导入 sqlite3 或直接引用 Nsight 私有表名。当前下游模块尚未创建，测试同时用恶意样例证明检查器能拒绝越界访问。证据：`scripts/verify_canonical_raw_boundary.py`。
-- [x] `EP-G3-09` 完成 Windows 真实 r2 的 Nsight `2026.2.1.210 / 3.25.0` adapter 审查：核心表继续必需，未发生相应活动时允许缺少 Memcpy/Memset/CUDA event 表并规范化为 0 条记录；可选表存在但字段不全仍 fail-closed；保留有符号 trace-relative 控制时间。r2 原 SQLite 哈希复核不变，唯一 invalid 为未映射的捕获结束同步。证据：`tests/test_v141_observation.py`、`tests/test_v141_canonical_raw.py` 及本轮只读诊断。
-- [x] `EP-G3-10` 用真实 r3 固定 Q0 observation scope：只有 source manifest 与唯一结构化 full_request identity 完整匹配时，request 结束后的未映射同步才记为 `HARNESS_OUTSIDE_REQUEST` warning；目标 request 内、范围不唯一和非 Q0 trace 继续 fail closed。Canonical 不删除该行，也不伪造 runtime 映射。证据：r3 SQLite 只读诊断、`tests/test_v141_observation.py`、`tests/test_v141_canonical_raw.py`。
+- [x] `EP-G3-01`～`EP-G3-02` 独立入口 `python -m exposedpath_v141 inspect-sqlite`；对支持的 Nsight schema、必需表/字段、sync correlation 与 dropped records 执行 fail-closed 检查。
+- [x] `EP-G3-03`～`EP-G3-04` 三份历史 trace 的 observation 回归稳定；因缺 source manifest 保持 `ambiguous`。证据：`engineering_evidence/observation_v0_1/`、`tests/test_v141_observation.py`。
+- [x] `EP-G3-05`～`EP-G3-07` 冻结 Canonical Raw v0.2（八类记录、结构化 NVTX、单 trace 相对纳秒时钟、source-row identity、lineage、资格字段），实现只读 gzip JSONL 转换与合成/历史回归。证据：`docs/v1_4_1/contracts/canonical_raw_schema_v0_2.json`、`canonical_raw_v0_2.md`、`tests/test_v141_canonical_raw.py`。
+- [x] `EP-G3-08` 下游边界静态检查：禁止未来 S/A/B 导入 sqlite3 或直接引用 Nsight 私有表名。证据：`scripts/verify_canonical_raw_boundary.py`。
+- [x] `EP-G3-09`～`EP-G3-10` Windows/Nsight `2026.2.1.210` adapter 审查，以及 Q0 observation scope 固定（目标 request 外未映射同步记 `HARNESS_OUTSIDE_REQUEST` warning；目标 request 内与非 Q0 trace 继续 fail closed）。
 
-## Gate 4：S 同步语义层
+### Gate 4：S 同步语义层
 
-**Gate verdict：`PASS`。** 只表示 S v0.2 的离线语义实现、版本化输出、合成 fixture、Q0 核心 expected 对照及历史 trace fail-closed 回归通过；不表示真实 CUDA/Nsight Q0 已执行。
+**Gate verdict：`PASS`。** 只表示 S v0.2 的离线语义实现、版本化输出、合成 fixture、Q0 核心 expected 对照及历史 trace fail-closed 回归通过。
 
-- [x] `EP-G4-01` 实现 stream/device/context/event completion scope、可观察依赖图和每个 physical sync 的 `W(s)` 恢复；eventSyncId 要求唯一 record 且 event/context/device 一致。证据：`exposedpath_v141/sync_semantics.py`、`tests/test_v141_sync_semantics.py`。
-- [x] `EP-G4-02` 实现 activity/sync ownership、submission evidence、semantic frontier、唯一 terminal、0 ns tie、validity 和原因优先级。
-- [x] `EP-G4-03` 验证 completed-before 活动仍在 `W(s)`，并与冻结 Q0 核心 expected 交叉对照。
-- [x] `EP-G4-04` 验证无依赖路径的跨流时间重叠不进入 `W(s)`，明确 post-sync 活动不造成提交歧义或未来 default-stream 污染，并确保缺失 correlation 的 invalid 不被提交歧义掩盖。
-- [x] `EP-G4-05` 冻结 S schema 与 `analyze-s` CLI，并完成确定性 fixture、Raw→S 边界和历史 trace 回归。证据：`s_layer_schema_v0_2.json`、`s_layer_v0_2.md`、`tests/test_v141_s_bundle.py`、`engineering_evidence/s_layer_v0_2/historical_regression.json`。
+- [x] `EP-G4-01`～`EP-G4-02` 实现 stream/device/context/event completion scope、可观察依赖图与每个 physical sync 的 `W(s)`，以及 ownership、submission evidence、semantic frontier、唯一 terminal、0 ns tie、validity 与原因优先级。证据：`exposedpath_v141/sync_semantics.py`、`tests/test_v141_sync_semantics.py`。
+- [x] `EP-G4-03`～`EP-G4-04` 验证 completed-before 活动仍在 `W(s)`、无依赖跨流重叠不进入 `W(s)`，且缺失 correlation 的 invalid 不被提交歧义掩盖。
+- [x] `EP-G4-05` 冻结 S schema 与 `analyze-s` CLI，完成确定性 fixture、Raw→S 边界和历史 trace 回归。证据：`docs/v1_4_1/contracts/s_layer_schema_v0_2.json`、`docs/v1_4_1/s_layer_v0_2.md`、`engineering_evidence/s_layer_v0_2/historical_regression.json`。
+- 注：Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口——graph activity 缺少 node mapping 时，S 必须在判定 `GRAPH_MAPPING_UNSUPPORTED/INVALID` 的同时清空 `W(s)`、origin phase 与 cross-phase 派生状态。
 
-Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph activity 缺少 node mapping 时，S 必须在判定 `GRAPH_MAPPING_UNSUPPORTED/INVALID` 的同时清空 `W(s)`、origin phase 与 cross-phase 派生状态，不能保留无法证明的依赖。
+### Gate 5：A/B，再到 D/Exposure Signature
 
-## Gate 5：A/B，再到 D/Exposure Signature
+**Gate verdict：`PASS`。** 只表示 A/B 与纯派生层 v0.2 的离线语义实现、严格输入联结、版本化输出、合成测试、边界检查、历史 Engineering fail-closed 回归和完整分支独立复审通过。
 
-**Gate verdict：`PASS`。** 只表示 A/B 与纯派生层 v0.2 的离线语义实现、严格输入联结、版本化输出、合成测试、边界检查、历史 Engineering fail-closed 回归和完整分支独立复审通过；不表示真实 Q0、GPU 端到端链路、Pilot 或 Formal 已通过。旧 accounting 不能视为本 Gate 证据。
+- [x] `EP-G5-01`～`EP-G5-02` 冻结 A/B 输入联结与窗口规则，实现面向 request/phase、互斥且保守的 A 与整数纳秒守恒／invalid-ambiguous 传播。证据：`exposedpath_v141/ab_inputs.py`、`a_accounting.py`、`intervals.py`、`docs/v1_4_1/contracts/ab_schema_v0_2.json`。
+- [x] `EP-G5-03` 实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。证据：`exposedpath_v141/b_provenance.py`、`tests/test_v141_b_provenance.py`。
+- [x] `EP-G5-04`～`EP-G5-05` 仅从冻结后的 A/B 派生 D 与 Exposure Signature（零分母输出 `null`，不输出根因/瓶颈标签）。证据：`exposedpath_v141/derived.py`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`。
+- [x] `EP-G5-06` 完成互斥、守恒、provenance、版本与 validity 传播的离线验收和独立复审（`Approved`）。历史链路无合格 A window、S 446 invalid 且 B 446 `B_INVALID`。证据：`engineering_evidence/ab_v0_2/historical_regression.json`。
 
-2026-09-14 完整分支复审与收尾修复后的验证：S 联结在 A/B 计算前拒绝 validity/wait-set/frontier/terminal/closure 不一致，以及 terminal 时间/clock 与 Canonical 冲突或晚于 sync return；`COMPLETION_BOUNDARY` 还必须与对应 Canonical physical sync 使用同一时钟域，合法 completion boundary 和非 valid 状态仍保留。相同 run/pass 中正长度重叠的 invocation 全部停止生成 A 窗口，包括具有可信 Full Request 但缺 phase 的相邻 invocation；半开相邻及无关请求不受污染。marker-only/无 NVTX 的零窗口输入产生 `WINDOW_DISCOVERY_INVALID`，bundle 与 CLI fail closed。Derived 只准直接导入 `ABBundleError`、`load_ab_bundle`（支持 alias），禁止模块 namespace、package-member 和其他 re-export。证据：`tests/test_v141_ab_inputs.py`、`tests/test_v141_ab_bundle.py`、`tests/test_v141_derived.py`；最终 Gate 5 定向 `171 passed`，全量 `541 passed, 2 failed`（仅 `test_dry_run`、`test_spaces` 基线）；合同、oracle 设计/独立性、下游边界、compile 与 diff 检查通过。独立复审结论为 `Approved`，未改变 Measurement Contract、Q0 或 Protocol Freeze。
+### Gate 6：Q0 资格验证
 
-- [x] `EP-G5-01` 冻结 A/B 输入联结、窗口、输出 schema，并实现面向 request/phase、互斥且保守的 A。输入适配证据：`exposedpath_v141/ab_inputs.py`、`tests/test_v141_ab_inputs.py`；设计与 schema 证据：`docs/superpowers/specs/2026-09-12-gate5-accounting-design.md`、`docs/v1_4_1/contracts/ab_schema_v0_2.json`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_ab_schemas.py`；A 证据：`exposedpath_v141/a_accounting.py`、`tests/test_v141_a_accounting.py`。非窗口 structured marker 不创建或否定 A 窗口；其作为 worker API invocation ownership 证据时，必须由完整一致的 NVTX text payload 与缓存 identity 共同证明。
-- [x] `EP-G5-02` 实现 A 的 residual、整数纳秒守恒和 invalid/ambiguous 传播。证据：`exposedpath_v141/intervals.py`、`exposedpath_v141/a_accounting.py`、`tests/test_v141_intervals.py`、`tests/test_v141_a_accounting.py`，以及真实 `ABInputs` discovery 到 A 多线程 API union 与伪造 worker marker fail-closed 的回归 `tests/test_v141_ab_inputs.py`（定向验证 `53 passed`）。
-- [x] `EP-G5-03` 实现保持 per-sync provenance 的 B，禁止无依据跨同步求和。证据：`exposedpath_v141/b_provenance.py`、`tests/test_v141_b_provenance.py`；逐条投影 S 的 `W(s)`、terminal、validity 和 provenance，仅对 `B_VALID` 以 Canonical 半开区间 union 计算 hidden/exposed/terminal/return-tail，其他状态时长均为 `null`；定向验证 `29 passed`（含独立 Q0 oracle、overlapping wait-set union 和 completion-boundary terminal 回归）。
-- [x] `EP-G5-04` 仅从冻结后的 A/B 派生 D。`derive-exposure` 通过既有严格 A/B loader 读取唯一输入，按冻结公式生成每个窗口的 `D_margin/D_score`；零分母严格输出 `null`。证据：`exposedpath_v141/derived.py`、`tests/test_v141_derived.py`。
-- [x] `EP-G5-05` 仅从冻结后的 A/B 派生 Exposure Signature。输出冻结 A 向量/窗口比例及按 `(phase, sync_kind, sync_origin, callsite_id)` 的 B 状态 count、仅 `B_VALID` 数值的 median/nearest-rank p90、终端类型与离散分布；不输出 B total 或根因/瓶颈/速度上界标签。证据：`exposedpath_v141/derived.py`、`docs/v1_4_1/contracts/derived_schema_v0_2.json`、`tests/test_v141_derived.py`。
-- [x] `EP-G5-06` 完成互斥、守恒、provenance、版本和 validity 传播的离线验收。A/B 及 Derived bundle 均严格校验 manifest/记录 schema、gzip 哈希/大小/计数与可选外部 lineage，使用确定性 `mtime=0` gzip 和临时目录原子改名；Derived loader 额外校验 terminal-kind 对 `B_VALID` 的精确 count 与每项统计分布的有效数值样本数。CLI 为 `analyze-ab` 和 `derive-exposure`；静态边界拒绝 Derived 导入 Canonical/S/A/B 计算模块、Raw/S 时间字段、SQLite 或 Nsight 表名。最终定向 Gate 5 测试 `171 passed`，合同/Oracle/边界/compile/diff 检查通过；全量 pytest 为 `541 passed, 2 failed`，仅保留基线 PowerShell smoke `tests/test_server_smoke_script.py::test_dry_run`、`::test_spaces` 两项失败。历史链路无合格 A window、S 446 invalid 且 B 446 `B_INVALID`；证据：`engineering_evidence/ab_v0_2/historical_regression.json`。完整分支独立复审及最后一处 completion-boundary 时钟域定向复核均为 `Approved`。
+**Gate verdict：`PASS`（2026-09-20）。Q0 = `PASS`。** frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、frozen HEAD `4720881f400762d98f4d0759b1ffb55708968970`、implementation `ec945a67f048ff624e3701229d287894b9701ea3`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21/21 real `REAL_CASE_PASS`、2/2 synthetic-only PASS、23/23 `SYNTHETIC_PASS`，且只存在一份 `q0_gate_report.json`（`exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`，SHA256 `3A94F8B9B65294D82929EF183C59C4C84177D489F5AE9E8AF56FDDD676178967`）。
 
-## Gate 6：Q0 资格验证
+该 PASS 只说明当前 analyzer 在本目标 observation stack（Windows + RTX 4090 + CUDA 12.4.131 + Nsight 2026.2.1）上取得 **Q0 正确性资格**；不等于 Engineering Pilot、Pilot、Protocol Freeze 或 Formal 结果，也不建立第二平台等价性。完整 closeout（身份、哈希、缺失 prepare-time sidecar 边界、根因映射、实现成熟度、已关闭诊断分支）见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
 
-**Gate verdict：`PASS`（2026-09-20）。Q0 = `PASS`。** frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、frozen HEAD `4720881f400762d98f4d0759b1ffb55708968970`、implementation `ec945a67f048ff624e3701229d287894b9701ea3`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21 个 native/real case 全部 `REAL_CASE_PASS`、2 个 synthetic-only case（`Q0-TERMINAL-TIE-001`、`Q0-SUBMISSION-RACE-001`）PASS、23/23 `SYNTHETIC_PASS`，并且只存在一份 `q0_gate_report.json`（`exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`，SHA256 `3A94F8B9B65294D82929EF183C59C4C84177D489F5AE9E8AF56FDDD676178967`）。该 PASS 只说明当前 analyzer 在本目标 observation stack（Windows + RTX 4090 + CUDA 12.4.131 + Nsight 2026.2.1）上取得 **Q0 正确性资格**；不等于 Engineering Pilot、Pilot、Protocol Freeze 或 Formal 结果，也不建立第二平台等价性。完整 closeout（身份、哈希、缺失 prepare-time sidecar 边界、根因映射、实现成熟度、已关闭诊断分支）见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+`final-01`/`final-02`/`final-03` 永久保持 frozen incomplete，不 retry、不 resume、不拼接、不升级；不得重跑 Gate 6 GPU collection / synthetic / gate aggregation。
 
-**历史 verdict（已被取代，仅作历史记录）：`FAIL`。** r2 至 r10 及其后全部 KERNEL-MEMOP diagnostics 均为 Engineering 失败现场，不能升级为 Q0 证据。512 MiB H2D、64 MiB H2D 与 64 MiB D2H 在 RTX 4090 上均未与 10 ms kernel 发生设备重叠，说明该失败不随 copy direction 改变；64 MiB/1 ms 与 D2D 路线均已停止。2026-09-18 的 formal-shape 配对 diagnostic（`EP-G6-09`）证明该 construction 失败可由 pre-capture same-kernel warm-up 恢复。**2026-09-19（`EP-G6-10`）**：frozen run `q0-win-4090-20260919-gate6-final-01` 中 `Q0-KERNEL-MEMOP-001 = REAL_CASE_PASS`，但该 run 在 16 个 real evaluator 后因 `Q0-PHASE-SPILL-001` analyzer blocker 中断、另有 4 例 semantic FAIL、无 `q0_gate_report.json`，当时 Gate 6 只能保持 `FAIL`、Q0 保持 `NOT_RUN`。这些失败现场（r1～r10、各 diagnostic、final-01/02/03）永久保持 frozen incomplete，不 retry/resume/拼接/升级。
+### Gate 6 历史编号索引（试错过程的压缩记录，仅用于追溯）
 
-- [x] `EP-G6-01` 实现受控 CUDA Q0 微程序和机器可读 manifest。23 个 oracle case 严格一一映射，其中 21 个具有 native CUDA seed，terminal tie 与 submission race 明确保持纯合成；缺 correlation、dropped records 与 graph mapping 缺失使用真实 seed 后受控 Canonical 故障注入。CUDA 13.0 在无 GPU 执行条件下成功编译，binary `--list-cases` 与 21 个 seed 集合一致，未知 case 在 CUDA 初始化前失败。证据：`q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json`、`tests/test_v141_q0_cuda_source.py`。
-- [x] `EP-G6-02` 完成 GPU 前 Q0 执行准备：Windows/Linux 结构化 `nsys` argv、每 case source manifest、输入哈希、不可覆盖输出和 `PREPARED_NOT_EXECUTED/NOT_RUN` dry-run；23 个显式合成 Canonical profile 均经正式 S/A/B 与独立 evaluator 对照通过。observed 使用严格 schema，evaluator 静态禁止导入被测 S/A/B，错误字段、重复 identity、缺失/额外 case 和资格升级均 fail closed。证据：`exposedpath_v141/q0_execution.py`、`exposedpath_v141/q0_synthetic.py`、`exposedpath_v141/q0_evaluator.py`、`docs/v1_4_1/contracts/q0_observed_schema_v0_2.json`、`tests/test_v141_q0_execution.py`、`tests/test_v141_q0_synthetic.py`、`tests/test_v141_q0_evaluator.py`。
-- [x] `EP-G6-02A` 完成 GPU 前集成验收。CUDA 13.0 编译和 21-seed 清单、Nsight 2026.1.1 Windows dry-run、23/23 合成对照、oracle/evaluator 独立性、Canonical 边界和 Python compileall 通过；Gate4/5/Q0 定向 `200 passed`，CUDA source `5 passed`，全仓 `570 passed, 2 failed`，仅为既有 PowerShell smoke 基线失败。证据：`engineering_evidence/q0_pre_gpu_v0_2/readiness_report.json`。
-- [x] `EP-G6-02B` 补齐真实 Q0 执行适配。capture/显式 GPU 身份、单 case executor/receipt、三种受控 Canonical fault、真实 observed/evaluator、策略约束的 23-case Gate 聚合、CLI 与 Windows 服务器手册均已实现。活动标签必须经 `activity correlation -> launch API -> 同线程唯一 marker` 恢复；缺 correlation 故障只能使用注入前写入 lineage 的预写标签；真实 A/B 预期使用人工 wait-set/terminal 与实际区间独立重算。Q0 聚焦回归 `62 passed`、独立性与 compileall `PASS`；全仓 `590 passed, 2 failed`，仅为已登记的旧 PowerShell smoke 基线失败。证据：`exposedpath_v141/q0_collection.py`、`q0_faults.py`、`q0_real.py`、`q0_gate.py`、`docs/v1_4_1/gate6_windows_server_runbook.md`。
-- [x] `EP-G6-02C` 修复首次 Windows 实跑暴露的执行适配问题：GPU UUID 比较兼容带/不带内部连字符；精确加入已审查的 Nsight 2026.2.1/3.25.0；增强同步映射诊断；明确 CUDA 12.4 使用 v143/MSVC 14.39；Q0 微程序在请求范围结束后、`cudaProfilerStop` 前显式排空受控设备工作。全仓非 GPU 回归 `602 passed`，边界、oracle 独立性和 compileall 通过；显式排空尚未经过 GPU 验证。
-- [x] `EP-G6-02D` 修复真实 r3 揭示的 Q0 范围与下游合同错位：request 外未映射同步可贯穿 Canonical→S→B 且保持 invalid/null，不污染 A；Q0 单阶段微程序允许严格的 full_request+内嵌 decode 两窗口，普通 workload 仍要求 full_request/prefill/decode 三段；A 接受窗口外的有符号 trace-relative profiler API。真实 r3 输入哈希复核不变，本地只读链路为 inspect/Canonical 0、S/A-B 3、独立 evaluator 0/`REAL_CASE_PASS`；全仓 `615 passed`，Canonical 边界、oracle/evaluator 独立性、合同与 compileall 均通过。
-- [x] `EP-G6-02E` 修复真实 r4 EMPTY 暴露的 lazy-export 适配：KERNEL 缺表只在白名单 schema、`lazy=true`、CUDA capture 存在、关键导出元数据唯一且无 kernel/graph launch API 证据时规范化为零条；request 内外的 launch 冲突、非 lazy、未知 schema、缺 CUDA capture、元数据重复/冲突和残缺表继续 fail closed。真实 `VALID_EMPTY` evaluator 改用本次 sync 实际区间重算 A residual，不再使用合成 30 ns 常量。本地只读 r4 EMPTY 链路为 inspect/Canonical 0、S/A-B 3、evaluator 0/`REAL_CASE_PASS`；r4 输入保持不可变。
-- [x] `EP-G6-02F` 修复真实 r5 暴露的多线程 NVTX 范围错误：`Q0-DEFAULT-PTDS-001`、`Q0-MULTITHREAD-ORDERED-001`、`Q0-OVERLAPPING-HOST-SYNC-001` 均改为由 coordinator 创建唯一 `full_request + decode`，且范围从 worker 创建前持续到全部 worker join 后；worker 仅写立即结束的结构化 marker，避免包住 CUDA API 后与 activity/sync marker 形成多候选。原有 activity/sync/API/callsite identity 与 Q0 oracle 不变，analyzer 对重复 target request 继续 fail closed。r6 已验证 request 唯一性修复生效；该版用于保持 PTDS worker 生命周期的 query 轮询随后被 r6 证明不适合目标 Nsight observation stack，转由 `EP-G6-02G` 修复。
-- [x] `EP-G6-02G` 修复真实 r6 暴露的 PTDS query 轮询副作用：删除 `cudaStreamQuery` 循环，在 worker 的 `K_OTHER_THREAD` 后只排入一次 `cudaLaunchHostFunc`，由 Host 条件变量等待该 stream-ordered callback 并在 coordinator request 内 join。该机制不新增 CUDA sync/query；另外两个同源多线程 case 经源码检查没有 query 轮询，保持原实现。analyzer、Q0 oracle 及既有 activity/sync/API/callsite 标签均不变。定向 observation/CUDA 测试 `48 passed`，CUDA source/编译测试 `14 passed`，全仓 `639 passed, 2 failed`（仍仅为既有 PowerShell smoke 基线）；r7 已越过 PTDS 并推进至 invocation-bleed，确认本问题不再阻断批量流程。
-- [x] `EP-G6-02H` 修复真实 r7 暴露的 target scope 过滤错误：resolver 不再要求全 trace 只能有一个结构化 request，而是先按 `request_id + experiment/wmpc/run/run_role/pass/repeat + full_request` 完整目标 identity 过滤，再要求目标匹配数恰好为 1。prior 等非目标 request 可共存；零匹配和重复同 identity target 继续 fail closed。新增合成回归同时验证 prior+唯一 target、零目标、重复目标，以及 target 后 correlation 131 自动归为 request 外 warning；microbench、oracle 和既有 identity 均不修改。observation 定向测试 `36 passed`，全仓 `641 passed, 2 failed`（仍仅为既有 PowerShell smoke 基线）；合同 37/37、Canonical 边界、oracle 独立性和 compileall 通过。
-- [x] `EP-G6-02I` 修复真实 r8 暴露的 Graph 采集前态缺失：仅 `Q0-GRAPH-UNSUPPORTED-001` 的结构化 Nsight argv 增加一次 `--cuda-graph-trace=node`，其余 20 个 native seed 保持原采集参数。microbench、oracle、analyzer/S、Canonical adapter/schema、fault 语义和既有 identity 均不修改；run manifest 与 receipt 继续记录实际 argv。新增 Windows/Linux 回归验证 Graph case 参数恰好出现一次且其余 native case 均不包含；Q0 定向与合同/边界测试通过，全仓为 `643 passed, 2 failed`，两项仍是既有 PowerShell smoke 基线。
-- [x] `EP-G6-02J` 修复真实 r9 暴露的 evaluator 集合语义错误：仅 `wait_set_activity_labels` 使用无序且无重复的精确字符串成员比较；其他 list 字段继续使用原顺序比较。新增同成员换序通过，以及缺失、额外、重复标签失败回归；不修改 oracle、S/analyzer、Canonical 或 microbench。Q0 全套 `86 passed`，合同/Canonical/S/A-B/派生边界 `163 passed`，全仓 `647 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。
-- [x] `EP-G6-02K` 修复真实 r10 暴露的 KERNEL/MEMOP 构造不足：仅 `Q0-KERNEL-MEMOP-001` 在 profiler/request 前通过既有 `Resources` 生命周期预分配 512 MiB pinned host/device buffer，随后在原两个 nonblocking stream 上提交 10 ms `KERNEL_A` 与 512 MiB H2D `MEMCPY_B`；其余 case 继续使用 4 KiB。request 内不增加 malloc，oracle、identity、analyzer、evaluator、S/A-B 与 Canonical 均不修改。CUDA 源码实际编译通过；Q0 `87 passed`、合同/边界 `163 passed`、全仓 `648 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。
-- [x] `EP-G6-02L` 根据第一份 512 MiB/10 ms diagnostic 继续修正 KERNEL/MEMOP 启动编排：buffer 与时长不再变化，仅将 `MEMCPY_B` 提交移到 `KERNEL_A` 之前，让 DMA 先进入执行，再提交 compute；同一个 `S_DEVICE`、stream、标签、oracle 和分析链均不变。源码回归明确要求 `cudaMemcpyAsync` 早于 kernel launch 且二者早于 sync；CUDA 实际编译通过，Q0 `87 passed`、合同/边界 `163 passed`、全仓 `648 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。
-- [x] `EP-G6-02M` 根据 memcpy-first diagnostic 的 Runtime API 时间定位同线程序列化：`cudaMemcpyAsync` 仅 59399 ns，随后同一 `globalTid` 的 `cudaLaunchKernel` 阻塞 53242288 ns，kernel 设备活动直到 copy 完成后才开始。仅该 case 改由 coordinator 与 kernel worker 经纯 Host 条件变量同时放行，在两个既有 nonblocking stream 并发提交；coordinator 等 launch 返回后执行原 `S_DEVICE`，同步后才 join。未增加 CUDA query/event/sync，唯一 request/decode 覆盖 worker 生命周期，buffer、时长、oracle、identity 和分析链均不变。CUDA 源码实际编译通过；Q0 `87 passed`、全仓 `648 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。
-- [x] `EP-G6-02N` 修复 concurrent-host diagnostic 暴露的 worker invocation 证据缺失：仅在 `kernel_worker` 真正 launch `KERNEL_A` 前写入立即结束的 `WORKER_KERNEL_MEMOP` marker。coordinator 仍唯一持有 request/decode 并覆盖 worker 生命周期；未新增 CUDA query/event/sync，concurrent-host 编排、buffer、时长、stream、`S_DEVICE`、标签、oracle 与分析链均不变。CUDA 源码实际编译通过；Q0 `87 passed`、全仓 `648 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。
-- [x] `EP-G6-02O` 为 `_normalize_activity()` 增加 activity-specific marker ownership：只接受同线程、完整覆盖 enqueue API、NVTX text/cache 完整一致的 marker；不完整证据为 `INVALID`，invocation/phase 冲突为 `AMBIGUOUS`。marker 不创建 A 窗口，不改变 sync/event ownership、oracle、A/B 或 Q0 expected。新增跨线程正例、wait-set 集成、嵌套一致 marker、提前结束/部分覆盖/错线程、API 前或内部开始但未闭合、不完整/伪造及 identity/phase 冲突反例；合法 marker 不能遮蔽同线程的部分相交或未闭合坏证据。S 定向 `77 passed`；A marker/window `13 passed`；Q0 oracle/evaluator/real/synthetic `40 passed`；全仓 `661 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线；合同 37/37、oracle 独立性、Canonical 边界和 compileall 通过。规格：`docs/superpowers/specs/2026-09-17-s-activity-marker-ownership-design.md`。
-- [x] `EP-G6-02P` 增加与正常 Q0 executor 隔离的 `run-q0-wddm-diagnostic`：仅允许 `Q0-KERNEL-MEMOP-001`、Engineering 和单 GPU，以全新不可覆盖目录采集 `cuda,nvtx,wddm` 及 WDDM additional events，同时保存本机 Nsight version/help、HAGS 注册表状态、Raw、SQLite、receipt、WDDM 表摘要和目标 request 时间窗记录。输出明确禁止 CUDA activity 与 WDDM packet 一一对应或硬件根因结论；HAGS 未确认、WDDM 表为空或目标 packet 不可归属时统一为 `EVIDENCE_INSUFFICIENT`。正常 Q0 argv 继续严格为 `--trace=cuda,nvtx`，未来 r11 不继承 WDDM 参数。证据：`exposedpath_v141/q0_wddm_diagnostic.py`、`tests/test_v141_q0_wddm_diagnostic.py`、Windows 服务器手册 §2.13。
-- [x] `EP-G6-02Q` 增加仅允许 64 MiB H2D/10 ms kernel 的参数 diagnostic：独立 CLI 使用标准 `--trace=cuda,nvtx`，binary 只有在显式 diagnostic 参数、KERNEL-MEMOP case、64m-10ms run identity 和精确数值同时成立时才覆盖默认资源；manifest、source manifest 与 receipt 均记录方向、字节数、MiB 与 kernel 时长，并固定 Engineering/diagnostic-only/Q0 NOT_RUN。正常 Q0 仍为 512 MiB/10 ms，prepared manifest 明确不含 diagnostic flags；64 MiB/1 ms 尚未实现。
-- [x] `EP-G6-02R` 扩展既有 `--environment-json`，通过 `cudaDeviceGetAttribute` 记录 `async_engine_count`、`device_overlap`、`concurrent_kernels`；Q0 环境快照保存三项并在缺失时 fail closed。该探针只读取过滤后的逻辑设备 0，不运行 case、不启动 Nsight、不改变正常 Q0 collection argv。
-- [x] `EP-G6-02S` 增加独立的 64 MiB D2H/10 ms kernel Engineering diagnostic：新 CLI/identity 只允许 `DEVICE_TO_HOST`、精确字节数和时长，使用标准 CUDA/NVTX 采集并记录 Raw/SQLite、参数、环境、哈希与决策边界。正常 Q0 仍为 512 MiB H2D/10 ms，原 64 MiB H2D diagnostic 保持原参数和入口；D2H 路径不增加初始化、event、query 或额外同步。D2H/H2D/default-Q0/CUDA 编译定向回归 `47 passed`，全仓 `690 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线；compileall 通过。
-- [x] `EP-G6-03` r4 在 EMPTY、r5 在重复 request、r6 在 PTDS query 轮询、r7 在 invocation scope resolver、r8 在 Graph fault 前态、r9 在 evaluator wait-set 顺序、r10 及其后全部 diagnostic 在 KERNEL/MEMOP 真实重叠/证据恢复处均按 fail-fast 规则停止并保留现场。r1～r10 与失败 diagnostic 均不得覆盖或升级资格。
-- [x] `EP-G6-04` 64 MiB/10 ms 单例已完成：H2D=`22365422..26112424 ns`、kernel=`26741607..36745367 ns`，间隔 `629183 ns`、overlap=`0`。两项使用不同 nonblocking stream（14/13）、无 event/data dependency，最终 device sync 只作为共同完成边界。按预定规则停止，不进入 64 MiB/1 ms。
-- [x] `EP-G6-04A` GPU3 RTX 4090（UUID `GPU-0d8fafe6-a1e9-33cc-25fb-632316736455`）能力探针已在 commit `86147b046218a6f4f9d72bf75da378df4bad42d5` 上完成：`async_engine_count=5`、`device_overlap=1`、`concurrent_kernels=1`，driver/driver API/runtime 分别为 `12050/12050/12040`，数据角色为 Engineering、diagnostic-only、Q0 NOT_RUN。服务器复核报告给出的 capability/receipt/完整 ZIP SHA256 分别为 `30A1DFD39C2F88182CB389BCCBEE8E3A76C2BF768F509372496929AAAEFD7363`、`CE09875DBC4EAE0C364A934562DFADAB6C63FF52EF14B9A3FF4F55D6489D98E4`、`7A8079EE983C0CE04C8F3AF4259B81CEC6DE3EC07FB09CE518624D3B582BE3D2`。该证据只证明设备声明能力，不证明实际并发，更不定位 WDDM/driver/runtime 根因。
-- [x] `EP-G6-04B` 64 MiB D2H/10 ms 单例已在 commit `a607645e9c4fcd7df4b05d4e97fa8bf788763e47` 上完成并回传。唯一实验变量仍只有 copy direction：D2H `77979638..87266973 ns`（duration `9287335 ns`）、kernel `88995128..98995997 ns`（duration `10000869 ns`）、间隔 `1728155 ns`，真实 `overlap=0`，完成顺序 copy 先、kernel terminal。两项同 `contextId=1`、分别位于 non-blocking stream `14/13`、无 CUDA event dependency、Runtime API correlation 唯一；`S_DEVICE=VALID_NONEMPTY`、wait-set=`{MEMCPY_B,KERNEL_A}`、terminal=`KERNEL_A`（`end_ns=98995997`），A 为 `kernel_only=10000869 ns`、`kernel_memop_mixed=0`。证据目录：`server_evidence_inbox/q0-win-4090-20260917-kernel-memop-d2h-diag-64m-10ms-01/`（Raw、SQLite、receipt、canonical、s、ab）。本地只读复核 SHA-256 链全部一致：Raw `76FAEC18A88FF58A885076616902197B32D4E617E5E76376E779C777E1883425`、SQLite `C9964B0EE2CFD50BDB3DCC8811106204FC9FED99C5D549526D414AD071454956`、source manifest `BE917E5E17673961634B53CDBAC008625F806151122DFCCA8783551DEB713B73`、canonical manifest `DEEEF8F22DBEB3CF8721F0C3350D7DB8AE5D98EACAA039CFA131282A9C32FC3F`、S manifest `08D0B2A0661C1A5C9CA4FCEB737175DC4A6D1AB578DE4E7C597984C7BF9E5A83`，A/B 记录压缩件哈希与各自 manifest 相符。Canonical `observation_validity=valid`、`identity=VALID`，S/A-B quality=`VALID`，仅保留 1 条 `HARNESS_OUTSIDE_REQUEST` warning。按 receipt 预注册判据（`overlap_ns>0` 才算观察到重叠；`on_overlap_zero=STOP`）停止：不进入 D2D、不运行 64 MiB/1 ms、不建立 r11、不修改 oracle/Canonical/S/A/B/evaluator/Measurement Contract，也不在当前平台继续参数搜索。
-- [x] `EP-G6-05` 输出唯一 Q0 gate 报告。frozen run `q0-win-4090-20260920-gate6-final-04` 产出唯一一份 `gate/q0_gate_report.json`（schema `exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`，SHA256 `3A94F8B9B65294D82929EF183C59C4C84177D489F5AE9E8AF56FDDD676178967`），且 21/21 real `REAL_CASE_PASS`、2/2 synthetic-only PASS、23/23 `SYNTHETIC_PASS`。gate report 的 `evidence_scope=Q0_QUALIFICATION_ONLY`、`formal_evidence=false`，不得升级为 Pilot/Formal。证据：本地解包副本 `...\gate6-final04-extracted\q0-win-4090-20260920-gate6-final-04\gate\q0_gate_report.json`；索引见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
-- [x] `EP-G6-06` Gate 6 策略审查已完成并取得书面决定（2026-09-17）：(1) synthetic 原则允许作为 Engineering regression strengthening，但不得替代 real Q0 evidence、不得改变 Gate 6 verdict、不得提升数据资格或扩大 claim，且必须先证明存在新的未覆盖 failure mode；本次差异矩阵未发现此类缺口，故不实施新增 synthetic profile，只固化现有 coverage 与边界说明（转 `EP-G6-08`）。(2) 批准进入“候选平台 + construction admission”**设计**，第一阶段只定义候选平台资格条件与最小真实 overlap construction check，不运行完整 Q0；该批准只是方案设计批准，不代表授权任何外部服务器实验，具体平台与运行步骤需单独审核。(3) scope limitation 当前不批准，仅作 fallback。(4) 允许 Gate 7 非 GPU 项并行，Gate 7 保持 `BLOCKED`。证据：`docs/v1_4_1/gate6_strategy_review_v0_1.md`（审查定稿，含覆盖差异矩阵与 admission 设计草案）、`docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md`。
-- [ ] `EP-G6-07`（暂停，等待 `EP-G6-09` construction amendment 路线结果）候选平台 + construction admission：定义候选平台最低资格、固定 workload 与唯一变量、预注册尝试次数、成功/失败/停止条件、所需 evidence，以及通过 admission 后才允许提出完整 Q0 计划的硬门槛。设计与判据已冻结：`docs/v1_4_1/gate6_strategy_review_v0_1.md` §5、`docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`（A～F 节，冻结于候选平台确认之前）。候选平台静态资格盘点：`docs/v1_4_1/candidate_platform_inventory_v0_1.md`。**CP-03（服务器 RTX 6000 Ada / GPU2）已收敛**：A1、A3、A4、A5、A6、A8、A9 = `PASS`（已记录 OS/build、物理机型 ASUS `ESC8000A-E12`、GPU UUID `GPU-dff87fa4-1a85-8853-3fa7-c539b3886b38`、compute capability `8.9`、49140 MiB、driver package `555.99`、driver API `12.5`、runtime `12.4`、Toolkit/nvcc `12.4 / V12.4.131`、Nsight `2026.2.1.210`、frozen HEAD `a607645e` 且 frozen source dirty=0、编译 `PASS`、`--list-cases` 21/21 MATCH、binary SHA256 `A07C4BE5…`）；**剩余 A2 pending（正式 admission 前确认并预留独占窗口）与 A7 unknown（512 MiB pinned-host + device probe，未运行）**。CP-03 保持第一候选、仍为 `NEEDS_INFORMATION`，不得标为 `QUALIFIED_FOR_ADMISSION_PLANNING`；CP-01、CP-02 判定不变，当前仍无任何平台达到该状态。静态盘点只使用工具版本查询、编译与 `--list-cases` 等非 case 手段，未运行任何 case/workload/allocation probe。当前只允许设计与审核；未获单独批准前不得申请或运行任何外部平台实验，且构造准入 PASS 本身不等于 Gate 6 PASS、Q0 PASS 或 Gate 9 平台资格。**2026-09-18 起暂停**：本路线让位于 `EP-G6-09` construction amendment implementation，恢复推进需单独决定；CP-03 静态结果与冻结判据保持不变。
-- [x] `EP-G6-08` 完成 `KERNEL_MEMOP_MIXED` 现有 synthetic coverage 与“synthetic ↔ real”边界固化：记录现有 profile 已覆盖 mixed wait-set、A mixed 分桶与守恒、B 半开 union 与跨 kind terminal、无依赖重叠与 terminal 并列等；并记录 synthetic 直接构造 Canonical（`correlation_id` 为空、ownership 直接给定），因此无法替代真实 observation contract。纯文档变更，未新增或修改 profile、未改实现、未改变任何数据资格。证据：`docs/v1_4_1/gate6_strategy_review_v0_1.md` §4 与 §4.1。
-- [x] `EP-G6-09` Gate 6 construction amendment 收口 checkpoint（2026-09-18）。本轮只记录进展，未 implementation、未运行任何实验：
-  1. **formal-shape evidence**：run `q0-win-4090-20260918-kernel-memop-h2d-formalshape-warmup-02`；evidence ZIP SHA256 `04767C513ACEB0EF73EFB284981CF0D43AD255161A67ABEEBDDFCDBDEC70FDA1`。A'（native 512 MiB H2D + 10 ms `q0_spin_kernel`，无 warm-up）overlap=`0`、terminal=`KERNEL_A/KERNEL`；B（同一 measured construction，唯一有意差异为 pre-capture same-kernel warm-up + sync）overlap=`10000741 ns`、`S_DEVICE=VALID_NONEMPTY`、wait set=`{KERNEL_A,MEMCPY_B}`、terminal=`MEMCPY_B/MEMOP`。pair outcome=`AMENDMENT_REVIEW_ELIGIBLE`；不作 LAZY/WDDM/driver/runtime 机制归因。
-  2. **结论边界**：Windows/RTX 4090 能构造冻结 Q0 oracle 所需的 native 512 MiB H2D + 10 ms kernel formal shape；原 construction failure 不再作为“平台 incapable”证据；证据支持 pre-capture same-kernel preconditioning/warm-up 与 construction 恢复存在强受控关联；不声明底层 root cause 已唯一确定。
-  3. **canonical history**：canonical branch `codex/gate6-canonical-baseline`；canonical implementation baseline `bc6c69cf5a6ec1d6e72d8f87454047246d5ad8f7`；evidence implementation `3dae79d8517678cfd1ad36752c74efab10184160`；二者 7/7 implementation blobs 已验证一致；历史 evidence 不改写。
-  4. **amendment**：文档 `docs/v1_4_1/gate6_construction_amendment_v0_1.md`；approval commit `558cc614c105045ffde940cc0dabd49f3cf606ab`；wording clarification commit `bcbed7c0a2b828616aa3c1b38d4904e717984eb7`。scope `APPLY = {Q0-KERNEL-MEMOP-001}`，其余 20 real=`DO_NOT_APPLY`，2 synthetic=`NOT_APPLICABLE`；runtime 由 manifest policy 驱动，review-time predicate 不进入 runtime。
-  5. **implementation preflight**：status=`PASS`、`SCOPE_EXPANSION_REQUIRED=false`。production touch list 固定为 `q0/execution_manifest_v0_2.json`、`docs/v1_4_1/contracts/q0_execution_schema_v0_2.json`、`q0/cuda/exposedpath_q0.cu`、`exposedpath_v141/q0_execution.py`、`exposedpath_v141/q0_collection.py`；test touch list 固定为 `tests/test_v141_q0_execution.py`、`tests/test_v141_q0_cuda_source.py`、`tests/test_v141_q0_collection.py`。`q0_gate.py`、oracle、Measurement Contract、Canonical、S、A/B、evaluator 与 package `__version__` 均不改。
-  6. **当前正式状态**：Gate 6=`FAIL`、Q0=`NOT_RUN`、amendment=`APPROVED`、implementation preflight=`PASS`、implementation=`IMPLEMENTED`（commit `2e81f6f9a9ec590d37fb01be9e31f2251645c5d1`）、offline validation=`PASS`、server validation=`NOT_STARTED`、Gate 7=`BLOCKED/暂停`、Gate 8=`未启动`；不再做新的 Gate 6 diagnostic。
-  7. **下一步**：server build + identity verification → 唯一一次完整 21 real + 2 synthetic Q0 → 只有唯一 `q0_gate_report.json` 达到 `23/23 + verdict=PASS + q0_status=PASS`，Gate 6 才正式 PASS。
-  8. **implementation（2026-09-19）**：8 文件实现（production 5 / test 3，`SCOPE_EXPANSION_REQUIRED=false`）。execution schema 升 `0.2.1`，23/23 case 显式 `measurement_initialization`（1 × `PRE_CAPTURE_SAME_KERNEL_WARMUP` = `Q0-KERNEL-MEMOP-001`，22 × `NONE`，其中 2 synthetic 仍为 `NONE`）；run schema `0.2.1`（collection 兼容只读接受历史 `0.2.0`）；正式 native invocation 显式携带 `--measurement-initialization <POLICY>` 并写入 case provenance；formal missing / unknown / duplicate policy 一律 fail closed，不静默按“无初始化”执行；Engineering `--diagnostic-warmup-kernel` 保持固定 10 ms，formal `PRE_CAPTURE_SAME_KERNEL_WARMUP` 使用 measured invocation duration，两套路径共用同一 kernel / launch configuration / 既有 measured kernel stream 且互斥；formal 路径不写 `EXPOSEDPATH_DIAGNOSTIC_V1`；`--list-cases`=21/21，`--environment-json` 与既有 diagnostic argv 行为不变。离线验证：targeted tests `70 passed`、Q0 offline regression `199 passed`、`compileall` 与 `git diff --check` 通过。local-environment note：本机 CP936 代码页 + LF 无 BOM 源码需要 `NVCC_APPEND_FLAGS="-Xcompiler=/utf-8"` 才能本地离线测试（未改动的历史版本在本机同样失败，同一字节转 CRLF 或加 UTF-8 BOM 亦可编译）；该设置只用于本机离线测试，不构成正式服务器编译要求，也不修改编译合同。server validation=`NOT_STARTED`，本轮未运行任何服务器/GPU/nsys/Q0 步骤。
+Gate 6 的工程试错已收敛为 `docs/v1_4_1/gate6_closeout_v0_1.md` 中的四类根因；下表只保留编号、结果与去向，不重述过程。
 
-- [x] `EP-G6-10` Gate 6 `final-01` root triage 收口 checkpoint（2026-09-19）。本轮只记录冻结 evidence 的只读审计结论，未 implementation、未提交任何修复、未运行任何测试/实验/GPU/nsys/Q0：
-  1. **final-01 disposition**：`q0-win-4090-20260919-gate6-final-01` 是 frozen incomplete Engineering run。Raw collection 21/21、SQLite 21/21、source Canonical 21/21、controlled fault Canonical 3/3、S bundles 21/21、A/B bundles 21/21，real evidence 已生成 16；其中 real PASS=12、real FAIL=4；`Q0-PHASE-SPILL-001` 因 analyzer blocker 未完成，其后的 real evaluator 未继续；synthetic 未运行、gate aggregation 未运行、无 `q0_gate_report.json`。`resume/retry/promotion=false` 仅作为文档 disposition 记录，不新增任何 machine-schema enum；该 run 不得重跑/续跑/拼接或升级为 Gate PASS。`Q0-KERNEL-MEMOP-001 = REAL_CASE_PASS`，证明 `EP-G6-09` construction warm-up amendment 已在正式 frozen run 中生效。
-  2. **frozen semantic FAIL（4 例）**：`Q0-MISSING-CORR-001`、`Q0-EXTERNAL-001`、`Q0-MULTITHREAD-ORDERED-001`、`Q0-OVERLAPPING-HOST-SYNC-001`。
-  3. **Phase-Spill（`Q0-PHASE-SPILL-001`）**：direct frozen timestamps `full_request = 31,043,268..71,956,668`、`prefill = 31,047,054..31,767,312`、`decode = 31,769,816..71,956,427`；gaps `3,786 / 2,504 / 241 ns`。root cause = Q0 controlled three-window observational shape 与 A-window exact-equality discovery rule 不兼容；Measurement Contract `0.2.0` 不要求该 equality。amendment 已批准（`docs/v1_4_1/gate6_phase_spill_amendment_v0_1.md`，approval commit `74c91368217824c1ab80db3376505d6e1041b136`），implementation=`NOT_STARTED`。
-  4. **Missing-Corr（`Q0-MISSING-CORR-001`）**：real fault 清除 correlation 后 enqueue proof 不可用，submission proof 只剩 GPU-start-before-sync；frozen evidence `K_UNMAPPED.start = 32,923,286`、`S_STREAM.start = 32,881,809`、delta `+41,477 ns`，故 `GPU_STARTED_BEFORE_SYNC` 不成立。`MISSING_ACTIVITY_CORRELATION` 为正确 primary；`SUBMISSION_ORDER_AMBIGUOUS` 是 contract 允许且有独立证据的 secondary；当前 oracle `secondary_reasons=[]` 与真实 construction 的 submission timing 不具确定性；synthetic proxy 与 real fault 不等价。root triage=`COMPLETE`，remediation=`UNRESOLVED / NOT_APPROVED`（不记为 analyzer bug，也未批准 host sleep/device gate/oracle 修改）。
-  5. **External（`Q0-EXTERNAL-001`）**：`K_EXTERNAL` launch 在 request 外，但 generic activity marker 携带当前 request/decode identity，因此 marker 把 activity 恢复成当前 invocation ownership；final observed 为 `VALID_NONEMPTY`、wait_set=`{K_EXTERNAL}`、terminal=`K_EXTERNAL`、`B_VALID`，与 oracle 的 external-ownership invalid path 相反。`EXTERNAL_OWNERSHIP_IN_SCOPE` 在真实 analyzer 路径无生产者，synthetic proxy 直接预置该 ownership reason。root triage=`COMPLETE`，remediation=`MARKER-OWNERSHIP-AMENDMENT_REQUIRED`。
-  6. **Multithread-Ordered（`Q0-MULTITHREAD-ORDERED-001`）**：native ordering construction 已正确形成（thread A：`K_A -> EventRecord`；thread B：`WaitEvent -> K_B -> StreamSynchronize`），但当前 S rule 只允许同线程 request/phase range 恢复 Host sync/event ownership：worker `S_THREAD_B` 有 structured marker 却 `request_id=null`，worker `cudaEventRecord` ownership invalid，event node 不创建，得到 `MISSING_EVENT_RECORD` 且 event dependency edge 不创建；oracle 在现冻结 S rule 下不可达。root triage=`COMPLETE`，remediation=`MARKER-OWNERSHIP-AMENDMENT_REQUIRED`。
-  7. **Overlapping-Host-Sync（`Q0-OVERLAPPING-HOST-SYNC-001`）**：native construction 已正确形成两个 host blocking sync `S_A = 22,514,632..63,220,988`、`S_B = 23,755,625..73,069,996`（overlap `39,465,363 ns`），且分别等待正确 stream/kernel；两个 worker sync 与 Multithread-Ordered 完全同源——structured sync marker 可恢复 callsite/origin/ordinal，却无法恢复 request/repeat/owner phase，得到 `INVOCATION_BOUNDARY_INVALID`，evaluator 在真正验证 A interval-union / B per-sync 语义前就失败。root triage=`COMPLETE`，remediation=`MARKER-OWNERSHIP-AMENDMENT_REQUIRED`。
-  8. **统一 root-cause map（仅文档分类，不构成新合同）**：Phase-Spill → observational-boundary amendment；Missing-Corr → submission-proof determinism，remediation 尚未批准；External + Multithread-Ordered + Overlapping-Host-Sync → shared marker ownership authority/provenance model gap，应统一 amendment、不应分别打补丁。核心矛盾记录为：activity marker authority 过强（request 外 marker 可把 External activity 吸进 invocation），sync/event worker marker authority 过弱（携带 identity 仍不能传播 invocation ownership）。
-  9. **下一步顺序（冻结）**：1) 起草统一 Marker Ownership amendment；2) 明确 trusted marker provenance/authority/scope；3) 特别解决 External reason 的真实生产路径与 worker event ownership；4) 再单独解决 Missing-Corr deterministic construction；5) 所有 amendment 批准后统一 implementation；6) offline validation；7) server rebuild/identity；8) 新 run-id 下唯一完整 21 real + 2 synthetic；9) 只有唯一 gate report 达到 `23/23 + verdict=PASS + q0_status=PASS`，Gate 6 才正式 PASS。当前状态：Gate 6=`FAIL`、Q0=`NOT_RUN`、Gate 7=`BLOCKED/暂停`、Gate 8 未启动。
+| 编号 | 结果摘要 | 证据／去向 |
+|---|---|---|
+| `EP-G6-01` | 受控 CUDA Q0 微程序 + 机器可读 manifest：23 oracle case 严格映射，21 native seed + 2 纯合成；`--list-cases` 21/21 | `q0/cuda/exposedpath_q0.cu`、`q0/execution_manifest_v0_2.json` |
+| `EP-G6-02` | GPU 前执行准备：结构化 `nsys` argv、每 case source manifest、输入哈希、不可覆盖输出与 dry-run；23 个合成 profile 经正式 S/A/B 与独立 evaluator 对照 | `exposedpath_v141/q0_execution.py`、`q0_synthetic.py`、`q0_evaluator.py` |
+| `EP-G6-02A` | GPU 前集成验收（编译/list、Windows dry-run、23/23 合成对照、静态边界与全仓回归） | `engineering_evidence/q0_pre_gpu_v0_2/readiness_report.json` |
+| `EP-G6-02B` | 真实 Q0 执行适配：Profiler API 控制 capture、显式 GPU 身份、单 case executor/receipt、三种受控 fault、真实 observed/evaluator、23-case 聚合、CLI 与 Windows runbook | `q0_collection.py`、`q0_faults.py`、`q0_real.py`、`q0_gate.py`、`docs/v1_4_1/gate6_windows_server_runbook.md` |
+| `EP-G6-02C` | 首次 Windows 实跑修复：GPU UUID 比较、Nsight `2026.2.1/3.25.0`、同步映射诊断、MSVC 14.39、受控设备工作显式排空 | 失败现场 r2 保持不可变 |
+| `EP-G6-02D` | r3：Q0 observation scope 与下游合同错位修复（request 外同步 → harness warning；单阶段两窗口） | `EP-ISSUE-08`、`EP-ISSUE-09` |
+| `EP-G6-02E` | r4：lazy-export 零行 KERNEL 表规范化与真实 `VALID_EMPTY` evaluator | `EP-ISSUE-10` |
+| `EP-G6-02F` | r5：三个同源多线程 seed 的重复 target request 修复（coordinator 唯一持有 request/decode） | `EP-ISSUE-11` |
+| `EP-G6-02G` | r6：删除 PTDS `cudaStreamQuery` 轮询，改一次 stream-ordered host callback | `EP-ISSUE-12` |
+| `EP-G6-02H` | r7：target identity 唯一性过滤（非目标 request 可共存，零/重复目标仍 fail closed） | `EP-ISSUE-13` |
+| `EP-G6-02I` | r8：仅 Graph case 增加一次 `--cuda-graph-trace=node` | `EP-ISSUE-14` |
+| `EP-G6-02J` | r9：`wait_set_activity_labels` 改用无序、无重复的精确成员比较 | `EP-ISSUE-15` |
+| `EP-G6-02K` | r10：仅 KERNEL-MEMOP case 预分配 512 MiB buffer，改用 10 ms kernel | `EP-ISSUE-16` |
+| `EP-G6-02L` | memcpy-first 提交顺序（让 DMA 先进入执行） | `EP-ISSUE-16` |
+| `EP-G6-02M` | coordinator/worker 双 Host 路径并发提交，消除同线程序列化 | `EP-ISSUE-16` |
+| `EP-G6-02N` | worker launch 前增加立即结束的 `WORKER_KERNEL_MEMOP` marker | `EP-ISSUE-16` |
+| `EP-G6-02O` | activity-specific marker ownership：只接受同线程、完整覆盖 enqueue API、text/cache 完整一致的 marker | `docs/superpowers/specs/2026-09-17-s-activity-marker-ownership-design.md`、`EP-ISSUE-17` |
+| `EP-G6-02P` | 与正常 executor 隔离的 WDDM Engineering diagnostic（禁止 CUDA↔packet 一一对应或根因结论） | `exposedpath_v141/q0_wddm_diagnostic.py`、runbook §2.13 |
+| `EP-G6-02Q` | 64 MiB H2D/10 ms 参数 diagnostic（独立 CLI 与 identity；正常 Q0 仍为 512 MiB/10 ms） | `exposedpath_v141/q0_kernel_memop_diagnostic.py` |
+| `EP-G6-02R` | 环境快照增加 `async_engine_count`/`device_overlap`/`concurrent_kernels`，缺失即 fail closed | `--environment-json` |
+| `EP-G6-02S` | 64 MiB D2H/10 ms 参数 diagnostic（唯一实验变量为 copy direction） | `exposedpath_v141/q0_kernel_memop_d2h_diagnostic.py`、`EP-G6-04B` |
+| `EP-G6-03` | r1～r10 与失败 diagnostic 一律 fail-fast 停止并保留现场，不覆盖、不升级资格 | 各 `rN` 证据目录 |
+| `EP-G6-04` | 64 MiB/10 ms 单例：overlap=`0`（间隔 `629183 ns`）→ 按预定规则停止，不进入 64 MiB/1 ms | 历史 diagnostic 证据 |
+| `EP-G6-04A` | GPU3 RTX 4090 能力探针：`async_engine_count=5`、`device_overlap=1`、`concurrent_kernels=1`（只证明设备声明能力） | 服务器 capability/receipt/ZIP SHA256 |
+| `EP-G6-04B` | 64 MiB D2H/10 ms 单例：真实 overlap=`0`、terminal=`KERNEL_A` → STOP（不进入 D2D、不调参、不建 r11） | `server_evidence_inbox/` |
+| `EP-G6-05` | 输出唯一 Q0 gate report（final-04） | `gate/q0_gate_report.json`，SHA256 `3A94F8B9…` |
+| `EP-G6-06` | 策略审查：synthetic 边界、候选平台 admission 设计批准（仅设计）、scope limitation 不批准 | `docs/v1_4_1/gate6_strategy_review_v0_1.md` |
+| `EP-G6-07` | 候选平台 + construction admission：设计与判据已冻结；**非 Gate 6 阻塞项**，仅在需要第二平台（含 Linux Formal 平台）时按 Gate 9 重启 | `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`、`candidate_platform_inventory_v0_1.md` |
+| `EP-G6-08` | 固化 `KERNEL_MEMOP_MIXED` 的 synthetic coverage 与 synthetic↔real 边界（纯文档） | `gate6_strategy_review_v0_1.md` §4/§4.1 |
+| `EP-G6-09` | construction amendment 收口：formal-shape 配对诊断 + amendment 冻结 + preflight + implementation（execution schema `0.2.1`、`measurement_initialization` policy） | `gate6_construction_amendment_v0_1.md`、runbook §3 |
+| `EP-G6-10` | `final-01` 收口与 4 例 semantic FAIL 的 root triage（Phase-Spill / Missing-Corr / External / Multithread-Ordered / Overlapping-Host-Sync） | 见 `gate6_closeout_v0_1.md` §3 |
+| `EP-G6-11` | Gate 6 closeout 与 final-04 落账（只读独立复核，未重跑任何采集） | `docs/v1_4_1/gate6_closeout_v0_1.md` |
 
-- [x] `EP-G6-11` Gate 6 closeout 与 final-04 落账（2026-09-20）。按上述冻结顺序完成：统一 Marker Ownership amendment、Phase-Spill amendment、Q0 build contract amendment、Missing-Corr amendment v0.2、Sync Projection amendment v0.1 全部批准并统一 implementation（`ec945a67f048ff624e3701229d287894b9701ea3`，package `0.2.2`）；服务器 build 通过 build receipt 审计；final-04 fresh 21-native collection 完整重派生（`SQLite -> Canonical -> faults -> S -> A/B -> real -> synthetic -> gate`）；`23/23 + verdict=PASS + q0_status=PASS` 且唯一 gate report 成立，Gate 6/Q0 正式 `PASS`。本轮只做只读独立复核与文档落账，**未重跑任何 Gate 6 GPU collection / synthetic / aggregate**。复核结论：archive SHA256 `CBE51B05…`、handoff manifest SHA256 `6304061B…`、gate report SHA256 `3A94F8B9…`、post-gate provenance SHA256 `C97678BF…` 与 handoff 记录逐字一致；本地解包 524/524 文件、`28169328` bytes；`code_commit.txt`、`frozen_implementation_commit.txt`、`git_status.txt` 三个 prepare-time sidecar 确认缺失且不得回填（`post_gate_handoff_provenance.json` 的 `record_scope=POST_GATE_HANDOFF_ONLY`、`substitutes_for_missing_pre_run_sidecars=false`）。证据：`docs/v1_4_1/gate6_closeout_v0_1.md`。
+## 4. Gate 6 根因、amendment 与实现去向（一句话版）
 
-- **Gate 6 状态快照说明（2026-09-20）：** 本节 `EP-G6-01`～`EP-G6-11` 的条目保留各自日期的事实与状态文字（包括条目内部出现的 `Gate 6=FAIL`、`Q0=NOT_RUN`、`Gate 7=BLOCKED/暂停`、`implementation=NOT_STARTED`、`Q0-KERNEL-MEMOP-001 platform construction blocked`、`EP-G6-07 暂停` 等）。这些一律是对应日期当时的历史状态，已由 2026-09-20 的 Gate 6/Q0 `PASS` 取代；当前状态以本节 Gate verdict 与文件顶部“当前快照”为准。`EP-G6-07`（候选平台 + construction admission）不再作为 Gate 6 的前序条件，仅在需要第二平台（含 Linux Formal 平台）时按 Gate 9 平台资格流程重启，其冻结判据与 CP-03 静态盘点保持不变。
+Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射见 `docs/v1_4_1/gate6_closeout_v0_1.md` §3：
 
-## Gate 7：Runner 与跨平台执行对齐
+1. **观测/采集适配**（r2～r8：Nsight 版本与可选表、lazy-export 零行表、request scope、target identity、graph node tracing）→ adapter 条件化 + fail closed，最终在 final-04 真实数据上通过。
+2. **测量构造 / warm-up**（`Q0-KERNEL-MEMOP-001` 的 device overlap 恢复）→ `gate6_construction_amendment_v0_1.md`：仅该 case 使用 `PRE_CAPTURE_SAME_KERNEL_WARMUP`；底层机制仍不归因。
+3. **ownership / phase / sync 语义投影**（External、Multithread-Ordered、Overlapping-Host-Sync、Query、Sync-D2H）→ `gate6_marker_ownership_amendment_v0_1.md` 与 `gate6_sync_projection_amendment_v0_1.md`：trusted marker authority、跨线程 worker ownership、registry-role-preserving projection（共享 helper）。
+4. **oracle / evaluator 与证据聚合**（Phase-Spill 窗口规则、Missing-Corr secondary、wait-set 成员顺序、gate 唯一性）→ `gate6_phase_spill_amendment_v0_1.md`、`gate6_missing_corr_amendment_v0_2.md`、`gate6_q0_build_contract_amendment_v0_1.md`。
 
-**Gate verdict：`NOT_RUN`。** Gate 6/Q0 于 2026-09-20 通过后，Gate 7 的前序阻塞条件已经消除，但 Gate 7 本身尚未执行。当前事实：旧 runner 的首 Token 时间仍取自异步 argmax 之后、后续 Token 使用 `.any()` 判定可能触发隐式同步（`EP-ISSUE-01`）；Pass0/Pass1 parity 未被机器化证明；launcher 只有 PowerShell（`scripts/*.ps1`），无等价平台入口；`tests/test_server_smoke_script.py::test_dry_run`、`::test_spaces` 两项既有失败未处置。
+## 5. Gate 7～14 计划
 
-**重审计结论（2026-09-20）：** 原 `EP-G7-01`～`EP-G7-07` 的 7 个行政步骤压缩为 4 个可执行步骤（`EP-G7-08`～`EP-G7-11`）。合并的是**同一工程单元**（runner 语义/身份、identity/parity/schema、平台适配、验证与验收），没有合并彼此独立的科学 acceptance 判据：每一步内部仍逐条保留各自的 PASS/STOP 条件。执行计划：`docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`；旧计划 `docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md` 仅作历史记录（其“Gate 6 等待期内并行推进”的前提已失效）。
+### Gate 7：Runner 与执行链对齐
 
-**平台范围决定（2026-09-20，显式 scope 决定，不是静默弱化）：** 项目当前只声明**一个**目标 observation stack（Windows + RTX 4090 + CUDA 12.4.131 + Nsight 2026.2.1）；Q0 资格也仅在该栈上取得；研究设计主体的核心域是单 GPU、请求内部 Host-device exposure。因此 Gate 7 的“合同等价”**只在当前声明的目标平台上要求真实 GPU smoke 证据**，跨平台等价不再是 Gate 7 的必备条件。runner/launcher 仍必须完成平台适配隔离（核心不得硬编码 Windows 路径/命令/shell），以保持平台可移植性；“声称支持第二平台（含 Linux）”所需的 Linux launcher、smoke、平台资格检查与 Linux Q0 归入 Gate 9 的平台资格流程（与 `docs/v1_4_1/gate6_windows_server_runbook.md` §1 “正式平台改为 Linux 必须重新执行平台资格检查和 Q0”一致）。**任一平台在通过该平台的真实 smoke 前不得声称受支持。**
+**Gate verdict：`NOT_RUN`。** Gate 6/Q0 于 2026-09-20 通过后前序阻塞已消除，但 Gate 7 本身尚未执行。当前事实：旧 runner 的首 Token 时间仍取自异步 argmax 之后、后续 Token 使用 `.any()` 判定可能触发隐式同步（`EP-ISSUE-01`）；Pass0/Pass1 parity 未被机器化证明；launcher 只有 PowerShell（`scripts/*.ps1`），无等价平台入口；`tests/test_server_smoke_script.py::test_dry_run`、`::test_spaces` 两项既有失败未处置。
 
-- [ ] `EP-G7-08`（未开始，合并旧 `EP-G7-01`+`EP-G7-02`）统一 Token 就绪边界并分离 G1/N1 模式：首 Token 与后续 Token 使用同一可观察 completion 语义；G1 自然逐 Token 同步与 N1 人为干预以互斥、机器可读的身份表达，非法组合 fail closed。验收证据：runner 合同更新＋离线/合成测试（边界单调性、倒序 fail closed、模式互斥与非法组合拒绝）。PASS：两项判据的定向测试全绿且合同文字与实现一致。STOP：若边界修正需要改动 Measurement Contract 语义定义，停止并单独提出。Unlock：逐 Token 边界可比较，N1/G1 不会被静默混用。
-- [ ] `EP-G7-09`（未开始，合并旧 `EP-G7-03`+`EP-G7-04`）Pass0/Pass1 parity 与机器可读 provenance 补齐：Pass0/Pass1 的输入、身份、phase boundary 与执行策略等价，并以机器可读 parity 检查证明；补齐全环境快照、early EOS、OOM、exclusion、retry、attempt、data role 与稳定实验身份字段。验收证据：parity 校验测试＋schema/字段缺失或冲突 fail-closed 测试（复用既有 `wmpc_manifest.json`/`inference_results.jsonl`/`exclusion_log.jsonl`，不新建平行 checker）。PASS：parity 与字段完整性判据全绿。STOP：若要求把缺字段降级为默认零值，停止。Unlock：Pass0/Pass1 可配对比较，后续 exclusion/retry 规则有机器可读依据。
-- [ ] `EP-G7-10`（未开始，合并旧 `EP-G7-05`＋旧 `EP-G7-06` 的基线失败部分）平台适配隔离与既有 smoke 基线收敛：把 Windows PowerShell／平台探测／Nsight 调用收敛到 adapter/launcher，runner 核心跨平台；路径使用 `pathlib`、子进程使用参数列表；处置 `tests/test_server_smoke_script.py::test_dry_run` 与 `::test_spaces`（修复或按平台范围决定明确重界定并记录）。验收证据：Windows/Linux 命令构造与参数单测（无需 GPU）＋两项基线失败的最终处置结论。PASS：单测全绿、两项基线失败被修复或经明确重界定后不再计为未知失败。STOP：若必须依赖真实 GPU 才能判定，移交 `EP-G7-11`。Unlock：平台可移植性被结构性保护，测试基线不再含未解释失败。
-- [ ] `EP-G7-11`（未开始，合并旧 `EP-G7-06` 的全量验证＋旧 `EP-G7-07` 并按平台范围决定重写）非 GPU 全量验证＋当前声明目标平台真实 GPU smoke 与 Gate 7 验收：在 Windows/RTX 4090 上执行 runner 端到端 smoke（Pass0/Pass1、identity/phase boundary、exclusion/retry 记录），并证明产出能被机器读取且与 Gate 7 合同一致。验收证据：全量 `python -m pytest -q -p no:cacheprovider`、`python -m compileall exposedpath analysis exposedpath_v141`、合同/边界检查，以及目标平台 smoke 的 manifest/receipt 证据。PASS：非 GPU 判据与目标平台 smoke 判据同时成立，且未修改 Measurement Contract 或 `exposedpath_v141` 计算语义。STOP：任何真实 smoke 失败都保留现场并停止，不得用 mock 结果替代；需要第二平台等价性时转 Gate 9。Unlock：Gate 8 Engineering Pilot 获得唯一入口。
+**重审计结论（2026-09-20）：** 原 `EP-G7-01`～`EP-G7-07` 的 7 个行政步骤压缩为 4 个可执行步骤（`EP-G7-08`～`EP-G7-11`）。合并的是**同一工程单元**（runner 语义/身份、identity/parity/schema、平台适配、验证与验收），没有合并彼此独立的科学 acceptance 判据：每一步内部仍逐条保留各自的 PASS/STOP 条件。执行计划：`docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`；旧计划 `docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md` 仅作历史记录。
 
-原编号处置（不得复用旧编号）：`EP-G7-01`→`EP-G7-08`；`EP-G7-02`→`EP-G7-08`；`EP-G7-03`→`EP-G7-09`；`EP-G7-04`→`EP-G7-09`；`EP-G7-05`→`EP-G7-10`；`EP-G7-06`→`EP-G7-10`（基线失败部分）＋`EP-G7-11`（全量验证部分）；`EP-G7-07`→`EP-G7-11`（按平台范围决定重写为“当前声明目标平台的真实 smoke”；其跨平台部分转入 Gate 9）。旧编号一律标记为“已合并/已重映射”，不删历史、不重复使用。
+**平台范围决定（2026-09-20，显式 scope 决定，不是静默弱化）：** 项目当前只声明**一个**目标 observation stack（Windows + RTX 4090 + CUDA 12.4.131 + Nsight 2026.2.1），Q0 资格也仅在该栈取得。因此 Gate 7 的“合同等价”**只在当前声明的目标平台上要求真实 GPU smoke 证据**。runner/launcher 仍必须完成平台适配隔离（核心不得硬编码 Windows 路径/命令/shell）；“声称支持第二平台（含 Linux）”所需的 Linux launcher、smoke、平台资格检查与 Linux Q0 归入 Gate 9。**任一平台在通过该平台的真实 smoke 前不得声称受支持。**
 
-## Gate 8：Engineering Pilot
+- [ ] `EP-G7-08`（未开始，合并旧 `EP-G7-01`+`EP-G7-02`）
+  - **Objective**：首 Token 与后续 Token 使用同一个可观察 completion 语义；G1 自然逐 Token 同步与 N1 人为干预以互斥、机器可读的模式身份表达。
+  - **Why**：`EP-ISSUE-01` 使两类 Token 的完成边界不同，而这个差别会直接进入 A 窗口与 phase 定义；模式不分离则 N1 的人为同步会被误读为 G1 的自然行为。
+  - **Implementation**：更新 `exposedpath/runner.py` 的 Token 边界取值与 `docs/pilot_runner_contract.md`；引入模式身份字段并实现非法组合 fail closed。测试先行。
+  - **Evidence**：边界单调性／时间倒序 fail-closed 测试；模式互斥与非法组合拒绝测试；合同文字与实现一致性检查。
+  - **PASS**：上述测试全绿，且首/后续 Token 边界在合成输入下使用同一语义。
+  - **STOP**：若修正边界需要改动 Measurement Contract 语义或 `exposedpath_v141` 语义 → 停止并单独提出。
+  - **Dependency**：无（Gate 7 第一个可执行步骤；只依赖已冻结的 Gate 1 合同）。
+  - **Unlock**：逐 Token 边界可比较，N1/G1 不会被静默混用。
+- [ ] `EP-G7-09`（未开始，合并旧 `EP-G7-03`+`EP-G7-04`）
+  - **Objective**：冻结并证明 Pass0/Pass1 的输入、身份、phase boundary 与执行策略等价；补齐环境快照、early EOS、OOM、exclusion、retry、attempt 与 data role 字段。
+  - **Why**：Pass0/Pass1 若不等价，profiler overhead 与执行差异会被混同为模型行为；缺失的 exclusion/retry/attempt 字段会让“计划 repeat 数”与“有效样本数”不可区分。
+  - **Implementation**：复用既有 `wmpc_manifest.json`／`inference_results.jsonl`／`exclusion_log.jsonl` 结构补齐字段并加入机器可读 parity 检查；不新建平行 manifest 体系。
+  - **Evidence**：parity 校验测试；字段缺失/冲突 fail-closed 测试；一次合成 Pass0/Pass1 配对演练的机器可读产物。
+  - **PASS**：缺失或冲突字段一律 fail closed，且 parity 检查在等价输入上通过、在任一有意差异上失败。
+  - **STOP**：若要求把缺字段降级为零值/默认值来让检查通过 → 停止。
+  - **Dependency**：与 `EP-G7-08` 无相互依赖，可并行；两者都必须先于 `EP-G7-11` 完成。
+  - **Unlock**：Pass0/Pass1 可配对比较，exclusion/retry 规则有机器可读依据。
+- [ ] `EP-G7-10`（未开始，合并旧 `EP-G7-05`＋旧 `EP-G7-06` 的基线失败部分）
+  - **Objective**：把 Windows PowerShell、平台探测、Nsight 调用收敛到 adapter/launcher；处置两项既有 smoke 失败。
+  - **Why**：平台差异目前散落在脚本中，任何第二平台（Gate 9）都会重新暴露同类问题；未解释的基线失败会让后续回归无法区分“新缺陷”与“旧噪声”。
+  - **Implementation**：runner 核心改用 `pathlib` 与结构化子进程参数；平台特定逻辑下沉到 adapter/launcher；修复或按平台范围决定明确重界定 `tests/test_server_smoke_script.py::test_dry_run` 与 `::test_spaces`。
+  - **Evidence**：Windows/Linux 命令构造与参数单测（不需要 GPU）；两项基线失败的最终处置结论。
+  - **PASS**：定向单测全绿；两项基线失败被修复或经明确重界定后不再计为未知失败。
+  - **STOP**：若某项必须先有真实 GPU 才能判定 → 移交 `EP-G7-11`，不得用 mock 结论代替。
+  - **Dependency**：独立于 `EP-G7-08`/`EP-G7-09`，可并行；其结论不依赖 GPU。
+  - **Unlock**：平台可移植性被结构性保护，测试基线不再含未解释失败。
+- [ ] `EP-G7-11`（未开始，合并旧 `EP-G7-06` 的全量验证＋旧 `EP-G7-07`，按平台范围决定重写）
+  - **Objective**：在 Windows/RTX 4090 上执行 runner 端到端 smoke（Pass0/Pass1、identity/phase boundary、exclusion/retry 记录），证明产出可被机器读取且与 Gate 7 合同一致，并完成 Gate 7 验收决定。
+  - **Why**：只有真实 GPU smoke 能证明该执行链在真实执行栈上成立；Gate 8 必须以这份证据为入口。
+  - **Implementation**：不改语义；只执行既有 runner 链路并收集 manifest/receipt 证据。真实 GPU 执行须在用户批准的窗口内进行。
+  - **Evidence**：全量 `python -m pytest -q -p no:cacheprovider`、`python -m compileall exposedpath analysis exposedpath_v141`、合同/边界检查，以及目标平台 smoke 的 manifest/receipt 证据。
+  - **PASS**：非 GPU 判据与目标平台真实 smoke 判据同时成立，且未修改 Measurement Contract 或 `exposedpath_v141` 计算语义。
+  - **STOP**：任何真实 smoke 失败都保留现场并停止，不得用 mock 或局部测试替代；需要第二平台等价性时转 Gate 9。
+  - **Dependency**：消费 `EP-G7-08`～`EP-G7-10` 的产物；是 Gate 7 verdict 的必要条件，必须最后执行。
+  - **Unlock**：Gate 8 Engineering Pilot 获得唯一入口。
 
-**Gate verdict：`NOT_RUN`（未启动）。** Q0 已 `PASS`，Gate 8 当前的唯一前序依赖是 Gate 7 的 acceptance（`EP-G7-11`）；在 Gate 7 满足完成判据前不得启动，也不得把 Gate 6 PASS 当作 Gate 8 的通行证。
+原编号处置（不得复用旧编号）：`EP-G7-01`→`EP-G7-08`；`EP-G7-02`→`EP-G7-08`；`EP-G7-03`→`EP-G7-09`；`EP-G7-04`→`EP-G7-09`；`EP-G7-05`→`EP-G7-10`；`EP-G7-06`→`EP-G7-10`（基线失败部分）＋`EP-G7-11`（全量验证部分）；`EP-G7-07`→`EP-G7-11`（其跨平台部分转入 Gate 9）。
+
+### Gate 8：Engineering Pilot
+
+**Gate verdict：`NOT_RUN`（未启动）。** 唯一前序依赖是 Gate 7 的 acceptance（`EP-G7-11`）；在 Gate 7 满足完成判据前不得启动，也不得把 Gate 6 PASS 当作 Gate 8 的通行证。
 
 - [ ] `EP-G8-01`（未开始，依赖 `EP-G7-11`）运行最小端到端开发 workload。
-- [ ] `EP-G8-02`（未开始，依赖 `EP-G7-11`）验证 benchmark -> runner -> Nsight -> Canonical Raw -> S -> A/B -> D/Signature 全链路。
+- [ ] `EP-G8-02`（未开始，依赖 `EP-G7-11`）验证 benchmark → runner → Nsight → Canonical Raw → S → A/B → D/Signature 全链路。
 - [ ] `EP-G8-03`（未开始，依赖 `EP-G7-11`）记录 trace coverage、存储规模、profiler overhead、运行可靠性和失败模式。
 - [ ] `EP-G8-04`（未开始，依赖 `EP-G7-11`）形成 Engineering Pilot 报告；不得将结果用作正式科学结论。
 
-## Gate 9：Formal 平台资格检查
+### Gate 9：Formal 平台资格检查
 
 **Gate verdict：`BLOCKED`。** 正式 GPU 平台尚未确定或接入（与 Gate 6 无关：Gate 6 只在其声明的 Windows/RTX 4090 目标栈上取得 Q0 资格）。若正式平台选为 Linux 或第二平台，则该平台的 launcher、smoke 与平台资格检查在此处执行。
 
@@ -217,7 +271,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - [ ] `EP-G9-03`（受阻）检查 eager 行为及 G2 所需 compile/graph 可行性。
 - [ ] `EP-G9-04`（受阻）给出平台 `PASS/FAIL/BLOCKED` 资格结论。
 
-## Gate 10：可行域与 OOM 边界
+### Gate 10：可行域与 OOM 边界
 
 **Gate verdict：`BLOCKED`。** 等待合格正式平台。
 
@@ -225,7 +279,7 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - [ ] `EP-G10-02`（受阻）记录 OOM、early EOS、不稳定和 retry，不把 OOM 当科学重要性指标。
 - [ ] `EP-G10-03`（受阻）确定跨配置比较所需的共同稳定范围和平台特定排除项。
 
-## Gate 11：Pilot
+### Gate 11：Pilot
 
 **Gate verdict：`BLOCKED`。** 依赖合格平台和共同可行域。
 
@@ -234,142 +288,139 @@ Gate 6 合成 Q0 复核额外发现并修正一处 fail-closed 缺口：graph ac
 - [ ] `EP-G11-03`（受阻）记录 Pilot 依据并保持其非 Formal 数据角色。
 - [ ] `EP-G11-04`（受阻）形成 Protocol Freeze 所需输入清单。
 
-## Gate 12：Protocol Freeze
+### Gate 12：Protocol Freeze
 
 **Gate verdict：`NOT_RUN`。** 只有前置 Gate 完成后才允许冻结。
 
-- [ ] `EP-G12-01`（未开始）冻结代码提交、analyzer/schema、平台栈和协议版本。
-- [ ] `EP-G12-02`（未开始）冻结 workload matrix、seed/input digest、repeat 和 Pass0/Pass1 配对。
-- [ ] `EP-G12-03`（未开始）冻结排除规则、质量 gate、统计方法和绘图方案。
-- [ ] `EP-G12-04`（未开始）冻结 N1/G1/G2 claim 评估规则。
+- [ ] `EP-G12-01`～`EP-G12-04`（未开始）冻结代码提交、analyzer/schema、平台栈、协议版本、workload matrix、seed/input digest、repeat、Pass0/Pass1 配对、排除规则、质量 gate、统计方法、绘图方案与 N1/G1/G2 claim 评估规则。
 - [ ] `EP-G12-05`（未开始）建立冻结后实质变更的新版协议及 Formal 数据失效规则。
 
-## Gate 13：N1 与 G1
+### Gate 13：N1 与 G1
 
 **Gate verdict：`NOT_RUN`。** 尚未进入 Formal 实验。
 
-- [ ] `EP-G13-01`（未开始）按冻结协议执行 N1 受控同步干预。
-- [ ] `EP-G13-02`（未开始）按冻结协议执行 G1 自然 workload sweep。
-- [ ] `EP-G13-03`（未开始）验证 Information Gain，并如实报告 null、按比例和依赖 regime 的结果。
-- [ ] `EP-G13-04`（未开始）审查 claim 是否仍保持单 GPU、请求内部 Host-device exposure 边界。
+- [ ] `EP-G13-01`～`EP-G13-04`（未开始）按冻结协议执行 N1 受控同步干预与 G1 自然 workload sweep，验证 Information Gain（如实报告 null、按比例和依赖 regime 的结果），并审查 claim 是否仍保持单 GPU、请求内部 Host-device exposure 边界。
 
-## Gate 14：G2
+### Gate 14：G2
 
 **Gate verdict：`NOT_RUN`。** 必须在 Correctness 和 Information Gain 证据成立后执行。
 
-- [ ] `EP-G14-01`（未开始）按预定义规则选择真实优化 intervention 和 held-out 场景。
-- [ ] `EP-G14-02`（未开始）执行 held-out decision-gain 评估。
-- [ ] `EP-G14-03`（未开始）依据预定义标准确定最终 claim；若无额外决策价值，则删除预测/决策优越性 claim。
+- [ ] `EP-G14-01`～`EP-G14-03`（未开始）按预定义规则选择真实优化 intervention 与 held-out 场景，执行 decision-gain 评估；若无额外决策价值，则删除预测/决策优越性 claim。
 
-## 已知问题与风险
+## 6. 已知问题与风险
 
-- `EP-ISSUE-01`：旧 runner 的首 Token 时间取在异步 argmax 提交后，但后续 EOS `.any()` 可能触发隐式同步，Token 完成边界不一致。影响：Gate 1、7；不得直接用于新版 phase 定义。
-- `EP-ISSUE-02`：三份历史 trace 缺少 source manifest。影响：validity 必须保持 `ambiguous`，不能升级数据资格。
-- `EP-ISSUE-03`（已指派，未关闭）：仓库全量测试长期保留两项既有的本地 PowerShell smoke 失败 `tests/test_server_smoke_script.py::test_dry_run` 与 `::test_spaces`，与工作前基线相同，不属于 Gate 2～4 新增失败，也不影响 Gate 6 PASS（Gate 6 的判据是唯一 gate report，不依赖该 smoke 脚本）。影响：跨平台执行层需单独修复或按平台范围重新界定。**2026-09-20 处置**：指派给 `EP-G7-10`，必须在 Gate 7 acceptance（`EP-G7-11`）前给出修复或明确重界定结论；在此之前它仍是未解释的基线失败，不得当作“已解决”。
-- `EP-ISSUE-04`（2026-09-17 事实更正）：本机（Lenovo 82L5，Windows build 26200）实际存在 GTX 1650（4 GiB，driver package `581.57`，Toolkit/nvcc `V13.0.88`，Nsight 2026.1.1 系列），此前“本机无 GPU”的记录已过时。该机器**尚未完成 Candidate qualification**（driver API 与 runtime 版本未知、schema 未审查、独占性未确认、A7 未闭合），因此**当前不得作为真实 Q0/workload 平台**；仅允许离线工作与已批准的非 case qualification。实验室 Windows 服务器已有可用 RTX 4090/6000 Ada。Q0、跨平台 GPU smoke、Engineering Pilot 及后续实验的真实结论必须由通过相应资格检查的真实平台证据给出。静态盘点见 `docs/v1_4_1/candidate_platform_inventory_v0_1.md`。
-- `EP-ISSUE-05`（已解决）：使用校验过哈希的 LibreOffice 临时解包版本完成本地全页渲染；研究主体 40 页、实验协议 27 页均已检查。渲染器仅用于文档 QA，不改变研究 Gate。
-- `EP-ISSUE-06`：S 层已对 event/wait 的 context/stream 活动查找建立索引，并缓存重复 scope 建图；event/default-stream 密集型大 trace 的规模性能尚未在真实 Engineering 数据上验收。影响：需在 Engineering Pilot 记录耗时与峰值内存；当前不改变 S 语义正确性或数据资格。
-- `EP-ISSUE-07`：本机环境变量 `CL` 被配置为 MSVC 目录，但该名称会被 `cl.exe`/`nvcc` 解释为隐式编译参数，导致 CUDA 编译失败。Q0 编译入口只在子进程环境中移除 `CL/_CL_`，不修改用户系统环境；后续 GPU 平台资格检查仍需记录并复核实际编译环境。
-- `EP-ISSUE-08`（已解决并保留历史）：r2 的 `Q0-STREAM-001` 在 request 结束后出现未映射 context sync；r2 保持原失败现场，未修改或升级资格。后续 r3 已证明新增显式排空本身具有唯一 runtime 映射。
-- `EP-ISSUE-09`（已解决，待 r4 复验）：r3 的 request 后尾部同步 `correlationId=135` 无 runtime 候选。现以唯一 Q0 full_request identity 限定 observation scope，保留该 Raw/Canonical 记录并标为 `HARNESS_OUTSIDE_REQUEST` warning；因无 API 映射，只能称为与 teardown 时间一致，不能断言具体 API 来源。
-- `EP-ISSUE-10`（已解决并经 r5 路径推进验证）：Nsight 2026.2.1 的 `lazy=true` SQLite 在零 kernel case 不创建 KERNEL 表，旧 observation 将其误判为核心缺表；真实 EMPTY evaluator 还错误沿用合成 trace 的 30 ns residual。现已用条件化 adapter 与真实区间 oracle 修复，并对 kernel/graph launch API 变体及关键导出元数据重复/冲突继续 fail closed；r4 保持失败现场。
-- `EP-ISSUE-11`（已解决并经 r6 复验）：r5 的 PTDS worker 线程创建了与 coordinator 完全相同 identity 的 `full_request`，触发 `TARGET_REQUEST_NOT_UNIQUE`；同源 multithread/overlapping-sync 实现也有相同结构。r6 已确认 coordinator 唯一 request/decode 生效，不再出现 target request 唯一性错误。
-- `EP-ISSUE-12`（已解决并经 r7 路径推进验证）：r6 中 PTDS worker 的 `cudaStreamQuery` 轮询产生 correlation 129、133～162 共 31 条 request 内 synchronization activity，但 Runtime 表无对应 API 行。microbench 改用一次 stream-ordered host callback 与 Host 条件变量；r7 已越过该 case，analyzer 未放宽映射规则。
-- `EP-ISSUE-13`（已解决并经 r8 复验）：r7 invocation-bleed 的 prior 与 target request identity 不同且不重叠，旧 resolver 却因结构化 request 总数为 2 判定目标不唯一。现只对完整目标 identity 的匹配数执行唯一性 gate；r8 已完成 21/21 native source Canonical，确认该问题不再阻断。
-- `EP-ISSUE-14`（代码已修复，待 r10 完整复验）：r8 默认 Nsight graph-level tracing 只产生 `GRAPH_TRACE`，没有 KERNEL node activity 或 `CUDA_GRAPH_NODE_EVENTS`，导致 Graph mapping-removal fault 零命中。独立服务器诊断确认仅增加 `--cuda-graph-trace=node` 后，真实 node mapping 可进入现有 Canonical 并被既有 selector 唯一移除。修复严格限定 Graph case，不放宽 fault 或 analyzer。
-- `EP-ISSUE-15`（已解决并经 r10 路径推进验证）：r9 `S_DEVICE` 的 wait-set 成员与 oracle 完全相同但顺序相反，旧 evaluator 通过通用 list equality 误判失败。现为该字段单独应用唯一字符串集合比较；r10 已越过 DEVICE case，重复标签和其他 list 合同仍保持 fail closed。
-- `EP-ISSUE-16`（遗留未归因，但**不再阻塞**）：512 MiB H2D、64 MiB H2D 与 64 MiB D2H 均未和 10 ms kernel 重叠；缩短 copy 使活动间隔降至 629183 ns，改变方向后为 1728155 ns，都没有改变串行结果。真实 trace 已排除相同/default stream、event wait、数据依赖和过早同步；GPU capability 为 `async_engine_count=5/device_overlap=1/concurrent_kernels=1`，只说明硬件声明支持相关能力，不能证明当前 workload 必然重叠。现有证据不能区分 WDDM、driver、Runtime 或调度层，**禁止根因归因**，也禁止在该平台继续参数搜索。**2026-09-18 更新**：formal-shape 配对 diagnostic（`EP-G6-09`）证明 pre-capture same-kernel warm-up 可恢复该 construction 的 device overlap，因此“平台 incapable”解释不再成立、不再记为 platform construction blocked。**2026-09-20 更新**：该 construction 已作为 manifest policy（`Q0-KERNEL-MEMOP-001 = PRE_CAPTURE_SAME_KERNEL_WARMUP`）在 final-04 上验证为 `REAL_CASE_PASS`，Gate 6/Q0 已 PASS；本 issue 保留为“底层机制未归因”的科学记录，不属于任何 Gate 的阻塞项，也不得据此重启参数搜索或诊断。异平台 admission 路线（`EP-G6-07`）只在需要第二平台时按 Gate 9 重启。
-- `EP-ISSUE-17`（已解决并经真实单例验证）：activity-specific marker ownership 已使目标 `S_DEVICE=VALID_NONEMPTY`、wait-set=`{MEMCPY_B,KERNEL_A}`，此前 `INVOCATION_BOUNDARY_INVALID` 不再出现。当前失败与 ownership 无关，不再继续修改 S 来处理设备不重叠。
+**未关闭／长期有效：**
 
-## 固定执行顺序与最近任务
+- `EP-ISSUE-01`：旧 runner 的首 Token 时间取在异步 argmax 提交后，但后续 EOS `.any()` 可能触发隐式同步，Token 完成边界不一致。影响：Gate 1、7；不得直接用于新版 phase 定义。**处置**：Gate 7 `EP-G7-08`。
+- `EP-ISSUE-02`：三份历史 trace 缺少 source manifest。影响：validity 必须保持 `ambiguous`，不能升级数据资格。**永久限制**。
+- `EP-ISSUE-03`（已指派，未关闭）：仓库全量测试长期保留两项既有本地 PowerShell smoke 失败 `tests/test_server_smoke_script.py::test_dry_run` 与 `::test_spaces`，与工作前基线相同，不属于任何 Gate 新增失败，也不影响 Gate 6 PASS（Gate 6 的判据是唯一 gate report，不依赖该 smoke 脚本）。**处置**：Gate 7 `EP-G7-10` 必须在 `EP-G7-11` 前给出修复或明确重界定结论；在此之前它仍是未解释的基线失败，不得当作“已解决”。
+- `EP-ISSUE-04`：本机（Lenovo 82L5，Windows build 26200）存在 GTX 1650（4 GiB，driver package `581.57`，Toolkit/nvcc `V13.0.88`，Nsight 2026.1.1 系列），但**尚未完成 Candidate qualification**（driver API 与 runtime 版本未知、schema 未审查、独占性未确认、A7 未闭合），因此当前不得作为真实 Q0/workload 平台；仅允许离线工作与已批准的非 case qualification。静态盘点见 `docs/v1_4_1/candidate_platform_inventory_v0_1.md`。
+- `EP-ISSUE-06`：S 层已建立 event/wait 查找索引并缓存重复 scope 建图；event/default-stream 密集型大 trace 的规模性能尚未在真实 Engineering 数据上验收。影响：需在 Engineering Pilot 记录耗时与峰值内存；不改变 S 语义正确性或数据资格。
+- `EP-ISSUE-07`：本机环境变量 `CL` 被配置为 MSVC 目录，但该名称会被 `cl.exe`/`nvcc` 解释为隐式编译参数。Q0 编译入口只在子进程环境中移除 `CL/_CL_`，不修改用户系统环境；GPU 平台资格检查仍需记录并复核实际编译环境。
+- `EP-ISSUE-16`（遗留未归因，**不再阻塞**）：512 MiB H2D、64 MiB H2D 与 64 MiB D2H 在 RTX 4090 上均未与 10 ms kernel 重叠；真实 trace 已排除相同/default stream、event wait、数据依赖和过早同步；GPU capability 为 `async_engine_count=5/device_overlap=1/concurrent_kernels=1`，只说明硬件声明支持相关能力。formal-shape 配对 diagnostic 证明 pre-capture same-kernel warm-up 可恢复该构造的 device overlap，因此“平台 incapable”解释不再成立；该 construction 已作为 manifest policy 在 final-04 验证为 `REAL_CASE_PASS`。**现有证据不能区分 WDDM／driver／Runtime／调度层，禁止根因归因，禁止在该平台重启参数搜索或诊断。**异平台 admission（`EP-G6-07`）只在需要第二平台时按 Gate 9 重启。
 
-当前顺序为：`Gate 1 合同 -> Gate 2 oracle -> Gate 3 Canonical Raw -> Gate 4 S -> Gate 5 A/B/D/Signature -> Gate 6 Q0 -> Gate 7 runner/跨平台 -> Gate 8 Engineering Pilot -> Gate 9~12 正式实验准备 -> Gate 13 N1/G1 -> Gate 14 G2`。
+**已解决（保留历史，不再需要为正常前进执行而复查）：**
 
-**并行执行记录（2026-09-17；历史记录，已被 2026-09-20 Gate 6 PASS 取代）**：当时 Gate 6 停留在 `Q0-KERNEL-MEMOP-001` platform construction blocked，等待 `EP-G6-07` 的候选平台确认；`EP-G7-01`～`EP-G7-06` 的非 GPU 工作曾获并行授权后暂停。该安排与前提均已失效：Gate 6/Q0 已 PASS，Gate 7 已解锁并按 `EP-G7-08`～`EP-G7-11` 重新规划。
+| 编号 | 结论 |
+|---|---|
+| `EP-ISSUE-05` | 本地全页渲染与研究主体/协议文档 QA 已完成（渲染器只用于文档 QA，不改变研究 Gate） |
+| `EP-ISSUE-08` | r2 捕获结束同步未映射；r3 证明新增显式排空具有唯一 runtime 映射 |
+| `EP-ISSUE-09` | r3 request 后尾部同步无 runtime 候选；以唯一 full_request identity 限定 observation scope，标为 `HARNESS_OUTSIDE_REQUEST` warning |
+| `EP-ISSUE-10` | Nsight `lazy=true` 零 kernel case 缺 KERNEL 表被误判缺表；已用条件化 adapter 与真实区间 oracle 修复 |
+| `EP-ISSUE-11` | r5 PTDS worker 创建同 identity `full_request`；coordinator 唯一 request/decode 已生效 |
+| `EP-ISSUE-12` | r6 `cudaStreamQuery` 轮询产生 31 条无 Runtime 映射同步；改用一次 stream-ordered host callback |
+| `EP-ISSUE-13` | r7 resolver 误用全 trace request 总数作为唯一性条件；已改为只对完整 target identity 计数 |
+| `EP-ISSUE-14` | r8 默认 graph-level tracing 无 node activity；仅 Graph case 增加 `--cuda-graph-trace=node` |
+| `EP-ISSUE-15` | r9 evaluator 以通用 list equality 比较 wait-set；该字段改为唯一字符串集合比较 |
+| `EP-ISSUE-17` | activity-specific marker ownership 已在真实单例上验证；`INVOCATION_BOUNDARY_INVALID` 不再出现 |
 
-**Gate 6 canonical baseline 整合记录（2026-09-18；历史记录，Gate 7 状态部分已被取代）**：Gate 6 的历史分叉（`codex/v141-analyzer` 与 `gate6-warmup-clean`）已收敛到单一 canonical branch `codex/gate6-canonical-baseline`（起点 `453dd9ed67dc3a9db61690a3f16f54f09e7e5009`，仅 cherry-pick `aa27d9402198d84cd7fbde592b0909a46c097a03`、`ba734716a52b559b307358971ae6fddb510469c3`、`3dae79d8517678cfd1ad36752c74efab10184160`，不重复引入与 `453dd9e` patch 等价的 `bb49936`）。canonical implementation baseline 为 `bc6c69cf5a6ec1d6e72d8f87454047246d5ad8f7`，与 evidence implementation `3dae79d8517678cfd1ad36752c74efab10184160` 的 7/7 implementation blobs 已逐字节比对一致；docs 保留 `codex/v141-analyzer` 历史，历史 evidence 不改写。该系统整合结论继续有效；其中“Gate 7 保持 `BLOCKED/暂停`、`EP-G6-07` Candidate 路线暂停”的描述已被 2026-09-20 Gate 6 PASS 取代（Gate 7 现为 `NOT_RUN`、已解锁；Candidate 路线只在需要第二平台时按 Gate 9 重启）。
+## 7. 固定执行顺序与最近任务
 
-最近应执行的任务：
+当前顺序：`Gate 1 合同 → Gate 2 oracle → Gate 3 Canonical Raw → Gate 4 S → Gate 5 A/B/D/Signature → Gate 6 Q0 → Gate 7 runner/执行链对齐 → Gate 8 Engineering Pilot → Gate 9～12 正式实验准备 → Gate 13 N1/G1 → Gate 14 G2`。Gate 0 已完成封存。
+
+**最近应执行的任务（按顺序）：**
 
 1. `EP-G7-08`（当前最高优先级）：统一 Token 就绪边界并分离 G1/N1 模式。先写失败测试，再改 runner 与合同；不得修改 Measurement Contract 语义；不运行 GPU。
 2. `EP-G7-09`：Pass0/Pass1 parity 与机器可读 provenance 补齐（复用既有 manifest/results 产物，不新建平行 checker）。
 3. `EP-G7-10`：平台适配隔离与两项既有 PowerShell smoke 失败的最终处置。
 4. `EP-G7-11`：非 GPU 全量验证＋当前声明目标平台（Windows/RTX 4090）真实 GPU smoke，形成 Gate 7 acceptance 决定。Gate 7 只在 `EP-G7-11` 判据同时成立时改判 `PASS`；此前 Gate 8 不得启动。
-5. Gate 6 已收口并冻结：`final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因。`EP-G6-07` Candidate Platform 路线只在需要第二平台（含 Linux Formal 平台）时按 Gate 9 重启。
 
-## 计划调整记录
+**Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
-（本表为按时间顺序的历史记录。行内出现的 `Gate 6 保持 FAIL`、`Q0 保持 NOT_RUN`、`Gate 7 保持 BLOCKED` 等字样均为该行对应日期当时的状态；Gate 6/Q0 已由 7.0 行改判为 `PASS`，当前状态以文件顶部“当前快照”为准。）
+## 8. 计划调整记录
 
-| 清单版本 | 日期 | 调整内容 | 影响编号 | 冻结协议/Formal 数据影响 |
+（按时间顺序。行内出现的 `Gate 6 = FAIL`、`Q0 = NOT_RUN`、`Gate 7 = BLOCKED` 等字样均为该行日期当时的状态，已由 7.0 行改判；各行只保留结论摘要，详细过程见对应 amendment、runbook 与 `docs/v1_4_1/gate6_closeout_v0_1.md`。）
+
+| 清单版本 | 日期 | 调整摘要 | 影响编号 | 冻结协议／Formal 数据影响 |
 |---|---|---|---|---|
-| 0.1 | 2026-09-10 | 首次建立完整清单；纳入无 GPU 离线路线、自然逐 Token 同步边界和现有 observation 基础 | 全部 | 当前尚未 Protocol Freeze，也无 Formal 数据，不产生失效 |
-| 0.2 | 2026-09-10 | 完成旧研究设计、WMPC、实验协议与 v1.4.1 的权威关系审计；新增两份 Pre-Pilot 整合候选版。协议修订底稿由此前假定的 WMPC v1.5 更正为实验协议 v2.0，WMPC 仅保留为候选配置来源；执行 Gate 顺序不变 | EP-FND-06 至 EP-FND-10 | 未改变冻结协议；当前无 Formal 数据，不产生失效 |
-| 0.3 | 2026-09-10 | 基于两份完整 Word 母版逐章吸收 v1.4.1，完成结构/语义自动校验和 40/27 页视觉验收；摘要候选版降为历史整合记录，完整 v7.0 成为当前研究主体，v2.1 成为 Pre-Pilot 执行依据 | EP-FND-07 至 EP-FND-11、EP-ISSUE-05 | 未通过 Gate 1 或 Protocol Freeze；当前无 Formal 数据，不产生失效 |
-| 0.4 | 2026-09-10 | 复核发现 v7.0 的自动检查偏重方法语义，第一章未完整吸收 v1.4.1 的背景论证。启动 v7.1 修订，并将两个当前入口简化为 `ExposedPath_研究设计.docx` 与 `ExposedPath_实验协议.docx` | EP-FND-09、EP-FND-11、EP-FND-12 | 不改变 Measurement Contract、Gate 或 Formal 数据资格 |
-| 0.5 | 2026-09-11 | 完成 v7.1 背景与研究立意补齐、两份文档的简洁命名、结构/语义自动校验及 40/27 页全页视觉验收；移除封面标题装饰线并修正表格与章节分页。 | EP-FND-12、EP-ISSUE-05 | 不改变 Measurement Contract、Gate 或 Formal 数据资格；下一步仍为 EP-G1-02 |
-| 0.6 | 2026-09-11 | 完成 Measurement Contract v0.2：冻结 Token/phase、自然与干预同步身份、三类 completion scope、提交证明、`W(s)`、terminal、validity、A/B 与纯派生规则；建立 37 条规则到 25 个验证案例的机器映射和合同校验命令。 | EP-G1-02 至 EP-G1-09 | Gate 1 内部合同审查 PASS；不改变 Q0、Pilot、Protocol Freeze 或 Formal 数据资格；下一步为 EP-G2-01 |
-| 0.7 | 2026-09-11 | 完成 Q0 独立标准答案设计：23 个必需案例覆盖 25 个特性，预写 `W(s)`、terminal、validity 和 A/B 关系，并增加 AST 独立性检查及 `DESIGN_ONLY_PASS` CLI。 | EP-G2-01 至 EP-G2-05、EP-G3-05 | Gate 2 设计审查 PASS；真实 Q0 仍未运行，Gate 6 保持 BLOCKED；不改变 Pilot、Protocol Freeze 或 Formal 数据资格；下一步为 EP-G3-05 |
-| 0.8 | 2026-09-11 | 完成 Canonical Raw v0.2：冻结八类事实记录与 identity/clock/lineage 合同，实现只读 gzip JSONL 转换、越层访问检查，并对三份历史 trace 完成 Engineering 回归与 Raw 哈希复核。 | EP-G3-05 至 EP-G3-08、EP-G4-01 至 EP-G4-05 | Gate 3 PASS；历史数据仍为 ambiguous Engineering 证据，真实 Q0 与 Gate 6 不变；下一步为 EP-G4-01 |
-| 0.9 | 2026-09-11 | 完成 S v0.2：Canonical-only ownership、submission、completion graph、`W(s)`、terminal、validity、版本化输出与历史 trace fail-closed 回归；下一优先级切换为 A/B | EP-G4-01 至 EP-G4-05、EP-G5-01 | 未改变 Protocol Freeze；真实 Q0 未运行，当前无 Formal 数据，不产生失效 |
-| 1.0 | 2026-09-11 | Gate 4 独立代码复审后修正三项语义缺陷：missing correlation 不再被降级、wait-event 末端节点不再漏 producer、外部 invocation 不再于建图前静默删除；同时补齐 default-stream 冲突/歧义、submission 审计信息、registry lineage 与重复 scope 建图缓存 | EP-G4-01 至 EP-G4-05 | 未改变 Measurement Contract 或 Protocol Freeze；原 Gate 4 实现结论经修正后重新验证，真实 Q0 状态不变 |
-| 1.1 | 2026-09-11 | Gate 4 第二轮独立复审后要求 eventSyncId 唯一映射并校验 event/context/device；修正缺失 correlation 与提交顺序不明并存时的 invalid 传播，以及未来 default-stream overlap 对较早同步的污染；补充 event/wait 查找索引和 9 个回归案例 | EP-G4-01 至 EP-G4-05、EP-ISSUE-03、EP-ISSUE-06 | 未改变 Measurement Contract、Q0 状态或 Protocol Freeze；当前仍无 Formal 数据，不产生失效 |
-| 1.2 | 2026-09-11 | Gate 4 第三轮独立复审发现缺失 correlation 的强 invalid 在 event 捕获和 legacy default-stream 路径仍可能被顺序歧义覆盖；补齐三条路径的统一 fail-closed 传播和 3 个回归案例 | EP-G4-02、EP-G4-05、EP-ISSUE-03 | 未改变 Measurement Contract、Q0 状态或 Protocol Freeze；当前仍无 Formal 数据，不产生失效 |
-| 1.3 | 2026-09-12 | Gate 4 独立复审无 Critical/Important 后正式进入 Gate 5；书面冻结 A/B 双输入联结、窗口发现、原子区间分类、B 状态投影、D/Signature 纯派生及无 GPU 验证方法，等待用户复核 | EP-G5-01 至 EP-G5-06 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；仅形成 Gate 5 设计，尚未实现或产生新实验数据 |
-| 1.4 | 2026-09-12 | 冻结 A/B 与纯派生层 v0.2 JSON Schema：A 记录携带整数纳秒守恒审计字段，B 严格保持 per-sync 冻结字段并对非 `B_VALID` 时长执行 null-only，D/Signature 仅接受 A/B lineage、向量、比例、状态 count 与非加和统计；后续代码实现顺序不变 | EP-G5-01 至 EP-G5-06 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效 |
-| 1.5 | 2026-09-12 | 修复 Gate 5 schema 首轮复审的重要问题：按 terminal kind/status 强制有效 identity、clock 与 timing nullability；当 `B_VALID>0` 时强制 hidden/exposed/return-tail 具有非空统计和数值分布，并将 terminal-kind count 收紧为固定键对象；跨字段 count 求和仍由后续 Task 7 运行时校验 | EP-G5-01、EP-G5-03、EP-G5-05、EP-G5-06 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效 |
-| 1.6 | 2026-09-12 | 修复 Gate 5 schema 第二轮复审的重要问题：`B_VALID>0` 时至少一个 terminal kind count 为正；`ACTIVITY>0` 时 terminal pre/overlap 的 median、p90 与数值分布必须非空；精确 count 求和仍由后续 Task 7 运行时校验 | EP-G5-01、EP-G5-05、EP-G5-06 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效 |
-| 1.7 | 2026-09-12 | 完成 Gate 5 Task 3 共享整数半开区间原语：交、裁剪、相邻/重叠 union、union 长度和原子切分；覆盖空区间、逆序/负时间拒绝、重复与确定性排序。A/B 研究语义与冻结合同未改变。 | EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步为 A 记账实现与测试 |
-| 1.8 | 2026-09-12 | 完成 Gate 5 Task 4 的 A 墙钟记账：按窗口/API/sync/`W(s)` 边界原子切分，以固定优先级互斥分配顶层与二级字段；全局质量失败、局部 invalid/ambiguous sync、未知 API 语义及未知 wait activity kind 均 fail-closed 到 unattributed。加入手算 100 ns、API union/冲突、重叠 sync、phase clipping 与 0 ns Decode 定向测试。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步为 B provenance、D/Signature 与 Gate 5 集成验证 |
-| 1.9 | 2026-09-12 | Gate 5 Task 4 第一轮复审引入 CUDA API 的结构化 NVTX ownership gate，并覆盖外部线程、无线程、invalid-over-valid、双非空 wait-set union、正常 0 ns 窗口与运行时数值校验；其中把 ownership 与当前 phase/thread 绑定的过严规则已在 2.0 修正。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；B、bundle、D/Signature 与 Gate 5 集成验证仍未完成 |
-| 2.0 | 2026-09-12 | Gate 5 Task 4 第二轮复审澄清 API ownership 与 phase clipping：同 API 线程、完整 identity 且包含 API 的 Canonical structured request/phase/marker range 仅证明同一 invocation；它不定义 A 窗口。A 仍只由结构化 request/phase windows 定义，跨 phase API 由原子区间分别裁剪；允许同 invocation 的 worker-thread marker，拒绝冲突或不完整的 enclosing ownership。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；B、bundle、D/Signature 与 Gate 5 集成验证仍未完成 |
-| 2.1 | 2026-09-12 | Gate 5 Task 4 集成复审修正窗口发现：完整 structured 非窗口 kind（含 worker ownership marker）不参与 A window creation，也不否定同一 invocation 的 request/prefill/decode 三个有效窗口；request/phase 的文本伪造、字段缺失和边界冲突仍按原有规则 fail-closed。新增真实 ABInputs discovery 到 A 的多线程 query union 回归。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；该检查仅为合成 Engineering 证据，B、bundle、D/Signature 与完整 Gate 5 集成仍未完成 |
-| 2.2 | 2026-09-12 | Gate 5 Task 4 第二轮集成复审收紧 worker API ownership：A 在采用任一 structured request/phase/marker range 前重新解析其 NVTX text，并要求与缓存 identity 完整一致；缺前缀、解析/对象失败或字段冲突一律不是 ownership evidence。窗口发现继续忽略非窗口 marker，因此伪造 marker 不会否定正常三窗口，但其 API 片段 fail-closed 至 unattributed。 | EP-G5-01、EP-G5-02 | 不改变 Measurement Contract、Q0 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；该检查仅为合成 Engineering 证据，B、bundle、D/Signature 与完整 Gate 5 集成仍未完成 |
-| 2.3 | 2026-09-13 | 完成 Gate 5 Task 5 的 B 单同步 provenance：B 逐条投影 S 的 sync identity、wait-set、terminal、validity、origin 和 cross-phase 字段；仅在 `B_VALID` 时按 Canonical 活动区间 union 计算 hidden/exposed、terminal pre/overlap 与 return-tail，其他状态保持 null-only。输出不含跨同步 total/sum 接口；新增 Q0 oracle 独立 expected 的合成回归。 | EP-G5-03 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步为 bundle/纯派生层与 Gate 5 集成验证 |
-| 2.4 | 2026-09-13 | Approved review 后补齐两条 B 回归：同一有效 wait-set 的重叠活动按区间 union 而非 duration sum，及 `COMPLETION_BOUNDARY` terminal 的 activity timing 为 null、return-tail 仍按可观察 completion boundary 计算。现有实现已满足，未修改生产代码。 | EP-G5-03 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效 |
-| 2.5 | 2026-09-13 | 完成 Gate 5 A/B bundle 与 `analyze-ab` CLI：Canonical+S 先严格联结，A/B 只调用既有冻结计算模块；输出逐条 schema 校验、确定性 gzip、拒绝覆盖、临时目录原子改名，loader 校验 schema/hash/size/count 和可选外部 lineage。边界审计显式覆盖 S 与四个 A/B 下游模块，并拒绝 sqlite3、Nsight 私有表名和旧 accounting import。 | EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；D/Signature 仍未实现。 |
-| 2.6 | 2026-09-13 | Gate 5 Task 6 复审修正：A/B loader 在 schema 允许未来资格值时仍执行当前 Engineering 资格策略（`formal_evidence=false`、`q0_status=NOT_RUN`、`scope=A_B_LAYER_ONLY`），该策略只在 Gate 6 尚无独立哈希资格证明期间适用；外部 S lineage 额外逐项核对 sync registry version/SHA-256；静态边界检查覆盖 `from analysis import exposed_accounting` 及 alias，保留无关 `analysis` import。 | EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 保持 `NOT_RUN`，当前无 Formal 数据，不产生失效；该 loader policy 不是对未来 Formal bundle 的永久否定。 |
-| 2.7 | 2026-09-13 | 完成 Gate 5 Task 7：`derive-exposure` 仅消费已验证 A/B bundle，确定性、不可覆盖地输出 D 和 Exposure Signature；D 使用冻结三项 A 公式与零分母 null，Signature 只摘要 A 向量/比例和 B 状态、有效数值统计、终端类型/分布。派生 loader 复查 schema/hash/可选 A/B lineage、资格不升级，以及 terminal/distribution 的运行时 count 一致性；边界审计禁止其回读 Canonical/S 或 Raw/S 时间字段。 | EP-G5-04 至 EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；Gate 5 仍为 `NOT_RUN`，当前无 Formal 数据，不产生失效；下一步是 Task 8 的历史 Engineering 回归、全量验证与独立复审。 |
-| 2.8 | 2026-09-13 | 完成 Gate 5 Task 8 离线工程验证：以 `nsys export --lazy=false` 只读导出历史 `w01` trace，Raw SHA-256 前后相同；Canonical identity 保持 ambiguous，S 的 446 条 physical sync 均 invalid，A 无合格 window，B 一一投影为 446 条 `B_INVALID`，Q0 保持 `NOT_RUN`。完成 A/B 定向、合同、oracle/边界、compile 和全量 pytest；全量仅保留已记录的两项 PowerShell smoke 失败。 | EP-G5-06、EP-ISSUE-02、EP-ISSUE-03 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；历史结果仍仅为 Engineering，当前无 Formal 数据。Gate 5 明确保持 `NOT_RUN`，awaiting independent review；controller 在独立完整 diff 复审后决定 verdict。 |
-| 2.9 | 2026-09-14 | 完整分支复审后的最终修复：严格校验 S 状态、wait-set/frontier 和 Canonical terminal 一致性；跨 invocation Full Request 正重叠按 identity fail closed；零窗口必须有质量 issue；Derived 改为精确 A/B loader/error 符号白名单。首轮 RED 30 项复现，另补缺 phase 的重叠请求 RED→GREEN；最终 Gate 5 `170 passed`，全量 `540 passed, 2 failed`（仅既有 PowerShell smoke）。 | EP-G5-01、EP-G5-03、EP-G5-05、EP-G5-06、EP-G3-08 | 不改变 Measurement Contract、Q0、Pilot 或 Protocol Freeze；未重新采集历史 trace 或产生 Formal 数据。Gate 5 保持 `NOT_RUN`，awaiting independent re-review。 |
-| 3.0 | 2026-09-14 | 独立再复审确认三项问题闭合，并发现 completion boundary 尚未核对 Canonical sync 时钟域；新增反例先失败后修复，最终定向复核 `Approved`。Gate 5 新鲜验证为 `171 passed`，全量为 `541 passed, 2 failed`（仅既有 PowerShell smoke），据此将 Gate 5 判为 `PASS`，当前优先级切换至 Gate 6 的 GPU 前可执行工作。 | EP-G5-03、EP-G5-06、EP-G6-01、EP-G6-02 | 不改变 Measurement Contract、真实 Q0、Pilot 或 Protocol Freeze；历史数据仍仅为 Engineering，当前无 Formal 数据。 |
-| 3.1 | 2026-09-14 | 冻结 Gate 6 GPU 前实施计划：23 个 oracle case 一一映射到原生 CUDA、真实 seed 后故障注入或纯合成 Canonical；新增 CUDA compile/list、Windows/Linux argv dry-run、正式 S/A/B 合成执行和独立 evaluator 的测试先行顺序。 | EP-G6-01、EP-G6-02 | 不改变 Measurement Contract 或 Gate 2 expected；Gate 6 继续 `BLOCKED`，不产生真实 Q0、Pilot 或 Formal 证据。 |
-| 3.2 | 2026-09-14 | 完成 Q0 执行合同第一步：23 个 oracle case 与执行 case 严格一一对应，稳定 activity/sync/API label 不得改写；区分原生 CUDA、真实 seed 后 Canonical 故障注入和纯合成 Canonical，缺失/额外/重复 case、资格升级及策略字段冲突均 fail closed。 | EP-G6-01 | 不改变 Gate 2 expected；只是 Engineering 执行规划证据，Gate 6 与真实 Q0 保持 `BLOCKED/NOT_RUN`。 |
-| 3.3 | 2026-09-14 | 完成受控 Q0 CUDA 微程序：覆盖 21 个 native seed，使用结构化 NVTX request/phase/activity/sync label，支持 stream、device、driver context、event/cross-stream、completed-before、empty、kernel+MemOp、default stream、multithread、overlapping host sync、phase spill、invocation bleed、graph、同步 D2H 与 query。CUDA 13.0 可在不运行 case 时编译并核对 seed 集合；本机污染性的 `CL` 环境变量只在编译子进程中移除。 | EP-G6-01、EP-ISSUE-07 | 仅证明源码可构建及身份注册一致，不证明 GPU 行为或 Nsight 可观测性；Gate 6 继续 `BLOCKED`，Q0 `NOT_RUN`。 |
-| 3.4 | 2026-09-14 | 完成 Q0 跨平台 dry-run：Windows/Linux 均生成无 shell 引号拼接的 `nsys` argv、23 份 source manifest、逐文件哈希和不可覆盖 run manifest；21 个 native seed 有采集命令，2 个 synthetic-only case 明确无 GPU 命令。 | EP-G6-02 | dry-run 不执行 CUDA、Nsight 或 analyzer，不产生 `.nsys-rep`；Gate 6 继续 `BLOCKED`，Q0 `NOT_RUN`。 |
-| 3.5 | 2026-09-14 | 完成 Gate 6 的 GPU 前合成对照：23 个显式 Canonical profile 进入正式 S/A/B，独立 evaluator 按冻结 oracle 对照且静态禁止导入被测模块；严格 observed schema 与重复/缺失/额外 identity 检查 fail closed。该回归发现并修正 graph mapping unsupported 时 S 仍保留未证明 wait-set 的缺口。 | EP-G4-01 至 EP-G4-05、EP-G6-02 | 合成结果仅为 Engineering/SYNTHETIC_ONLY，Q0 仍为 NOT_RUN，Gate 6 保持 BLOCKED；不改变 Measurement Contract、Protocol Freeze 或 Formal 数据。 |
-| 3.6 | 2026-09-14 | 完成 Gate 6 GPU 前集成验收并固化机器可读证据：实际执行 CUDA 编译/list、Nsight Windows dry-run、23-case 合成 S/A/B 对照、静态边界与全仓非 GPU 回归。全仓为 `570 passed, 2 failed`，无新增失败。 | EP-G6-02A、EP-G6-03 | GPU 前准备判定 PASS 不等于 Gate 6 PASS；Q0 仍为 NOT_RUN，EP-G6-03 至 05 继续受 GPU 阻塞，不改变任何实验数据资格。 |
-| 3.7 | 2026-09-14 | 真实执行复审发现 NVTX capture 缺少明确触发 range、真实 receipt/fault/observed/gate 尚未实现，因此在服务器采集前新增 EP-G6-02B。第一步改用 CUDA Profiler API 控制 capture，并冻结显式单 GPU 选择。 | EP-G6-02B、EP-G6-03 | 修正此前“可直接真实采集”的过早推断；不否定合成就绪证据，不改变 Q0 NOT_RUN、Gate6 BLOCKED 或任何 Formal 资格。 |
-| 3.8 | 2026-09-14 | 完成真实 Q0 单 case executor 与不可覆盖 receipt：执行前检查工具和 source manifest 哈希，显式传递单 GPU 选择，采集环境身份、命令日志与 Raw 哈希；失败现场与成功收据严格分开。 | EP-G6-02B | 仅新增 Engineering 采集能力，尚无真实 GPU 产物；Q0 保持 NOT_RUN，Gate6 保持 BLOCKED。 |
-| 3.9 | 2026-09-14 | 完成三种 Q0 Canonical 故障副本：只在新 bundle 中移除唯一 activity correlation、标记 dropped records 或移除唯一 graph node mapping，并重写确定性文件哈希和 lineage。 | EP-G6-02B | Raw 与源 Canonical 保持不可变；故障副本只用于 Q0 Engineering，不能升级数据资格。 |
-| 4.0 | 2026-09-14 | 完成真实 Q0 observed/evaluator：稳定活动标签由 correlation、launch API 与唯一结构化 marker 联结；真实数值预期只使用 oracle 预写的 wait-set/terminal 标签和本次真实区间独立重算，避免拿合成固定纳秒值评判 GPU。缺区间、缺映射和歧义映射均 fail closed。 | EP-G6-02B | 单 case 通过仅标记 `REAL_CASE_PASS/REAL_CASE_ONLY`，Q0 仍为 `NOT_RUN`；尚未聚合全部必需 case，Gate 6 保持 `BLOCKED`。 |
-| 4.1 | 2026-09-14 | 完成本地全部真实 Q0 执行缺口：故障注入前记录唯一目标/预写标签；单 case 证据绑定 receipt、Raw/source manifest、Canonical/S/A/B 哈希与环境；唯一聚合器强制 21 个真实 case、2 个合成边界例、单 run 和单环境，完整合成报告不得替代真实案例；补齐 CLI 与 Windows 服务器手册。 | EP-G6-02B、EP-G6-03 至 EP-G6-05 | 本地准备完成不等于真实 Q0 已运行。Gate 6 仍 `BLOCKED`、Q0 仍 `NOT_RUN`；下一步必须在固定 GPU/软件栈执行服务器采集。 |
-| 4.2 | 2026-09-15 | 根据服务器已有旧 `YLQ_test` 环境补充部署与回传流程：旧项目/虚拟环境/历史结果保持不动；新版由 Git bundle 在同级目录 clone，使用轻量独立虚拟环境并记录 commit/dirty state；先跑单例再批量，最终回传完整 `$Out`。 | EP-G6-03 | 只完善 Engineering 执行与 provenance，不改变 Measurement Contract、Q0 verdict、Protocol Freeze 或 Formal 数据资格。 |
-| 4.3 | 2026-09-15 | 基于服务器 r2 真实 SQLite 修复 Windows Q0 适配：精确支持 Nsight `2026.2.1.210 / 3.25.0`，区分核心表与按活动出现的可选表，保留有符号 trace-relative 时间，规范化 GPU UUID，并输出未唯一映射 sync 的完整诊断；r2 哈希保持不变且继续因捕获结束同步 fail-closed。微程序新增 request 外显式排空，手册改为原目录 bundle 更新、MSVC 14.39 和 r3 单例优先。全仓 `602 passed`。 | EP-G3-09、EP-G6-02C、EP-G6-03、EP-ISSUE-08 | 不改变 `W(s)`、terminal、A/B 等 Measurement Contract；这是 Protocol Freeze 前的 observation/执行适配修正。Q0 仍 `NOT_RUN`，r1/r2 不升级资格，当前无 Formal 数据。 |
-| 4.4 | 2026-09-15 | 基于不可变 r3 修正 Q0 observation scope 和下游空映射处理：唯一目标 request 外同步保留为 harness warning，目标内与非 Q0 仍 fail closed；S/B 保留 invalid/null 行，A 不让无 ownership 的 request 外行污染窗口；Q0 单阶段窗口与微程序对齐，并允许窗口外有符号 profiler API。r3 本地只读重放得到 `REAL_CASE_PASS`，全仓 `615 passed`，手册切换为 r3 诊断后新建 r4。 | EP-G3-10、EP-G6-02D、EP-G6-03、EP-ISSUE-09 | 不改变 `W(s)`、terminal 或正式 workload 三阶段语义；属于 Engineering、Protocol Freeze 前合同澄清。r3 不升级为 Q0 证据，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，当前无 Pilot/Formal 数据。 |
-| 4.5 | 2026-09-15 | 基于不可变 r4 EMPTY 修正 lazy-export 零行 KERNEL 表与真实 `VALID_EMPTY` evaluator：缺表只在已审查 schema、lazy、CUDA capture、关键导出元数据唯一且无 kernel/graph launch evidence 时规范化为零条；其他情况继续 fail closed。独立复审后补齐 graph launch、`_ptsz`/`_ptds` API 变体、严格 lazy 取值与重复/冲突元数据反例。新导出统一 `--lazy=false`，服务器流程改为 r4 只读诊断后新建 r5。最终定向测试 `86 passed`、全量 pytest `632 passed`，合同 37/37、Canonical 边界、oracle 独立性和 compileall 均通过。 | EP-G6-02E、EP-G6-04、EP-ISSUE-10 | 不改变 Measurement Contract、Q0 oracle 的语义预期、S/A/B 定义或 Formal 资格；r4 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
-| 4.6 | 2026-09-16 | 基于不可变 r5 PTDS 修复三个同源多线程 native seed 的重复 target request：coordinator 唯一持有 full_request/decode 并覆盖 worker GPU 工作，worker 仅写不包住 CUDA API 的短 marker；analyzer 唯一性规则保持 fail closed。旧 r5 只读复核仍 invalid 且哈希不变；服务器流程切换为 r5 诊断后新建 r6。全仓 `636 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。 | EP-G6-02F、EP-G6-03、EP-G6-04、EP-ISSUE-11 | 不改变 Measurement Contract、Q0 oracle、A/B 定义或 Formal 资格；r5 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
-| 4.7 | 2026-09-16 | r6 已确认重复 request 修复和 request 外 harness 分类正确，同时发现 PTDS 的 `cudaStreamQuery` 轮询生成 31 条无 Runtime 映射的 request 内 synchronization。microbench 改为一次 stream-ordered host callback 加 Host 条件变量；analyzer 保持 fail closed，手册切换为 r6 只读诊断后新建 r7。全仓 `639 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。 | EP-G6-02G、EP-G6-03、EP-G6-04、EP-ISSUE-11、EP-ISSUE-12 | 不改变 Measurement Contract、Q0 oracle、既有稳定标签、A/B 定义或 Formal 资格；r6 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
-| 4.8 | 2026-09-16 | r7 invocation-bleed 暴露 resolver 将全 trace request 总数误用为目标唯一性条件。现改为只对完整 target identity 的匹配数执行唯一性 gate；prior request 可共存，零目标与重复目标继续 fail closed，correlation 131 复用既有 request 外规则。手册切换为 r7 只读诊断后新建 r8。全仓 `641 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。 | EP-G6-02H、EP-G6-03、EP-G6-04、EP-ISSUE-13 | 不改变 Measurement Contract、Q0 oracle、microbench、既有 identity、A/B 定义或 Formal 资格；r7 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
-| 4.9 | 2026-09-16 | r8 已完成 21/21 源 Canonical，但默认 graph-level tracing 无 node activity，导致 Graph mapping-removal fault 零命中。现仅为该 Graph case 增加 `--cuda-graph-trace=node`，并以跨平台命令回归保证其余 native case 不受影响；手册切换到全新 r9。全仓 `643 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线。 | EP-G6-02I、EP-G6-03、EP-G6-04、EP-ISSUE-14 | 不改变 Measurement Contract、Q0 oracle、microbench、analyzer/S、Canonical 或 fault 语义；r8 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，无 Pilot/Formal 数据受影响。 |
-| 5.0 | 2026-09-16 | r9 在 `Q0-DEVICE-001` 因 wait-set 标签顺序与 oracle 不同被 evaluator 误判。现仅对 `wait_set_activity_labels` 使用无序、无重复的精确成员比较；缺失、额外、重复仍失败，其他 list 字段不变。手册增加 r9 只读 evaluator 重放并切换到全新 r10。Q0 `86 passed`、合同/边界 `163 passed`、全仓 `647 passed, 2 failed`。 | EP-G6-02J、EP-G6-03、EP-G6-04、EP-ISSUE-15 | 不改变 `W(s)`、oracle、S/analyzer、Canonical、microbench 或 Formal 资格；r9 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
-| 5.1 | 2026-09-16 | r10 的 4 KiB H2D 未与 35 ms kernel 重叠，mixed exposure 为零。现仅对 KERNEL-MEMOP case 在 profiler/request 前预分配 512 MiB buffer，改用 10 ms kernel 与 512 MiB H2D；其他 case 保持 4 KiB。新增真实单 case diagnostic gate，通过后才允许新建 r11。Q0 `87 passed`、合同/边界 `163 passed`、全仓 `648 passed, 2 failed`。 | EP-G6-02K、EP-G6-03、EP-G6-04、EP-ISSUE-16 | 不改变 oracle、measurement semantics、identity、analyzer/evaluator、Canonical 或 Formal 资格；r10 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
-| 5.2 | 2026-09-16 | 第一份 512 MiB/10 ms diagnostic 仍显示 kernel 后约 108159 ns 才开始 copy。第二版不再扩大 buffer，只把长 H2D 提交移到 kernel 之前，并以静态构造回归锁定 memcpy→kernel→sync 顺序；手册要求全新 memcpy-first diagnostic，未通过前禁止建立 r11。Q0 `87 passed`、合同/边界 `163 passed`、全仓 `648 passed, 2 failed`。 | EP-G6-02L、EP-G6-03、EP-G6-04、EP-ISSUE-16 | 不改变 oracle、measurement semantics、identity、analyzer/evaluator、Canonical 或 Formal 资格；已有 diagnostic 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
-| 5.3 | 2026-09-16 | memcpy-first diagnostic 证明 H2D API 仅 59399 ns，而同线程后续 kernel launch 阻塞 53242288 ns 且设备执行被串行化。第三版仅把两个既有 stream 的提交拆到 coordinator/worker 两条 Host 路径，以 Host 条件变量同时放行，仍由原 `S_DEVICE` 建立 completion 证据；手册切换为全新 concurrent-host diagnostic，未通过前禁止建立 r11。Q0 `87 passed`、全仓 `648 passed, 2 failed`。 | EP-G6-02M、EP-G6-03、EP-G6-04、EP-ISSUE-16 | 不改变 oracle、measurement semantics、identity、analyzer/evaluator、Canonical 或 Formal 资格；r10 与两份 diagnostic 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
-| 5.4 | 2026-09-16 | concurrent-host diagnostic 中两项 submission evidence 均为 `PROVEN`，但 worker 缺少结构化 invocation marker，导致 `KERNEL_A` 无法归入 decode，S 以 `INVOCATION_BOUNDARY_INVALID` fail closed。第四版仅在 worker launch 前增加立即结束的 `WORKER_KERNEL_MEMOP` marker；手册切换为全新 concurrent-host-marker diagnostic，未通过前禁止建立 r11。Q0 `87 passed`、全仓 `648 passed, 2 failed`。 | EP-G6-02N、EP-G6-03、EP-G6-04、EP-ISSUE-16 | 不改变 oracle、measurement semantics、request/decode identity、analyzer/evaluator、Canonical 或 Formal 资格；r10 与三份 diagnostic 不升级，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
-| 5.5 | 2026-09-17 | 最新 diagnostic 证明 `KERNEL_A` marker 完整覆盖同线程 launch，但 S 只接受 request/phase ownership；直接延长 worker marker 仍不会被 S 采用，并会使 Q0 label 多候选。新增 activity-specific marker ownership 修正规格与正反例矩阵，暂停 GPU 重跑，待用户复核后实施。 | EP-G6-02O、EP-G6-03、EP-G6-04、EP-ISSUE-17 | 这是 Pre-Pilot/Engineering 合同一致性修正设计；尚未修改 S、oracle、A/B、Q0 expected 或任何数据资格，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`。 |
-| 5.6 | 2026-09-17 | 按批准规格以测试先行方式增加 activity-specific marker ownership；只在 `_normalize_activity()` 接受同线程、完整覆盖 enqueue API、text/cache 完整一致的 marker。坏证据 invalid，identity/phase 冲突 ambiguous；独立复审后补齐合法 marker 不得遮蔽部分相交或在 API 结束前开始但未闭合的坏 marker。sync/event、A 窗口、oracle、A/B 和 Q0 expected 不变。离线 S `77 passed`，全仓 `661 passed, 2 failed`（仅既有 PowerShell smoke 基线），合同/独立性/边界检查通过。 | EP-G6-02O、EP-G6-04、EP-ISSUE-17 | 这是 Engineering analyzer 修正候选；真实 GPU 单例尚未复验，Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，本轮不得建立 r11。 |
-| 5.7 | 2026-09-17 | 真实 activity-ownership 单例确认 S 修复成功，但 512 MiB H2D 与 10 ms kernel 仍无 device overlap。新增完全隔离的 WDDM Engineering diagnostic 入口：运行时核对 Nsight 版本/help，保存 HAGS、Raw/SQLite/receipt 和中立 WDDM 时间线；仅允许 PID/context/engine/time-window 推断，永不声称 CUDA↔packet 严格映射或具体硬件根因。正常 Q0 argv 和未来 r11 均不增加 WDDM 参数。定向回归 `51 passed`，全仓 `671 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线；合同、oracle 独立性、Canonical 边界与 compileall 均通过。 | EP-G6-02P、EP-G6-04、EP-ISSUE-16、EP-ISSUE-17 | 不改变 microbench、oracle、Canonical、S、A/B、evaluator、Measurement Contract 或数据资格；Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，当前唯一下一步为 WDDM diagnostic，禁止建立 r11。 |
-| 5.8 | 2026-09-17 | diag-02 在管理员权限下成功采集 WDDM queue 证据，但 HAGS 未确认且 packet 无 CUDA correlationId，因果结论保持未建立。新增严格隔离的 64 MiB H2D/10 ms kernel 参数 diagnostic，使用标准 CUDA/NVTX 采集并记录实际参数；正常 512 MiB/10 ms Q0 路径不变，1 ms 候选未实现。定向回归 `55 passed`，全仓 `678 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线；合同、oracle 独立性、Canonical 边界和 compileall 均通过。 | EP-G6-02Q、EP-G6-04、EP-ISSUE-16 | 仅为 Engineering 假设检验能力，不改变 oracle、Canonical、S、A/B、evaluator、Measurement Contract 或数据资格；Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，禁止建立 r11。 |
-| 5.9 | 2026-09-17 | 64 MiB/10 ms diagnostic 真实结果仍为 overlap=0，按预定判据停止 1 ms 路线。新增跨 CUDA 12.4/13 兼容的 device capability 探针，通过 `cudaDeviceGetAttribute` 输出并保存 async engine 数、device overlap 和 concurrent kernels；环境快照缺任一字段均 fail closed。定向回归 `42 passed`，全仓 `681 passed, 2 failed`，两项仍为既有 PowerShell smoke 基线；compileall 通过。 | EP-G6-02R、EP-G6-04、EP-G6-04A、EP-ISSUE-16 | 只增加 Engineering 平台资格证据，不修改 microbench case、oracle、Canonical、S、A/B、evaluator 或正常 collection argv；Gate 6 仍 `FAIL`、Q0 仍 `NOT_RUN`，不得建立 r11。 |
-| 6.0 | 2026-09-17 | 服务器 capability probe 已报告并复核 GPU UUID、commit 与三项能力：`async_engine_count=5`、`device_overlap=1`、`concurrent_kernels=1`，同时记录 capability、receipt 和完整 ZIP SHA256。能力证据只能证明设备声明支持，不能解释此前 overlap=0。后续路线切换为先设计单变量 D2H Engineering diagnostic；H2D 调参和 64 MiB/1 ms 正式停止。 | EP-G6-04A、EP-ISSUE-16 | 不改变正常 Q0、oracle、Canonical、S、A/B、evaluator 或 Measurement Contract；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，D2D 与 r11 均禁止。 |
-| 6.1 | 2026-09-17 | 按批准设计实现严格隔离的 64 MiB D2H/10 ms Engineering diagnostic。binary 仅在专用 flag 与 run identity 同时匹配时切换 copy direction；默认 512 MiB H2D 和既有 64 MiB H2D 路径保持不变。receipt 固化 overlap 唯一判据、terminal 非门槛、两种结果均停止以及禁止因果归因。定向回归 `47 passed`，全仓 `690 passed, 2 failed`，compileall 通过。 | EP-G6-02S、EP-G6-04B、EP-ISSUE-16 | 不修改 oracle、Canonical、S、A/B、evaluator 或 Measurement Contract；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，服务器尚未实跑 D2H，禁止 D2D、调参和 r11。 |
-| 6.2 | 2026-09-17 | 收录并复核 64 MiB D2H/10 ms Engineering diagnostic 真实证据（commit `a607645e`；Raw/SQLite/source manifest/canonical/S/A-B 哈希链与 validity 复核通过）：D2H `77979638..87266973 ns`、kernel `88995128..98995997 ns`，间隔 `1728155 ns`、`overlap=0`，terminal=`KERNEL_A`，A `kernel_only=10000869 ns`、`kernel_memop_mixed=0`。改变 H2D→D2H 方向仍未恢复真实 device overlap，`Q0-KERNEL-MEMOP-001` 记为 platform construction blocked，且不归因 WDDM、driver 或 Runtime。按预注册判据 STOP：不进入 D2D、不运行 64 MiB/1 ms、不建立 r11、不修改 oracle/Canonical/S/A/B/evaluator/Measurement Contract，不在该平台继续参数搜索。新增 `EP-G6-06`，只做策略审查设计。 | EP-G6-04B、EP-G6-05、EP-G6-06、EP-ISSUE-16 | 不改变 Measurement Contract、Q0 oracle、A/B 定义或任何数据资格；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，当前无 Pilot/Formal 数据 |
-| 6.3 | 2026-09-17 | 完成 `EP-G6-06` 策略审查并记录决定：synthetic 仅允许作为 Engineering regression strengthening；覆盖差异矩阵显示现有 23 个 profile 已覆盖 `KERNEL_MEMOP_MIXED` 的重叠 wait-set、mixed 分桶、union 与 terminal 语义，未发现新的未覆盖 failure mode，因此不实施新增 synthetic profile，`EP-G6-08` 只做纯文档边界固化；批准进入“候选平台 + construction admission”设计（仅设计批准，不授权外部实验），并把平台资格与准入判据冻结为 `docs/v1_4_1/candidate_platform_admission_checklist_v0_1.md`（在确认候选平台之前冻结）；scope limitation 暂不批准、仅作 fallback；runbook 统一为“第 3 节及后续 r11 当前仍一律禁止执行”。新增 `EP-G6-07`、`EP-G6-08`。纯设计/文档变更，未运行任何新实验。 | EP-G6-06、EP-G6-07、EP-G6-08 | 不改变 Measurement Contract、Q0 oracle、Canonical、S、A/B、evaluator 或数据资格；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`，当前无 Pilot/Formal 数据 |
-| 6.4 | 2026-09-17 | 批准 `EP-G7-01`～`EP-G7-06` 的非 GPU 工作与 Gate 6 等待期并行推进，并要求与 Gate 6 策略工作隔离提交；Gate 7 保持 `BLOCKED`、`EP-G7-07` 不得执行、Gate 8 不得启动。计划：`docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md`。清单版本同步提升为 `6.4`。纯计划/文档变更，未运行 GPU smoke、未采集任何 pass。 | EP-G7-01 至 EP-G7-06 | 不改变 Measurement Contract、Gate 6/Q0 requirement 或任何数据资格；Gate 7 保持 `BLOCKED`，当前无 Pilot/Formal 数据 |
-| 6.5 | 2026-09-17 | 收口 `EP-G6-07` 首轮候选平台盘点：主线切换为 Candidate Platform qualification；修正 CP-01 的 A3（driver package `581.57`、driver API 与 runtime 均 `UNKNOWN`、Toolkit/nvcc `V13.0.88`，不得用 `nvidia-smi` 的 `CUDA Version` 充当 driver API/runtime），并将 CP-01/CP-03 的 A7 保持 `UNKNOWN`（显存与 host RAM 不能证明 512 MiB pinned-host + device 分配会成功）；确定信息补齐顺序 CP-03 → CP-01，CP-02 仅作 construction-blocked baseline，且该顺序不是 overlap 概率排名；Gate 7/8 暂停推进（Gate 7 保持 `BLOCKED`）；根因边界保持不变（已确认不同 non-blocking stream 在真实 device timeline 上串行，但不得归因到 Runtime/driver/WDDM/scheduler 任一层，不继续 RTX 4090 参数搜索）。清单版本同步提升为 `6.5`。纯文档变更，未运行任何实验。 | EP-G6-07、EP-G7-01 至 EP-G7-06、EP-ISSUE-04、EP-ISSUE-16 | 不改变 Measurement Contract、Q0 oracle、Canonical、S、A/B、evaluator 或数据资格；Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`、Gate 7 保持 `BLOCKED`，当前无 Pilot/Formal 数据 |
-| 6.6 | 2026-09-17 | CP-03（服务器 RTX 6000 Ada / GPU2）静态 qualification 收敛：A1、A3、A4、A5、A6、A8、A9 = `PASS`，并回填本轮实际取得的原始值（Windows Server 2022 Datacenter `10.0.20348`；物理机 ASUS `ESC8000A-E12`；Hyper-V 已安装且 `vmms` 运行；GPU index `2`、`NVIDIA RTX 6000 Ada Generation`、UUID `GPU-dff87fa4-1a85-8853-3fa7-c539b3886b38`、compute capability `8.9`、`memory.total = 49140 MiB`；driver package `555.99`；`cudaDriverGetVersion 12050 → 12.5`；`cudaRuntimeGetVersion 12040 → 12.4`；Toolkit/nvcc `12.4 / V12.4.131`；Nsight `2026.2.1.210-262137639646v0`；frozen HEAD `a607645e9c4fcd7df4b05d4e97fa8bf788763e47` 且 frozen source dirty lines = `0`；编译 `PASS`；`--list-cases` `21/21 MATCH`；binary SHA256 `A07C4BE52ED8EB1901C2AFEA529AF3E8FB230D27861FE390DC14BD3DE5BCD308`）。剩余 A2 `UNKNOWN / PENDING`（正式 admission 前确认并预留独占窗口；当前 GPU2 有其他用户任务属临时占用）与 A7 `UNKNOWN`（512 MiB pinned-host + device probe，未运行）。CP-03 保持第一候选、仍为 `NEEDS_INFORMATION`，不得标为 `QUALIFIED_FOR_ADMISSION_PLANNING`；CP-01/CP-02 判定不变。清单版本同步提升为 `6.6`。纯文档变更，未运行任何 case/workload/allocation probe/admission/GPU smoke。 | EP-G6-07 | 不改变任何 Gate verdict：Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`、Gate 7 保持 `BLOCKED`、Gate 8 未启动；不改变 Measurement Contract、Q0 oracle、Canonical、S、A/B、evaluator 或任何数据资格；当前无 Pilot/Formal 数据 |
-| 6.7 | 2026-09-18 | Gate 6 construction amendment 收口 checkpoint（新增 `EP-G6-09`）：收录 formal-shape 配对 diagnostic（`q0-win-4090-20260918-kernel-memop-h2d-formalshape-warmup-02`，evidence ZIP SHA256 `04767C513ACEB0EF73EFB284981CF0D43AD255161A67ABEEBDDFCDBDEC70FDA1`）——A' overlap=`0`、terminal=`KERNEL_A/KERNEL`；B overlap=`10000741 ns`、`S_DEVICE=VALID_NONEMPTY`、wait set=`{KERNEL_A,MEMCPY_B}`、terminal=`MEMCPY_B/MEMOP`，pair outcome=`AMENDMENT_REVIEW_ELIGIBLE`，不作 LAZY/WDDM/driver/runtime 归因；据此 Windows/RTX 4090 的“平台 incapable”推断不再成立，但底层 root cause 仍不声明唯一确定。建立 canonical baseline `codex/gate6-canonical-baseline`（implementation baseline `bc6c69cf`，与 evidence implementation `3dae79d` 的 7/7 implementation blobs 一致，历史 evidence 不改写）；冻结 construction amendment `docs/v1_4_1/gate6_construction_amendment_v0_1.md`（approval `558cc61`、wording clarification `bcbed7c`，`APPLY = {Q0-KERNEL-MEMOP-001}`，其余 20 real=`DO_NOT_APPLY`、2 synthetic=`NOT_APPLICABLE`，runtime 由 manifest policy 驱动、review-time predicate 不进入 runtime）；完成 implementation preflight（status=`PASS`、`SCOPE_EXPANSION_REQUIRED=false`，production/test touch list 已冻结，`q0_gate.py`/oracle/Measurement Contract/Canonical/S/A/B/evaluator 均不改）。`EP-G6-07` Candidate 路线暂停；不再做新的 Gate 6 diagnostic。清单版本同步提升为 `6.7`。纯文档变更，未 implementation、未运行任何 case/workload/admission/Q0/GPU smoke。 | EP-G6-05、EP-G6-07、EP-G6-09、EP-ISSUE-16 | 不改变任何 Gate verdict：Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`、Gate 7 保持 `BLOCKED/暂停`、Gate 8 未启动；不改变 Measurement Contract、Q0 oracle、Canonical、S、A/B、evaluator 或任何数据资格；amendment 与 preflight 已批准但 implementation 未开始，当前无 Pilot/Formal 数据 |
-| 6.8 | 2026-09-19 | `EP-G6-09` construction amendment implementation 收口并准备服务器执行（implementation commit `2e81f6f9a9ec590d37fb01be9e31f2251645c5d1`）：execution schema 升 `0.2.1`，23/23 case 显式 `measurement_initialization`（1 × `PRE_CAPTURE_SAME_KERNEL_WARMUP` = `Q0-KERNEL-MEMOP-001`、22 × `NONE`），正式 native invocation 必须显式携带且只携带一次 `--measurement-initialization <POLICY>`，缺失/未知/重复一律 STOP，`--list-cases`/`--environment-json` 与 Engineering diagnostic argv 不要求也不得混用该 policy；Engineering warm-up 保持固定 10 ms、formal warm-up 使用 measured invocation duration；离线验证 targeted tests `70 passed`、Q0 offline regression `199 passed`、`--list-cases` 21/21、compileall 与 `git diff --check` 通过；server validation=`NOT_STARTED`。同步更新 `docs/v1_4_1/gate6_windows_server_runbook.md` 的冻结 commit、schema `0.2.1` 与 formal policy 规则。清单版本同步提升为 `6.8`。本轮为纯文档收口，未修改代码/tests/schema/manifest、未运行任何 case/admission/Q0/GPU smoke。 | EP-G6-05、EP-G6-07、EP-G6-09、EP-ISSUE-16 | 不改变任何 Gate verdict：Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`、Gate 7 保持 `BLOCKED/暂停`、Gate 8 未启动；不改变 Measurement Contract、Q0 oracle、Canonical、S、A/B、evaluator 或任何数据资格；implementation 已完成但 server validation 与完整 Q0 尚未执行，当前无 Pilot/Formal 数据 |
-| 6.9 | 2026-09-19 | Gate 6 `final-01` 收口与 4 例 semantic FAIL root triage（新增 `EP-G6-10`）：frozen run `q0-win-4090-20260919-gate6-final-01` 为 frozen incomplete Engineering run（Raw collection 21/21、SQLite 21/21、source Canonical 21/21、controlled fault Canonical 3/3、S bundles 21/21、A/B bundles 21/21、real evidence 已生成 16、real PASS=12、real FAIL=4、`Q0-PHASE-SPILL-001` evaluator 因 analyzer blocker 未完成、其后 real evaluator 未继续、synthetic 与 gate aggregation 未运行、无 `q0_gate_report.json`、`resume/retry/promotion=false` 仅作文档 disposition 且不新增 schema enum）；`Q0-KERNEL-MEMOP-001 = REAL_CASE_PASS`，证明 `EP-G6-09` construction warm-up amendment 已在正式 frozen run 生效。4 例 FAIL 根因全部定性：Phase-Spill → observational-boundary amendment（`docs/v1_4_1/gate6_phase_spill_amendment_v0_1.md`，approval `74c91368`，implementation=`NOT_STARTED`）；Missing-Corr → submission-proof determinism（remediation=`UNRESOLVED / NOT_APPROVED`）；External / Multithread-Ordered / Overlapping-Host-Sync → shared marker ownership authority/provenance model gap，应统一 Marker Ownership amendment。下一步只起草统一 Marker Ownership amendment 并单独解决 Missing-Corr deterministic construction，不 implementation、不运行实验。清单版本同步提升为 `6.9`。纯文档变更，未 implementation、未运行任何 case/GPU/nsys/Q0。 | EP-G6-05、EP-G6-07、EP-G6-09、EP-G6-10、EP-ISSUE-16 | 不改变任何 Gate verdict：Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`、Gate 7 保持 `BLOCKED/暂停`、Gate 8 未启动；不改变 Measurement Contract、Q0 oracle、Canonical、S、A/B、evaluator、23-case composition 或任何数据资格；冻结 `final-01` 不重跑/续跑/拼接/升级；当前无 Pilot/Formal 数据 |
-| 7.0 | 2026-09-20 | **Gate 6/Q0 正式 PASS 并收口**（新增 `EP-G6-11`）：只读独立复核 final-04 传输件、解包清单与 gate report 后，把 Gate 6/Q0 落账为 `PASS`，并新增 `docs/v1_4_1/gate6_closeout_v0_1.md` 作为唯一 closeout（身份与哈希、缺失 prepare-time sidecar 边界、root-cause→amendment→implementation→verification 映射、实现成熟度、已关闭诊断分支）。同时把 7 个 Gate 7 行政步骤重审计压缩为 4 个可执行步骤 `EP-G7-08`～`EP-G7-11`（每步含 Objective/Why/Implementation/Evidence/PASS/STOP/Unlock），并作出**平台范围显式决定**：Gate 7 的合同等价只在当前声明的 Windows/RTX 4090 目标栈上要求真实 GPU smoke，跨平台等价转 Gate 9（不静默弱化：任一平台未通过该平台真实 smoke 前不得声称受支持）。清理本地可重建垃圾（未跟踪 bundle、pytest scratch、ad-hoc diff），不触碰正式 evidence、不重写 Git 历史、不重跑任何 Gate 6 GPU collection/synthetic/aggregate。清单版本同步提升为 `7.0`。 | EP-G6-05、EP-G6-11、EP-G7-08～EP-G7-11、EP-ISSUE-01、EP-ISSUE-03、EP-ISSUE-16 | 不改变 Measurement Contract、Q0 oracle、Canonical、S、A/B、evaluator、23-case composition、Gate 6 PASS 判据或任何既有数据资格；Gate 6/Q0 改判为 `PASS` 依据 final-04 的既有唯一 gate report（未新增采集）；Gate 7 由 `BLOCKED` 改为 `NOT_RUN`（解锁待执行）；Gate 8 仍未启动；当前无 Pilot/Formal 数据 |
+| 0.1 | 2026-09-10 | 首次建立完整清单；纳入无 GPU 离线路线、自然逐 Token 同步边界与现有 observation 基础 | 全部 | 无 Formal 数据，不产生失效 |
+| 0.2 | 2026-09-10 | 权威关系审计：协议修订底稿由 WMPC v1.5 更正为实验协议 v2.0；新增两份 Pre-Pilot 整合候选版 | EP-FND-06～10 | 未改变冻结协议 |
+| 0.3 | 2026-09-10 | 基于两份 Word 母版吸收 v1.4.1，完成 40/27 页视觉验收；完整 v7.0/v2.1 成为当前入口 | EP-FND-07～11、EP-ISSUE-05 | 未通过 Gate 1 或 Protocol Freeze |
+| 0.4 | 2026-09-10 | 复核发现 v7.0 第一章背景论证不完整，启动 v7.1 修订并简化交付文件名 | EP-FND-09、EP-FND-11、EP-FND-12 | 不改变合同或资格 |
+| 0.5 | 2026-09-11 | 完成 v7.1 背景与研究立意补齐、结构/语义校验与全页视觉验收 | EP-FND-12、EP-ISSUE-05 | 不改变合同或资格 |
+| 0.6 | 2026-09-11 | 完成 Measurement Contract v0.2，建立 37 条规则到 25 个验证案例的机器映射 | EP-G1-02～09 | Gate 1 内部合同审查 PASS |
+| 0.7 | 2026-09-11 | 完成 Q0 独立标准答案设计（23 case、25 特性、`DESIGN_ONLY_PASS`） | EP-G2-01～05、EP-G3-05 | Gate 2 设计审查 PASS |
+| 0.8 | 2026-09-11 | 完成 Canonical Raw v0.2 与三份历史 trace 的 Engineering 回归 | EP-G3-05～08、EP-G4-01～05 | Gate 3 PASS |
+| 0.9 | 2026-09-11 | 完成 S v0.2：ownership、submission、completion graph、`W(s)`、terminal、validity 与版本化输出 | EP-G4-01～05、EP-G5-01 | 无 |
+| 1.0 | 2026-09-11 | Gate 4 复审修正三项语义缺陷：missing correlation 降级、wait-event 漏 producer、外部 invocation 静默删除 | EP-G4-01～05 | 无 |
+| 1.1 | 2026-09-11 | Gate 4 二轮复审：`eventSyncId` 唯一映射与 event/context/device 校验、invalid 传播、default-stream 污染；补 9 回归 | EP-G4-01～05、EP-ISSUE-03、EP-ISSUE-06 | 无 |
+| 1.2 | 2026-09-11 | Gate 4 三轮复审：统一缺失 correlation 的 fail-closed 传播路径；补 3 回归 | EP-G4-02、EP-G4-05 | 无 |
+| 1.3 | 2026-09-12 | 冻结 Gate 5 设计（A/B 双输入联结、窗口发现、B 投影、D/Signature 纯派生） | EP-G5-01～06 | 无 |
+| 1.4 | 2026-09-12 | 冻结 A/B 与派生层 v0.2 JSON Schema（守恒字段、null-only、lineage） | EP-G5-01～06 | 无 |
+| 1.5 | 2026-09-12 | Gate 5 schema 一审修复：terminal kind/status 的 identity、clock 与 timing nullability，count 收紧 | EP-G5-01、EP-G5-03、EP-G5-05、EP-G5-06 | 无 |
+| 1.6 | 2026-09-12 | Gate 5 schema 二审修复：`B_VALID>0` 时 terminal count 与统计分布必须非空 | EP-G5-01、EP-G5-03、EP-G5-05、EP-G5-06 | 无 |
+| 1.7 | 2026-09-12 | 完成整数半开区间原语（交、裁剪、相邻/重叠 union、union 长度、原子切分） | EP-G5-02 | 无 |
+| 1.8 | 2026-09-12 | 完成 A 墙钟记账：按窗口/API/sync/`W(s)` 原子切分，固定优先级互斥分配，fail-closed 到 unattributed | EP-G5-01、EP-G5-02 | 无 |
+| 1.9 | 2026-09-12 | Gate 5 Task 4 一审引入结构化 NVTX API ownership gate（过严规则已在 2.0 修正） | EP-G5-01、EP-G5-02 | 无 |
+| 2.0 | 2026-09-12 | 二审澄清 API ownership 与 phase clipping：ownership 只证明同一 invocation，不定义 A 窗口 | EP-G5-01、EP-G5-02 | 无 |
+| 2.1 | 2026-09-12 | 集成复审修正窗口发现：非窗口 marker 不创建也不否定 A 三窗口 | EP-G5-01、EP-G5-02 | 无 |
+| 2.2 | 2026-09-12 | 收紧 worker API ownership：采用前重解析 NVTX text 并要求与缓存 identity 完整一致 | EP-G5-01、EP-G5-02 | 无 |
+| 2.3 | 2026-09-13 | 完成 B 单同步 provenance：仅 `B_VALID` 按区间 union 计算，其他状态 null-only，不提供跨同步 total | EP-G5-03 | 无 |
+| 2.4 | 2026-09-13 | 补两条 B 回归：重叠活动按 union、`COMPLETION_BOUNDARY` terminal timing 为 null | EP-G5-03 | 无 |
+| 2.5 | 2026-09-13 | 完成 A/B bundle 与 `analyze-ab` CLI：严格联结、逐条 schema 校验、确定性 gzip、拒绝覆盖、边界审计 | EP-G5-06、EP-G3-08 | 无 |
+| 2.6 | 2026-09-13 | A/B loader 在 schema 允许未来资格值时仍执行当前 Engineering 资格策略；外部 S lineage 核对 registry SHA | EP-G5-06、EP-G3-08 | 该策略不是对 Formal bundle 的永久否定 |
+| 2.7 | 2026-09-13 | 完成 `derive-exposure`：D 与 Exposure Signature 纯派生，边界禁止回读 Canonical/S 或 Raw/S 时间字段 | EP-G5-04～06、EP-G3-08 | 无 |
+| 2.8 | 2026-09-13 | Gate 5 Task 8 历史 trace 离线工程验证：S 446 invalid → B 446 `B_INVALID`，无合格 A 窗口 | EP-G5-06、EP-ISSUE-02、EP-ISSUE-03 | 历史数据仍为 ambiguous Engineering 证据 |
+| 2.9 | 2026-09-14 | 分支复审最终修复：S/wait-set/frontier/terminal 一致性、跨 invocation 重叠 fail closed、Derived 精确符号白名单 | EP-G5-01、EP-G5-03、EP-G5-05、EP-G5-06、EP-G3-08 | 未产生 Formal 数据 |
+| 3.0 | 2026-09-14 | 独立再复审通过（补 completion boundary 时钟域校验）；Gate 5 判为 `PASS`，优先级切换至 Gate 6 GPU 前工作 | EP-G5-03、EP-G5-06、EP-G6-01、EP-G6-02 | Gate 5 PASS |
+| 3.1 | 2026-09-14 | 冻结 Gate 6 GPU 前实施计划：23 个 oracle case → native CUDA / seed+fault / 纯合成三类 | EP-G6-01、EP-G6-02 | Gate 6 仍 `BLOCKED` |
+| 3.2 | 2026-09-14 | 完成 Q0 执行合同第一步：case 严格一一对应、稳定 label 不可改写、策略字段冲突 fail closed | EP-G6-01 | 无 |
+| 3.3 | 2026-09-14 | 完成受控 Q0 CUDA 微程序（21 native seed、结构化 NVTX、可无 GPU 编译并核对 seed 集合） | EP-G6-01、EP-ISSUE-07 | 只证明可构建，不证明 GPU 行为 |
+| 3.4 | 2026-09-14 | 完成 Windows/Linux 结构化 `nsys` argv dry-run、23 份 source manifest 与不可覆盖 run manifest | EP-G6-02 | 不产生 `.nsys-rep` |
+| 3.5 | 2026-09-14 | 完成 23 案例合成 S/A/B + 独立 evaluator 对照；修正 graph mapping unsupported 时 S 保留未证明 wait-set 的缺口 | EP-G4-01～05、EP-G6-02 | 仅 `SYNTHETIC_ONLY` |
+| 3.6 | 2026-09-14 | GPU 前集成验收：编译/list、Windows dry-run、合成对照、静态边界与全仓非 GPU 回归 | EP-G6-02A、EP-G6-03 | GPU 前 PASS ≠ Gate 6 PASS |
+| 3.7 | 2026-09-14 | 真实执行复审新增 `EP-G6-02B`：改用 CUDA Profiler API 控制 capture 并冻结显式单 GPU 选择 | EP-G6-02B、EP-G6-03 | 修正“可直接真实采集”的过早推断 |
+| 3.8 | 2026-09-14 | 完成单 case executor 与不可覆盖 receipt（工具/source manifest 哈希、环境身份、命令日志、Raw 哈希） | EP-G6-02B | 仅新增采集能力 |
+| 3.9 | 2026-09-14 | 完成三种受控 Canonical 故障副本（移除唯一 activity correlation／dropped records／graph node mapping） | EP-G6-02B | Raw 与源 Canonical 保持不可变 |
+| 4.0 | 2026-09-14 | 完成真实 observed/evaluator：标签联结 + 本次真实区间重算，缺区间/映射一律 fail closed | EP-G6-02B | 单 case 仅 `REAL_CASE_ONLY` |
+| 4.1 | 2026-09-14 | 完成本地真实 Q0 执行缺口：唯一聚合器强制 21 real + 2 synthetic、单 run/单环境，补齐 CLI 与双平台手册 | EP-G6-02B、EP-G6-03～05 | 本地准备 ≠ 真实 Q0 |
+| 4.2 | 2026-09-15 | 补充服务器部署与回传流程（Git bundle clone、独立 venv、先单例后批量、记录 commit/dirty state） | EP-G6-03 | 无 |
+| 4.3 | 2026-09-15 | 基于 r2 修复 Windows 适配：Nsight `2026.2.1.210/3.25.0`、可选表规范化、有符号 trace-relative 时间、UUID、诊断输出 | EP-G3-09、EP-G6-02C、EP-ISSUE-08 | r2 不升级资格 |
+| 4.4 | 2026-09-15 | 基于 r3 修正 observation scope 与下游空映射；r3 本地只读重放 `REAL_CASE_PASS` | EP-G3-10、EP-G6-02D、EP-ISSUE-09 | r3 不升级资格 |
+| 4.5 | 2026-09-15 | 基于 r4 EMPTY 修正 lazy-export 零行 KERNEL 表与真实 `VALID_EMPTY` evaluator；导出统一 `--lazy=false` | EP-G6-02E、EP-ISSUE-10 | r4 不升级资格 |
+| 4.6 | 2026-09-16 | 基于 r5 修复三个同源多线程 seed 的重复 target request（coordinator 唯一 request/decode） | EP-G6-02F、EP-ISSUE-11 | r5 不升级资格 |
+| 4.7 | 2026-09-16 | r6 确认修复并发现 PTDS `cudaStreamQuery` 轮询产生 31 条未映射同步 → 改一次 stream-ordered host callback | EP-G6-02G、EP-ISSUE-12 | r6 不升级资格 |
+| 4.8 | 2026-09-16 | r7 修正 resolver 的目标唯一性判定：只对完整 target identity 计数 | EP-G6-02H、EP-ISSUE-13 | r7 不升级资格 |
+| 4.9 | 2026-09-16 | r8 为 Graph case 增加一次 `--cuda-graph-trace=node`，其余 native case 采集参数不变 | EP-G6-02I、EP-ISSUE-14 | r8 不升级资格 |
+| 5.0 | 2026-09-16 | r9 evaluator 对 `wait_set_activity_labels` 改用无序、无重复精确成员比较 | EP-G6-02J、EP-ISSUE-15 | r9 不升级资格 |
+| 5.1 | 2026-09-16 | r10 无 device overlap → 仅 KERNEL-MEMOP case 预分配 512 MiB 并把 kernel 改为 10 ms，新增单 case diagnostic gate | EP-G6-02K、EP-ISSUE-16 | r10 不升级资格 |
+| 5.2 | 2026-09-16 | 512 MiB diagnostic 仍串行 → 改为 memcpy-first 提交顺序并以静态回归锁定 | EP-G6-02L、EP-ISSUE-16 | 同上 |
+| 5.3 | 2026-09-16 | 证明同线程 `cudaLaunchKernel` 被长 H2D 阻塞 → 改为 coordinator/worker 双 Host 路径并发提交 | EP-G6-02M、EP-ISSUE-16 | 同上 |
+| 5.4 | 2026-09-16 | concurrent-host diagnostic 缺 worker invocation marker → worker launch 前增加立即结束的 `WORKER_KERNEL_MEMOP` | EP-G6-02N、EP-ISSUE-16 | 同上 |
+| 5.5 | 2026-09-17 | 证明仅延长 worker marker 无效 → 冻结 activity-specific marker ownership 修正规格，暂停 GPU 重跑 | EP-G6-02O、EP-ISSUE-17 | 未修改 S 语义 |
+| 5.6 | 2026-09-17 | 按规格测试先行实现 activity-specific marker ownership；S 定向 `77 passed`，全仓 `661 passed, 2 failed` | EP-G6-02O、EP-ISSUE-17 | 真实 GPU 单例尚未复验 |
+| 5.7 | 2026-09-17 | 真实 ownership 单例确认 S 修复成功但 device overlap 仍为 0 → 新增完全隔离的 WDDM Engineering diagnostic；全仓 `671 passed` | EP-G6-02P、EP-ISSUE-16 | 无 |
+| 5.8 | 2026-09-17 | WDDM diag-02 采集成功但 HAGS 未确认、packet 无 correlationId → 新增 64 MiB H2D/10 ms diagnostic；全仓 `678 passed` | EP-G6-02Q、EP-ISSUE-16 | 仅 Engineering 假设检验能力 |
+| 5.9 | 2026-09-17 | 64 MiB/10 ms 仍 overlap=0 → 按预定判据停止 1 ms 路线；新增 device capability 探针；全仓 `681 passed` | EP-G6-02R、EP-G6-04A、EP-ISSUE-16 | 无 |
+| 6.0 | 2026-09-17 | 服务器 capability 复核：`async_engine_count=5`、`device_overlap=1`、`concurrent_kernels=1`（只证明设备声明能力） | EP-G6-04A、EP-ISSUE-16 | 不解释此前 overlap=0 |
+| 6.1 | 2026-09-17 | 实现严格隔离的 64 MiB D2H/10 ms diagnostic（专用 flag + run identity 双条件） | EP-G6-02S、EP-G6-04B、EP-ISSUE-16 | 默认 Q0 路径不变 |
+| 6.2 | 2026-09-17 | 收录 D2H 真实证据：仍 overlap=0，`Q0-KERNEL-MEMOP-001` 记为 platform construction blocked，按判据 STOP | EP-G6-04B、EP-G6-05、EP-G6-06、EP-ISSUE-16 | Gate 6 仍 `FAIL`、Q0 `NOT_RUN` |
+| 6.3 | 2026-09-17 | 完成 `EP-G6-06` 策略审查：synthetic 仅作 regression strengthening、批准候选平台 admission 设计、冻结 admission checklist、scope limitation 不批准 | EP-G6-06～08 | 纯设计，未运行实验 |
+| 6.4 | 2026-09-17 | 批准 Gate 7 非 GPU 项与 Gate 6 等待期并行（该前提已被 6.7/7.0 取代） | EP-G7-01～06 | Gate 7 保持 `BLOCKED` |
+| 6.5 | 2026-09-17 | `EP-G6-07` 首轮候选平台盘点：主线切到 Candidate Platform qualification，CP-01 A3 修正，A7 保持 `UNKNOWN` | EP-G6-07、EP-ISSUE-04、EP-ISSUE-16 | Gate 7/8 暂停推进 |
+| 6.6 | 2026-09-17 | CP-03 静态 qualification 收敛（A1、A3～A9 = `PASS`；A2 pending、A7 unknown；仍为 `NEEDS_INFORMATION`） | EP-G6-07 | 未运行任何 case/workload probe |
+| 6.7 | 2026-09-18 | formal-shape 配对 diagnostic 证明 warm-up 可恢复 overlap → 建立 canonical baseline `codex/gate6-canonical-baseline` 与 construction amendment；`EP-G6-07` 暂停 | EP-G6-05、EP-G6-07、EP-G6-09、EP-ISSUE-16 | Gate 6 仍 `FAIL`、Q0 `NOT_RUN` |
+| 6.8 | 2026-09-19 | construction amendment implementation：execution schema `0.2.1`、23/23 case 显式 `measurement_initialization`（1 warm-up + 22 `NONE`）；targeted `70 passed`、Q0 offline `199 passed` | EP-G6-05、EP-G6-07、EP-G6-09 | server validation `NOT_STARTED` |
+| 6.9 | 2026-09-19 | `final-01` 收口与 4 例 semantic FAIL root triage（新增 `EP-G6-10`）：Phase-Spill / Missing-Corr / External / Multithread-Ordered / Overlapping-Host-Sync | EP-G6-05、EP-G6-07、EP-G6-09、EP-G6-10 | Gate 6 仍 `FAIL`、Q0 `NOT_RUN` |
+| 7.0 | 2026-09-20 | **Gate 6/Q0 正式 PASS 并收口**（新增 `EP-G6-11` 与 `gate6_closeout_v0_1.md`）；Gate 7 压缩为 `EP-G7-08`～`EP-G7-11` 并作出平台范围显式决定；清理本地可重建垃圾 | EP-G6-05、EP-G6-11、EP-G7-08～11、EP-ISSUE-01、EP-ISSUE-03、EP-ISSUE-16 | Gate 6/Q0 改判 `PASS`（依据既有唯一 gate report，未新增采集）；Gate 7 由 `BLOCKED` 改为 `NOT_RUN` |
+| 7.1 | 2026-09-20 | 最后一次收尾：本清单重构为“交接入口 + 当前快照 + Gate 摘要 + 压缩历史”；清除过时 live 状态文字；为旧 Gate 6/5 计划与规格加历史横幅；为 Gate 7 四步补 `Dependency`；补 Gate 6 论文级分类总结 | EP-G6-11、EP-G7-08～11、EP-ISSUE-03 | 不改变任何 Gate verdict、Measurement Contract、oracle、schema 或数据资格 |

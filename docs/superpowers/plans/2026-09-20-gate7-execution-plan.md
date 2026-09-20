@@ -26,6 +26,7 @@ Gate 7 的唯一目标：让 runner/launcher 的**可观察边界、身份与执
 - **Evidence：** 边界单调性/时间倒序 fail-closed 测试；模式互斥与非法组合拒绝测试；合同文字与实现一致的检查。
 - **PASS：** 上述测试全绿，且首/后续 Token 边界在合成输入下使用同一语义。
 - **STOP：** 若修正边界需要改动 Measurement Contract 的语义定义或 `exposedpath_v141` 语义 → 停止并单独提出，不在 Gate 7 内静默修改。
+- **Dependency：** 无（Gate 7 的第一个可执行步骤）；只依赖已冻结的 Gate 1 Measurement Contract，不依赖 `EP-G7-09`/`EP-G7-10`。
 - **Unlock：** 逐 Token 的可比较性成立，N1/G1 不会互相污染。
 
 ### `EP-G7-09` Pass0/Pass1 parity + 机器可读 provenance 补齐
@@ -36,6 +37,7 @@ Gate 7 的唯一目标：让 runner/launcher 的**可观察边界、身份与执
 - **Evidence：** parity 校验测试；字段缺失/冲突 fail-closed 测试；一次合成 Pass0/Pass1 配对演练的机器可读产物。
 - **PASS：** 缺失或冲突字段一律 fail closed，且 parity 检查在等价输入上通过、在任一有意差异上失败。
 - **STOP：** 若要求把缺字段降级为零值/默认值来让检查通过 → 停止。
+- **Dependency：** 与 `EP-G7-08` 无相互依赖，可并行实现；两者均须在 `EP-G7-11` 前完成。
 - **Unlock：** Pass0/Pass1 可配对，exclusion/retry 政策有机器可读依据。
 
 ### `EP-G7-10` 平台适配隔离 + 既有 smoke 基线收敛
@@ -46,6 +48,7 @@ Gate 7 的唯一目标：让 runner/launcher 的**可观察边界、身份与执
 - **Evidence：** 命令构造与参数单测（不需要 GPU）；两项基线失败的最终处置结论（修复，或重界定并说明为何不再是未知失败）。
 - **PASS：** 定向单测全绿；两项基线失败被修复或经明确重界定后不再计为未知失败。
 - **STOP：** 若某项必须先有真实 GPU 才能判定 → 移交 `EP-G7-11`，不得用 mock 结论代替。
+- **Dependency：** 独立于 `EP-G7-08`/`EP-G7-09`，可并行；其两项 smoke 失败的处置结论不依赖 GPU。
 - **Unlock：** 平台可移植性被结构性保护，测试基线重新干净。
 
 ### `EP-G7-11` 非 GPU 全量验证 + 目标平台真实 GPU smoke + Gate 7 验收
@@ -56,6 +59,7 @@ Gate 7 的唯一目标：让 runner/launcher 的**可观察边界、身份与执
 - **Evidence：** 全量 `python -m pytest -q -p no:cacheprovider`；`python -m compileall exposedpath analysis exposedpath_v141`；合同/边界检查；目标平台 smoke 的 manifest/receipt 与逐项边界核对。
 - **PASS：** 非 GPU 判据与目标平台真实 smoke 判据同时成立，且未修改 Measurement Contract 或 `exposedpath_v141` 计算语义。
 - **STOP：** 任何真实 smoke 失败保留现场并停止，不得用 mock 或局部测试代替；需要第二平台等价性时转 Gate 9。
+- **Dependency：** 消费 `EP-G7-08`～`EP-G7-10` 的产物；是 Gate 7 verdict 的必要条件，必须最后执行。
 - **Unlock：** Gate 8 Engineering Pilot 可以启动；Gate 8 在 Gate 7 未满足本判据前不得启动。
 
 ## 3. 顺序与依赖

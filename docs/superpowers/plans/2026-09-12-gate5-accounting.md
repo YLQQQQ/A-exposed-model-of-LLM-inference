@@ -1,5 +1,7 @@
 # Gate 5 A/B 与派生层实施计划
 
+> **HISTORICAL / SUPERSEDED FOR CURRENT EXECUTION** — 本计划是历史实施记录，仅作追溯保留。正文中的 `Gate 6 = BLOCKED`、`Q0 = NOT_RUN` 等均为当时状态，不得作为当前执行依据。当前 Gate 状态见 `docs/v1_4_1/research_progress.md`；Gate 6 结论见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: 使用 `subagent-driven-development` 按任务逐项实施；每项任务必须先写失败测试，再写最小实现，再独立复审。
 
 **目标：** 实现符合 Measurement Contract v0.2 的 A/B 分析器与只读 A/B 的 D/Exposure Signature 派生层，并用确定性合成数据和历史 Engineering trace 验证 fail-closed 行为。

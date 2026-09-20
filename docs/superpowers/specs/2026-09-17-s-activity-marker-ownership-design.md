@@ -1,5 +1,7 @@
 # S 层跨线程 Activity Marker Ownership 修正规格
 
+> **HISTORICAL / ALREADY IMPLEMENTED AND VERIFIED** — 本规格已按原样实现（`EP-G6-02O`，最终随 package `0.2.2` 进入 Gate 6 通过版本），正文中的 `真实 GPU 单例尚未复验`、`Q0 = NOT_RUN`、`Gate 6 = FAIL` 等均为撰写当时状态，已被 2026-09-20 Gate 6/Q0 `PASS` 取代。当前 Gate 状态见 `docs/v1_4_1/research_progress.md`；Gate 6 结论见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+
 ## 1. 状态与目的
 
 状态：已批准并按测试先行方式实施；真实 GPU 单例尚未复验。
