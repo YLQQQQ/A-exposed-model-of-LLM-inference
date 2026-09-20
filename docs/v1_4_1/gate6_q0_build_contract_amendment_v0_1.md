@@ -133,6 +133,14 @@ frozen Git tree
 
 本 amendment 显式批准此前标记的 scope expansion。
 
+> **Supersede 注记（2026-09-20）**：本节中 `can_map_host_memory == 1` 的 formal hard gate、以及
+> Missing-Corr case 内的 `properties.canMapHostMemory != 0` native fail-closed guard，已由
+> `docs/v1_4_1/gate6_missing_corr_amendment_v0_2.md` **supersede**：sentinel handshake 被 diagnostic
+> evidence 否决后，该 capability 不再是正式 Q0 的硬性准入条件。字段本身仍由 `--environment-json` /
+> collection 记录并要求存在（缺失仍 fail closed），但 `can_map_host_memory == 0` 不再自动拒绝正式
+> collection。§2 的 `-arch=sm_89` 与 §3 的 build receipt 规则保持不变；§1 中
+> 「不带 `-arch` 时 system-scope atomic 编译失败」降级为历史依据。
+
 `--environment-json` 新增字段：
 
 ```text

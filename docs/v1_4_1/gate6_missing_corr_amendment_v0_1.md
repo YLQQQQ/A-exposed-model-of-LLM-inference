@@ -18,6 +18,16 @@ watchdog 规则、controlled fault 边界、synthetic 对齐、scope、zero-diff
   （`gate6_marker_ownership_amendment_v0_1.md`）；
 - controlled fault injection 语义（`REMOVE_ACTIVITY_CORRELATION` 保持不变）。
 
+> **Supersede 注记（2026-09-20）**：本文件的 §2（one-way mapped-sentinel handshake）、§3（sentinel
+> 内存与可见性合同）、§4（one-way 裁决与 watchdog），以及 §6 / §7 / §9 中与 sentinel runtime
+> construction 相关的条目，已由 `docs/v1_4_1/gate6_missing_corr_amendment_v0_2.md` **supersede**：
+> 该 handshake 在目标 Windows/WDDM 栈上被独立 diagnostic evidence 否决（pure host poll queue ≈30 s、
+> pre-capture same-kernel warm-up ≈5 s、`cudaStreamGetFlags` ≈5 s），正式 construction 回退为普通
+> `launch K_UNMAPPED -> S_STREAM -> cudaStreamSynchronize`，并删除 sentinel / watchdog /
+> system-scope atomic。§1（规范测试意图与根因定性）、§5（controlled fault 边界）与
+> 「synthetic 必须经真实语义推导」的原则继续有效，但具体期望值以 v0.2 §3 / §4 为准。
+> 本文件不再作为 implementation 依据。
+
 ## 1. Evidence basis
 
 ### 1.1 规范测试意图（oracle，冻结）
