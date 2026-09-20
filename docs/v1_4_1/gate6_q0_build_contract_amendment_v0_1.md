@@ -1,5 +1,7 @@
 # Gate 6 Q0 Build Contract Amendment v0.1：显式 codegen architecture 与 build provenance
 
+> **后记（2026-09-20）：** 本文档为冻结的 amendment 记录，其 `-arch=sm_89` 与 build receipt 要求不变；正文中“Gate 6 = `FAIL` / Q0 = `NOT_RUN` / Gate 7 `BLOCKED/暂停`”等描述均为批准时刻的历史状态，已由 Gate 6/Q0 `PASS`（`q0-win-4090-20260920-gate6-final-04`，package `0.2.2`）取代。注意 `can_map_host_memory` 的 hard-gate 语义已由 `gate6_missing_corr_amendment_v0_2.md` 收窄为“继续记录且必填、值为 0 不拒绝 collection”。当前状态见 `docs/v1_4_1/research_progress.md` 与 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+
 状态：**批准（2026-09-19）**
 适用范围：Gate 6 / Q0 Qualification 的正式 Q0 binary 构建合同与构建 provenance
 canonical baseline 分支：`codex/gate6-canonical-baseline`

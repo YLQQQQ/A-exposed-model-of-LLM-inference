@@ -1,5 +1,7 @@
 # Gate 6 策略审查：mixed kernel/memop 的证据来源（`EP-G6-06` 审查定稿）
 
+> **后记（2026-09-20）：** 本文档为冻结的策略审查记录，其审查结论与判据不变；正文中“Gate 6 保持 `FAIL`、Q0 保持 `NOT_RUN`、`Q0-KERNEL-MEMOP-001` 保持 platform construction blocked、Candidate 路线推进中”等描述均为 2026-09-17 的历史状态，已由 Gate 6/Q0 `PASS`（`q0-win-4090-20260920-gate6-final-04`，package `0.2.2`，`Q0-KERNEL-MEMOP-001 = REAL_CASE_PASS`）取代；`EP-G6-07` Candidate Platform 路线只在需要第二平台（含 Linux Formal 平台）时按 Gate 9 重启。当前状态见 `docs/v1_4_1/research_progress.md` 与 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+
 ## 1. 状态、决定来源与不变边界
 
 状态：**审查定稿**。文件路径保持 `gate6_strategy_review_v0_1.md`，内容取代此前的提案版，并记录用户 2026-09-17 对 `EP-G6-06` 的四项决定及据此形成的设计。

@@ -1,5 +1,7 @@
 # Gate 6 Sync Projection Amendment v0.1：registry-role-preserving semantic sync projection
 
+> **后记（2026-09-20）：** 本文档为冻结的 amendment 记录，其 requirement 内容不变；正文中“final-04 尚未执行 / Gate 6 尚未 PASS”等描述均为批准时刻的历史状态，已由 Gate 6/Q0 `PASS`（`q0-win-4090-20260920-gate6-final-04`，package `0.2.2`，`final-04` 已按 fresh 21-native collection 完整重派生）取代。当前状态见 `docs/v1_4_1/research_progress.md` 与 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+
 状态：**批准（2026-09-20）**
 适用范围：Gate 6 / Q0 Qualification；S 层 sync universe 成员判定、A/B 输入联结（S ↔ Canonical
 correspondence）与 `q0_real` 的真实 case 投影

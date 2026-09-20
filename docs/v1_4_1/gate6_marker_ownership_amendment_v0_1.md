@@ -1,5 +1,7 @@
 # Gate 6 Unified Marker Ownership Amendment v0.1：跨线程 marker authority 与 request-scope provenance
 
+> **后记（2026-09-20）：** 本文档为冻结的 amendment 记录，其 requirement 内容不变；正文中“Gate 6 = `FAIL` / Q0 = `NOT_RUN` / 待 implementation / Gate 7 暂停”等描述均为批准时刻的历史状态，已由 Gate 6/Q0 `PASS`（`q0-win-4090-20260920-gate6-final-04`，package `0.2.2`）取代。当前状态见 `docs/v1_4_1/research_progress.md` 与 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+
 状态：**批准（2026-09-19）**
 适用范围：Gate 6 / Q0 Qualification，仅涉及 `Q0-EXTERNAL-001`、`Q0-MULTITHREAD-ORDERED-001`、`Q0-OVERLAPPING-HOST-SYNC-001` 的 S 层 ownership 证据规则
 canonical baseline 分支：`codex/gate6-canonical-baseline`

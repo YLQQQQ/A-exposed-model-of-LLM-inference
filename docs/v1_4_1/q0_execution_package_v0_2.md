@@ -2,7 +2,7 @@
 
 ## 当前用途
 
-本执行包把 Gate 2 已冻结的 23 个标准答案转换为可执行计划。当前阶段为 Engineering；编译成功、dry-run 或合成对照均不能判定 Q0 通过。只有获得 GPU 后，在目标 CUDA/Nsight observation stack 上完成全部必需 case 的真实采集、故障注入审计和 oracle 对照，Gate 6 才可能由 `BLOCKED` 改为 `PASS`。
+本执行包把 Gate 2 已冻结的 23 个标准答案转换为可执行计划。当前阶段为 Engineering；编译成功、dry-run 或合成对照均不能判定 Q0 通过。Q0 通过的条件是在目标 CUDA/Nsight observation stack 上完成全部必需 case 的真实采集、故障注入审计和 oracle 对照；该条件已于 2026-09-20 在冻结目标栈（Windows + RTX 4090 + CUDA 12.4.131 + Nsight 2026.2.1）由 frozen run `q0-win-4090-20260920-gate6-final-04` 满足，Gate 6/Q0 为 `PASS`（package/analyzer `0.2.2`）。该 PASS 只说明 Q0 正确性资格，不等于 Pilot/Formal 结果；当前状态见 `docs/v1_4_1/research_progress.md` 与 `docs/v1_4_1/gate6_closeout_v0_1.md`。
 
 ## 文件职责
 

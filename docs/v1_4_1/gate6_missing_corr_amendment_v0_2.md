@@ -1,5 +1,7 @@
 # Gate 6 Missing-Corr Amendment v0.2：oracle 期望与 construction 回退
 
+> **后记（2026-09-20）：** 本文档为冻结的 amendment 记录，其 requirement 内容不变；正文中“Gate 6 = `FAIL` / Q0 = `NOT_RUN` / Gate 7 `BLOCKED/暂停`”等描述均为批准时刻的历史状态，已由 Gate 6/Q0 `PASS`（`q0-win-4090-20260920-gate6-final-04`，package `0.2.2`，其中 `Q0-MISSING-CORR-001 = REAL_CASE_PASS`）取代。当前状态见 `docs/v1_4_1/research_progress.md` 与 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+
 状态：**批准（2026-09-20）**
 适用范围：Gate 6 / Q0 Qualification，仅涉及 `Q0-MISSING-CORR-001` 的 oracle 期望、native construction、
 synthetic 对齐与 `can_map_host_memory` capability 地位

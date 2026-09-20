@@ -10,7 +10,7 @@
 - 本轮**未运行**任何 Q0 case、overlap workload、D2H/D2D 变体、k=3 admission、完整 Q0、GPU smoke 或 Gate 8；未生成或执行任何 construction admission 命令。
 - 本轮只使用：已有机器信息、工具版本查询、编译，以及 `--list-cases`（均属冻结 checklist 明确允许的非 case qualification 手段）。
 - 不因 GPU 理论支持 concurrent copy/compute、也不因平台是 Linux 或数据中心 GPU 而给出任何 overlap 预判。
-- 任何静态资格结论都不构成 Gate 9 平台资格；Gate 6 保持 `FAIL`，Q0 保持 `NOT_RUN`，Gate 7 保持 `BLOCKED`。
+- 任何静态资格结论都不构成 Gate 9 平台资格；Gate 6/Q0 已于 2026-09-20 在冻结目标栈（Windows + RTX 4090）上 `PASS`，本文件的候选平台结论只服务于未来第二平台（含 Linux Formal 平台）的 Gate 9 资格流程。
 
 本轮实际执行的静态动作（可复查）：
 

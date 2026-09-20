@@ -4,7 +4,7 @@
 
 本设计为未来 Q0 正确性验证预先写定标准答案。它回答“在一个人为控制、依赖关系已知的案例中，正确的 `W(s)`、terminal、validity 和 A/B 关系应是什么”，不负责从 Nsight trace 推导这些答案。
 
-当前 Gate 2 的 `PASS` 只表示标准答案结构完整、可机器校验且与被测 analyzer 静态隔离。当前没有 GPU，CUDA 微程序、真实 Nsight trace 和 analyzer 对照均未运行，因此 Q0 执行状态仍为 `NOT_RUN`，Gate 6 仍为 `BLOCKED`。
+当前 Gate 2 的 `PASS` 只表示标准答案结构完整、可机器校验且与被测 analyzer 静态隔离。该设计冻结之后，CUDA 微程序、真实 Nsight trace 与 analyzer 对照已于 2026-09-20 在冻结目标栈（Windows + RTX 4090 + CUDA 12.4.131 + Nsight 2026.2.1）上完成：`q0-win-4090-20260920-gate6-final-04` 的全套 case（含 `Q0-MISSING-CORR-001` v0.2 的 `MISSING_ACTIVITY_CORRELATION` + `[SUBMISSION_ORDER_AMBIGUOUS]` 期望）通过，Q0 为 `PASS`、Gate 6 为 `PASS`（package/analyzer `0.2.2`）。本文件的 oracle 结构与预期未因该轮执行而改变；当前状态见 `docs/v1_4_1/research_progress.md` 与 `docs/v1_4_1/gate6_closeout_v0_1.md`。
 
 ## 2. 文件与职责
 

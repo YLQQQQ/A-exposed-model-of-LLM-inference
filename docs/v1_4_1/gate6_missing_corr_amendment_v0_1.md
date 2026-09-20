@@ -1,5 +1,7 @@
 # Gate 6 Missing-Corr Amendment v0.1：same-activity mapped-sentinel deterministic construction
 
+> **后记（2026-09-20）：** 本文档为冻结的 amendment 记录，其 requirement 内容不变；本 v0.1 的 mapped-sentinel construction 已被 `gate6_missing_corr_amendment_v0_2.md` supersede，正文中“Gate 6 = `FAIL` / Q0 = `NOT_RUN` / Gate 7 `BLOCKED/暂停`”等状态描述均为批准时刻的历史状态，已由 Gate 6/Q0 `PASS`（`q0-win-4090-20260920-gate6-final-04`，package `0.2.2`）取代。当前状态见 `docs/v1_4_1/research_progress.md` 与 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+
 状态：**批准（2026-09-19）**
 适用范围：Gate 6 / Q0 Qualification，仅涉及 `Q0-MISSING-CORR-001` 的 native construction 与 synthetic 对齐
 canonical baseline 分支：`codex/gate6-canonical-baseline`

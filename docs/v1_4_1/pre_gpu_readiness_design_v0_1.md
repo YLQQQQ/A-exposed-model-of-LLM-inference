@@ -107,7 +107,7 @@ GPU 前的目标是达到“离线准备完成”：方法合同和独立标准�
 
 **离线完成条件**：所有 GPU 程序和命令可静态检查，dry-run 能生成完整 manifest，CPU/mock 测试通过，且不会把 mock 结果写成真实验证。
 
-**状态边界**：Gate 6 和 Gate 7 仍为 `BLOCKED`，直到真实 GPU trace 与目标平台 smoke test 完成。
+**状态边界**：Gate 6 已于 2026-09-20 在冻结目标栈（Windows + RTX 4090 + CUDA 12.4.131 + Nsight 2026.2.1）通过（见 `docs/v1_4_1/gate6_closeout_v0_1.md`）；Gate 7 尚未执行（`NOT_RUN`），其准入需要真实 GPU smoke 与 runner 合同验收完成。
 
 ### 8. GPU 前总验收
 

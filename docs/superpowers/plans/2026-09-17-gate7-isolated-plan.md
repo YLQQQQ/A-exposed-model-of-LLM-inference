@@ -1,6 +1,6 @@
 # Gate 7 隔离实施计划：`EP-G7-01`～`EP-G7-06`（并行、非 GPU）
 
-状态：**定稿（docs-only）**。本文件与其对应的 `research_progress.md` Gate 7 状态更新单独提交，不包含 Gate 6 策略文档变更。
+状态：**已被取代（历史记录，不得执行）**。2026-09-20 Gate 6/Q0 通过后，Gate 7 已重新审计并压缩为 `EP-G7-08`～`EP-G7-11`，现行计划为 `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`。本文件的“Gate 6 等待期内并行推进”“Gate 7 保持 `BLOCKED`”“双平台 GPU smoke 为必备条件”等前提均已失效；其正文仅作历史记录保留，`EP-G7-01`～`EP-G7-07` 不再执行、不得复用这些编号。本文件原是（docs-only）定稿，与其对应的 `research_progress.md` Gate 7 状态更新单独提交，不包含 Gate 6 策略文档变更。
 
 ## 1. 授权与边界
 

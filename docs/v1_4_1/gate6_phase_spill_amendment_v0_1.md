@@ -1,5 +1,7 @@
 # Gate 6 Phase-Spill Amendment v0.1：Q0 受控三窗口 observational boundary
 
+> **后记（2026-09-20）：** 本文档为冻结的 amendment 记录，其 requirement 内容不变；正文中“Gate 6 = `FAIL` / Q0 = `NOT_RUN` / implementation=`NOT_STARTED`”等描述均为批准时刻的历史状态，已由 Gate 6/Q0 `PASS`（`q0-win-4090-20260920-gate6-final-04`，package `0.2.2`，其中 `Q0-PHASE-SPILL-001 = REAL_CASE_PASS`）取代。当前状态见 `docs/v1_4_1/research_progress.md` 与 `docs/v1_4_1/gate6_closeout_v0_1.md`。
+
 状态：**批准（2026-09-19）**
 适用范围：Gate 6 / Q0 Qualification，仅涉及 `Q0-PHASE-SPILL-001` 的 A 窗口发现规则
 canonical baseline 分支：`codex/gate6-canonical-baseline`
