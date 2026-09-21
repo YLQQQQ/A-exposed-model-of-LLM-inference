@@ -73,9 +73,17 @@ def generate_run_id() -> str:
     return f"run-{ts}-{suffix}"
 
 
-def generate_attempt_uid(run_id: str, repeat_index: int) -> str:
-    """Generate an attempt uid."""
-    return f"{run_id}-rep{repeat_index:04d}"
+def generate_attempt_uid(run_id: str, repeat_index: int, retry_index: int = 0) -> str:
+    """Generate an attempt uid.
+
+    ``retry_index`` 0 is the first (planned) attempt and keeps the historical
+    uid format.  Retries of the same planned repeat index get a distinct uid so
+    attempt identity can never collide across retries.
+    """
+    base = f"{run_id}-rep{repeat_index:04d}"
+    if retry_index <= 0:
+        return base
+    return f"{base}-retry{retry_index:02d}"
 
 
 def generate_analysis_run_id() -> str:

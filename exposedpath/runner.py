@@ -8,6 +8,7 @@ Key constraints:
   - Batch samples must be distinct (no cloning)
   - fixed_output_tokens must be generated exactly
   - Early EOS / wrong output count → exclusion
+  - Attempts/exclusions carry machine-readable identity for Pass 0 / Pass 1 parity
 """
 
 import sys
@@ -27,12 +28,26 @@ from exposedpath.nvtx import (
     make_phase_label,
     make_structured_nvtx_label,
 )
-from exposedpath.results import record_exclusion, record_success
+from exposedpath.cross_pass_validator import load_attempt_accounting
+from exposedpath.results import (
+    ATTEMPT_PLAN_VERSION,
+    EXCLUSION_REASON_CUDA_ERROR,
+    EXCLUSION_REASON_EARLY_EOS,
+    EXCLUSION_REASON_OOM,
+    EXCLUSION_REASON_OUTPUT_TOKEN_COUNT_MISMATCH,
+    EXCLUSION_REASON_RUNTIME_ERROR,
+    PHASE_BOUNDARY_POLICY,
+    PHASE_BOUNDARY_POLICY_VERSION,
+    RETRY_POLICY,
+    TOKEN_READY_MECHANISM,
+    TOKEN_READY_ORIGIN_NATURAL,
+    record_exclusion,
+    record_success,
+)
 from exposedpath.validation import validate_prompt_tokens_sha256_match
 from exposedpath.workload import get_batch_inputs, load_prompt_tokens
 
 
-TOKEN_READY_MECHANISM = "device_to_host_token_ids"
 SYNCHRONIZE_POLICY = (
     "request_start_drain_outside_window, natural_token_ready_host_read_per_token, "
     "no_final_cleanup_inside_window"
@@ -357,12 +372,15 @@ def _write_cross_pass_parity(manifest, pass_label, output_dir, manifest_path, mo
     from pathlib import Path as _Path
 
     parity = {
-        "schema_version": "exposedpath-v3-cross-pass-1",
+        "schema_version": "exposedpath-v3-cross-pass-2",
         "experiment_id": manifest.get("experiment_id"),
         "wmpc_id": manifest.get("wmpc_id"),
         "run_id": manifest.get("run_id"),
         "pass_id": pass_label,
         "prompt_tokens_sha256": manifest.get("prompt_tokens_sha256"),
+        "fixed_input_tokens": manifest.get("fixed_input_tokens"),
+        "fixed_output_tokens": manifest.get("fixed_output_tokens"),
+        "batch_size": manifest.get("batch_size"),
         "manifest_sha256": hashlib.sha256(_Path(manifest_path).read_bytes()).hexdigest(),
         "runner_source_sha256": hashlib.sha256(_Path(__file__).read_bytes()).hexdigest(),
         "python_executable": sys.executable,
@@ -381,6 +399,17 @@ def _write_cross_pass_parity(manifest, pass_label, output_dir, manifest_path, mo
         "dtype": "fp16",
         "attention_backend": manifest.get("attention_backend", "sdpa"),
         "execution_mode": manifest.get("execution_mode", "eager"),
+        # ---- Gate 7 frozen Pass0/Pass1 identity (EP-G7-09) ----
+        "data_role": manifest.get("data_role"),
+        "run_role": manifest.get("run_role"),
+        "phase_boundary_policy_version": PHASE_BOUNDARY_POLICY_VERSION,
+        "phase_boundary_policy": PHASE_BOUNDARY_POLICY,
+        "token_ready_mechanism": TOKEN_READY_MECHANISM,
+        "token_ready_origin": TOKEN_READY_ORIGIN_NATURAL,
+        "attempt_plan_version": ATTEMPT_PLAN_VERSION,
+        "retry_policy": RETRY_POLICY,
+        "planned_warmup_count": manifest.get("warmup_count"),
+        "planned_repeat_count": manifest.get("repeat_count"),
         "study_mode": manifest.get("study_mode"),
         "n1_intervention": manifest.get("n1_intervention"),
         "model_eval": True,
@@ -564,13 +593,28 @@ def execute_pass(
     fixed_output_tokens = manifest["fixed_output_tokens"]
     warmup_count = manifest["warmup_count"]
     repeat_count = manifest["repeat_count"]
-    run_role = manifest.get("run_role", "FORMAL")
+    # ---- Frozen Gate 7 run-mode identity: fail closed, never defaulted ----
+    missing_identity = [
+        key for key in ("run_role", "data_role", "study_mode") if not manifest.get(key)
+    ]
+    if missing_identity:
+        raise RuntimeError(
+            "manifest is missing required Gate 7 identity fields: "
+            + ", ".join(missing_identity)
+        )
+    run_role = manifest["run_role"]
+    data_role = manifest["data_role"]
     study_mode = manifest["study_mode"]
     if study_mode != "G1_NATURAL":
         raise RuntimeError(
             "N1_INTERVENTION execution is not enabled in EP-G7-08; "
             "only its identity contract is available"
         )
+    attempt_provenance = {
+        "data_role": data_role,
+        "run_role": run_role,
+        "study_mode": study_mode,
+    }
     # Use physical GPU from manifest if present; fall back to 0.
     # The load_model function handles CUDA_VISIBLE_DEVICES remapping.
     gpu = manifest.get("gpu", 0) if isinstance(manifest.get("gpu"), int) else 0
@@ -650,12 +694,26 @@ def execute_pass(
                     f"got {result['actual_output_tokens']}"
                     + (" (early EOS)" if result["early_eos"] else "")
                 )
-                record_exclusion(output_dir, run_id, rep, reason)
+                record_exclusion(
+                    output_dir, run_id, rep, reason,
+                    exclusion_reason=EXCLUSION_REASON_OUTPUT_TOKEN_COUNT_MISMATCH,
+                    early_eos=bool(result["early_eos"]),
+                    output_len_expected=fixed_output_tokens,
+                    output_len_actual=result["actual_output_tokens"],
+                    **attempt_provenance,
+                )
                 print(f"  EXCLUDED: {reason}")
                 continue
 
             if result["early_eos"]:
-                record_exclusion(output_dir, run_id, rep, "early EOS before fixed_output_tokens")
+                record_exclusion(
+                    output_dir, run_id, rep, "early EOS before fixed_output_tokens",
+                    exclusion_reason=EXCLUSION_REASON_EARLY_EOS,
+                    early_eos=True,
+                    output_len_expected=fixed_output_tokens,
+                    output_len_actual=result["actual_output_tokens"],
+                    **attempt_provenance,
+                )
                 print(f"  EXCLUDED: early EOS")
                 continue
 
@@ -670,8 +728,9 @@ def execute_pass(
                 actual_input_tokens=result["actual_input_tokens"],
                 actual_output_tokens=result["actual_output_tokens"],
                 batch_size=result["batch_size"],
+                output_len_expected=fixed_output_tokens,
+                **attempt_provenance,
                 extra={
-                    "study_mode": study_mode,
                     "token_ready_boundaries": token_ready_boundaries_to_records(
                         result["token_ready_boundaries"]
                     ),
@@ -687,12 +746,55 @@ def execute_pass(
             )
 
         except torch.cuda.OutOfMemoryError as e:
-            record_exclusion(output_dir, run_id, rep, "OOM", exception=str(e))
+            record_exclusion(
+                output_dir, run_id, rep, "OOM", exception=str(e),
+                exclusion_reason=EXCLUSION_REASON_OOM,
+                oom=True,
+                output_len_expected=fixed_output_tokens,
+                **attempt_provenance,
+            )
             print(f"  EXCLUDED: OOM")
         except Exception as e:
-            record_exclusion(output_dir, run_id, rep, "runtime_error", exception=str(e))
+            is_cuda_error = isinstance(e, getattr(torch.cuda, "CudaError", ()))
+            record_exclusion(
+                output_dir, run_id, rep,
+                "CUDA error" if is_cuda_error else "runtime_error",
+                exception=str(e),
+                exclusion_reason=(
+                    EXCLUSION_REASON_CUDA_ERROR if is_cuda_error
+                    else EXCLUSION_REASON_RUNTIME_ERROR
+                ),
+                output_len_expected=fixed_output_tokens,
+                **attempt_provenance,
+            )
             traceback.print_exc()
             print(f"  EXCLUDED: {e}")
+
+    # ---- Attempt ledger must account for every planned repeat index exactly once ----
+    try:
+        pass_accounting = load_attempt_accounting(
+            output_dir,
+            planned_warmup_count=warmup_count,
+            planned_repeat_count=repeat_count,
+        )
+    except FileNotFoundError as e:
+        print(f"[runner] FATAL: {e}")
+        sys.exit(1)
+    unless_accounted = (
+        pass_accounting["missing_repeat_indexes"]
+        or pass_accounting["duplicate_repeat_indexes"]
+        or pass_accounting["unexpected_repeat_indexes"]
+        or pass_accounting["records_missing_attempt_identity"]
+    )
+    if unless_accounted:
+        print(
+            f"[runner] FATAL: {pass_label} attempt accounting is incomplete or "
+            f"ambiguous: missing={pass_accounting['missing_repeat_indexes']} "
+            f"duplicate={pass_accounting['duplicate_repeat_indexes']} "
+            f"unexpected={pass_accounting['unexpected_repeat_indexes']} "
+            f"missing_identity={pass_accounting['records_missing_attempt_identity']}"
+        )
+        sys.exit(1)
 
     # ---- Telemetry: after pass ----
     _sample_gpu_telemetry(manifest, pass_label, output_dir, "after_pass", gpu_index=gpu)

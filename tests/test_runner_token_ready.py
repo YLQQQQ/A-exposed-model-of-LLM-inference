@@ -306,6 +306,7 @@ def test_n1_execution_is_rejected_before_any_gpu_work(monkeypatch, tmp_path):
         "warmup_count": 0,
         "repeat_count": 1,
         "run_role": "ENGINEERING",
+        "data_role": "ENGINEERING",
         "study_mode": "N1_INTERVENTION",
     }
     monkeypatch.setattr(runner, "load_manifest", lambda _path: manifest)

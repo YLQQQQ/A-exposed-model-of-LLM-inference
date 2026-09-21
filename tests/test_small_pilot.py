@@ -10,12 +10,41 @@ DIAG    = Path(__file__).resolve().parent.parent / "scripts" / "run_cross_pass_c
 def _t(): return SCRIPT.read_text(encoding="utf-8")
 
 # ===== Cross-pass validator =====
+def _parity_identity():
+    """Complete Pass 0 / Pass 1 parity identity (frozen field set, EP-G7-09)."""
+    return {
+        # workload
+        "prompt_tokens_sha256": "a", "experiment_id": "e", "wmpc_id": "w",
+        "fixed_input_tokens": 128, "fixed_output_tokens": 64, "batch_size": 1,
+        "sampling_config": {"do_sample": False}, "warmup_count": 5, "repeat_count": 5,
+        # GPU
+        "gpu_uuid": "u", "gpu_pci_bus_id": "p", "requested_physical_gpu_index": 3,
+        # execution
+        "runner_source_sha256": "r", "dtype": "fp16", "attention_backend": "sdpa",
+        "execution_mode": "eager", "inference_mode": True, "use_cache": True,
+        "synchronize_policy": "x", "study_mode": "G1_NATURAL", "n1_intervention": None,
+        "cuda_visible_devices": "u",
+        # phase boundary / token-ready
+        "phase_boundary_policy_version": "exposedpath-phase-boundary/0.1.0",
+        "phase_boundary_policy": {"full_request_end": "final_token_ready_host_readable"},
+        "token_ready_mechanism": "device_to_host_token_ids",
+        "token_ready_origin": "natural_token_ready",
+        # environment
+        "data_role": "PILOT", "run_role": "PILOT", "python_version": "3.12.7",
+        "pytorch_version": "2.5.0", "transformers_version": "4.46.0",
+        "cuda_runtime_version": "12.4", "nvidia_driver_version": "581.57",
+        "cuda_device_order": "", "torch_num_threads": 8, "torch_num_interop_threads": 1,
+        "omp_num_threads": "", "mkl_num_threads": "", "cpu_affinity": "",
+        # attempt plan
+        "attempt_plan_version": "exposedpath-attempt-plan/0.1.0",
+        "retry_policy": "EXACTLY_ONE_ATTEMPT_PER_PLANNED_REPEAT_INDEX_NO_AUTO_RETRY",
+        "planned_warmup_count": 5, "planned_repeat_count": 5,
+    }
+
+
 def test_validator_importable():
     from exposedpath.cross_pass_validator import validate_pair, PASS_PARITY_OK
-    p = {"prompt_tokens_sha256":"a","experiment_id":"e","wmpc_id":"w","warmup_count":5,"repeat_count":5,
-         "gpu_uuid":"u","gpu_pci_bus_id":"p","requested_physical_gpu_index":3,
-         "runner_source_sha256":"r","dtype":"fp16","attention_backend":"sdpa","execution_mode":"eager",
-         "inference_mode":True,"use_cache":True,"synchronize_policy":"x","study_mode":"G1_NATURAL","n1_intervention":None,"cuda_visible_devices":"u"}
+    p = _parity_identity()
     assert PASS_PARITY_OK in validate_pair(p, p)
 
 def test_gpu_mismatch_detected():

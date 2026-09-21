@@ -52,6 +52,7 @@ def _manifest(**overrides):
         "inference_framework_version": "0.1.0", "execution_mode": "eager",
         "experiment_id": "test_exp", "wmpc_id": "wmpc-placeholder",
         "run_id": "run-placeholder", "run_role": "warmup",
+        "data_role": "PILOT",
         "study_mode": "G1_NATURAL", "n1_intervention": None,
         "warmup_count": 3, "repeat_count": 5,
         "prompt_tokens_file": "prompt_tokens.json",
@@ -170,7 +171,9 @@ def test_exclusion_log_written():
     with tempfile.TemporaryDirectory() as td:
         out = Path(td)
         record_exclusion(out, run_id="run-test", repeat_index=1,
-                         reason="CUDA OOM", exception="OutOfMemoryError")
+                         reason="CUDA OOM", exception="OutOfMemoryError",
+                         exclusion_reason="OOM", oom=True,
+                         data_role="PILOT", run_role="PILOT", study_mode="G1_NATURAL")
         lines = (out / "exclusion_log.jsonl").read_text("utf-8").strip().split("\n")
         e = json.loads(lines[0])
         assert e["attempt_status"] == "excluded" and e["invalid_reason"] == "CUDA OOM"
@@ -181,7 +184,8 @@ def test_success_log_written():
         record_success(out, run_id="run-test", repeat_index=0,
                        inference_start_ns=1_000_000_000, inference_end_ns=1_000_050_000,
                        prefill_latency_ms=12.345, decode_latency_ms=34.567,
-                       actual_input_tokens=128, actual_output_tokens=64, batch_size=1)
+                       actual_input_tokens=128, actual_output_tokens=64, batch_size=1,
+                       data_role="PILOT", run_role="PILOT", study_mode="G1_NATURAL")
         lines = (out / "inference_results.jsonl").read_text("utf-8").strip().split("\n")
         e = json.loads(lines[0])
         assert e["attempt_status"] == "success" and e["actual_input_tokens"] == 128
@@ -323,7 +327,8 @@ def test_e2e_ns_to_ms_conversion():
         r = record_success(out, run_id="run-test", repeat_index=0,
                            inference_start_ns=start_ns, inference_end_ns=end_ns,
                            prefill_latency_ms=89.8, decode_latency_ms=114.9,
-                           actual_input_tokens=32, actual_output_tokens=2, batch_size=1)
+                           actual_input_tokens=32, actual_output_tokens=2, batch_size=1,
+                           data_role="PILOT", run_role="PILOT", study_mode="G1_NATURAL")
         e2e = r["inference_e2e_latency_ms"]
         assert 204.6 < e2e < 204.8, f"Expected ~204.6945 ms, got {e2e}"
         assert e2e != 204694500.0, f"ns→ms conversion missing: got raw ns value {e2e}"
@@ -337,7 +342,8 @@ def test_e2e_time_invariants():
         r = record_success(out, run_id="run-test", repeat_index=0,
                            inference_start_ns=1_000_000_000, inference_end_ns=1_200_000_000,
                            prefill_latency_ms=50.0, decode_latency_ms=150.0,
-                           actual_input_tokens=32, actual_output_tokens=2, batch_size=1)
+                           actual_input_tokens=32, actual_output_tokens=2, batch_size=1,
+                           data_role="PILOT", run_role="PILOT", study_mode="G1_NATURAL")
         assert r["inference_e2e_latency_ms"] > 0
         assert r["prefill_latency_ms"] >= 0
         assert r["decode_latency_ms"] >= 0

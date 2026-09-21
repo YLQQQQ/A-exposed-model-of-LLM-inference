@@ -197,6 +197,7 @@ MANIFEST_REQUIRED_CORE = [
     "wmpc_id",
     "run_id",
     "run_role",
+    "data_role",
     "study_mode",
     "warmup_count",
     "repeat_count",
