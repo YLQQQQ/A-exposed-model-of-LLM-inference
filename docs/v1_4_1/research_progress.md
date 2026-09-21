@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-> 一句话状态：**Gate 0～6 = `PASS`（Gate 6 / Q0 已完成）；Gate 7 的 `EP-G7-08`、`EP-G7-09` 已完成，当前唯一下一步是 `EP-G7-10`。**
+> 一句话状态：**Gate 0～6 = `PASS`（Gate 6 / Q0 已完成）；Gate 7 的 `EP-G7-08`、`EP-G7-09`、`EP-G7-10` 已完成，当前唯一下一步是 `EP-G7-11`。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -27,6 +27,7 @@
 - **数据角色**：`Prototype` / `Engineering` / `Pilot` / `Formal` 严格分开；复制、改名或重新分析都不能提升资格。当前只有 `Prototype` 与 `Engineering` 数据，**无合格 Pilot/Formal 数据**。
 - **当前唯一声明的目标 observation stack**：Windows + RTX 4090（UUID `GPU-0d8fafe6-a1e9-33cc-25fb-632316736455`）+ CUDA 12.4.131 + Nsight 2026.2.1 + package/analyzer `0.2.2`。Q0 资格只在该栈上取得。
 - **第二平台（含 Linux）**：不声明支持；其 launcher、smoke、平台资格检查与 Q0 属 Gate 9。任一平台未通过该平台的真实 smoke 前不得声称受支持。
+- **平台边界（代码位置）**：Python 侧唯一平台边界是 `exposedpath/platform_adapter.py`（工具解析 + 结构化 argv + fail closed；包内仅此模块导入 `subprocess`）；Windows 启动层是 `scripts/*.ps1`。runner/manifest 核心保持平台无关，新增平台能力不得绕过该边界。
 
 ### 0.4 文档地图（按接手顺序）
 
@@ -62,10 +63,10 @@
 - 当前研究阶段：`Engineering`
 - 当前工作分支：`codex/gate7-runner`（从 Gate 6 canonical closeout `478b945` 创建的隔离 worktree）
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前 Gate 状态：Gate 0～6 = `PASS`；Gate 7 = `NOT_RUN`（`EP-G7-08`、`EP-G7-09` 已完成，待 `EP-G7-10`/`EP-G7-11`）；Gate 8 = `NOT_RUN`（不得在 Gate 7 acceptance 前启动）；Gate 9～11 = `BLOCKED`（Formal 平台未确定/未接入）；Gate 12～14 = `NOT_RUN`
-- 当前最高优先级：Gate 7 `EP-G7-10`（旧编号 `EP-G7-05`＋`EP-G7-06` 基线失败部分已合并）——平台适配隔离并给出两项既有 smoke 失败的最终处置；完整步骤、acceptance 与 STOP 条件见 §5 与 `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`
+- 当前 Gate 状态：Gate 0～6 = `PASS`；Gate 7 = `NOT_RUN`（`EP-G7-08`～`EP-G7-10` 已完成，待 `EP-G7-11`）；Gate 8 = `NOT_RUN`（不得在 Gate 7 acceptance 前启动）；Gate 9～11 = `BLOCKED`（Formal 平台未确定/未接入）；Gate 12～14 = `NOT_RUN`
+- 当前最高优先级：Gate 7 `EP-G7-11`（旧编号 `EP-G7-06` 的全量验证部分＋`EP-G7-07`）——非 GPU 全量验证 ＋ 目标平台（Windows + RTX 4090）真实 GPU smoke，并形成 Gate 7 verdict；完整步骤、acceptance 与 STOP 条件见 §5 与 `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`
 - 当前总体判断（2026-09-20）：Gate 6 / Q0 已正式 `PASS`。frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21/21 `REAL_CASE_PASS`、2 个 synthetic-only case（`Q0-TERMINAL-TIE-001`、`Q0-SUBMISSION-RACE-001`）PASS、23/23 `SYNTHETIC_PASS`，且存在唯一一份 `q0_gate_report.json`（schema `exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`）。该 PASS 只说明当前 analyzer 在本目标 observation stack 上取得 **Q0 正确性资格**；不等于 Engineering Pilot、Pilot、Protocol Freeze 或 Formal 结果，也不建立第二平台等价性。身份、哈希、provenance caveat、根因映射与实现成熟度见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
-- 当前到达点（`EP-G7-09`）：runner 已统一首/后续 Token 的 Host-readable completion boundary，并冻结 Pass0/Pass1 parity identity（workload / GPU / execution strategy / phase boundary / environment snapshot / attempt plan 六组字段）；`cross_pass_parity.json` 升级为 `exposedpath-v3-cross-pass-2`，缺失身份一律 `PASS_PARITY_IDENTITY_MISSING` fail closed；attempt/exclusion/retry/data-role 已机器可读，planned repeat index 必须恰好记账一次。Gate 7 verdict 仍为 `NOT_RUN`，下一步是 `EP-G7-10`，不是 Gate 8。
+- 当前到达点（`EP-G7-10`）：runner 已统一首/后续 Token 的 Host-readable completion boundary，Pass0/Pass1 parity identity 与 attempt/exclusion/retry provenance 已冻结并机器可校验，Python 侧平台差异已收敛到 `exposedpath/platform_adapter.py`（核心不再导入 `subprocess`、不再出现裸工具名/shell），两项既有 smoke 基线失败已定位为测试非封闭（依赖环境 `PATH`）并修复。Gate 7 verdict 仍为 `NOT_RUN`，唯一下一步是 `EP-G7-11`（真实 GPU smoke），不是 Gate 8。
 
 历史快照（保留，不覆盖；以下描述 2026-09-19 及更早的当时状态，均已由 2026-09-20 Gate 6 PASS 取代，详细过程见 `docs/v1_4_1/gate6_closeout_v0_1.md`）：
 
@@ -208,7 +209,7 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 ### Gate 7：Runner 与执行链对齐
 
-**Gate verdict：`NOT_RUN`。** `EP-G7-08`、`EP-G7-09` 已完成，但 Gate 7 只有在 `EP-G7-11` 的全部 acceptance 判据满足后才形成 verdict。当前事实：Token-ready completion 与 G1/N1 身份已对齐；Pass0/Pass1 parity identity 与 attempt/exclusion/retry provenance 已冻结并机器可校验；launcher 仍只有 PowerShell（`scripts/*.ps1`），无等价平台入口；`tests/test_server_smoke_script.py::test_dry_run`、`::test_spaces` 两项既有失败未处置。
+**Gate verdict：`NOT_RUN`。** `EP-G7-08`～`EP-G7-10` 已完成，但 Gate 7 只有在 `EP-G7-11` 的全部 acceptance 判据满足后才形成 verdict。当前事实：Token-ready completion 与 G1/N1 身份已对齐；Pass0/Pass1 parity identity 与 attempt/exclusion/retry provenance 已冻结并机器可校验；Python 侧平台差异已收敛到 `exposedpath/platform_adapter.py`（核心不含 shell/裸工具名，外部调用一律结构化 argv + fail closed），Windows launcher 仍为 `scripts/*.ps1`，第二平台入口按平台范围决定归 Gate 9；`tests/test_server_smoke_script.py::test_dry_run`、`::test_spaces` 已定位为测试非封闭（依赖环境 `PATH`／裸 `powershell`）并修复。
 
 **重审计结论（2026-09-20）：** 原 `EP-G7-01`～`EP-G7-07` 的 7 个行政步骤压缩为 4 个可执行步骤（`EP-G7-08`～`EP-G7-11`）。合并的是**同一工程单元**（runner 语义/身份、identity/parity/schema、平台适配、验证与验收），没有合并彼此独立的科学 acceptance 判据：每一步内部仍逐条保留各自的 PASS/STOP 条件。执行计划：`docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`；旧计划 `docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md` 仅作历史记录。
 
@@ -232,12 +233,12 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
   - **STOP**：若要求把缺字段降级为零值/默认值来让检查通过 → 停止。
   - **Dependency**：与 `EP-G7-08` 无相互依赖，可并行；两者都必须先于 `EP-G7-11` 完成。
   - **Unlock**：Pass0/Pass1 可配对比较，exclusion/retry 规则有机器可读依据。
-- [ ] `EP-G7-10`（未开始，合并旧 `EP-G7-05`＋旧 `EP-G7-06` 的基线失败部分）
+- [x] `EP-G7-10`（2026-09-21 完成，合并旧 `EP-G7-05`＋旧 `EP-G7-06` 的基线失败部分）
   - **Objective**：把 Windows PowerShell、平台探测、Nsight 调用收敛到 adapter/launcher；处置两项既有 smoke 失败。
   - **Why**：平台差异目前散落在脚本中，任何第二平台（Gate 9）都会重新暴露同类问题；未解释的基线失败会让后续回归无法区分“新缺陷”与“旧噪声”。
   - **Implementation**：runner 核心改用 `pathlib` 与结构化子进程参数；平台特定逻辑下沉到 adapter/launcher；修复或按平台范围决定明确重界定 `tests/test_server_smoke_script.py::test_dry_run` 与 `::test_spaces`。
-  - **Evidence**：Windows/Linux 命令构造与参数单测（不需要 GPU）；两项基线失败的最终处置结论。
-  - **PASS**：定向单测全绿；两项基线失败被修复或经明确重界定后不再计为未知失败。
+  - **Evidence**（无 GPU）：新增 `exposedpath/platform_adapter.py` 作为唯一 Python 侧平台边界（平台身份、可执行后缀、工具解析、结构化 argv、`ToolUnavailableError`/`ToolExecutionError` fail closed），包内仅此模块导入 `subprocess`；`exposedpath/runner.py` 的 driver-version 与 telemetry 查询、`exposedpath/manifest.py` 的 driver/git provenance 全部改经 adapter（字段名与取值语义不变，无 schema 变更）；新增 `tests/test_platform_adapter.py` 覆盖平台身份、`.exe` 规则、解析顺序、无 shell 的字面量传参、fail closed，以及“核心模块不得导入 `subprocess`／不得出现裸工具名与 `shell=True`”的结构不变式。两项 smoke 失败根因：`tests/test_server_smoke_script.py::_run` 以裸名 `"powershell"` 启动宿主、且 launcher 的 `Resolve-Executable python` 依赖环境 `PATH`；受控复现（`PATH = System32 + WindowsPowerShell`，无 python）得到 launcher `exit 1` + `ERROR: Cannot resolve PythonExe`，即该两项的 `assert 0 == 1`，`PATH` 连 PowerShell 目录都缺失时则表现为 `FileNotFoundError`。修复：显式解析 PowerShell（`shutil.which` → `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe`）、显式传 `-PythonExe sys.executable`、失败时在断言消息中回显 stdout/stderr，并把同文件 `test_import` 的裸 `python` 一并改为 `sys.executable`；新增回归 `test_dry_run_is_independent_of_ambient_path`（PATH 去 python 仍须 `exit 0`）与 `test_launcher_invocation_does_not_use_bare_powershell_name`（AST 断言 `subprocess.run` 首参不得为裸字符串）。
+  - **PASS**：`tests/test_platform_adapter.py` 20 passed；`tests/test_server_smoke_script.py` 31 passed（含 PATH 去 python 的回归）；`tests/test_server_smoke_script.py::test_dry_run`、`::test_spaces` 在默认与受控 `PATH` 两种环境下均 `exit 0`，**不再计为未知失败**；两项失败为测试非封闭而非产品缺陷（launcher 语义未改，仅显式化宿主与解释器）。
   - **STOP**：若某项必须先有真实 GPU 才能判定 → 移交 `EP-G7-11`，不得用 mock 结论代替。
   - **Dependency**：独立于 `EP-G7-08`/`EP-G7-09`，可并行；其结论不依赖 GPU。
   - **Unlock**：平台可移植性被结构性保护，测试基线不再含未解释失败。
@@ -429,3 +430,4 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 | 7.1 | 2026-09-20 | 最后一次收尾：本清单重构为“交接入口 + 当前快照 + Gate 摘要 + 压缩历史”；清除过时 live 状态文字；为旧 Gate 6/5 计划与规格加历史横幅；为 Gate 7 四步补 `Dependency`；补 Gate 6 论文级分类总结 | EP-G6-11、EP-G7-08～11、EP-ISSUE-03 | 不改变任何 Gate verdict、Measurement Contract、oracle、schema 或数据资格 |
 | 7.2 | 2026-09-21 | 完成 `EP-G7-08`：统一首/后续 Token 的 Host-readable completion，首/后续 EOS 均复用 Host 值，结果时间截止于最后 Token-ready 且 phase ranges 在校验/cleanup 前关闭；加入 G1/N1 互斥机器身份、结构化 NVTX 与 fail-closed validation | EP-G7-08、EP-ISSUE-01 | Gate 7 保持 `NOT_RUN`；严格跨 pass phase parity 留给 `EP-G7-09`；不改变 Measurement Contract、`exposedpath_v141`、Gate 6 证据或数据资格 |
 | 7.3 | 2026-09-21 | 完成 `EP-G7-09`：冻结 Pass0/Pass1 parity identity（workload／GPU／execution strategy／phase boundary／environment snapshot／attempt plan 六组）并把 `cross_pass_parity.json` 升为 `exposedpath-v3-cross-pass-2`；attempt/exclusion/retry/data-role 机器可读；缺失身份、缺失/重复 repeat index 与有意差异一律 fail closed | EP-G7-09、EP-G7-03、EP-G7-04 | Gate 7 保持 `NOT_RUN`；不改变 Measurement Contract、`exposedpath_v141`、Gate 6 证据、数据资格或 Gate 7 PASS 判据 |
+| 7.4 | 2026-09-21 | 完成 `EP-G7-10`：新增 `exposedpath/platform_adapter.py` 作为唯一 Python 侧平台边界（结构化 argv、无 shell、工具解析与 fail closed），runner/manifest 的 `nvidia-smi`／`git` 调用全部改经 adapter（无 schema/字段语义变化）；两项既有 smoke 失败定位为测试非封闭（裸 `powershell`＋依赖环境 `PATH` 解析 `python`）并修复，新增 PATH 独立性与 AST 结构回归 | EP-G7-10、EP-G7-05、EP-G7-06、EP-ISSUE-03 | Gate 7 保持 `NOT_RUN`（`EP-G7-11` 真实 GPU smoke 未执行）；不改变 Measurement Contract、`exposedpath_v141`、Gate 6 证据、数据资格或 Gate 7 PASS 判据 |

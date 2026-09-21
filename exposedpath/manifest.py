@@ -265,11 +265,11 @@ def _read_model_config(model_path: str) -> Dict:
 
 def _get_nvidia_driver() -> str:
     """Try to get NVIDIA driver version via nvidia-smi."""
-    import subprocess
+    from exposedpath import platform_adapter
+
     try:
-        out = subprocess.check_output(
-            ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
-            text=True, timeout=10,
+        out = platform_adapter.nvidia_smi(
+            ["--query-gpu=driver_version", "--format=csv,noheader"], timeout=10,
         )
         return out.strip().split("\n")[0].strip()
     except Exception:
@@ -278,12 +278,10 @@ def _get_nvidia_driver() -> str:
 
 def _get_git_commit() -> Optional[str]:
     """Get current git commit hash."""
-    import subprocess
+    from exposedpath import platform_adapter
+
     try:
-        out = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            text=True, timeout=5, stderr=subprocess.DEVNULL,
-        )
+        out = platform_adapter.git(["rev-parse", "HEAD"], timeout=5)
         return out.strip()
     except Exception:
         return None
@@ -291,12 +289,10 @@ def _get_git_commit() -> Optional[str]:
 
 def _get_git_dirty() -> Optional[bool]:
     """Check if git working tree is dirty."""
-    import subprocess
+    from exposedpath import platform_adapter
+
     try:
-        out = subprocess.check_output(
-            ["git", "status", "--porcelain"],
-            text=True, timeout=5, stderr=subprocess.DEVNULL,
-        )
+        out = platform_adapter.git(["status", "--porcelain"], timeout=5)
         return len(out.strip()) > 0
     except Exception:
         return None

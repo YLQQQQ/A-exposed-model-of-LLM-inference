@@ -368,8 +368,10 @@ def run_one_invocation(
 
 def _write_cross_pass_parity(manifest, pass_label, output_dir, manifest_path, model_path, device):
     """Write cross_pass_parity.json for later cross-pass validation."""
-    import hashlib, json as _json, os as _os, platform as _platform, subprocess as _sp
+    import hashlib, json as _json, os as _os, platform as _platform
     from pathlib import Path as _Path
+
+    from exposedpath import platform_adapter as _adapter
 
     parity = {
         "schema_version": "exposedpath-v3-cross-pass-2",
@@ -430,9 +432,10 @@ def _write_cross_pass_parity(manifest, pass_label, output_dir, manifest_path, mo
         "command_line": " ".join(sys.argv),
     }
     try:
-        out = _sp.check_output(["nvidia-smi","--query-gpu=driver_version","--format=csv,noheader"], text=True, timeout=10)
+        out = _adapter.nvidia_smi(["--query-gpu=driver_version", "--format=csv,noheader"], timeout=10)
         parity["nvidia_driver_version"] = out.strip().split("\n")[0].strip()
-    except: pass
+    except Exception:
+        pass
     try:
         import psutil; p = psutil.Process(); parity["process_priority"] = str(p.nice())
     except: pass
@@ -447,7 +450,9 @@ def _sample_gpu_telemetry(
     stage: str, repeat_index=None, gpu_index=0,
 ):
     """Read-only GPU telemetry using nvidia-smi. Uses PHYSICAL GPU index."""
-    import json as _json, subprocess as _sp, datetime as _dt
+    import json as _json, datetime as _dt
+
+    from exposedpath import platform_adapter as _adapter
     # Use physical GPU index for nvidia-smi (NOT logical cuda device)
     physical_idx = manifest.get("gpu_index_physical", gpu_index)
     expected_uuid = manifest.get("gpu_uuid")
@@ -458,9 +463,9 @@ def _sample_gpu_telemetry(
 
     fields = "index,uuid,pci.bus_id,name,clocks.current.graphics,clocks.current.sm,clocks.current.memory,pstate,temperature.gpu,power.draw,power.limit,utilization.gpu,utilization.memory"
     try:
-        out = _sp.check_output(
-            ["nvidia-smi", "-i", selector, "--query-gpu=" + fields,
-             "--format=csv,noheader,nounits"], text=True, timeout=10,
+        out = _adapter.nvidia_smi(
+            ["-i", selector, "--query-gpu=" + fields, "--format=csv,noheader,nounits"],
+            timeout=10,
         ).strip()
         parts = [x.strip() for x in out.split(",")]
         q_ok = 0

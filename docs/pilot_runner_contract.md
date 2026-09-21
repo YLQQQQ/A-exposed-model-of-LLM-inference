@@ -123,6 +123,35 @@ The parity decision is mechanical, not editorial. `exposedpath.cross_pass_valida
 - `study_mode=G1_NATURAL` with natural per-Token Host-readable completion
 - Machine-readable, mutually exclusive G1/N1 mode configuration; N1 execution remains disabled and fails closed in Gate 7
 
+### 9.1 Platform boundary (EP-G7-10)
+
+Platform differences live in exactly two places. Everything else is platform
+agnostic.
+
+| Layer | Location | Owns |
+|---|---|---|
+| Python platform boundary | `exposedpath/platform_adapter.py` | platform identity, executable naming (`.exe`), host-tool resolution, structured argv construction and invocation |
+| Windows launcher layer | `scripts/*.ps1` | PowerShell entry points, Nsight wrapping, server-side run orchestration |
+
+Rules enforced by tests (`tests/test_platform_adapter.py`):
+
+- Within the `exposedpath` package, only `platform_adapter` imports
+  `subprocess`. Runner/manifest core never shells out and never names a host
+  executable.
+- Every external tool call is a structured argv list with `shell=False`;
+  arguments containing spaces or shell metacharacters are passed literally.
+- A tool that cannot be resolved raises `ToolUnavailableError`; a resolved tool
+  that exits non-zero raises `ToolExecutionError` when queried. The adapter
+  never substitutes `0`/`unknown`/empty-string defaults — callers decide how to
+  record a failure, and existing records (`nvidia_driver_version: "unknown"`,
+  telemetry `QUERY_FAILED: ...`) keep their previous meaning.
+- Test entry points must resolve host executables explicitly instead of relying
+  on the ambient `PATH` (see `tests/test_server_smoke_script.py`).
+
+Linux support is currently only expressed as naming/suffix rules and default
+tool locations; it is not a validated platform. The Linux launcher, smoke and
+platform qualification belong to Gate 9.
+
 ## 10. NOT Yet Supported (Pilot Scope)
 
 - `torch.compile` / CUDA Graph
@@ -135,6 +164,7 @@ The parity decision is mechanical, not editorial. `exposedpath.cross_pass_valida
 - Bootstrap/repeat-level statistical tests
 - Resource audit periodic sampling
 - Full event synchronization recovery
+- Linux (second-platform) launcher, smoke and platform qualification (Gate 9)
 
 ## 11. Pilot Run Example
 

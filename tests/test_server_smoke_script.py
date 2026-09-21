@@ -1,15 +1,45 @@
-"""Tests for run_server_smoke_test.ps1 — resume state recovery, gates, Join-Path."""
+"""Tests for run_server_smoke_test.ps1 — resume state recovery, gates, Join-Path.
+
+EP-G7-10 note: the launcher invocation below is hermetic. The host is part of
+the platform boundary, so the PowerShell executable is resolved explicitly and
+the interpreter is passed as ``-PythonExe``. A bare ``powershell`` / ``python``
+lookup would make these checks depend on the caller's ambient PATH, which
+previously produced two unexplained baseline failures.
+"""
 
 from __future__ import annotations
-import os, subprocess, sys, tempfile
+import os, shutil, subprocess, sys, tempfile
 from pathlib import Path
 import pytest
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "run_server_smoke_test.ps1"
 def _t(): return SCRIPT.read_text(encoding="utf-8")
-def _run(argv,cwd=None):
-    r=subprocess.run(["powershell","-ExecutionPolicy","Bypass","-NoProfile","-Command",f"& '{SCRIPT}' {argv}"],capture_output=True,text=True,cwd=cwd or str(SCRIPT.parent.parent))
+
+def _powershell_exe():
+    """Resolve Windows PowerShell explicitly; never rely on the ambient PATH."""
+    found = shutil.which("powershell")
+    if found:
+        return found
+    system_root = os.environ.get("SystemRoot", r"C:\Windows")
+    candidate = Path(system_root) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+    if candidate.is_file():
+        return str(candidate)
+    return None
+
+def _run(argv,cwd=None,env=None):
+    exe=_powershell_exe()
+    if exe is None:
+        pytest.skip("Windows PowerShell is unavailable on this host")
+    r=subprocess.run([exe,"-ExecutionPolicy","Bypass","-NoProfile","-Command",f"& '{SCRIPT}' {argv}"],capture_output=True,text=True,cwd=cwd or str(SCRIPT.parent.parent),env=env)
     return r.returncode,r.stdout,r.stderr
+
+def _dry_run_args(model_path,nsys_path):
+    """Dry-run argv with an explicit interpreter (PATH-independent)."""
+    return f'-ModelPath "{model_path}" -GpuId 0 -NsysPath "{nsys_path}" -PythonExe "{sys.executable}" -DryRun'
+
+def _assert_dry_run_ok(model_path,nsys_path,cwd=None,env=None):
+    rc,out,err=_run(_dry_run_args(model_path,nsys_path),cwd,env=env)
+    assert rc==0, f"dry run exited {rc}\n--- stdout ---\n{out}\n--- stderr ---\n{err}"
 
 # ===== Recovery functions exist =====
 def test_recover_pass0_function_exists():
@@ -88,17 +118,58 @@ def test_dry_run():
     with tempfile.TemporaryDirectory() as td:
         m=Path(td)/"m"; m.mkdir(); (m/"config.json").write_text("{}")
         n=Path(td)/"n"; n.mkdir(); (n/"nsys.exe").write_text("f")
-        assert _run(f'-ModelPath "{m}" -GpuId 0 -NsysPath "{n/"nsys.exe"}" -DryRun',td)[0]==0
+        _assert_dry_run_ok(m,n/"nsys.exe",td)
 def test_spaces():
     with tempfile.TemporaryDirectory() as td:
         m=Path(td)/"my m"; m.mkdir(); (m/"config.json").write_text("{}")
         n=Path(td)/"n s"; n.mkdir(); (n/"nsys.exe").write_text("f")
-        assert _run(f'-ModelPath "{m}" -GpuId 0 -NsysPath "{n/"nsys.exe"}" -DryRun',td)[0]==0
+        _assert_dry_run_ok(m,n/"nsys.exe",td)
+def test_dry_run_is_independent_of_ambient_path():
+    """EP-G7-10 regression: a PATH without python must not fail the launcher."""
+    if _powershell_exe() is None:
+        pytest.skip("Windows PowerShell is unavailable on this host")
+    with tempfile.TemporaryDirectory() as td:
+        m=Path(td)/"m"; m.mkdir(); (m/"config.json").write_text("{}")
+        n=Path(td)/"n"; n.mkdir(); (n/"nsys.exe").write_text("f")
+        system_root=os.environ.get("SystemRoot", r"C:\Windows")
+        env={
+            "SystemRoot": system_root,
+            "WINDIR": system_root,
+            "PATH": str(Path(system_root)/"System32"),
+            "TEMP": td,
+            "TMP": td,
+        }
+        _assert_dry_run_ok(m,n/"nsys.exe",td,env=env)
+def test_launcher_invocation_does_not_use_bare_powershell_name():
+    """EP-G7-10: hosts must be resolved, never invoked by bare name.
+
+    Structural guard: every ``subprocess.run`` in this module must pass an
+    argv list whose first element is a resolved path (a name or call, not a
+    bare string literal such as ``["powershell"`` or ``["python"``).
+    """
+    import ast
+
+    tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    run_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "run"
+    ]
+    assert run_calls, "expected at least one subprocess.run call in this module"
+    for call in run_calls:
+        argv = call.args[0] if call.args else None
+        assert isinstance(argv, ast.List) and argv.elts, "subprocess.run expects an argv list"
+        first = argv.elts[0]
+        assert not (
+            isinstance(first, ast.Constant) and isinstance(first.value, str)
+        ), f"bare executable name is not hermetic: {ast.dump(first)}"
 
 # ===== Misc =====
 def test_import():
     p=Path(__file__).resolve().parent.parent
-    r=subprocess.run(["python","-c","import sys; sys.path.insert(0,'.'); import exposedpath; print(exposedpath.__version__)"],capture_output=True,text=True,cwd=str(p),timeout=15)
+    r=subprocess.run([sys.executable,"-c","import sys; sys.path.insert(0,'.'); import exposedpath; print(exposedpath.__version__)"],capture_output=True,text=True,cwd=str(p),timeout=15)
     assert r.returncode==0 and "3.0.0-pilot" in r.stdout
 def test_no_bom(): assert not SCRIPT.read_bytes().startswith(b'\xef\xbb\xbf')
 def test_pythonpath(): assert '$env:PYTHONPATH' in _t()
