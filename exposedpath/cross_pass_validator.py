@@ -49,11 +49,19 @@ def validate_pair(p0: Dict, p1: Dict) -> List[str]:
             issues.append(PASS_GPU_MISMATCH)
             break
 
+    # The Gate 7 mode identity is mandatory. Treat a legacy pair that omits the
+    # fields on both sides as unknown, not as equal.
+    required_mode_fields = ("study_mode", "n1_intervention")
+    if any(k not in p0 or k not in p1 for k in required_mode_fields):
+        issues.append(PASS_EXECUTION_PARITY_MISMATCH)
+
     # Execution parity
     for k in ["runner_source_sha256","dtype","attention_backend","execution_mode",
-              "inference_mode","use_cache","synchronize_policy","cuda_visible_devices"]:
+              "inference_mode","use_cache","synchronize_policy","study_mode",
+              "n1_intervention","cuda_visible_devices"]:
         if p0.get(k) != p1.get(k):
-            issues.append(PASS_EXECUTION_PARITY_MISMATCH)
+            if PASS_EXECUTION_PARITY_MISMATCH not in issues:
+                issues.append(PASS_EXECUTION_PARITY_MISMATCH)
             break
 
     if not issues:

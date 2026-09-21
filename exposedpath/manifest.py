@@ -44,6 +44,8 @@ def create_manifest(
     clock_preflight_required: bool = False,
     environment_sharing_mode: str = "SHARED",
     data_role: str = "PILOT",
+    study_mode: str = "G1_NATURAL",
+    n1_intervention: Optional[Dict] = None,
     eligible_for_final_statistics: bool = False,
     sampling_config: Optional[Dict] = None,
     model_revision: str = "unknown",
@@ -115,6 +117,8 @@ def create_manifest(
         "wmpc_id": None,  # computed after prompt_tokens loaded
         "run_id": generate_run_id(),
         "run_role": run_role,
+        "study_mode": study_mode,
+        "n1_intervention": n1_intervention,
         "gpu": gpu,
         "gpu_index": gpu,
         "gpu_index_physical": gpu_index_physical,

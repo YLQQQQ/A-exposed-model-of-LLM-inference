@@ -2,10 +2,13 @@
 
 ## 1. Measurement Boundaries
 
-- `full_request` NVTX range defines the measurement window
+- The frozen semantic endpoint of `full_request` is the final Host-readable Token-ready completion; `inference_end_ns` and the ordered structured Token-ready evidence record that endpoint
 - Tokenizer/detokenizer are **OUTSIDE** the measurement boundary
-- Final device synchronization (`torch.cuda.synchronize()`) MUST be inside `full_request`
-- No per-token synchronization between decode steps
+- `request.start` is recorded after the request-start drain returns; that drain is outside `full_request`
+- Every generated Token crosses the same blocking Host-readable boundary: the Token ID is copied/read on Host, then its completion timestamp is recorded
+- The runner closes the legacy phase ranges immediately after the last structured Token-ready marker and before boundary validation or other cleanup; there is no trailing cleanup synchronization in the measured path
+- G1 natural Token-ready completion uses `sync_origin=natural_token_ready`
+- `inference_results.jsonl` records each successful attempt's ordered `token_ready_boundaries` (`token_index`, Host token IDs, `completed_ns`, origin, and mechanism)
 - No streaming callbacks inside the timing path
 
 ## 2. Fixed Input
@@ -27,6 +30,7 @@
 - `fixed_output_tokens` = exact number of output tokens the model must generate
 - Prefill produces the first output token (TTFT)
 - Decode produces tokens 2..`fixed_output_tokens`
+- Prefill ends only after Token 0 is Host-readable; every later Decode step ends at the equivalent Host-readable boundary
 - `output_len=1`: decode phase is empty but must be handled consistently (documented)
 - Early EOS -> exclusion (not success)
 - Wrong output token count -> exclusion
@@ -38,12 +42,16 @@
 - Both passes read the same `wmpc_manifest.json` and `prompt_tokens.json`
 - Both use the same `warmup_count` and `repeat_count`
 - Identical `repeat_index` plan for both passes
+- Both use the same study mode, generation control flow, Host-readable Token-ready operation, and synchronization policy; Pass 1 only adds structured NVTX markers and profiling
 
 ## 6. NVTX Contract
 
 - **Invocation**: `EXPOSEDPATH_INVOCATION:<experiment_id>:<wmpc_id>:<run_id>:<pass>:<repeat_index>`
 - **Phases**: `EXPOSEDPATH_PHASE:full_request`, `EXPOSEDPATH_PHASE:prefill`, `EXPOSEDPATH_PHASE:decode`
+- **Token-ready sync**: `EXPOSEDPATH_JSON_V1:<json>` with `kind=sync`, `sync_origin=natural_token_ready`, `token_index`, `token_ready_mechanism=device_to_host_token_ids`, `callsite_id`, and complete run/request/repeat identity
+- **N1 intervention identity**: `kind=sync`, `sync_origin=n1_intervention`, distinct `callsite_id`, `intervention_variant_id`, and `intervention_ordinal`; EP-G7-08 validates this identity but does not execute N1
 - `full_request` contains `prefill` then `decode`
+- `completed_ns` is a Host monotonic timestamp and is not asserted numerically equal to an NVTX trace-clock timestamp; strict Pass0/Pass1 phase-boundary parity remains an EP-G7-09 acceptance item
 - Warmup has NO formal NVTX ranges
 - `prepare_input` / tokenization NOT inside `full_request`
 
@@ -89,6 +97,8 @@
 - A-layer wall-clock decomposition (from legacy analyzer)
 - B-layer per-sync diagnostics (from legacy analyzer)
 - Windows Server + PowerShell
+- `study_mode=G1_NATURAL` with natural per-Token Host-readable completion
+- Machine-readable, mutually exclusive G1/N1 mode configuration; N1 execution remains disabled and fails closed in Gate 7
 
 ## 10. NOT Yet Supported (Pilot Scope)
 

@@ -52,6 +52,7 @@ def _manifest(**overrides):
         "inference_framework_version": "0.1.0", "execution_mode": "eager",
         "experiment_id": "test_exp", "wmpc_id": "wmpc-placeholder",
         "run_id": "run-placeholder", "run_role": "warmup",
+        "study_mode": "G1_NATURAL", "n1_intervention": None,
         "warmup_count": 3, "repeat_count": 5,
         "prompt_tokens_file": "prompt_tokens.json",
     }

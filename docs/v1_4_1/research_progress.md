@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-> 一句话状态：**Gate 0～6 = `PASS`（Gate 6 / Q0 已完成）；当前唯一下一步是 Gate 7 的 `EP-G7-08`。**
+> 一句话状态：**Gate 0～6 = `PASS`（Gate 6 / Q0 已完成）；Gate 7 的 `EP-G7-08` 已完成，当前唯一下一步是 `EP-G7-09`。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -55,17 +55,17 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.1`
-- 最近更新：`2026-09-20`
+- 清单版本：`7.2`
+- 最近更新：`2026-09-21`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
-- 当前工作分支：`codex/gate6-canonical-baseline`（Gate 6 canonical baseline；历史 `codex/v141-analyzer` 与 `gate6-warmup-clean` 已收敛到该分支）
+- 当前工作分支：`codex/gate7-runner`（从 Gate 6 canonical closeout `478b945` 创建的隔离 worktree）
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～6 = `PASS`；Gate 7 = `NOT_RUN`（已解锁，待执行）；Gate 8 = `NOT_RUN`（不得在 Gate 7 acceptance 前启动）；Gate 9～11 = `BLOCKED`（Formal 平台未确定/未接入）；Gate 12～14 = `NOT_RUN`
-- 当前最高优先级：Gate 7 `EP-G7-08`（旧编号 `EP-G7-01`/`EP-G7-02` 已合并）——统一 Token 就绪边界并分离 G1 自然逐 Token 同步与 N1 人为干预模式；完整步骤、acceptance 与 STOP 条件见 §5 与 `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`
+- 当前最高优先级：Gate 7 `EP-G7-09`（旧编号 `EP-G7-03`/`EP-G7-04` 已合并）——证明 Pass0/Pass1 parity 并补齐机器可读 provenance；完整步骤、acceptance 与 STOP 条件见 §5 与 `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`
 - 当前总体判断（2026-09-20）：Gate 6 / Q0 已正式 `PASS`。frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21/21 `REAL_CASE_PASS`、2 个 synthetic-only case（`Q0-TERMINAL-TIE-001`、`Q0-SUBMISSION-RACE-001`）PASS、23/23 `SYNTHETIC_PASS`，且存在唯一一份 `q0_gate_report.json`（schema `exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`）。该 PASS 只说明当前 analyzer 在本目标 observation stack 上取得 **Q0 正确性资格**；不等于 Engineering Pilot、Pilot、Protocol Freeze 或 Formal 结果，也不建立第二平台等价性。身份、哈希、provenance caveat、根因映射与实现成熟度见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
-- 当前到达点（`EP-G6-11`）：Gate 6 已收口并落账，下一步是本清单 Gate 7 的第一个实现步骤，而不是新的 Gate 6 清理或诊断周期。
+- 当前到达点（`EP-G7-08`）：runner 已统一首/后续 Token 的 Host-readable completion boundary；G1 natural Token-ready 与 N1 intervention 身份已分离且非法组合 fail closed。Gate 7 verdict 仍为 `NOT_RUN`，下一步是 `EP-G7-09`，不是 Gate 8。
 
 历史快照（保留，不覆盖；以下描述 2026-09-19 及更早的当时状态，均已由 2026-09-20 Gate 6 PASS 取代，详细过程见 `docs/v1_4_1/gate6_closeout_v0_1.md`）：
 
@@ -208,18 +208,18 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 ### Gate 7：Runner 与执行链对齐
 
-**Gate verdict：`NOT_RUN`。** Gate 6/Q0 于 2026-09-20 通过后前序阻塞已消除，但 Gate 7 本身尚未执行。当前事实：旧 runner 的首 Token 时间仍取自异步 argmax 之后、后续 Token 使用 `.any()` 判定可能触发隐式同步（`EP-ISSUE-01`）；Pass0/Pass1 parity 未被机器化证明；launcher 只有 PowerShell（`scripts/*.ps1`），无等价平台入口；`tests/test_server_smoke_script.py::test_dry_run`、`::test_spaces` 两项既有失败未处置。
+**Gate verdict：`NOT_RUN`。** `EP-G7-08` 已完成，但 Gate 7 只有在 `EP-G7-11` 的全部 acceptance 判据满足后才形成 verdict。当前事实：Token-ready completion 与 G1/N1 身份已对齐；完整 Pass0/Pass1 parity/provenance 尚未补齐；launcher 只有 PowerShell（`scripts/*.ps1`），无等价平台入口；`tests/test_server_smoke_script.py::test_dry_run`、`::test_spaces` 两项既有失败未处置。
 
 **重审计结论（2026-09-20）：** 原 `EP-G7-01`～`EP-G7-07` 的 7 个行政步骤压缩为 4 个可执行步骤（`EP-G7-08`～`EP-G7-11`）。合并的是**同一工程单元**（runner 语义/身份、identity/parity/schema、平台适配、验证与验收），没有合并彼此独立的科学 acceptance 判据：每一步内部仍逐条保留各自的 PASS/STOP 条件。执行计划：`docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`；旧计划 `docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md` 仅作历史记录。
 
 **平台范围决定（2026-09-20，显式 scope 决定，不是静默弱化）：** 项目当前只声明**一个**目标 observation stack（Windows + RTX 4090 + CUDA 12.4.131 + Nsight 2026.2.1），Q0 资格也仅在该栈取得。因此 Gate 7 的“合同等价”**只在当前声明的目标平台上要求真实 GPU smoke 证据**。runner/launcher 仍必须完成平台适配隔离（核心不得硬编码 Windows 路径/命令/shell）；“声称支持第二平台（含 Linux）”所需的 Linux launcher、smoke、平台资格检查与 Linux Q0 归入 Gate 9。**任一平台在通过该平台的真实 smoke 前不得声称受支持。**
 
-- [ ] `EP-G7-08`（未开始，合并旧 `EP-G7-01`+`EP-G7-02`）
+- [x] `EP-G7-08`（2026-09-21 完成，合并旧 `EP-G7-01`+`EP-G7-02`）
   - **Objective**：首 Token 与后续 Token 使用同一个可观察 completion 语义；G1 自然逐 Token 同步与 N1 人为干预以互斥、机器可读的模式身份表达。
   - **Why**：`EP-ISSUE-01` 使两类 Token 的完成边界不同，而这个差别会直接进入 A 窗口与 phase 定义；模式不分离则 N1 的人为同步会被误读为 G1 的自然行为。
   - **Implementation**：更新 `exposedpath/runner.py` 的 Token 边界取值与 `docs/pilot_runner_contract.md`；引入模式身份字段并实现非法组合 fail closed。测试先行。
-  - **Evidence**：边界单调性／时间倒序 fail-closed 测试；模式互斥与非法组合拒绝测试；合同文字与实现一致性检查。
-  - **PASS**：上述测试全绿，且首/后续 Token 边界在合成输入下使用同一语义。
+  - **Evidence**：新增 `tests/test_runner_token_ready.py`，覆盖首/后续统一 Host-readable helper、首 Token/后续 Token EOS 均复用 Host 值、边界完整性/单调性、时间倒序与缺失边界 fail closed、机器可读边界记录、phase range 在校验/cleanup 前关闭、G1/N1 身份互斥、非法模式、双侧缺失 mode identity fail closed、N1 执行禁止及 Pass0/Pass1 Token-ready 行为一致；定向回归 `155 passed`，完整 CPU suite `844 passed, 3 failed, 4 errors`（均为既有 server smoke 与本机 CUDA 13/CP936 Q0 fixture 编译问题），合同 `37/37 PASS`，Canonical Raw 边界 `PASS`。
+  - **PASS**：首/后续 Token 均通过同一 `device_to_host_token_ids` completion helper；runner 的 `inference_end_ns` 对应最后一个 Token-ready 完成点，legacy phase ranges 在随后校验/cleanup 前关闭；G1 使用 `natural_token_ready`，N1 仅建立 `n1_intervention` 身份且执行 fail closed；未修改 Measurement Contract 或 `exposedpath_v141`。严格 Pass0/Pass1 phase-boundary parity 仍属于 `EP-G7-09`，本步不提前宣称。
   - **STOP**：若修正边界需要改动 Measurement Contract 语义或 `exposedpath_v141` 语义 → 停止并单独提出。
   - **Dependency**：无（Gate 7 第一个可执行步骤；只依赖已冻结的 Gate 1 合同）。
   - **Unlock**：逐 Token 边界可比较，N1/G1 不会被静默混用。
@@ -311,7 +311,6 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 **未关闭／长期有效：**
 
-- `EP-ISSUE-01`：旧 runner 的首 Token 时间取在异步 argmax 提交后，但后续 EOS `.any()` 可能触发隐式同步，Token 完成边界不一致。影响：Gate 1、7；不得直接用于新版 phase 定义。**处置**：Gate 7 `EP-G7-08`。
 - `EP-ISSUE-02`：三份历史 trace 缺少 source manifest。影响：validity 必须保持 `ambiguous`，不能升级数据资格。**永久限制**。
 - `EP-ISSUE-03`（已指派，未关闭）：仓库全量测试长期保留两项既有本地 PowerShell smoke 失败 `tests/test_server_smoke_script.py::test_dry_run` 与 `::test_spaces`，与工作前基线相同，不属于任何 Gate 新增失败，也不影响 Gate 6 PASS（Gate 6 的判据是唯一 gate report，不依赖该 smoke 脚本）。**处置**：Gate 7 `EP-G7-10` 必须在 `EP-G7-11` 前给出修复或明确重界定结论；在此之前它仍是未解释的基线失败，不得当作“已解决”。
 - `EP-ISSUE-04`：本机（Lenovo 82L5，Windows build 26200）存在 GTX 1650（4 GiB，driver package `581.57`，Toolkit/nvcc `V13.0.88`，Nsight 2026.1.1 系列），但**尚未完成 Candidate qualification**（driver API 与 runtime 版本未知、schema 未审查、独占性未确认、A7 未闭合），因此当前不得作为真实 Q0/workload 平台；仅允许离线工作与已批准的非 case qualification。静态盘点见 `docs/v1_4_1/candidate_platform_inventory_v0_1.md`。
@@ -323,6 +322,7 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 | 编号 | 结论 |
 |---|---|
+| `EP-ISSUE-01` | `EP-G7-08` 已统一首/后续 Token 的 Host-readable completion boundary；EOS 使用已读取 Host 值，`inference_end_ns` 截止于最后一个 Token-ready 完成点，phase ranges 在校验/cleanup 前关闭；严格跨 pass phase parity 留给 `EP-G7-09` |
 | `EP-ISSUE-05` | 本地全页渲染与研究主体/协议文档 QA 已完成（渲染器只用于文档 QA，不改变研究 Gate） |
 | `EP-ISSUE-08` | r2 捕获结束同步未映射；r3 证明新增显式排空具有唯一 runtime 映射 |
 | `EP-ISSUE-09` | r3 request 后尾部同步无 runtime 候选；以唯一 full_request identity 限定 observation scope，标为 `HARNESS_OUTSIDE_REQUEST` warning |
@@ -340,10 +340,9 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 **最近应执行的任务（按顺序）：**
 
-1. `EP-G7-08`（当前最高优先级）：统一 Token 就绪边界并分离 G1/N1 模式。先写失败测试，再改 runner 与合同；不得修改 Measurement Contract 语义；不运行 GPU。
-2. `EP-G7-09`：Pass0/Pass1 parity 与机器可读 provenance 补齐（复用既有 manifest/results 产物，不新建平行 checker）。
-3. `EP-G7-10`：平台适配隔离与两项既有 PowerShell smoke 失败的最终处置。
-4. `EP-G7-11`：非 GPU 全量验证＋当前声明目标平台（Windows/RTX 4090）真实 GPU smoke，形成 Gate 7 acceptance 决定。Gate 7 只在 `EP-G7-11` 判据同时成立时改判 `PASS`；此前 Gate 8 不得启动。
+1. `EP-G7-09`（当前最高优先级）：Pass0/Pass1 parity 与机器可读 provenance 补齐（复用既有 manifest/results 产物，不新建平行 checker）。
+2. `EP-G7-10`：平台适配隔离与两项既有 PowerShell smoke 失败的最终处置。
+3. `EP-G7-11`：非 GPU 全量验证＋当前声明目标平台（Windows/RTX 4090）真实 GPU smoke，形成 Gate 7 acceptance 决定。Gate 7 只在 `EP-G7-11` 判据同时成立时改判 `PASS`；此前 Gate 8 不得启动。
 
 **Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
@@ -424,3 +423,4 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 | 6.9 | 2026-09-19 | `final-01` 收口与 4 例 semantic FAIL root triage（新增 `EP-G6-10`）：Phase-Spill / Missing-Corr / External / Multithread-Ordered / Overlapping-Host-Sync | EP-G6-05、EP-G6-07、EP-G6-09、EP-G6-10 | Gate 6 仍 `FAIL`、Q0 `NOT_RUN` |
 | 7.0 | 2026-09-20 | **Gate 6/Q0 正式 PASS 并收口**（新增 `EP-G6-11` 与 `gate6_closeout_v0_1.md`）；Gate 7 压缩为 `EP-G7-08`～`EP-G7-11` 并作出平台范围显式决定；清理本地可重建垃圾 | EP-G6-05、EP-G6-11、EP-G7-08～11、EP-ISSUE-01、EP-ISSUE-03、EP-ISSUE-16 | Gate 6/Q0 改判 `PASS`（依据既有唯一 gate report，未新增采集）；Gate 7 由 `BLOCKED` 改为 `NOT_RUN` |
 | 7.1 | 2026-09-20 | 最后一次收尾：本清单重构为“交接入口 + 当前快照 + Gate 摘要 + 压缩历史”；清除过时 live 状态文字；为旧 Gate 6/5 计划与规格加历史横幅；为 Gate 7 四步补 `Dependency`；补 Gate 6 论文级分类总结 | EP-G6-11、EP-G7-08～11、EP-ISSUE-03 | 不改变任何 Gate verdict、Measurement Contract、oracle、schema 或数据资格 |
+| 7.2 | 2026-09-21 | 完成 `EP-G7-08`：统一首/后续 Token 的 Host-readable completion，首/后续 EOS 均复用 Host 值，结果时间截止于最后 Token-ready 且 phase ranges 在校验/cleanup 前关闭；加入 G1/N1 互斥机器身份、结构化 NVTX 与 fail-closed validation | EP-G7-08、EP-ISSUE-01 | Gate 7 保持 `NOT_RUN`；严格跨 pass phase parity 留给 `EP-G7-09`；不改变 Measurement Contract、`exposedpath_v141`、Gate 6 证据或数据资格 |

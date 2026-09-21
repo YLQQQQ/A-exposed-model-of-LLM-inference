@@ -197,6 +197,7 @@ MANIFEST_REQUIRED_CORE = [
     "wmpc_id",
     "run_id",
     "run_role",
+    "study_mode",
     "warmup_count",
     "repeat_count",
 ]
@@ -215,7 +216,36 @@ def validate_manifest_core(manifest: Dict) -> List[str]:
     for key in MANIFEST_REQUIRED_PATHS:
         if key not in manifest or not manifest[key]:
             errors.append(f"Manifest missing required path field: {key}")
+    errors.extend(validate_study_mode(manifest))
     return errors
+
+
+def validate_study_mode(manifest: Dict) -> List[str]:
+    """Fail closed on mixed or incomplete G1/N1 run-mode identity."""
+    if "study_mode" not in manifest:
+        return []  # validate_manifest_core reports the required-field error.
+    mode = manifest.get("study_mode")
+    intervention = manifest.get("n1_intervention")
+    if not isinstance(mode, str):
+        return ["study_mode must be one string"]
+    if mode == "G1_NATURAL":
+        if intervention is not None:
+            return ["G1_NATURAL forbids n1_intervention configuration"]
+        return []
+    if mode == "N1_INTERVENTION":
+        if not isinstance(intervention, dict):
+            return ["N1_INTERVENTION requires n1_intervention configuration"]
+        required = ("intervention_variant_id", "callsite_id")
+        missing = [field for field in required if not intervention.get(field)]
+        if missing:
+            return [
+                "N1_INTERVENTION requires n1_intervention fields: "
+                + ", ".join(missing)
+            ]
+        if intervention.get("sync_origin") != "n1_intervention":
+            return ["N1_INTERVENTION requires sync_origin=n1_intervention"]
+        return []
+    return [f"unsupported study_mode: {mode}"]
 
 
 def validate_manifest_wmpc_stability(manifest: Dict) -> Optional[str]:

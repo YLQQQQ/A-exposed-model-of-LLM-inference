@@ -15,24 +15,24 @@ def test_validator_importable():
     p = {"prompt_tokens_sha256":"a","experiment_id":"e","wmpc_id":"w","warmup_count":5,"repeat_count":5,
          "gpu_uuid":"u","gpu_pci_bus_id":"p","requested_physical_gpu_index":3,
          "runner_source_sha256":"r","dtype":"fp16","attention_backend":"sdpa","execution_mode":"eager",
-         "inference_mode":True,"use_cache":True,"synchronize_policy":"x","cuda_visible_devices":"u"}
+         "inference_mode":True,"use_cache":True,"synchronize_policy":"x","study_mode":"G1_NATURAL","n1_intervention":None,"cuda_visible_devices":"u"}
     assert PASS_PARITY_OK in validate_pair(p, p)
 
 def test_gpu_mismatch_detected():
     from exposedpath.cross_pass_validator import validate_pair, PASS_GPU_MISMATCH
-    p0={"gpu_uuid":"a","gpu_pci_bus_id":"b","requested_physical_gpu_index":3,"prompt_tokens_sha256":"x","experiment_id":"e","wmpc_id":"w","warmup_count":5,"repeat_count":5,"runner_source_sha256":"r","dtype":"fp16","attention_backend":"sdpa","execution_mode":"eager","inference_mode":True,"use_cache":True,"synchronize_policy":"x","cuda_visible_devices":"u"}
+    p0={"gpu_uuid":"a","gpu_pci_bus_id":"b","requested_physical_gpu_index":3,"prompt_tokens_sha256":"x","experiment_id":"e","wmpc_id":"w","warmup_count":5,"repeat_count":5,"runner_source_sha256":"r","dtype":"fp16","attention_backend":"sdpa","execution_mode":"eager","inference_mode":True,"use_cache":True,"synchronize_policy":"x","study_mode":"G1_NATURAL","n1_intervention":None,"cuda_visible_devices":"u"}
     p1=dict(p0); p1["gpu_uuid"]="DIFFERENT"
     assert PASS_GPU_MISMATCH in validate_pair(p0, p1)
 
 def test_workload_mismatch_detected():
     from exposedpath.cross_pass_validator import validate_pair, PASS_WORKLOAD_MISMATCH
-    p0={"prompt_tokens_sha256":"a","experiment_id":"e","wmpc_id":"w","warmup_count":5,"repeat_count":5,"gpu_uuid":"u","gpu_pci_bus_id":"p","requested_physical_gpu_index":3,"runner_source_sha256":"r","dtype":"fp16","attention_backend":"sdpa","execution_mode":"eager","inference_mode":True,"use_cache":True,"synchronize_policy":"x","cuda_visible_devices":"u"}
+    p0={"prompt_tokens_sha256":"a","experiment_id":"e","wmpc_id":"w","warmup_count":5,"repeat_count":5,"gpu_uuid":"u","gpu_pci_bus_id":"p","requested_physical_gpu_index":3,"runner_source_sha256":"r","dtype":"fp16","attention_backend":"sdpa","execution_mode":"eager","inference_mode":True,"use_cache":True,"synchronize_policy":"x","study_mode":"G1_NATURAL","n1_intervention":None,"cuda_visible_devices":"u"}
     p1=dict(p0); p1["prompt_tokens_sha256"]="DIFFERENT"
     assert PASS_WORKLOAD_MISMATCH in validate_pair(p0, p1)
 
 def test_execution_parity_mismatch_detected():
     from exposedpath.cross_pass_validator import validate_pair, PASS_EXECUTION_PARITY_MISMATCH
-    p0={"prompt_tokens_sha256":"a","experiment_id":"e","wmpc_id":"w","warmup_count":5,"repeat_count":5,"gpu_uuid":"u","gpu_pci_bus_id":"p","requested_physical_gpu_index":3,"runner_source_sha256":"r","dtype":"fp16","attention_backend":"sdpa","execution_mode":"eager","inference_mode":True,"use_cache":True,"synchronize_policy":"x","cuda_visible_devices":"u"}
+    p0={"prompt_tokens_sha256":"a","experiment_id":"e","wmpc_id":"w","warmup_count":5,"repeat_count":5,"gpu_uuid":"u","gpu_pci_bus_id":"p","requested_physical_gpu_index":3,"runner_source_sha256":"r","dtype":"fp16","attention_backend":"sdpa","execution_mode":"eager","inference_mode":True,"use_cache":True,"synchronize_policy":"x","study_mode":"G1_NATURAL","n1_intervention":None,"cuda_visible_devices":"u"}
     p1=dict(p0); p1["runner_source_sha256"]="DIFFERENT"
     assert PASS_EXECUTION_PARITY_MISMATCH in validate_pair(p0, p1)
 

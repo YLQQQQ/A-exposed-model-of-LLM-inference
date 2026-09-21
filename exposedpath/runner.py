@@ -2,7 +2,8 @@
 Runner: Pass 0 (no profiler) and Pass 1 (nsys-wrapped) inference execution.
 
 Key constraints:
-  - No per-token torch.cuda.synchronize()
+  - Every generated Token crosses the same Host-readable completion boundary
+  - Natural Token-ready reads are distinct from N1 intervention identity
   - No tokenizer inside the timing path
   - Batch samples must be distinct (no cloning)
   - fixed_output_tokens must be generated exactly
@@ -12,17 +13,124 @@ Key constraints:
 import sys
 import time
 import traceback
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from exposedpath.manifest import load_manifest
-from exposedpath.nvtx import make_invocation_label, make_phase_label
+from exposedpath.nvtx import (
+    make_invocation_label,
+    make_natural_token_ready_identity,
+    make_phase_label,
+    make_structured_nvtx_label,
+)
 from exposedpath.results import record_exclusion, record_success
 from exposedpath.validation import validate_prompt_tokens_sha256_match
 from exposedpath.workload import get_batch_inputs, load_prompt_tokens
+
+
+TOKEN_READY_MECHANISM = "device_to_host_token_ids"
+SYNCHRONIZE_POLICY = (
+    "request_start_drain_outside_window, natural_token_ready_host_read_per_token, "
+    "no_final_cleanup_inside_window"
+)
+
+
+@dataclass(frozen=True)
+class TokenReadyBoundary:
+    token_index: int
+    host_token_ids: tuple[int, ...]
+    completed_ns: int
+    sync_origin: str
+    token_ready_mechanism: str
+
+
+def token_ready_boundaries_to_records(
+    boundaries: Sequence[TokenReadyBoundary],
+) -> list[dict]:
+    """Return JSON-ready Token-ready completion evidence."""
+    return [
+        {
+            "token_index": boundary.token_index,
+            "host_token_ids": list(boundary.host_token_ids),
+            "completed_ns": boundary.completed_ns,
+            "sync_origin": boundary.sync_origin,
+            "token_ready_mechanism": boundary.token_ready_mechanism,
+        }
+        for boundary in boundaries
+    ]
+
+
+def observe_token_ready_boundary(
+    token_tensor,
+    *,
+    token_index: int,
+    identity_base: Mapping,
+    phase: str,
+    clock_ns: Callable[[], int] = time.perf_counter_ns,
+    emit_nvtx: bool,
+) -> TokenReadyBoundary:
+    """Block until token IDs are Host-readable, then timestamp completion."""
+    identity = make_natural_token_ready_identity(
+        identity_base,
+        phase=phase,
+        token_index=token_index,
+        callsite_id=f"{phase}.token_ready",
+        sync_ordinal=token_index,
+        token_ready_mechanism=TOKEN_READY_MECHANISM,
+    )
+    if emit_nvtx:
+        torch.cuda.nvtx.range_push(make_structured_nvtx_label(identity))
+    try:
+        values = token_tensor.detach().cpu().reshape(-1).tolist()
+        host_token_ids = tuple(int(value) for value in values)
+        if not host_token_ids:
+            raise RuntimeError(f"Token-ready boundary {token_index} produced no Host-readable IDs")
+        completed_ns = clock_ns()
+    finally:
+        if emit_nvtx:
+            torch.cuda.nvtx.range_pop()
+    return TokenReadyBoundary(
+        token_index=token_index,
+        host_token_ids=host_token_ids,
+        completed_ns=completed_ns,
+        sync_origin="natural_token_ready",
+        token_ready_mechanism=TOKEN_READY_MECHANISM,
+    )
+
+
+def validate_token_ready_boundaries(
+    request_start_ns: int,
+    boundaries: Sequence[TokenReadyBoundary],
+    *,
+    expected_count: int,
+) -> None:
+    """Validate complete, indexed, monotonic Token-ready evidence."""
+    if len(boundaries) != expected_count:
+        raise RuntimeError(
+            f"expected {expected_count} token-ready boundaries, got {len(boundaries)}"
+        )
+    previous_ns = request_start_ns
+    for expected_index, boundary in enumerate(boundaries):
+        if boundary.token_index != expected_index:
+            raise RuntimeError(
+                f"missing token-ready boundary at index {expected_index}; "
+                f"observed index {boundary.token_index}"
+            )
+        if boundary.completed_ns < previous_ns:
+            raise RuntimeError(
+                f"token-ready boundary {boundary.token_index} is not monotonic: "
+                f"{boundary.completed_ns} < {previous_ns}"
+            )
+        if boundary.sync_origin != "natural_token_ready":
+            raise RuntimeError(
+                f"token-ready boundary {boundary.token_index} has invalid sync_origin "
+                f"{boundary.sync_origin!r}"
+            )
+        previous_ns = boundary.completed_ns
 
 
 def load_model(model_path: str, gpu: int = 0):
@@ -116,10 +224,12 @@ def run_one_invocation(
     nvtx_prefill_label: str,
     nvtx_decode_label: str,
     eos_token_id: Optional[int] = None,
+    token_ready_identity_base: Optional[Mapping] = None,
+    clock_ns: Callable[[], int] = time.perf_counter_ns,
 ) -> Dict:
     """Execute a single inference invocation with NVTX annotation.
 
-    No per-token sync. Single final sync inside full_request boundary.
+    Each generated token crosses the same Host-readable completion boundary.
     Returns result dict for record_success.
     """
     batch_size, prompt_len = input_ids.shape
@@ -130,7 +240,10 @@ def run_one_invocation(
     # ==================== NVTX: invocation ====================
     torch.cuda.nvtx.range_push(nvtx_invocation_label)
 
-    t_start_ns = time.perf_counter_ns()
+    if token_ready_identity_base is None:
+        raise RuntimeError("token_ready_identity_base is required")
+
+    t_start_ns = clock_ns()
 
     # ==================== NVTX: full_request ====================
     torch.cuda.nvtx.range_push(nvtx_full_request_label)
@@ -144,8 +257,17 @@ def run_one_invocation(
     next_token = outputs.logits[:, -1, :].argmax(dim=-1)
     past_key_values = outputs.past_key_values
 
-    # TTFT — first token computed (no separate sync needed; model() already done)
-    t_first_token_ns = time.perf_counter_ns()
+    token_ready_boundaries = [
+        observe_token_ready_boundary(
+            next_token,
+            token_index=0,
+            identity_base=token_ready_identity_base,
+            phase="prefill",
+            clock_ns=clock_ns,
+            emit_nvtx=bool(nvtx_invocation_label),
+        )
+    ]
+    t_first_token_ns = token_ready_boundaries[0].completed_ns
 
     torch.cuda.nvtx.range_pop()  # prefill
 
@@ -153,9 +275,14 @@ def run_one_invocation(
     torch.cuda.nvtx.range_push(nvtx_decode_label)
 
     actual_output_tokens = 1  # first token from prefill
-    early_eos = False
+    early_eos = (
+        eos_token_id is not None
+        and eos_token_id in token_ready_boundaries[0].host_token_ids
+    )
 
     for step_i in range(1, output_len):
+        if early_eos:
+            break
         current_input = next_token.unsqueeze(1)
         with torch.inference_mode():
             outputs = model(input_ids=current_input, past_key_values=past_key_values, use_cache=True)
@@ -163,18 +290,32 @@ def run_one_invocation(
         past_key_values = outputs.past_key_values
         actual_output_tokens += 1
 
+        boundary = observe_token_ready_boundary(
+            next_token,
+            token_index=step_i,
+            identity_base=token_ready_identity_base,
+            phase="decode",
+            clock_ns=clock_ns,
+            emit_nvtx=bool(nvtx_invocation_label),
+        )
+        token_ready_boundaries.append(boundary)
+
         # Check for early EOS
-        if eos_token_id is not None and (next_token == eos_token_id).any():
+        if eos_token_id is not None and eos_token_id in boundary.host_token_ids:
             early_eos = True
             break
 
-    # ---- Final sync inside full_request boundary ----
-    torch.cuda.synchronize()
-    t_end_ns = time.perf_counter_ns()
+    t_end_ns = token_ready_boundaries[-1].completed_ns
 
+    # Close measured ranges immediately after the final Token-ready marker.
+    # Boundary validation and all other Host cleanup stay outside the ranges.
     torch.cuda.nvtx.range_pop()  # decode
     torch.cuda.nvtx.range_pop()  # full_request
     torch.cuda.nvtx.range_pop()  # invocation
+
+    validate_token_ready_boundaries(
+        t_start_ns, token_ready_boundaries, expected_count=actual_output_tokens,
+    )
 
     # ---- Time invariants ----
     if t_end_ns <= t_start_ns:
@@ -206,6 +347,7 @@ def run_one_invocation(
         "batch_size": batch_size,
         "early_eos": early_eos,
         "output_len_expected": output_len,
+        "token_ready_boundaries": token_ready_boundaries,
     }
 
 
@@ -239,13 +381,15 @@ def _write_cross_pass_parity(manifest, pass_label, output_dir, manifest_path, mo
         "dtype": "fp16",
         "attention_backend": manifest.get("attention_backend", "sdpa"),
         "execution_mode": manifest.get("execution_mode", "eager"),
+        "study_mode": manifest.get("study_mode"),
+        "n1_intervention": manifest.get("n1_intervention"),
         "model_eval": True,
         "inference_mode": True,
         "use_cache": True,
         "sampling_config": manifest.get("sampling_config"),
         "warmup_count": manifest.get("warmup_count"),
         "repeat_count": manifest.get("repeat_count"),
-        "synchronize_policy": "drain_before_timing, final_sync_in_full_request, no_per_token_sync",
+        "synchronize_policy": SYNCHRONIZE_POLICY,
         "cpu_affinity": _os.environ.get("CPU_AFFINITY", ""),
         "torch_num_threads": torch.get_num_threads(),
         "torch_num_interop_threads": getattr(torch, "get_num_interop_threads", lambda: None)(),
@@ -421,6 +565,12 @@ def execute_pass(
     warmup_count = manifest["warmup_count"]
     repeat_count = manifest["repeat_count"]
     run_role = manifest.get("run_role", "FORMAL")
+    study_mode = manifest["study_mode"]
+    if study_mode != "G1_NATURAL":
+        raise RuntimeError(
+            "N1_INTERVENTION execution is not enabled in EP-G7-08; "
+            "only its identity contract is available"
+        )
     # Use physical GPU from manifest if present; fall back to 0.
     # The load_model function handles CUDA_VISIBLE_DEVICES remapping.
     gpu = manifest.get("gpu", 0) if isinstance(manifest.get("gpu"), int) else 0
@@ -470,6 +620,15 @@ def execute_pass(
         label = make_invocation_label(experiment_id, wmpc_id, run_id, pass_label, rep) if use_nvtx else ""
 
         try:
+            token_ready_identity_base = {
+                "experiment_id": experiment_id,
+                "wmpc_id": wmpc_id,
+                "run_id": run_id,
+                "run_role": run_role,
+                "pass_id": pass_label,
+                "request_id": f"{run_id}:repeat:{rep}",
+                "repeat_id": str(rep),
+            }
             result = run_one_invocation(
                 model=model,
                 input_ids=input_ids,
@@ -481,6 +640,7 @@ def execute_pass(
                 nvtx_prefill_label=nvtx_prefill,
                 nvtx_decode_label=nvtx_decode,
                 eos_token_id=eos_token_id,
+                token_ready_identity_base=token_ready_identity_base,
             )
 
             # Validate output
@@ -510,6 +670,12 @@ def execute_pass(
                 actual_input_tokens=result["actual_input_tokens"],
                 actual_output_tokens=result["actual_output_tokens"],
                 batch_size=result["batch_size"],
+                extra={
+                    "study_mode": study_mode,
+                    "token_ready_boundaries": token_ready_boundaries_to_records(
+                        result["token_ready_boundaries"]
+                    ),
+                },
             )
             e2e_ms = (result['inference_end_ns'] - result['inference_start_ns']) / 1_000_000.0
             _sample_gpu_telemetry(manifest, pass_label, output_dir, "after_repeat", repeat_index=rep, gpu_index=gpu)
