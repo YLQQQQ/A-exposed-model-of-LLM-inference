@@ -95,6 +95,14 @@ def test_all_three_pass_yields_ready():
     """When Pass0 + Pass1 + Analyzer PASS, gate is READY_FOR_SMALL_PILOT."""
     assert 'READY_FOR_SMALL_PILOT' in _t()
 
+def test_final_gate_requires_all_static_preflight_checks_to_pass():
+    """A failed static preflight must not be able to produce a ready verdict."""
+    t = _t()
+    final = t[t.find('FINAL: Gate Decision'):]
+    for check in ("pytest", "compileall", "verify_pilot_install"):
+        expected = f'$Report.environment["{check}"] -eq "PASS"'
+        assert expected in final, f"final gate does not require {check}=PASS"
+
 # ===== Old errors not inherited =====
 def test_report_initialized_fresh():
     """Report starts with empty errors array, does not load old JSON."""
@@ -104,6 +112,17 @@ def test_report_initialized_fresh():
 # ===== Join-Path PS 5.1 =====
 def test_join_path_named_params():
     assert 'Join-Path -Path' in _t() and '-ChildPath' in _t()
+
+def test_verify_pilot_install_uses_ps51_path_and_selected_python():
+    """The mandatory verifier uses a PS 5.1-safe path and the smoke interpreter."""
+    t = _t()
+    assert (
+        'Join-Path -Path (Join-Path -Path $ProjectRoot -ChildPath "scripts") '
+        '-ChildPath "verify_pilot_install.ps1"'
+    ) in t
+    assert '"-PythonExe",$PythonExe' in t
+    assert '$Report.environment["verify_pilot_install"] = "PASS"' in t
+    assert '$Report.environment["verify_pilot_install"] = "FAIL' in t
 
 # ===== Analyzer gates =====
 def test_analyzer_starts_false():

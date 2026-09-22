@@ -367,10 +367,15 @@ print('name', torch.cuda.get_device_name(logical))
     $Report.environment["cuda"] = ($r.Stdout -join "`n")
     if ($r.ExitCode -ne 0) { Set-GateFailure "BLOCKED_BY_ENVIRONMENT" "CUDA/PyTorch check failed. GPU $GpuId not ready." }
 
-    $VerifyScript = Join-Path $ProjectRoot "scripts" "verify_pilot_install.ps1"
+    $VerifyScript = Join-Path -Path (Join-Path -Path $ProjectRoot -ChildPath "scripts") -ChildPath "verify_pilot_install.ps1"
+    $Report.environment["verify_pilot_install"] = "FAIL (script missing)"
     if (Test-Path $VerifyScript) {
-        $a = @("-ExecutionPolicy","Bypass","-File",$VerifyScript,"-SkipTests"); $r = Invoke-Native -Executable "powershell" -Arguments $a -OutBase "08_verify_pilot" -WorkingDirectory $ProjectRoot -Label "verify_pilot_install"
-        $Report.environment["verify_pilot_install"] = if ($r.ExitCode -eq 0) { "PASS" } else { "WARN" }
+        $a = @("-ExecutionPolicy","Bypass","-File",$VerifyScript,"-SkipTests","-PythonExe",$PythonExe); $r = Invoke-Native -Executable "powershell" -Arguments $a -OutBase "08_verify_pilot" -WorkingDirectory $ProjectRoot -Label "verify_pilot_install"
+        if ($r.ExitCode -eq 0) {
+            $Report.environment["verify_pilot_install"] = "PASS"
+        } else {
+            $Report.environment["verify_pilot_install"] = "FAIL (exit=$($r.ExitCode))"
+        }
     }
     Write-Host "  Environment done."
 } else { Write-Host ""; Write-Host "===== STEP 1: Environment SKIPPED =====" }
@@ -688,6 +693,17 @@ if ((-not $WmpcId) -or (-not $RunId)) {
 # Compute final gate
 $allGatesOk = $true
 $finalErrors = @()
+
+# Static preflight checks are mandatory for a closeout verdict.  Missing,
+# skipped, or failed checks must fail closed.
+$staticPreflightOk = `
+    ($Report.environment["pytest"] -eq "PASS") -and `
+    ($Report.environment["compileall"] -eq "PASS") -and `
+    ($Report.environment["verify_pilot_install"] -eq "PASS")
+if (-not $staticPreflightOk) {
+    $allGatesOk = $false
+    $finalErrors += "Static preflight not PASS (pytest=$($Report.environment['pytest']); compileall=$($Report.environment['compileall']); verify_pilot_install=$($Report.environment['verify_pilot_install']))"
+}
 
 # Pass 0 check
 $p0_ok = ($Report.pass0["status"] -eq "PASS") -or ($Report.pass0["validation_status"] -eq "OK")
