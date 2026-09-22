@@ -46,8 +46,17 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 Write-Host "--- Required Packages ---"
 $Pkgs = @("torch", "transformers", "yaml", "exposedpath")
+$PackageProbe = @'
+import importlib
+import sys
+
+package_name = sys.argv[1]
+module = importlib.import_module(package_name)
+version = getattr(module, '__version__', 'ok')
+print('{}: import OK; version={}'.format(package_name, version))
+'@
 foreach ($pkg in $Pkgs) {
-    $result = & $PythonExe -c "import ${pkg}; print(f'  ${pkg}: {getattr(${pkg}, \"__version__\", \"ok\")}')" 2>&1
+    $result = & $PythonExe -c $PackageProbe $pkg 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-Host $result
     } else {
