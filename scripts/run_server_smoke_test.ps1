@@ -341,8 +341,29 @@ if ($ResumeLevel -le 1) {
     if ($r.ExitCode -ne 0) { Set-GateFailure "BLOCKED_BY_ENVIRONMENT" "nsys --version failed (exit=$($r.ExitCode))" }
     $Report.environment["nsys_version"] = ($r.Stdout -join " ").Trim()
 
-    $cuda_code = "import torch,sys; print('torch',torch.__version__); print('cuda',torch.cuda.is_available()); print('count',torch.cuda.device_count() if torch.cuda.is_available() else 0); print('name',torch.cuda.get_device_name($GpuId) if torch.cuda.is_available() and $GpuId<torch.cuda.device_count() else 'N/A')"
-    $a = @("-c",$cuda_code); $r = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "07_cuda_check" -WorkingDirectory $WD -Label "CUDA check"
+    $cuda_code = @"
+import os
+import torch
+from exposedpath.manifest import resolve_logical_cuda_index
+
+physical = $GpuId
+logical = resolve_logical_cuda_index(
+    physical_gpu_index=physical,
+    cuda_visible_devices=os.environ.get('CUDA_VISIBLE_DEVICES'),
+)
+available = torch.cuda.is_available()
+print('torch', torch.__version__)
+print('cuda', available)
+print('physical', physical)
+print('logical', logical)
+print('count', torch.cuda.device_count() if available else 0)
+if not available:
+    raise RuntimeError('CUDA unavailable')
+print('name', torch.cuda.get_device_name(logical))
+"@
+    $cuda_check_script = Join-Path $LogDir "07_cuda_check.py"
+    [System.IO.File]::WriteAllText($cuda_check_script, $cuda_code, [System.Text.UTF8Encoding]::new($false))
+    $a = @('"' + $cuda_check_script + '"'); $r = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "07_cuda_check" -WorkingDirectory $WD -Label "CUDA check"
     $Report.environment["cuda"] = ($r.Stdout -join "`n")
     if ($r.ExitCode -ne 0) { Set-GateFailure "BLOCKED_BY_ENVIRONMENT" "CUDA/PyTorch check failed. GPU $GpuId not ready." }
 
@@ -391,13 +412,21 @@ if ($ResumeLevel -le 3) {
     } else {
         $manifest_py = @"
 import sys; sys.path.insert(0, r'$ProjectRoot')
-from exposedpath.manifest import create_manifest, finalize_manifest, save_manifest
+import os
+from exposedpath.manifest import create_manifest, finalize_manifest, resolve_logical_cuda_index, save_manifest
 from exposedpath.workload import load_prompt_tokens
 from pathlib import Path
 pt_path = Path(r'$PtFile'); pt = load_prompt_tokens(pt_path)
+physical_gpu_index = $GpuId
+logical_gpu_index = resolve_logical_cuda_index(
+    physical_gpu_index=physical_gpu_index,
+    cuda_visible_devices=os.environ.get('CUDA_VISIBLE_DEVICES'),
+)
 m = create_manifest(experiment_id='$ExperimentId', run_role='PILOT', model_path=r'$ModelPath',
     prompt_tokens_file=str(pt_path.resolve()), batch_size=1, fixed_output_tokens=$FixedOutputTokens,
-    warmup_count=$WarmupCount, repeat_count=$RepeatCount, gpu=$GpuId, external_cuda_workload_policy='none')
+    warmup_count=$WarmupCount, repeat_count=$RepeatCount, gpu=physical_gpu_index,
+    gpu_index_physical=physical_gpu_index, gpu_index_logical=logical_gpu_index,
+    external_cuda_workload_policy='none')
 m = finalize_manifest(m, pt, prompt_tokens_path=pt_path)
 out_dir = Path(r'$SmokeDir'); save_manifest(m, out_dir / 'wmpc_manifest.json')
 print('MANIFEST_PATH:' + str(out_dir / 'wmpc_manifest.json'))

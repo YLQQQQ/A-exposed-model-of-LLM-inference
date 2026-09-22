@@ -152,6 +152,24 @@ Linux support is currently only expressed as naming/suffix rules and default
 tool locations; it is not a validated platform. The Linux launcher, smoke and
 platform qualification belong to Gate 9.
 
+### 9.2 Physical and process-local GPU identity (EP-G7-11 preflight)
+
+`gpu_index` and `gpu_index_physical` identify the physical GPU used by
+`nvidia-smi`, UUID/PCI provenance, and telemetry. `gpu_index_logical` identifies
+the device ordinal visible to the current PyTorch process. For example,
+`CUDA_VISIBLE_DEVICES=3` maps physical GPU `3` to `cuda:0`; only logical index
+`0` may be passed to `torch.cuda.*`.
+
+`exposedpath.manifest.resolve_logical_cuda_index` is the single mapping helper
+used by manifest generation and the server smoke launcher. It is a pure
+function over the physical index and `CUDA_VISIBLE_DEVICES`; it does not use
+`torch.cuda.device_count()` to infer physical identity. A masked physical index
+in a numeric mask must map uniquely, and an explicitly supplied logical index
+must agree with that mapping. For an opaque UUID mask, the caller must provide
+an in-range logical index while UUID/PCI provenance supplies the physical
+identity. Empty or malformed masks fail closed. Runner model-loading remapping
+is unchanged.
+
 ## 10. NOT Yet Supported (Pilot Scope)
 
 - `torch.compile` / CUDA Graph

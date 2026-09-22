@@ -20,6 +20,73 @@ from exposedpath.validation import (
 )
 
 
+def resolve_logical_cuda_index(
+    *,
+    physical_gpu_index: int,
+    cuda_visible_devices: Optional[str],
+    declared_logical_index: Optional[int] = None,
+) -> int:
+    """Map a physical GPU index to its process-local CUDA index.
+
+    This is a pure identity mapping.  It deliberately does not inspect torch
+    or device_count because those expose only the process-local CUDA view.
+    """
+    if physical_gpu_index < 0:
+        raise ValueError("physical_gpu_index must be non-negative")
+    if declared_logical_index is not None and declared_logical_index < 0:
+        raise ValueError("declared_logical_index must be non-negative")
+
+    if cuda_visible_devices is None:
+        expected_logical_index = physical_gpu_index
+        if (
+            declared_logical_index is not None
+            and declared_logical_index != expected_logical_index
+        ):
+            raise ValueError(
+                f"logical GPU index {declared_logical_index} conflicts with "
+                f"unmasked physical GPU index {physical_gpu_index}"
+            )
+        return expected_logical_index
+    if not cuda_visible_devices.strip():
+        raise ValueError("CUDA_VISIBLE_DEVICES does not expose any GPU")
+
+    visible_devices = [item.strip() for item in cuda_visible_devices.split(",")]
+    if any(not identity for identity in visible_devices):
+        raise ValueError(f"CUDA_VISIBLE_DEVICES is malformed: {cuda_visible_devices!r}")
+    physical_identity = str(physical_gpu_index)
+    matches = [index for index, identity in enumerate(visible_devices) if identity == physical_identity]
+    if len(matches) == 1:
+        expected_logical_index = matches[0]
+        if (
+            declared_logical_index is not None
+            and declared_logical_index != expected_logical_index
+        ):
+            raise ValueError(
+                f"logical GPU index {declared_logical_index} conflicts with "
+                f"physical GPU index {physical_gpu_index} mapped to "
+                f"logical index {expected_logical_index}"
+            )
+        return expected_logical_index
+    if len(matches) > 1:
+        raise ValueError(
+            f"physical GPU index {physical_gpu_index} is not uniquely visible in "
+            f"CUDA_VISIBLE_DEVICES={cuda_visible_devices!r}"
+        )
+    if all(identity.isdecimal() for identity in visible_devices):
+        raise ValueError(
+            f"physical GPU index {physical_gpu_index} is not visible in "
+            f"CUDA_VISIBLE_DEVICES={cuda_visible_devices!r}"
+        )
+    if not all(identity.startswith(("GPU-", "MIG-")) for identity in visible_devices):
+        raise ValueError(f"CUDA_VISIBLE_DEVICES is malformed: {cuda_visible_devices!r}")
+    if declared_logical_index is None or declared_logical_index >= len(visible_devices):
+        raise ValueError(
+            f"physical GPU index {physical_gpu_index} cannot be mapped uniquely from "
+            f"CUDA_VISIBLE_DEVICES={cuda_visible_devices!r}"
+        )
+    return declared_logical_index
+
+
 def create_manifest(
     *,
     experiment_id: str,
@@ -64,7 +131,19 @@ def create_manifest(
     the wmpc_id after filling in any unknown fields.
     """
     # ---- Hardware auto-detect ----
-    gpu_name = torch.cuda.get_device_name(gpu) if torch.cuda.is_available() else "unknown"
+    physical_gpu_index = gpu if gpu_index_physical is None else gpu_index_physical
+    logical_gpu_index = resolve_logical_cuda_index(
+        physical_gpu_index=physical_gpu_index,
+        cuda_visible_devices=os.environ.get("CUDA_VISIBLE_DEVICES"),
+        declared_logical_index=gpu_index_logical,
+    )
+    detected_gpu_name = (
+        gpu_name
+        if gpu_name is not None
+        else torch.cuda.get_device_name(logical_gpu_index)
+        if torch.cuda.is_available()
+        else "unknown"
+    )
     cuda_ver = torch.version.cuda or "unknown"
     torch_ver = torch.__version__
 
@@ -100,7 +179,7 @@ def create_manifest(
 
         # ---- P ----
         "cpu_model": cpu_model or platform.processor() or "unknown",
-        "gpu_model": gpu_name,
+        "gpu_model": detected_gpu_name,
         "platform_snapshot_file": None,
 
         # ---- C ----
@@ -120,12 +199,12 @@ def create_manifest(
         "study_mode": study_mode,
         "n1_intervention": n1_intervention,
         "gpu": gpu,
-        "gpu_index": gpu,
-        "gpu_index_physical": gpu_index_physical,
-        "gpu_index_logical": gpu_index_logical,
+        "gpu_index": physical_gpu_index,
+        "gpu_index_physical": physical_gpu_index,
+        "gpu_index_logical": logical_gpu_index,
         "gpu_uuid": gpu_uuid,
         "gpu_pci_bus_id": gpu_pci_bus_id,
-        "gpu_name": gpu_name or torch.cuda.get_device_name(gpu) if torch.cuda.is_available() else "unknown",
+        "gpu_name": detected_gpu_name,
         "clock_policy": clock_policy,
         "clock_control_requested": clock_control_requested,
         "clock_control_applied": clock_control_applied,
