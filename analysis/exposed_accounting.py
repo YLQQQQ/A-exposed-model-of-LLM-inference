@@ -157,9 +157,16 @@ def _load_nvtx(cur, schema, resolve_name) -> list[dict]:
     tid_c = U.pick_col(nvtx_cm, "threadid", "thread_id", "globaltid", "global_tid")
     if not (start_c and end_c):
         return []
+    # Build the quoted column expressions outside the f-strings. Before PEP 701
+    # (Python < 3.12) an f-string expression part may not contain a backslash,
+    # and its delimiter quote terminates the literal even inside an expression;
+    # the previous inline form therefore failed to compile on older hosts with
+    # "SyntaxError: unterminated triple-quoted string literal". The generated
+    # SQL is byte-for-byte unchanged.
+    text_col = '"' + text_c + '"' if text_c else "CAST('''' AS TEXT)"
+    tid_col = '"' + tid_c + '"' if tid_c else "0"
     query = (f'SELECT "{start_c}", "{end_c}", '
-             f'{"\"" + text_c + "\"" if text_c else "CAST('''' AS TEXT)"}, '
-             f'{"\"" + tid_c + "\"" if tid_c else "0"} '
+             f"{text_col}, {tid_col} "
              f'FROM "{nvtx_table}" ORDER BY "{start_c}"')
     result = []
     try:
