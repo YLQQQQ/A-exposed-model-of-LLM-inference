@@ -78,6 +78,16 @@ def test_recover_pass1_sets_script_vars():
     """Recover-Pass1State sets script-level NsysRepFile/NsysSqliteFile."""
     assert '$Script:NsysRepFile' in _t() and '$Script:NsysSqliteFile' in _t()
 
+def test_recover_pass1_requires_postprocess_identity():
+    recovery = _t().split('function Recover-Pass1State {', 1)[1].split('\n}\n', 1)[0]
+    assert 'pass1_postprocess_report.json' in recovery
+    assert 'successful_attempt' in recovery
+    assert 'analyzer_allowed' in recovery
+    assert 'rep_sha256' in recovery
+    assert 'canonical_sqlite_sha256' in recovery
+    assert 'expectedAttemptPath' in recovery
+    assert 'attemptHash' in recovery
+
 # ===== Skip branches call recovery =====
 def test_pass0_else_calls_recovery():
     assert 'Recover-Pass0State -Dir $Pass0Dir' in _t()
@@ -161,11 +171,58 @@ def test_observation_profile_is_durable_before_nsys_launch():
 def test_export_follows_nonempty_rep_and_precedes_analyzer():
     t = _t()
     rep = t.index('if (-not (Test-Path $NsysRepFile)')
-    export = t.index('"export","--type","sqlite"')
+    export = t.index('gate7_nsys_postprocess.py')
     analyzer = t.index('===== STEP 6: Analyzer =====')
     assert rep < export < analyzer
-    assert '"sqlite","--sqlite",$NsysSqliteFile' in t[export:analyzer]
-    assert 'if ($rSql.ExitCode -ne 0)' in t[export:analyzer]
+    assert '"--canonical-sqlite"' in t[export:analyzer]
+    assert '"--report"' in t[export:analyzer]
+    assert '$Report.pass1["sqlite_export"]' in t[export:analyzer]
+    assert 'if ($pr.ExitCode -ne 0 -or' in t[export:analyzer]
+
+
+def test_analyzer_requires_revalidated_canonical_sqlite():
+    t = _t()
+    analyzer = t[t.index('===== STEP 6: Analyzer ====='):]
+    validate = analyzer.index('"sqlite","--sqlite",(\'"\' + $NsysSqliteFile + \'"\')')
+    invoke = analyzer.index('OutBase "40_analyzer"')
+    assert validate < invoke
+    assert 'if ($rSql.ExitCode -ne 0)' in analyzer[validate:invoke]
+
+
+def test_sqlite_validation_quotes_space_containing_paths():
+    analyzer = _t()[_t().index('===== STEP 6: Analyzer ====='):]
+    assert "('\"' + $NsysSqliteFile + '\"')" in analyzer
+    assert "('\"' + $AnalysisDir + '\"')" in analyzer
+    final = _t()[_t().index('FINAL: Gate Decision'):]
+    for path in ("$ManifestPath", "$PreflightGpuIdentityPath", "$Pass0Dir", "$Pass1Dir"):
+        assert "('\"' + " + path + " + '\"')" in final
+
+
+def test_resume_rejects_completed_attempt_without_modifying_machine_report(tmp_path):
+    model = tmp_path / "model"; model.mkdir(); (model / "config.json").write_text("{}")
+    nsys = tmp_path / "nsys.exe"; nsys.write_text("fake")
+    smoke = tmp_path / "old smoke"; smoke.mkdir()
+    original = b'{"gate_decision":"BLOCKED_BY_NSYS","historical":true}\n'
+    report = smoke / "smoke_test_report.json"
+    report.write_bytes(original)
+    args = (_dry_run_args(model, nsys) +
+            f' -ExistingSmokeDir "{smoke}" -ResumeFrom Analyzer')
+    rc, out, err = _run(args, cwd=tmp_path)
+    assert rc != 0, (out, err)
+    assert report.read_bytes() == original
+
+
+def test_existing_postprocess_report_fails_before_new_export():
+    postprocess = _t()[_t().index('gate7_nsys_postprocess.py'):_t().index('===== STEP 6: Analyzer =====')]
+    guard = postprocess.index('Test-Path -LiteralPath $PostprocessReport')
+    launch = postprocess.index('OutBase "31_nsys_postprocess"')
+    assert guard < launch
+
+
+def test_optional_nsys_stats_cannot_hang_before_analyzer():
+    t = _t()
+    postprocess = t[t.index('gate7_nsys_postprocess.py'):t.index('===== STEP 6: Analyzer =====')]
+    assert '32_nvtx_stats' not in postprocess
 
 def test_final_gate_calls_machine_parity_and_telemetry_validator():
     t = _t()
@@ -185,6 +242,14 @@ def test_fresh_smoke_rejects_existing_evidence():
 def test_analyzer_missing_required_fields_cannot_pass():
     t = _t()
     assert 'if ($gate_errors.Count -eq 0) { $analysis_ok=$true }' in t
+
+
+def test_analyzer_failure_causes_blocked_machine_report_and_nonzero_exit():
+    final = _t()[_t().index('FINAL: Gate Decision'):]
+    assert 'if (-not $a_ok) { $allGatesOk = $false' in final
+    assert '$Report.gate_decision = "BLOCKED"' in final
+    assert 'Save-Report' in final
+    assert final.strip().endswith('exit 1')
 
 # ===== Dry-run / paths =====
 def test_dry_run():

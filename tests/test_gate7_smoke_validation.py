@@ -138,4 +138,75 @@ def test_sqlite_missing_empty_and_bad_schema_fail_closed(tmp_path):
     assert validate_sqlite(path)
     with sqlite3.connect(path) as db:
         db.execute("CREATE TABLE TRACE_EVENTS (id INTEGER)")
+    assert validate_sqlite(path)
+    with sqlite3.connect(path) as db:
+        db.execute("CREATE TABLE NVTX_EVENTS (start INTEGER, end INTEGER)")
+    assert any("CUPTI_ACTIVITY_KIND_RUNTIME" in issue for issue in validate_sqlite(path))
+
+
+def _complete_gate7_schema():
+    return {
+        "META_DATA_CAPTURE": "name TEXT, value TEXT",
+        "META_DATA_EXPORT": "name TEXT, value TEXT",
+        "StringIds": "id INTEGER, value TEXT",
+        "NVTX_EVENTS": "start INTEGER, end INTEGER, text TEXT, textId INTEGER",
+        "CUPTI_ACTIVITY_KIND_RUNTIME": "start INTEGER, end INTEGER, correlationId INTEGER, nameId INTEGER",
+        "CUPTI_ACTIVITY_KIND_SYNCHRONIZATION": "start INTEGER, end INTEGER, correlationId INTEGER",
+        "CUPTI_ACTIVITY_KIND_KERNEL": "start INTEGER, end INTEGER, correlationId INTEGER",
+        "TARGET_INFO_CUDA_CONTEXT_INFO": "contextId INTEGER, deviceId INTEGER",
+        "TARGET_INFO_CUDA_STREAM": "streamId INTEGER, contextId INTEGER",
+        "TARGET_INFO_GPU": "id INTEGER, name TEXT",
+        "DIAGNOSTIC_EVENT": "timestamp INTEGER, source TEXT, severity TEXT, text TEXT",
+    }
+
+
+def test_complete_gate7_export_schema_passes(tmp_path):
+    path = tmp_path / "complete.sqlite"
+    with sqlite3.connect(path) as db:
+        for table, columns in _complete_gate7_schema().items():
+            db.execute(f"CREATE TABLE {table} ({columns})")
     assert validate_sqlite(path) == []
+
+
+@pytest.mark.parametrize("missing_table", list(_complete_gate7_schema()))
+def test_each_required_export_table_missing_fails_closed(tmp_path, missing_table):
+    path = tmp_path / "missing.sqlite"
+    with sqlite3.connect(path) as db:
+        for table, columns in _complete_gate7_schema().items():
+            if table != missing_table:
+                db.execute(f"CREATE TABLE {table} ({columns})")
+    assert any(missing_table in issue for issue in validate_sqlite(path))
+
+
+def test_required_table_without_key_columns_fails_closed(tmp_path):
+    path = tmp_path / "thin.sqlite"
+    with sqlite3.connect(path) as db:
+        for table in (
+            "META_DATA_CAPTURE", "META_DATA_EXPORT", "StringIds", "NVTX_EVENTS",
+            "CUPTI_ACTIVITY_KIND_RUNTIME", "CUPTI_ACTIVITY_KIND_SYNCHRONIZATION",
+            "CUPTI_ACTIVITY_KIND_KERNEL", "TARGET_INFO_CUDA_CONTEXT_INFO",
+            "TARGET_INFO_CUDA_STREAM", "TARGET_INFO_GPU", "DIAGNOSTIC_EVENT",
+        ):
+            db.execute(f"CREATE TABLE {table} (dummy INTEGER)")
+    assert any("missing columns" in issue for issue in validate_sqlite(path))
+
+
+def test_sqlite_integrity_failure_fails_closed(tmp_path):
+    path = tmp_path / "broken.sqlite"
+    path.write_bytes(b"not a SQLite database")
+    assert validate_sqlite(path)
+
+
+def test_sqlite_file_metadata_io_error_fails_closed(tmp_path, monkeypatch):
+    path = tmp_path / "locked.sqlite"
+    path.write_bytes(b"placeholder")
+    original_stat = Path.stat
+
+    def stat_with_lock(self, *args, **kwargs):
+        if self == path:
+            raise PermissionError("simulated metadata lock")
+        return original_stat(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", stat_with_lock)
+    issues = validate_sqlite(path)
+    assert any("simulated metadata lock" in issue for issue in issues)

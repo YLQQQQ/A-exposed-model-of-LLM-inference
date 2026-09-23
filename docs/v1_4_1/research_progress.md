@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-> 一句话状态：**Gate 0～6 = `PASS`（Gate 6 / Q0 已完成）；Gate 7 = `NOT_RUN`，`EP-G7-11` 进行中。前一次 fresh smoke 被系统 BugCheck 中断；bounded launcher repair 已在本地完成，服务器部署与重新运行 GPU smoke 尚未获授权。Gate 8 不得启动。**
+> 一句话状态：**Gate 0～6 = `PASS`（Gate 6 / Q0 已完成）；Gate 7 = `NOT_RUN`，`EP-G7-11` 进行中。`799fb8d` fresh smoke 完成最小 Nsight collection，但即时 SQLite export 卡住并正确判为 `BLOCKED_BY_NSYS`；本轮有界后处理修复仅在本地验证，尚未获服务器部署/GPU smoke 授权。Gate 8 不得启动。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -56,17 +56,17 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.6`
+- 清单版本：`7.8`
 - 最近更新：`2026-09-23`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
-- 当前工作分支：`codex/gate7-runner`（从 Gate 6 canonical closeout `478b945` 创建的隔离 worktree）
+- 当前工作分支：`codex/gate7-postprocessing`（从 `799fb8de188abca9342da45a2254c763947c7b2b` 创建的独立本地修复 worktree；服务器仍是 `799fb8d`）
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～6 = `PASS`；Gate 7 = `NOT_RUN`（`EP-G7-08`～`EP-G7-10` 已完成，`EP-G7-11` 仍待 fresh smoke 与逐项验收）；Gate 8 = `NOT_RUN`（不得在 Gate 7 acceptance 前启动）；Gate 9～11 = `BLOCKED`（Formal 平台未确定/未接入）；Gate 12～14 = `NOT_RUN`
-- 当前最高优先级：审计本次 bounded launcher repair 的提交身份与本地验证；服务器部署和重新运行 GPU smoke 尚未获授权。未来如获单独批准，必须使用新提交、全新 Engineering evidence，并逐项审计 machine report、Pass0/Pass1、parity、telemetry 与 Nsight/Analyzer；不得拼接旧 attempt。
+- 当前最高优先级：完成本地 Nsight SQLite post-processing reliability repair 的验证与独立提交；服务器部署和重新运行 GPU smoke 均未获授权。未来如获单独批准，必须使用新提交、全新 Engineering evidence，并逐项审计 machine report、Pass0/Pass1、parity、telemetry 与 Nsight/Analyzer；不得拼接旧 attempt 或离线诊断产物。
 - 当前总体判断（2026-09-20）：Gate 6 / Q0 已正式 `PASS`。frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21/21 `REAL_CASE_PASS`、2 个 synthetic-only case（`Q0-TERMINAL-TIE-001`、`Q0-SUBMISSION-RACE-001`）PASS、23/23 `SYNTHETIC_PASS`，且存在唯一一份 `q0_gate_report.json`（schema `exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`）。该 PASS 只说明当前 analyzer 在本目标 observation stack 上取得 **Q0 正确性资格**；不等于 Engineering Pilot、Pilot、Protocol Freeze 或 Formal 结果，也不建立第二平台等价性。身份、哈希、provenance caveat、根因映射与实现成熟度见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
-- 当前到达点（`EP-G7-11`）：physical/logical GPU index 修复后，目标服务器一次 fresh smoke 已完成静态检查、manifest 和 Pass0，但在 Pass1/Nsight 启动边界遭系统 BugCheck `0x133` 中断，attempt 状态为 `INTERRUPTED_BY_SYSTEM_BUGCHECK`；无 Pass1 Raw、SQLite 或 Analyzer，不能作为 Gate 7 验收证据。随后完成只读 Trace Minimization / Acceptance Scope Audit 和本地 bounded launcher repair；准确根因未获证明，repair 不被宣称为 BugCheck 修复。Gate 7 仍为 `NOT_RUN`，Gate 8 未启动。
+- 当前到达点（`EP-G7-11`）：此前一次 fresh smoke 在 Pass1/Nsight 启动边界遭系统 BugCheck `0x133` 中断，根因未获证明。随后服务器报告：`799fb8d` 在目标 Windows/RTX 4090 的 static preflight `940 passed, 1 skipped`、compileall、verify、合同/Canonical/oracle 检查通过；新 Engineering smoke `smoke_20260923T134310Z` 的 Pass0、Pass1 inference/telemetry/parity 和最小 Nsight collection 完成，生成非空 REP，且未再出现 BugCheck。但即时 `nsys export` 在约 51% 停滞，被人工终止后 machine report 为 `BLOCKED_BY_NSYS`、exit 1，Analyzer 未运行；该 attempt **不是** Gate 7 acceptance evidence。相同 SHA256 的 REP 副本后续离线 export 得到 integrity PASS 的 SQLite，诊断 analyzer exit 0；仅支持“REP 可离线导出/分析”，不证明即时 export 挂起的精确根因，也不追认原 attempt。Gate 7 仍为 `NOT_RUN`，Gate 8 未启动。
 
 历史快照（保留，不覆盖；以下描述 2026-09-19 及更早的当时状态，均已由 2026-09-20 Gate 6 PASS 取代，详细过程见 `docs/v1_4_1/gate6_closeout_v0_1.md`）：
 
@@ -209,11 +209,15 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 ### Gate 7：Runner 与执行链对齐
 
-**Gate verdict：`NOT_RUN`。** `EP-G7-08`～`EP-G7-10` 已完成，`EP-G7-11` 进行中；Gate 7 只有在其全部 acceptance 判据满足后才形成 verdict。Token-ready completion、G1/N1 身份、Pass0/Pass1 parity identity 与 attempt provenance 已建立。此前一次 fresh smoke 在 Pass0 完成后遭系统 BugCheck 中断，属于历史 interrupted attempt；本次 bounded launcher repair 仅在本地验证，服务器尚未部署或重跑。
+**Gate verdict：`NOT_RUN`。** `EP-G7-08`～`EP-G7-10` 已完成，`EP-G7-11` 进行中；Gate 7 只有在其全部 acceptance 判据满足后才形成 verdict。Token-ready completion、G1/N1 身份、Pass0/Pass1 parity identity 与 attempt provenance 已建立。BugCheck attempt 与 `799fb8d` 的 `BLOCKED_BY_NSYS` attempt 均为历史 Engineering 诊断记录，不拼接验收。本次 post-processing repair 仅在本地验证，尚未部署服务器或重跑 GPU smoke。
 
 **2026-09-23 scope / trace 审计与 repair checkpoint：** Gate 7 只验目标 Windows/RTX 4090 的 runner、identity、Pass0/Pass1、Token-ready、phase-boundary、CUDA+NVTX 和 launcher integration smoke；真实模型 workload 上完整 `Canonical Raw v1.4.1 → S → A/B → D / Exposure Signature` 首次属于 Gate 8 `EP-G8-02`，不提前纳入 Gate 7。前一次 fresh attempt 的已知边界是 `Pass0 completed → Pass1/Nsight launch boundary → system BugCheck 0x133`；exact root cause **NOT PROVEN**，不得归因 NVIDIA、Nsight、launcher script 或 admin PowerShell。Trace minimization 是删去 Gate 7 非必需采集项并分离后处理，**不是** BugCheck 根因修复。
 
-本次 bounded launcher repair 将 Gate 7 `data_role` 显式设为 `Engineering`，静态门槛对齐 `pytest -p no:cacheprovider`、`compileall exposedpath analysis exposedpath_v141` 与同一 Python 的 `verify_pilot_install`；最终门槛实际验证六组 cross-pass parity、attempt accounting、physical/UUID/PCI/logical telemetry identity，缺证据或不一致 fail closed，`BLOCKED` machine report 对应非零进程码。Nsight collection profile 为 `--trace=cuda,nvtx --sample=none --cpuctxsw=none --cuda-memory-usage=false --cuda-trace-scope=process-tree --isr=false`，collection 不启用 stats；按 `collection → 非空 .nsys-rep → 显式 SQLite export / schema 校验 → analyzer` 执行，并在启动前保存 exact argv、Nsight 版本与 observation-profile provenance。新 profile 与旧 smoke evidence **不可拼接验收**。这些仍只是 Engineering 本地实现/测试证据；GPU smoke 尚未重新授权，Gate 7 不判 `PASS`，Gate 8 不启动。
+上一轮 bounded launcher repair 将 Gate 7 `data_role` 显式设为 `Engineering`，静态门槛对齐 `pytest -p no:cacheprovider`、`compileall exposedpath analysis exposedpath_v141` 与同一 Python 的 `verify_pilot_install`；最终门槛实际验证六组 cross-pass parity、attempt accounting、physical/UUID/PCI/logical telemetry identity，缺证据或不一致 fail closed，`BLOCKED` machine report 对应非零进程码。Nsight collection profile 为 `--trace=cuda,nvtx --sample=none --cpuctxsw=none --cuda-memory-usage=false --cuda-trace-scope=process-tree --isr=false`，collection 不启用 stats；原流程按 `collection → 非空 .nsys-rep → 显式 SQLite export / schema 校验 → analyzer` 执行，并在启动前保存 exact argv、Nsight 版本与 observation-profile provenance。新 profile 与旧 smoke evidence **不可拼接验收**。其后 `799fb8d` 已在服务器执行一次新 Engineering smoke，结果见下；Gate 7 未判 `PASS`，Gate 8 不启动。
+
+**2026-09-23 后处理可靠性修复 checkpoint：** 服务器报告的 `799fb8d` fresh smoke evidence id 为 `ep-g7-11-final-799fb8d-20260923T134309Z/smoke_20260923T134310Z`（绝对服务器位置保留在私有交接记录，不纳入仓库）。Pass0/Pass1 与最小 collection 完成，REP 大小 `979593` bytes、SHA256 `C2F561943C6465CA758845E8526652591363AD85EC8BCEAB074C9413AD6BB219`；即时 export 处理 `43074` events 后约 51% 停滞，人工仅结束该 exporter PID，launcher 正确报告 `BLOCKED_BY_NSYS`。相同 hash 的 REP 副本稍后离线导出 `2568192`-byte SQLite（SHA256 `DE064BFB37FF1CA3D9FEF240278E8BF9C1F531308D83B712B7FD3008373C5A6C`），`PRAGMA integrity_check=ok`、46 tables，`analysis/exposed_accounting.py` exit 0/`ACCOUNTING COMPLETE`；这只是否定 REP 固有不可导出的解释，exact Nsight internal hang root cause **NOT PROVEN**。本轮代码仅在 profile exit 后增加有界 REP 稳定/可读/哈希 gate、单次 180 秒且最多两次独立路径 export、仅结束超时 attempt 自身 PID、保留 stdout/stderr/partial SQLite、REP hash 复核、integrity+Gate7 必需 CUDA/NVTX/metadata 表及关键字段校验、同目录原子且无覆盖的 canonical 链接 promotion 与 SHA256 对照、Analyzer 前再次校验；旧 machine report 不可被 resume 覆写，恢复时核对后处理 PASS/attempt/REP/SQLite 身份。可选 `nsys stats` 不再位于 acceptance 主链。上述 schema gate 只检查 Engineering export 完整性，不把真实 workload 的完整 v1.4.1 science chain 提前移入 Gate7。既有 profile launch 对含空格路径的完整执行尚无验证，本轮不声称通用空格路径支持；目标服务器路径需在后续部署前核对。Nsight observation profile、runner、Measurement Contract、S/A/B/D、Q0 与 Gate 6 证据不变。原 attempt 保持 `BLOCKED_BY_NSYS`，诊断 SQLite 不回填；修复尚未获 GPU smoke 授权。
+
+本地 Windows argv/path 二审：新增纯 mock 回归，以含空格路径下的测试可执行文件副本运行 fake exporter，同时覆盖含空格 REP、输出 SQLite、stdout/stderr 文件和逐项 argv；实际走 `Popen(argv, shell=False)`，无生产实现改动。该回归不等于目标服务器真实 Nsight 或 elevated parent 验证；原 profile launch 的通用空格路径限制仍在。新增/相关定向测试 `97 passed`；全仓 CPU-only `977 passed, 5 skipped`（在 Python 进程内屏蔽本机 nvcc 并设 `CUDA_VISIBLE_DEVICES=-1`，不等于目标服务器 GPU smoke）；`compileall`、Measurement Contract `37/37 PASS`、Canonical boundary 与 oracle independence 均 PASS。一次未成功屏蔽本机 CUDA 13 nvcc 的全仓尝试为 `953 passed, 1 failed, 4 errors`，失败局限 Q0 CUDA source 编译夹具；未据此改动 Q0 或冻结证据。
 
 **重审计结论（2026-09-20）：** 原 `EP-G7-01`～`EP-G7-07` 的 7 个行政步骤压缩为 4 个可执行步骤（`EP-G7-08`～`EP-G7-11`）。合并的是**同一工程单元**（runner 语义/身份、identity/parity/schema、平台适配、验证与验收），没有合并彼此独立的科学 acceptance 判据：每一步内部仍逐条保留各自的 PASS/STOP 条件。执行计划：`docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`；旧计划 `docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md` 仅作历史记录。
 
@@ -246,7 +250,7 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
   - **STOP**：若某项必须先有真实 GPU 才能判定 → 移交 `EP-G7-11`，不得用 mock 结论代替。
   - **Dependency**：独立于 `EP-G7-08`/`EP-G7-09`，可并行；其结论不依赖 GPU。
   - **Unlock**：平台可移植性被结构性保护，测试基线不再含未解释失败。
-- [ ] `EP-G7-11`（进行中；此前 fresh smoke 被系统 BugCheck 中断，重新运行尚未获授权；合并旧 `EP-G7-06` 的全量验证＋旧 `EP-G7-07`）
+- [ ] `EP-G7-11`（进行中；`799fb8d` fresh smoke 在 SQLite export 阶段 `BLOCKED_BY_NSYS`，本地 bounded post-processing repair 尚未获服务器部署/GPU smoke 授权；合并旧 `EP-G7-06` 的全量验证＋旧 `EP-G7-07`）
   - **Objective**：在 Windows/RTX 4090 上执行 runner 端到端 smoke（Pass0/Pass1、identity/phase boundary、exclusion/retry 记录），证明产出可被机器读取且与 Gate 7 合同一致，并完成 Gate 7 验收决定。
   - **Why**：只有真实 GPU smoke 能证明该执行链在真实执行栈上成立；Gate 8 必须以这份证据为入口。
   - **Implementation**：smoke 前置修复新增纯函数 `resolve_logical_cuda_index(physical_gpu_index, cuda_visible_devices)`，不读取 GPU 或 `torch.cuda.device_count()`；`manifest.py` 与 server smoke 共享该 helper，torch name 查询只使用 logical index，manifest 的 `gpu_index`/`gpu_index_physical` 保持 physical、`gpu_index_logical` 保持进程内 logical。`runner.py` 已有 remapping 不修改。修复部署及目标环境确认后，只执行既有 runner 链路并收集 manifest/receipt 证据。
@@ -348,8 +352,8 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 **最近应执行的任务（按顺序）：**
 
-1. 完成本次 bounded launcher repair 的同提交进度记录、提交身份与本地定向验证；在明确的新授权前，不部署服务器、不运行 GPU/Nsight。
-2. 若后续单独批准，`EP-G7-11` 必须用新代码身份、目标 Windows/RTX 4090 栈和全新 Engineering evidence 重跑完整 smoke；先审计机器报告与所有验收条件，再决定 Gate 7 verdict。历史 interrupted/旧 profile evidence 不拼接。
+1. 完成本次 bounded SQLite post-processing reliability repair 的同提交进度记录、提交身份与本地验证；在明确的新授权前，不部署服务器、不运行 GPU/Nsight collection。
+2. 若后续单独批准，`EP-G7-11` 必须用新代码身份、目标 Windows/RTX 4090 栈和全新 Engineering evidence 重跑完整 smoke；先审计机器报告与所有验收条件，再决定 Gate 7 verdict。历史 interrupted、`BLOCKED_BY_NSYS` 与离线诊断 evidence 不拼接。
 3. 已完成的 `EP-G7-08`～`EP-G7-10` 不再产生新任务；如后续发现需要放宽其 fail-closed 判据，属于新计划项，不得直接修改。
 
 （历史顺序，保留不删：`EP-G7-09` → `EP-G7-10` → `EP-G7-11`；`EP-G7-09` 已于 2026-09-21 完成。）
@@ -440,3 +444,5 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 | 7.4 | 2026-09-21 | 完成 `EP-G7-10`：新增 `exposedpath/platform_adapter.py` 作为唯一 Python 侧平台边界（结构化 argv、无 shell、工具解析与 fail closed），runner/manifest 的 `nvidia-smi`／`git` 调用全部改经 adapter（无 schema/字段语义变化）；两项既有 smoke 失败定位为测试非封闭（裸 `powershell`＋依赖环境 `PATH` 解析 `python`）并修复，新增 PATH 独立性与 AST 结构回归 | EP-G7-10、EP-G7-05、EP-G7-06、EP-ISSUE-03 | Gate 7 保持 `NOT_RUN`（`EP-G7-11` 真实 GPU smoke 未执行）；不改变 Measurement Contract、`exposedpath_v141`、Gate 6 证据、数据资格或 Gate 7 PASS 判据 |
 | 7.5 | 2026-09-22 | 补记 `7e67219` 的 Python <3.12 f-string portability 修复；在 EP-G7-11 smoke 前按 tests first 修复 physical/logical GPU index 混用：manifest 与 server smoke 共享纯 resolver，torch 查询使用 logical index，manifest/telemetry 保留 physical identity，runner remapping 零修改 | EP-G7-11、EP-ISSUE-18～20 | Gate 7 保持 `NOT_RUN`（未运行 GPU smoke）；不改变 Measurement Contract、S/A/B/D、Q0 oracle/evaluator、Gate 6 evidence、schema 或数据资格 |
 | 7.6 | 2026-09-23 | EP-G7-11 fresh attempt 在 Pass0 后、Pass1/Nsight 启动边界遭 BugCheck 0x133 中断（根因未证实）；Trace Minimization / Acceptance Scope Audit 确认 Gate 7 为 integration smoke、完整真实 workload 科学链首属 Gate 8 EP-G8-02；同提交补记 bounded launcher repair：Engineering role、静态/跨 pass/telemetry fail-close、非零 BLOCKED、最小 CUDA+NVTX profile、独立 SQLite 后处理与观察身份留痕 | EP-G7-11、EP-G8-02 | Gate 7 仍 `NOT_RUN`，Gate 8 不启动，GPU smoke 未重新授权；旧/新 observation profile evidence 不可拼接；不改变 Measurement Contract、S/A/B/D、Q0 oracle/evaluator、Gate 6 冻结证据或 Formal 数据 |
+| 7.7 | 2026-09-23 | 服务器报告 `799fb8d` fresh smoke 的最小 Nsight collection 成功、无本次 BugCheck，但即时 SQLite export 挂起且原 machine report 正确 `BLOCKED_BY_NSYS`；同 hash REP 副本离线 export/integrity/analyzer 通过，精确挂起根因仍未证明。测试先行实现有界 REP readiness、最多两次 180 秒独立 SQLite export、PID 定向结束、哈希/必需表字段/完整性校验、无覆盖 promotion、Analyzer 前校验、历史 machine report 防覆写与 attempt provenance；原 attempt 不追认 | EP-G7-11 | Gate 7 仍 `NOT_RUN`，Gate 8 不启动，新 GPU smoke 未授权；仅改变 Engineering 后处理可靠性与 fail-close，不改变 observation profile、Measurement Contract、S/A/B/D、Q0、Gate 6 evidence 或 Formal 数据 |
+| 7.8 | 2026-09-23 | 后处理 Windows path/argv 二审新增真实 `Popen` + fake exporter 回归：含空格 exe/REP/SQLite 路径逐项传递，stdout/stderr 可追溯；生产实现无需修改。等待独立 bundle 部署、服务器静态验证及已有 REP 的新目录离线后处理验证，不运行 GPU smoke | EP-G7-11 | Gate 7 仍 `NOT_RUN`，Gate 8 不启动；原 `799fb8d` attempt 继续 `BLOCKED_BY_NSYS`，不改变 Measurement Contract、科学 analyzer、Q0 或 Gate 6 evidence |

@@ -99,6 +99,13 @@ else {
     $SmokeDir = Join-Path $OutputRoot "smoke_${SmokeTimestamp}"
 }
 $LogDir = Join-Path $SmokeDir "logs"
+if ($ExistingSmokeDir) {
+    $PriorMachineReport = Join-Path -Path $SmokeDir -ChildPath "smoke_test_report.json"
+    if (Test-Path -LiteralPath $PriorMachineReport -PathType Leaf) {
+        Write-Host "ERROR: Refusing to resume a finalized attempt or overwrite its machine report: $PriorMachineReport"
+        exit 1
+    }
+}
 
 # ---- Report skeleton ----
 $Report = @{
@@ -107,7 +114,7 @@ $Report = @{
     environment=@{}; pass0=@{}; pass1=@{}; analyzer=@{}; errors=@()
 }
 function Save-Report {
-    $Report | ConvertTo-Json -Depth 6 | Out-File (Join-Path $SmokeDir "smoke_test_report.json") -Encoding utf8
+    $Report | ConvertTo-Json -Depth 9 | Out-File (Join-Path $SmokeDir "smoke_test_report.json") -Encoding utf8
     $md = Join-Path $SmokeDir "SMOKE_TEST_REPORT.md"
     $md_content = @"
 # ExposedPath v3 Smoke Test Report
@@ -182,8 +189,42 @@ function Recover-Pass1State {
     if ((Get-Item $rep).Length -eq 0) { return $false, ".nsys-rep empty: $rep" }
     if (-not (Test-Path $sql)) { return $false, ".sqlite missing: $sql" }
     if ((Get-Item $sql).Length -eq 0) { return $false, ".sqlite empty: $sql" }
+    $postprocessPath = Join-Path -Path $Dir -ChildPath "pass1_postprocess_report.json"
+    if (-not (Test-Path -LiteralPath $postprocessPath -PathType Leaf)) { return $false, "post-processing report missing" }
+    try {
+        $postprocess = Get-Content -LiteralPath $postprocessPath -Raw | ConvertFrom-Json
+        $successfulAttempt = [int]$postprocess.successful_attempt
+        if ($postprocess.status -ne "PASS" -or $postprocess.analyzer_allowed -ne $true -or
+            $successfulAttempt -notin @(1,2) -or [int]$postprocess.attempt_count -lt $successfulAttempt) {
+            return $false, "post-processing acceptance identity invalid"
+        }
+        if ([System.IO.Path]::GetFullPath($postprocess.rep_path) -ne [System.IO.Path]::GetFullPath($rep) -or
+            [System.IO.Path]::GetFullPath($postprocess.canonical_sqlite_path) -ne [System.IO.Path]::GetFullPath($sql)) {
+            return $false, "post-processing REP/SQLite path identity mismatch"
+        }
+        $successful = @($postprocess.attempts | Where-Object { [int]$_.number -eq $successfulAttempt })
+        if ($successful.Count -ne 1 -or $successful[0].status -ne "PASS") {
+            return $false, "successful export attempt identity missing"
+        }
+        $expectedAttemptPath = Join-Path -Path $Dir -ChildPath ("pass1_profile.export_attempt{0}.sqlite" -f $successfulAttempt)
+        if (-not (Test-Path -LiteralPath $expectedAttemptPath -PathType Leaf) -or
+            [System.IO.Path]::GetFullPath($successful[0].output_path) -ne [System.IO.Path]::GetFullPath($expectedAttemptPath)) {
+            return $false, "successful export attempt file/path mismatch"
+        }
+        $repHash = (Get-FileHash -LiteralPath $rep -Algorithm SHA256).Hash
+        $sqlHash = (Get-FileHash -LiteralPath $sql -Algorithm SHA256).Hash
+        $attemptHash = (Get-FileHash -LiteralPath $expectedAttemptPath -Algorithm SHA256).Hash
+        if ($repHash -ne $postprocess.rep_sha256 -or $repHash -ne $successful[0].rep_sha256 -or
+            $sqlHash -ne $postprocess.canonical_sqlite_sha256 -or $sqlHash -ne $successful[0].sqlite_sha256 -or
+            $attemptHash -ne $sqlHash) {
+            return $false, "post-processing REP/SQLite SHA256 mismatch"
+        }
+    } catch {
+        return $false, "post-processing report unreadable/invalid: $($_.Exception.Message)"
+    }
     $Script:NsysRepFile = $rep
     $Script:NsysSqliteFile = $sql
+    $Report.pass1["sqlite_export"] = $postprocess
     $Report.pass1["status"] = "PASS"
     $Report.pass1["nsys_rep"] = $rep
     $Report.pass1["sqlite"] = $sql
@@ -608,8 +649,8 @@ if ($ResumeLevel -le 5) {
         nsys_exe=$NsysExePath; nsys_version=$Report.environment["nsys_version"]
         nsys_argv=$nsysArgs; trace="cuda,nvtx"; sample="none"; cpuctxsw="none"
         cuda_memory_usage=$false; cuda_trace_scope="process-tree"; isr=$false
-        collection_stats=$false; sqlite_policy="explicit_export_after_nonempty_rep"
-        nvtx_stats_policy="optional_postprocess_without_force_export"
+        collection_stats=$false; sqlite_policy="bounded_export_after_stable_hashed_rep"
+        nvtx_stats_policy="not_run_during_acceptance"
     }
     $Report.pass1["observation_profile"] | ConvertTo-Json -Depth 5 |
         Out-File (Join-Path $Pass1Dir "pass1_observation_profile.json") -Encoding utf8
@@ -625,27 +666,43 @@ if ($ResumeLevel -le 5) {
 
     if (-not (Test-Path $NsysRepFile) -or (Get-Item $NsysRepFile).Length -eq 0) { Set-GateFailure "BLOCKED_BY_NSYS" ".nsys-rep empty/missing" }
     if (Test-Path $NsysSqliteFile) { Set-GateFailure "BLOCKED_BY_NSYS" "SQLite output already exists: $NsysSqliteFile" }
-    Write-Host "  Exporting SQLite..."
-    $a = @("export","--type","sqlite","--output",$NsysSqliteFile,$NsysRepFile)
-    $Report.pass1["sqlite_export_argv"] = $a
-    $er = Invoke-Native -Executable $NsysExePath -Arguments $a -OutBase "31_nsys_export" -WorkingDirectory $ProjectRoot -Label "nsys export"
-    if ($er.ExitCode -ne 0) { Set-GateFailure "BLOCKED_BY_NSYS" "SQLite export failed (exit=$($er.ExitCode))" }
-    $ValidationScript = Join-Path -Path (Join-Path -Path $ProjectRoot -ChildPath "scripts") -ChildPath "gate7_smoke_validation.py"
-    $a = @($ValidationScript,"sqlite","--sqlite",$NsysSqliteFile)
-    $rSql = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "31_sqlite_validate" -WorkingDirectory $ProjectRoot -Label "SQLite schema check"
-    $Report.pass1["sqlite_validation"] = if ($rSql.ExitCode -eq 0) { "PASS" } else { "FAIL" }
-    if ($rSql.ExitCode -ne 0) { Set-GateFailure "BLOCKED_BY_NSYS" "SQLite missing/empty/schema unreadable" }
+    Write-Host "  Bounded SQLite post-processing..."
+    $PostprocessScript = Join-Path -Path (Join-Path -Path $ProjectRoot -ChildPath "scripts") -ChildPath "gate7_nsys_postprocess.py"
+    $PostprocessReport = Join-Path -Path $Pass1Dir -ChildPath "pass1_postprocess_report.json"
+    if (Test-Path -LiteralPath $PostprocessReport) {
+        Set-GateFailure "BLOCKED_BY_NSYS" "SQLite post-processing report already exists: $PostprocessReport"
+    }
+    $a = @(
+        ('"' + $PostprocessScript + '"'),
+        "--nsys", ('"' + $NsysExePath + '"'),
+        "--rep", ('"' + $NsysRepFile + '"'),
+        "--canonical-sqlite", ('"' + $NsysSqliteFile + '"'),
+        "--report", ('"' + $PostprocessReport + '"')
+    )
+    $pr = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "31_nsys_postprocess" -WorkingDirectory $ProjectRoot -Label "bounded nsys export"
+    $Report.pass1["sqlite_postprocess_process_exit_code"] = $pr.ExitCode
+    $Report.pass1["sqlite_postprocess_report_path"] = $PostprocessReport
+    if (-not (Test-Path $PostprocessReport -PathType Leaf)) {
+        Set-GateFailure "BLOCKED_BY_NSYS" "SQLite post-processing report missing (exit=$($pr.ExitCode))"
+    }
+    try {
+        $PostprocessResult = Get-Content -LiteralPath $PostprocessReport -Raw | ConvertFrom-Json
+    } catch {
+        Set-GateFailure "BLOCKED_BY_NSYS" "SQLite post-processing report unreadable: $($_.Exception.Message)"
+    }
+    $Report.pass1["sqlite_export"] = $PostprocessResult
+    if ($pr.ExitCode -ne 0 -or $PostprocessResult.status -ne "PASS" -or $PostprocessResult.analyzer_allowed -ne $true) {
+        Set-GateFailure "BLOCKED_BY_NSYS" "SQLite post-processing failed (exit=$($pr.ExitCode); status=$($PostprocessResult.status))"
+    }
+    if (-not (Test-Path $NsysSqliteFile -PathType Leaf) -or (Get-Item $NsysSqliteFile).Length -eq 0) {
+        Set-GateFailure "BLOCKED_BY_NSYS" "Promoted SQLite missing/empty"
+    }
     $rep_mb = [math]::Round((Get-Item $NsysRepFile).Length/1MB,2)
     $sql_mb = if (Test-Path $NsysSqliteFile) { [math]::Round((Get-Item $NsysSqliteFile).Length/1MB,2) } else { 0 }
     $Report.pass1["status"]="PASS"; $Report.pass1["nsys_rep"]=$NsysRepFile; $Report.pass1["sqlite"]=if(Test-Path $NsysSqliteFile){$NsysSqliteFile}else{"NOT GENERATED"}
     $Report.pass1["rep_size_mb"]=$rep_mb; $Report.pass1["sqlite_size_mb"]=$sql_mb
     Write-Host "  .nsys-rep: $NsysRepFile (${rep_mb}MB)  .sqlite: $NsysSqliteFile (${sql_mb}MB)"
 
-    $a = @("stats","--report","nvtx_pushpop_sum",$NsysRepFile); $r2 = Invoke-Native -Executable $NsysExePath -Arguments $a -OutBase "32_nvtx_stats" -WorkingDirectory $ProjectRoot -Label "nsys stats"
-    if ($r2.ExitCode -ne 0) {
-        Write-Host "    WARNING: nsys stats failed (exit=$($r2.ExitCode)). NVTX will be verified via analyzer."
-    }
-    $Report.pass1["nvtx_stats_preview"] = ($r2.Stdout -split "`n" | Select-Object -First 15) -join "`n"
 } else {
     Write-Host ""; Write-Host "===== STEP 5: Pass 1 SKIPPED ====="
     $p1ok, $p1msg = Recover-Pass1State -Dir $Pass1Dir
@@ -658,7 +715,12 @@ if ($ResumeLevel -le 5) {
 # ===================================================================
 if ($ResumeLevel -le 6) {
     Write-Host ""; Write-Host "===== STEP 6: Analyzer ====="
-    if (-not (Test-Path $NsysSqliteFile)) { Set-GateFailure "BLOCKED_BY_ANALYZER" "No SQLite" }
+    if (-not (Test-Path $NsysSqliteFile -PathType Leaf)) { Set-GateFailure "BLOCKED_BY_ANALYZER" "No SQLite" }
+    $ValidationScript = Join-Path -Path (Join-Path -Path $ProjectRoot -ChildPath "scripts") -ChildPath "gate7_smoke_validation.py"
+    $a = @(('"' + $ValidationScript + '"'),"sqlite","--sqlite",('"' + $NsysSqliteFile + '"'))
+    $rSql = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "31_sqlite_validate" -WorkingDirectory $ProjectRoot -Label "Canonical SQLite integrity/schema check"
+    $Report.pass1["sqlite_validation"] = if ($rSql.ExitCode -eq 0) { "PASS" } else { "FAIL" }
+    if ($rSql.ExitCode -ne 0) { Set-GateFailure "BLOCKED_BY_NSYS" "Canonical SQLite integrity/schema invalid" }
     $ats = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
     $asfx = -join ((48..57)+(97..122)|Get-Random -Count 8|ForEach-Object{[char]$_})
     $aid = "analysis-${ats}-${asfx}"
@@ -669,7 +731,7 @@ if ($ResumeLevel -le 6) {
     $cmdFile = Join-Path -Path $AnalysisDir -ChildPath "analysis_command.txt"
     "$PythonExe $apy --sqlite `"$NsysSqliteFile`" --output-dir `"$AnalysisDir`"" | Out-File $cmdFile -Encoding utf8
 
-    $a = @($apy,"--sqlite",$NsysSqliteFile,"--output-dir",$AnalysisDir)
+    $a = @(('"' + $apy + '"'),"--sqlite",('"' + $NsysSqliteFile + '"'),"--output-dir",('"' + $AnalysisDir + '"'))
     $r = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "40_analyzer" -WorkingDirectory $ProjectRoot -Label "Analyzer"
     $Report.analyzer["process_exit_code"] = $r.ExitCode
     $Report.analyzer["analysis_run_id"]=$aid
@@ -752,7 +814,7 @@ if ($Report.pass1["status"] -ne "PASS") { $allGatesOk = $false; $finalErrors += 
 # for validating all frozen cross-pass identities and attempt accounting.
 $ValidationScript = Join-Path -Path (Join-Path -Path $ProjectRoot -ChildPath "scripts") -ChildPath "gate7_smoke_validation.py"
 $PreflightGpuIdentityPath = Join-Path $SmokeDir "preflight_gpu_identity.json"
-$a = @($ValidationScript,"evidence","--manifest",$ManifestPath,"--preflight",$PreflightGpuIdentityPath,"--pass0",$Pass0Dir,"--pass1",$Pass1Dir)
+$a = @(('"' + $ValidationScript + '"'),"evidence","--manifest",('"' + $ManifestPath + '"'),"--preflight",('"' + $PreflightGpuIdentityPath + '"'),"--pass0",('"' + $Pass0Dir + '"'),"--pass1",('"' + $Pass1Dir + '"'))
 $r = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "50_gate7_evidence_validation" -WorkingDirectory $ProjectRoot -Label "Gate7 parity/telemetry"
 $Report.environment["gate7_evidence_validation"] = if ($r.ExitCode -eq 0) { "PASS" } else { "FAIL" }
 $Report.environment["gate7_evidence_validation_output"] = $r.Stdout

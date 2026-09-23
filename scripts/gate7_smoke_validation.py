@@ -6,6 +6,7 @@ This checks existing runner artifacts; it does not change scientific analysis.
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 import json
 import sqlite3
 import sys
@@ -19,6 +20,25 @@ from exposedpath.cross_pass_validator import (
     validate_attempt_accounting,
     validate_pair,
 )
+
+
+# Engineering export-completeness gate, not v1.4.1 scientific qualification.
+# This Gate7 CUDA+NVTX model smoke must retain the connected metadata, host API,
+# synchronization, kernel, mapping, and diagnostic tables. MEMCPY/MEMSET are
+# activity-dependent and deliberately not required here.
+GATE7_REQUIRED_EXPORT_COLUMNS = {
+    "META_DATA_CAPTURE": ("name", "value"),
+    "META_DATA_EXPORT": ("name", "value"),
+    "StringIds": ("id", "value"),
+    "NVTX_EVENTS": ("start", "end", "text", "textId"),
+    "CUPTI_ACTIVITY_KIND_RUNTIME": ("start", "end", "correlationId", "nameId"),
+    "CUPTI_ACTIVITY_KIND_SYNCHRONIZATION": ("start", "end", "correlationId"),
+    "CUPTI_ACTIVITY_KIND_KERNEL": ("start", "end", "correlationId"),
+    "TARGET_INFO_CUDA_CONTEXT_INFO": ("contextId", "deviceId"),
+    "TARGET_INFO_CUDA_STREAM": ("streamId", "contextId"),
+    "TARGET_INFO_GPU": ("id", "name"),
+    "DIAGNOSTIC_EVENT": ("timestamp", "source", "severity", "text"),
+}
 
 
 def _read_json(path: Path) -> dict:
@@ -37,14 +57,28 @@ def _read_jsonl(path: Path) -> list[dict]:
 
 def validate_sqlite(path: Path) -> list[str]:
     path = Path(path)
-    if not path.is_file() or path.stat().st_size == 0:
-        return ["SQLite missing or empty"]
     try:
-        with sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True) as db:
-            if db.execute("PRAGMA quick_check").fetchone() != ("ok",):
-                return ["SQLite quick_check failed"]
-            if not db.execute("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1").fetchone():
+        if not path.is_file() or path.stat().st_size == 0:
+            return ["SQLite missing or empty"]
+        with closing(sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True)) as db:
+            if db.execute("PRAGMA integrity_check").fetchone() != ("ok",):
+                return ["SQLite integrity_check failed"]
+            tables = {row[0].casefold(): row[0]
+                      for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            if not tables:
                 return ["SQLite has no readable tables"]
+            issues = []
+            for table, required_columns in GATE7_REQUIRED_EXPORT_COLUMNS.items():
+                actual_name = tables.get(table.casefold())
+                if actual_name is None:
+                    issues.append(f"SQLite missing required table {table}")
+                    continue
+                # Names come only from the fixed table list above, never input.
+                columns = {row[1].casefold() for row in db.execute(f'PRAGMA table_info("{table}")')}
+                missing = [name for name in required_columns if name.casefold() not in columns]
+                if missing:
+                    issues.append(f"SQLite {table} missing columns: {', '.join(missing)}")
+            return issues
     except (sqlite3.DatabaseError, OSError, ValueError) as exc:
         return [f"SQLite schema unreadable: {exc}"]
     return []
