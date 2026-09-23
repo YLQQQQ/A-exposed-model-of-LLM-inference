@@ -129,8 +129,62 @@ def test_analyzer_starts_false():
     assert '$analysis_ok=$false' in _t()
 
 # ===== nsys stats =====
-def test_nsys_force_export():
-    assert '--force-export=true' in _t()
+def test_nsys_export_does_not_force_overwrite():
+    assert '--force-export=true' not in _t()
+
+def test_gate7_engineering_role_and_static_scope():
+    t = _t()
+    assert "data_role='Engineering'" in t
+    assert '"-p","no:cacheprovider"' in t
+    assert '"exposedpath_v141"' in t
+
+def test_minimal_nsys_collection_profile():
+    t = _t()
+    start = t.index('$nsysArgs = @(')
+    end = t.index(')', start)
+    args = t[start:end]
+    for flag in ('--trace=cuda,nvtx', '--sample=none', '--cpuctxsw=none',
+                 '--cuda-memory-usage=false', '--cuda-trace-scope=process-tree',
+                 '--isr=false', '--stats=false'):
+        assert flag in args
+    for forbidden in ('--force-overwrite', '--gpu-metrics-devices', '--trace=wddm',
+                      '--cuda-trace-scope=system-wide', '--stats=true'):
+        assert forbidden not in args
+
+
+def test_observation_profile_is_durable_before_nsys_launch():
+    t = _t()
+    profile = t.index('pass1_observation_profile.json')
+    launch = t.index('Invoke-Native -Executable $NsysExePath -Arguments $nsysArgs')
+    assert profile < launch
+
+def test_export_follows_nonempty_rep_and_precedes_analyzer():
+    t = _t()
+    rep = t.index('if (-not (Test-Path $NsysRepFile)')
+    export = t.index('"export","--type","sqlite"')
+    analyzer = t.index('===== STEP 6: Analyzer =====')
+    assert rep < export < analyzer
+    assert '"sqlite","--sqlite",$NsysSqliteFile' in t[export:analyzer]
+    assert 'if ($rSql.ExitCode -ne 0)' in t[export:analyzer]
+
+def test_final_gate_calls_machine_parity_and_telemetry_validator():
+    t = _t()
+    final = t[t.index('FINAL: Gate Decision'):]
+    assert 'gate7_smoke_validation.py' in final
+    assert '--manifest' in final and '--pass0' in final and '--pass1' in final
+    assert '$r.ExitCode -ne 0' in final
+    assert 'if ($allGatesOk) { exit 0 }' in final
+    assert 'exit 1' in final
+
+def test_fresh_smoke_rejects_existing_evidence():
+    t = _t()
+    assert 'Smoke dir already exists' in t
+    assert 'SQLite output already exists' in t
+    assert 'Nsight output already exists' in t
+
+def test_analyzer_missing_required_fields_cannot_pass():
+    t = _t()
+    assert 'if ($gate_errors.Count -eq 0) { $analysis_ok=$true }' in t
 
 # ===== Dry-run / paths =====
 def test_dry_run():

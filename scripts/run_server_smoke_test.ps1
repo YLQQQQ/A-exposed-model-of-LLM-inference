@@ -299,8 +299,8 @@ if (-not (Test-Path $NsysExePath -PathType Leaf)) { Set-GateFailure "BLOCKED_BY_
 
 if ($ResumeLevel -eq 0) {
     if (Test-Path $SmokeDir) {
-        $existing = @(Get-ChildItem $SmokeDir -ErrorAction SilentlyContinue)
-        if ($existing.Count -gt 0) { Set-GateFailure "BLOCKED_BY_ENVIRONMENT" "Smoke dir not empty: $SmokeDir" }
+        Write-Host "ERROR: Smoke dir already exists: $SmokeDir"
+        exit 1
     }
     New-Item -ItemType Directory -Force -Path $SmokeDir | Out-Null
     New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
@@ -322,11 +322,11 @@ if ($ResumeLevel -le 1) {
     $a = @("-m","exposedpath","--help"); Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "02_exposedpath_help" -WorkingDirectory $WD -Label "exposedpath --help" | Out-Null
 
     if (-not $SkipStaticTests) {
-        $a = @("-m","pytest","-q"); $r = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "03_pytest" -WorkingDirectory $WD -Label "pytest"
+        $a = @("-m","pytest","-q","-p","no:cacheprovider"); $r = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "03_pytest" -WorkingDirectory $WD -Label "pytest"
         $Report.environment["pytest"] = if ($r.ExitCode -eq 0) { "PASS" } else { "FAIL (exit=$($r.ExitCode))" }
         $Report.environment["pytest_stderr_nonempty"] = $r.StderrNonEmpty
 
-        $a = @("-m","compileall","-q","exposedpath","analysis"); $r = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "04_compileall" -WorkingDirectory $WD -Label "compileall"
+        $a = @("-m","compileall","-q","exposedpath","analysis","exposedpath_v141"); $r = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "04_compileall" -WorkingDirectory $WD -Label "compileall"
         $Report.environment["compileall"] = if ($r.ExitCode -eq 0) { "PASS" } else { "FAIL (exit=$($r.ExitCode))" }
     } else {
         $Report.environment["pytest"] = "SKIPPED"; $Report.environment["compileall"] = "SKIPPED"
@@ -342,7 +342,7 @@ if ($ResumeLevel -le 1) {
     $Report.environment["nsys_version"] = ($r.Stdout -join " ").Trim()
 
     $cuda_code = @"
-import os
+import os, json, subprocess
 import torch
 from exposedpath.manifest import resolve_logical_cuda_index
 
@@ -360,12 +360,28 @@ print('count', torch.cuda.device_count() if available else 0)
 if not available:
     raise RuntimeError('CUDA unavailable')
 print('name', torch.cuda.get_device_name(logical))
+gpu = subprocess.run(
+    ['nvidia-smi', '-i', str(physical), '--query-gpu=index,uuid,pci.bus_id',
+     '--format=csv,noheader,nounits'], capture_output=True, text=True, check=True,
+)
+fields = [item.strip() for item in gpu.stdout.strip().split(',')]
+if len(fields) != 3 or int(fields[0]) != physical or not fields[1] or not fields[2]:
+    raise RuntimeError('preflight GPU identity incomplete or mismatched')
+print('GPU_IDENTITY_JSON:' + json.dumps({
+    'physical_gpu_index': physical, 'logical_gpu_index': logical,
+    'gpu_uuid': fields[1], 'gpu_pci_bus_id': fields[2],
+}))
 "@
     $cuda_check_script = Join-Path $LogDir "07_cuda_check.py"
     [System.IO.File]::WriteAllText($cuda_check_script, $cuda_code, [System.Text.UTF8Encoding]::new($false))
     $a = @('"' + $cuda_check_script + '"'); $r = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "07_cuda_check" -WorkingDirectory $WD -Label "CUDA check"
     $Report.environment["cuda"] = ($r.Stdout -join "`n")
     if ($r.ExitCode -ne 0) { Set-GateFailure "BLOCKED_BY_ENVIRONMENT" "CUDA/PyTorch check failed. GPU $GpuId not ready." }
+    $gpuIdentityLine = @($r.Stdout -split "`n" | Where-Object { $_ -match '^GPU_IDENTITY_JSON:' })
+    if ($gpuIdentityLine.Count -ne 1) { Set-GateFailure "BLOCKED_BY_ENVIRONMENT" "Preflight GPU identity missing" }
+    $PreflightGpuIdentityPath = Join-Path $SmokeDir "preflight_gpu_identity.json"
+    $gpuIdentityLine[0].Substring('GPU_IDENTITY_JSON:'.Length) | Out-File $PreflightGpuIdentityPath -Encoding utf8
+    $Report.environment["preflight_gpu_identity"] = Get-Content $PreflightGpuIdentityPath -Raw | ConvertFrom-Json
 
     $VerifyScript = Join-Path -Path (Join-Path -Path $ProjectRoot -ChildPath "scripts") -ChildPath "verify_pilot_install.ps1"
     $Report.environment["verify_pilot_install"] = "FAIL (script missing)"
@@ -427,7 +443,7 @@ logical_gpu_index = resolve_logical_cuda_index(
     physical_gpu_index=physical_gpu_index,
     cuda_visible_devices=os.environ.get('CUDA_VISIBLE_DEVICES'),
 )
-m = create_manifest(experiment_id='$ExperimentId', run_role='PILOT', model_path=r'$ModelPath',
+m = create_manifest(experiment_id='$ExperimentId', run_role='PILOT', data_role='Engineering', model_path=r'$ModelPath',
     prompt_tokens_file=str(pt_path.resolve()), batch_size=1, fixed_output_tokens=$FixedOutputTokens,
     warmup_count=$WarmupCount, repeat_count=$RepeatCount, gpu=physical_gpu_index,
     gpu_index_physical=physical_gpu_index, gpu_index_logical=logical_gpu_index,
@@ -544,14 +560,22 @@ if ($ResumeLevel -le 5) {
     Write-Host ""; Write-Host "===== STEP 5: Pass 1 (nsys) ====="
     New-Item -ItemType Directory -Force -Path $Pass1Dir | Out-Null
     $nsys_profile = Join-Path $Pass1Dir "pass1_profile"
+    $NsysRepFile = "$nsys_profile.nsys-rep"
+    $NsysSqliteFile = "$nsys_profile.sqlite"
+    if ((Test-Path $NsysRepFile) -or (Test-Path $NsysSqliteFile)) {
+        Set-GateFailure "BLOCKED_BY_NSYS" "Nsight output already exists: $nsys_profile"
+    }
 
     # Pre-build nsys arguments as a single array (NO inline + concatenation in call!)
     $nsysArgs = @(
         "profile",
         "--trace=cuda,nvtx",
-        "--cuda-memory-usage=true",
-        "--force-overwrite=true",
-        "--stats=true",
+        "--sample=none",
+        "--cpuctxsw=none",
+        "--cuda-memory-usage=false",
+        "--cuda-trace-scope=process-tree",
+        "--isr=false",
+        "--stats=false",
         "-o", $nsys_profile,
         $PythonExe,
         "-m", "exposedpath", "run-pass1",
@@ -580,6 +604,15 @@ if ($ResumeLevel -le 5) {
     # Log full nsys command
     $fullNsysCmd = "$NsysExePath $argsStr"
     $fullNsysCmd | Out-File (Join-Path $Pass1Dir "pass1_nsys_command.txt") -Encoding utf8
+    $Report.pass1["observation_profile"] = @{
+        nsys_exe=$NsysExePath; nsys_version=$Report.environment["nsys_version"]
+        nsys_argv=$nsysArgs; trace="cuda,nvtx"; sample="none"; cpuctxsw="none"
+        cuda_memory_usage=$false; cuda_trace_scope="process-tree"; isr=$false
+        collection_stats=$false; sqlite_policy="explicit_export_after_nonempty_rep"
+        nvtx_stats_policy="optional_postprocess_without_force_export"
+    }
+    $Report.pass1["observation_profile"] | ConvertTo-Json -Depth 5 |
+        Out-File (Join-Path $Pass1Dir "pass1_observation_profile.json") -Encoding utf8
     Write-Host "  Command: $fullNsysCmd"
     Write-Host "  Launching nsys..."
 
@@ -590,20 +623,25 @@ if ($ResumeLevel -le 5) {
     $Report.pass1["stdout_log"] = Join-Path $LogDir "30_pass1_nsys_stdout.txt"
     if ($r.ExitCode -ne 0) { Set-GateFailure "BLOCKED_BY_NSYS" "Pass 1 nsys exit=$($r.ExitCode)" }
 
-    $NsysRepFile = "$nsys_profile.nsys-rep"
-    $NsysSqliteFile = "$nsys_profile.sqlite"
     if (-not (Test-Path $NsysRepFile) -or (Get-Item $NsysRepFile).Length -eq 0) { Set-GateFailure "BLOCKED_BY_NSYS" ".nsys-rep empty/missing" }
-    if (-not (Test-Path $NsysSqliteFile)) {
-        Write-Host "  Exporting SQLite..."
-        $a = @("export","--type","sqlite","--output",$NsysSqliteFile,$NsysRepFile); $er = Invoke-Native -Executable $NsysExePath -Arguments $a -OutBase "31_nsys_export" -WorkingDirectory $ProjectRoot -Label "nsys export"
-    }
+    if (Test-Path $NsysSqliteFile) { Set-GateFailure "BLOCKED_BY_NSYS" "SQLite output already exists: $NsysSqliteFile" }
+    Write-Host "  Exporting SQLite..."
+    $a = @("export","--type","sqlite","--output",$NsysSqliteFile,$NsysRepFile)
+    $Report.pass1["sqlite_export_argv"] = $a
+    $er = Invoke-Native -Executable $NsysExePath -Arguments $a -OutBase "31_nsys_export" -WorkingDirectory $ProjectRoot -Label "nsys export"
+    if ($er.ExitCode -ne 0) { Set-GateFailure "BLOCKED_BY_NSYS" "SQLite export failed (exit=$($er.ExitCode))" }
+    $ValidationScript = Join-Path -Path (Join-Path -Path $ProjectRoot -ChildPath "scripts") -ChildPath "gate7_smoke_validation.py"
+    $a = @($ValidationScript,"sqlite","--sqlite",$NsysSqliteFile)
+    $rSql = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "31_sqlite_validate" -WorkingDirectory $ProjectRoot -Label "SQLite schema check"
+    $Report.pass1["sqlite_validation"] = if ($rSql.ExitCode -eq 0) { "PASS" } else { "FAIL" }
+    if ($rSql.ExitCode -ne 0) { Set-GateFailure "BLOCKED_BY_NSYS" "SQLite missing/empty/schema unreadable" }
     $rep_mb = [math]::Round((Get-Item $NsysRepFile).Length/1MB,2)
     $sql_mb = if (Test-Path $NsysSqliteFile) { [math]::Round((Get-Item $NsysSqliteFile).Length/1MB,2) } else { 0 }
     $Report.pass1["status"]="PASS"; $Report.pass1["nsys_rep"]=$NsysRepFile; $Report.pass1["sqlite"]=if(Test-Path $NsysSqliteFile){$NsysSqliteFile}else{"NOT GENERATED"}
     $Report.pass1["rep_size_mb"]=$rep_mb; $Report.pass1["sqlite_size_mb"]=$sql_mb
     Write-Host "  .nsys-rep: $NsysRepFile (${rep_mb}MB)  .sqlite: $NsysSqliteFile (${sql_mb}MB)"
 
-    $a = @("stats","--force-export=true","--report","nvtx_pushpop_sum",$NsysRepFile); $r2 = Invoke-Native -Executable $NsysExePath -Arguments $a -OutBase "32_nvtx_stats" -WorkingDirectory $ProjectRoot -Label "nsys stats"
+    $a = @("stats","--report","nvtx_pushpop_sum",$NsysRepFile); $r2 = Invoke-Native -Executable $NsysExePath -Arguments $a -OutBase "32_nvtx_stats" -WorkingDirectory $ProjectRoot -Label "nsys stats"
     if ($r2.ExitCode -ne 0) {
         Write-Host "    WARNING: nsys stats failed (exit=$($r2.ExitCode)). NVTX will be verified via analyzer."
     }
@@ -657,7 +695,7 @@ if ($ResumeLevel -le 6) {
                     $cov="$($ar.sync_coverage.sync_count_valid)/$($ar.sync_coverage.sync_count_total)"
                     $dcov="$($ar.sync_coverage.sync_duration_valid_ms)/$($ar.sync_coverage.sync_duration_total_ms) ms"
                 } else { $gate_errors += "sync_coverage missing" }
-                if ($aid) { $analysis_ok=$true }  # all checks passed
+                if ($gate_errors.Count -eq 0) { $analysis_ok=$true }
             } catch {
                 $gate_errors += "JSON parse failed: $($_.Exception.Message)"
             }
@@ -708,6 +746,17 @@ if (-not $staticPreflightOk) {
 # Pass 0 check
 $p0_ok = ($Report.pass0["status"] -eq "PASS") -or ($Report.pass0["validation_status"] -eq "OK")
 if (-not $p0_ok) { $allGatesOk = $false; $finalErrors += "Pass0 not OK" }
+if ($Report.pass1["status"] -ne "PASS") { $allGatesOk = $false; $finalErrors += "Pass1 not PASS" }
+
+# Re-read runner output and telemetry.  The machine report is not a substitute
+# for validating all frozen cross-pass identities and attempt accounting.
+$ValidationScript = Join-Path -Path (Join-Path -Path $ProjectRoot -ChildPath "scripts") -ChildPath "gate7_smoke_validation.py"
+$PreflightGpuIdentityPath = Join-Path $SmokeDir "preflight_gpu_identity.json"
+$a = @($ValidationScript,"evidence","--manifest",$ManifestPath,"--preflight",$PreflightGpuIdentityPath,"--pass0",$Pass0Dir,"--pass1",$Pass1Dir)
+$r = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "50_gate7_evidence_validation" -WorkingDirectory $ProjectRoot -Label "Gate7 parity/telemetry"
+$Report.environment["gate7_evidence_validation"] = if ($r.ExitCode -eq 0) { "PASS" } else { "FAIL" }
+$Report.environment["gate7_evidence_validation_output"] = $r.Stdout
+if ($r.ExitCode -ne 0) { $allGatesOk = $false; $finalErrors += "Pass0/Pass1 parity, attempt accounting or GPU telemetry invalid" }
 
 # nsys-rep check
 if ((-not (Test-Path $NsysRepFile)) -or ((Get-Item $NsysRepFile).Length -eq 0)) {
@@ -745,4 +794,5 @@ $Report.finished_at = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 Save-Report
 if ($OriginalPythonPath -ne $null) { $env:PYTHONPATH = $OriginalPythonPath } else { Remove-Item Env:\PYTHONPATH -ErrorAction SilentlyContinue }
 Write-Host "  Smoke dir: $SmokeDir"; Write-Host "  wmpc_id: $WmpcId"; Write-Host "  run_id: $RunId"; Write-Host ""
-exit 0
+if ($allGatesOk) { exit 0 }
+exit 1
