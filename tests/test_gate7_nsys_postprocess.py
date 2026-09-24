@@ -79,8 +79,12 @@ def _run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *behaviors: str,
     monkeypatch.setenv("FAKE_EXPORT_PID_FILE", str(pid_file))
     for index, behavior in enumerate(behaviors, 1):
         monkeypatch.setenv(f"FAKE_EXPORT_ATTEMPT{index}", behavior)
+    # Windows venv python.exe can launch another interpreter process. Use the
+    # base executable in place so Popen.pid is the exporter PID (also on timeout).
+    # Unlike the copied-executable test, this needs no PYTHONHOME/PATH relocation.
+    direct_interpreter = sys._base_executable if os.name == "nt" else sys.executable
     result = run_postprocess(
-        nsys_exe=nsys_exe or sys.executable,
+        nsys_exe=nsys_exe or direct_interpreter,
         rep_path=rep,
         canonical_path=canonical,
         report_path=report_path,
@@ -158,10 +162,22 @@ def test_executable_rep_and_output_paths_with_spaces_are_argv_safe(tmp_path, mon
 
 
 def test_timeout_terminates_only_recorded_pid_then_retry_succeeds(tmp_path, monkeypatch):
+    original_popen = postprocess.subprocess.Popen
+    processes = []
+
+    def start_after_previous_exit(*args, **kwargs):
+        if processes:
+            assert processes[-1].poll() is not None, "Retry started before exporter exit"
+        process = original_popen(*args, **kwargs)
+        processes.append(process)
+        return process
+
+    monkeypatch.setattr(postprocess.subprocess, "Popen", start_after_previous_exit)
     result, canonical, _, pid_file = _run(tmp_path, monkeypatch, "timeout", "success")
     first, second = result["attempts"]
     assert result["status"] == "PASS"
     assert result["attempt_count"] == 2
+    assert len(processes) == 2
     assert first["timed_out"] is True
     assert first["pid"] == int(pid_file.read_text())
     assert first["terminated_pid"] == first["pid"]
