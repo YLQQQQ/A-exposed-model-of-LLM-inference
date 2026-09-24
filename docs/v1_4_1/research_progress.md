@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-> 一句话状态：**Gate 0～6 = `PASS`（Gate 6 / Q0 已完成）；Gate 7 的 `EP-G7-08`～`EP-G7-10` 已完成，`EP-G7-11` 进行中；真实 GPU smoke 暂停，先完成并部署 physical/logical GPU index 修复及目标 CUDA/PyTorch 环境确认。**
+> 一句话状态：**Gate 0～6 = `PASS`；Gate 7 的 `EP-G7-08`～`EP-G7-10` 已完成，`EP-G7-11` 进行中。服务器回报的静态 pytest 与 Q0 CUDA source 测试已通过；全新最终 smoke 已启动，但因 Windows kernel bugcheck 中断，尚无最终验收证据。Gate 7 正式状态保持 `NOT_RUN`，暂停 GPU 工作，Gate 8 不得启动。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -42,8 +42,11 @@
 | `docs/v1_4_1/gate6_closeout_v0_1.md` | **Gate 6 论文级技术总结**：身份/哈希、根因→amendment→implementation→verification 映射、成熟度与遗留限制 |
 | `docs/v1_4_1/gate6_windows_server_runbook.md` | Q0 正式服务器采集／导出／派生／provenance 操作手册 |
 | `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md` | 当前 Gate 7 执行计划（`EP-G7-08`～`EP-G7-11`） |
+| `docs/server_smoke_test.md`、`docs/v1_4_1/gate7_windows_host_toolchain_incident.md`、`docs/v1_4_1/gate7_system_bugcheck_incident.md` | Gate 7 服务器操作入口、host-toolchain 故障与独立的系统 bugcheck 事件记录；不定义新的测量语义 |
 | `docs/v1_4_1/candidate_platform_inventory_v0_1.md`、`candidate_platform_admission_checklist_v0_1.md` | 第二平台静态盘点与冻结的准入判据（仅在 Gate 9 需要时启用） |
 | `docs/prototype_archive/README.md` | 旧 Prototype 封存说明（历史数据只能用于回归，不能作为 v1.4.1 证据） |
+
+**当前主线与历史材料的界线：** 本进度清单是唯一状态入口；研究设计 v7.1 与实验协议 v2.1 规定目标和执行依据；Measurement Contract／schema、Q0 oracle 分别约束测量语义与独立正确性；`exposedpath_v141/` 是 analyzer，`exposedpath/` 是 runner/manifest，`scripts/` 是平台启动层。它们是同一证据链的不同职责，不是几套互相竞争的“核心”。Gate 7 提交从 Gate 6 closeout `478b945` 连续衍生（当前 `12f6eae`）；后续修复有新提交与回归记录，但**不追改** Gate 6 frozen evidence。旧计划、`dist/` 发布副本与 Prototype 文档只供历史追溯，不能替代上述当前来源或混入本次 smoke。
 
 ### 0.5 30 分钟接手路径
 
@@ -52,21 +55,21 @@
 3. 读 `CONTEXT.md` 统一术语，再读 `AGENTS.md` 与 research protocol skill 的 `method-semantics.md`。
 4. 需要看实现时：`exposedpath_v141/`（Canonical/S/A/B/D/Q0 计算与 CLI）、`q0/`（微程序、manifest、oracle）、`tests/`。
 5. 需要复现 Gate 6 结论时读 `gate6_closeout_v0_1.md`；需要重跑 Q0 时读 runbook（**不得**在未获批准时重跑 Gate 6 采集）。
-6. 开始新工作时读 `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`，从 `EP-G7-08` 开始。
+6. 开始 Gate 7 接力时读执行计划与本节当前快照，从尚未验收的 `EP-G7-11` 继续；旧计划与已完成的 `EP-G7-08`～`EP-G7-10` 仅供追溯。
 
 ## 1. 当前快照
 
-- 清单版本：`7.5`
-- 最近更新：`2026-09-22`
+- 清单版本：`7.7`
+- 最近更新：`2026-09-23`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
-- 当前工作分支：`codex/gate7-runner`（从 Gate 6 canonical closeout `478b945` 创建的隔离 worktree）
+- 当前代码基线：`12f6eaee4b30327167cce7fde8083bd6a48250a5`（`codex/gate7-runner`，从 Gate 6 canonical closeout `478b945` 衍生）；本次文档审计在独立 `codex/gate7-audit` worktree，不改变该服务器代码基线或 Gate 6 分支。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前 Gate 状态：Gate 0～6 = `PASS`；Gate 7 = `NOT_RUN`（`EP-G7-08`～`EP-G7-10` 已完成，`EP-G7-11` 进行中但真实 GPU smoke 暂停）；Gate 8 = `NOT_RUN`（不得在 Gate 7 acceptance 前启动）；Gate 9～11 = `BLOCKED`（Formal 平台未确定/未接入）；Gate 12～14 = `NOT_RUN`
-- 当前最高优先级：完成 `EP-G7-11` 的 smoke 前置修复与环境确认。服务器目标 RTX 4090 为 physical index `3`，设置 `CUDA_VISIBLE_DEVICES=3` 后 PyTorch logical index 为 `0`；manifest 与 smoke 的 `torch.cuda.*` 查询必须使用 logical index，同时 provenance/telemetry 保留 physical identity。随后才允许执行 Windows/RTX 4090 真实 GPU smoke并形成 Gate 7 verdict。
+- 当前 Gate 状态：Gate 0～6 = `PASS`；Gate 7 正式状态 = `NOT_RUN`（旧 smoke 为 `BLOCKED`、新 smoke attempt 为 `INTERRUPTED_BY_SYSTEM_BUGCHECK`，均非 acceptance evidence）；Gate 8 = `NOT_RUN`（Gate 7 acceptance 前不得启动）；Gate 9～11 = `BLOCKED`（Formal 平台未确定/未接入）；Gate 12～14 = `NOT_RUN`。
+- 当前最高优先级：暂停 GPU smoke、续跑与 profiling；只读保全并核对全新中断 evidence 的完整相对路径、大小、时间线及 Windows Event 41/6008/1001 与 minidump。不得从时间相关性推断驱动、Nsight 或脚本根因；完成事故审计与单独决策前不重跑。physical GPU index `3` 与 torch logical index `0` 的语义保持不变。
 - 当前总体判断（2026-09-20）：Gate 6 / Q0 已正式 `PASS`。frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21/21 `REAL_CASE_PASS`、2 个 synthetic-only case（`Q0-TERMINAL-TIE-001`、`Q0-SUBMISSION-RACE-001`）PASS、23/23 `SYNTHETIC_PASS`，且存在唯一一份 `q0_gate_report.json`（schema `exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`）。该 PASS 只说明当前 analyzer 在本目标 observation stack 上取得 **Q0 正确性资格**；不等于 Engineering Pilot、Pilot、Protocol Freeze 或 Formal 结果，也不建立第二平台等价性。身份、哈希、provenance caveat、根因映射与实现成熟度见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
-- 当前到达点（`EP-G7-11` 前置）：`7e67219` 已修复 `analysis/exposed_accounting.py` 的 Python <3.12 f-string 编译阻塞（生成 SQL 不变）；随后服务器 smoke 前检查发现 `scripts/run_server_smoke_test.ps1` 与 `exposedpath/manifest.py` 把 physical index 误作 torch logical index。本轮以 tests first 建立纯映射 helper，并让两处共享；不修改 `runner.py` 已有 remapping。真实 GPU smoke未执行，Gate 7 仍为 `NOT_RUN`，不是 Gate 8。
+- 当前到达点（`EP-G7-11`）：`7e67219` 的 Python portability、`85dc8ef` 的 physical/logical GPU 映射、`757934e` 的 smoke fail-closed/PowerShell 5.1 修复及 `12f6eae` 的 package verification 修复均已在代码链中。服务器**回报**：VS2022/MSVC 19.38 x64 下，以 host-local 零字节 compatibility markers 排除 `nvcc` legacy-layout 检测阻塞后，最小 CUDA 编译成功，Q0 CUDA source `37 passed`，用 repo `.venv` 执行的完整 pytest `917 passed, 1 skipped`（exit 0）；此前使用 base Anaconda 的 5 个 collection error 是解释器选错。这些静态 PASS 不因后续 crash 改写为 FAIL。全新 evidence root `ep-g7-11-final-12f6eae-20260923T061109Z` 上的完整 smoke 已启动，执行中服务器发生 BugCheck `0x133` 并重启，attempt 记为 `INTERRUPTED_BY_SYSTEM_BUGCHECK`；精确执行阶段与根因未确定。原始服务器日志、事件和 dump 尚未导入本审计工作树，均待复核。host-toolchain 与系统事件分别见 `gate7_windows_host_toolchain_incident.md`、`gate7_system_bugcheck_incident.md`。
 
 历史快照（保留，不覆盖；以下描述 2026-09-19 及更早的当时状态，均已由 2026-09-20 Gate 6 PASS 取代，详细过程见 `docs/v1_4_1/gate6_closeout_v0_1.md`）：
 
@@ -209,7 +212,7 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 ### Gate 7：Runner 与执行链对齐
 
-**Gate verdict：`NOT_RUN`。** `EP-G7-08`～`EP-G7-10` 已完成，`EP-G7-11` 进行中；Gate 7 只有在其全部 acceptance 判据满足后才形成 verdict。当前事实：Token-ready completion 与 G1/N1 身份已对齐；Pass0/Pass1 parity identity 与 attempt/exclusion/retry provenance 已冻结并机器可校验；Python 侧平台差异已收敛到 `exposedpath/platform_adapter.py`。服务器 smoke 前发现并在本轮修复 physical/logical CUDA index 混用，但真实 GPU smoke仍须等待目标环境确认和新提交部署，未运行。
+**Gate verdict：`NOT_RUN`。** `EP-G7-08`～`EP-G7-10` 已完成，`EP-G7-11` 进行中；Gate 7 只有在其全部 acceptance 判据满足后才可改判 `PASS`。Token-ready、G1/N1、Pass0/Pass1 parity 与 platform adapter 已实现；physical/logical GPU 映射和 launcher/verification 修复已进入 `12f6eae`。此前 smoke 的 static pytest 失败、最终报告为 `BLOCKED`；其 evidence 仅作历史记录。host-toolchain 条件下静态检查由服务器回报通过；随后全新最终 smoke 启动，但因 Windows BugCheck `0x133` 中断，不能作为 Gate 7 acceptance evidence，亦不得与旧 attempt 拼接。当前暂停 GPU 工作。
 
 **重审计结论（2026-09-20）：** 原 `EP-G7-01`～`EP-G7-07` 的 7 个行政步骤压缩为 4 个可执行步骤（`EP-G7-08`～`EP-G7-11`）。合并的是**同一工程单元**（runner 语义/身份、identity/parity/schema、平台适配、验证与验收），没有合并彼此独立的科学 acceptance 判据：每一步内部仍逐条保留各自的 PASS/STOP 条件。执行计划：`docs/superpowers/plans/2026-09-20-gate7-execution-plan.md`；旧计划 `docs/superpowers/plans/2026-09-17-gate7-isolated-plan.md` 仅作历史记录。
 
@@ -242,11 +245,12 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
   - **STOP**：若某项必须先有真实 GPU 才能判定 → 移交 `EP-G7-11`，不得用 mock 结论代替。
   - **Dependency**：独立于 `EP-G7-08`/`EP-G7-09`，可并行；其结论不依赖 GPU。
   - **Unlock**：平台可移植性被结构性保护，测试基线不再含未解释失败。
-- [ ] `EP-G7-11`（进行中；真实 GPU smoke 暂停，合并旧 `EP-G7-06` 的全量验证＋旧 `EP-G7-07`）
+- [ ] `EP-G7-11`（进行中；静态 blocker 据服务器回报已解除，全新 smoke 因系统 bugcheck 中断，GPU 工作暂停；合并旧 `EP-G7-06` 的全量验证＋旧 `EP-G7-07`）
   - **Objective**：在 Windows/RTX 4090 上执行 runner 端到端 smoke（Pass0/Pass1、identity/phase boundary、exclusion/retry 记录），证明产出可被机器读取且与 Gate 7 合同一致，并完成 Gate 7 验收决定。
   - **Why**：只有真实 GPU smoke 能证明该执行链在真实执行栈上成立；Gate 8 必须以这份证据为入口。
-  - **Implementation**：smoke 前置修复新增纯函数 `resolve_logical_cuda_index(physical_gpu_index, cuda_visible_devices)`，不读取 GPU 或 `torch.cuda.device_count()`；`manifest.py` 与 server smoke 共享该 helper，torch name 查询只使用 logical index，manifest 的 `gpu_index`/`gpu_index_physical` 保持 physical、`gpu_index_logical` 保持进程内 logical。`runner.py` 已有 remapping 不修改。修复部署及目标环境确认后，只执行既有 runner 链路并收集 manifest/receipt 证据。
-  - **Evidence**：新增 `tests/test_gpu_index_mapping.py`；首轮旧实现上 3 项预期失败（helper 缺失、manifest 查询 index `3`、smoke 未共享 helper），独立复审后第二轮 3 项预期失败（空 mask 未拒绝、显式 logical 可绕过一致性检查、PowerShell `-c` 多行 argv 不安全），第三轮 4 项预期失败（禁用/垃圾/混合 mask 未拒绝、CUDA check 脚本空格路径未引用）。修复后相关 manifest/smoke 回归 `150 passed`；最终完整 CPU suite `910 passed, 1 failed, 4 errors`，唯一失败与 4 个 error 仍为既有本机 CUDA 13/CP936 下 Q0 CUDA fixture 编译问题。最终 diff 上 `compileall` PASS、Measurement Contract `37/37 PASS`、Canonical Raw boundary PASS、oracle/evaluator independence PASS，独立静态复审无剩余 Critical/Important；目标平台 GPU smoke未运行。
+  - **Implementation**：smoke 前置修复新增纯函数 `resolve_logical_cuda_index(physical_gpu_index, cuda_visible_devices)`，不读取 GPU 或 `torch.cuda.device_count()`；`manifest.py` 与 server smoke 共享该 helper，torch name 查询只使用 logical index，manifest 的 `gpu_index`/`gpu_index_physical` 保持 physical、`gpu_index_logical` 保持进程内 logical。`runner.py` 已有 remapping 不修改。`757934e` 使 static preflight 缺失/失败不能通过最终 gate，`12f6eae` 修复 package probe。全新 smoke 已按固定 host toolchain、显式 repo `.venv` Python 和新 evidence 目录启动，但系统重启导致中断；当前只读保全，不 `-ResumeFrom`、不重跑。
+  - **Evidence（此前代码修复阶段）**：新增 `tests/test_gpu_index_mapping.py`；首轮旧实现上 3 项预期失败（helper 缺失、manifest 查询 index `3`、smoke 未共享 helper），独立复审后第二轮 3 项预期失败（空 mask 未拒绝、显式 logical 可绕过一致性检查、PowerShell `-c` 多行 argv 不安全），第三轮 4 项预期失败（禁用/垃圾/混合 mask 未拒绝、CUDA check 脚本空格路径未引用）。修复后相关 manifest/smoke 回归 `150 passed`；当时完整 CPU suite `910 passed, 1 failed, 4 errors`，唯一失败与 4 个 error 为当时本机 CUDA 13/CP936 下 Q0 CUDA fixture 编译问题。该轮 diff 上 `compileall` PASS、Measurement Contract `37/37 PASS`、Canonical Raw boundary PASS、oracle/evaluator independence PASS，独立静态复审无剩余 Critical/Important；**这些是后续服务器静态 PASS 与中断 smoke 之前的阶段性结果**。
+  - **服务器后续回报（2026-09-23；原始日志待归档复核）**：`12f6eae` 先前 smoke 的 final decision 为 `BLOCKED`（pytest FAIL，compileall/verify/analyzer PASS）。使用 VS2022/MSVC 19.38 x64 与 host-local compatibility markers 后，最小 CUDA 编译 exit 0，Q0 CUDA source `37 passed in 20.42s`；显式 repo `.venv` Python 的完整 pytest `917 passed, 1 skipped in 94.97s`、exit 0。错误使用 base Anaconda Python 导致的 5 个 collection error 不计为代码回归。新 evidence root `ep-g7-11-final-12f6eae-20260923T061109Z` 上的 fresh smoke 已启动，未使用 ResumeFrom、ExistingSmokeDir、SkipStaticTests 或 DryRun，但执行中发生系统 bugcheck/restart，attempt 状态为 `INTERRUPTED_BY_SYSTEM_BUGCHECK`；目前不能从文件修改时间判定中断阶段，静态 PASS 也不能替代最终 machine report 验收。
   - **PASS**：非 GPU 判据与目标平台真实 smoke 判据同时成立，且未修改 Measurement Contract 或 `exposedpath_v141` 计算语义。
   - **STOP**：任何真实 smoke 失败都保留现场并停止，不得用 mock 或局部测试替代；需要第二平台等价性时转 Gate 9。
   - **Dependency**：消费 `EP-G7-08`～`EP-G7-10` 的产物；是 Gate 7 verdict 的必要条件，必须最后执行。
@@ -313,18 +317,20 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 **未关闭／长期有效：**
 
 - `EP-ISSUE-02`：三份历史 trace 缺少 source manifest。影响：validity 必须保持 `ambiguous`，不能升级数据资格。**永久限制**。
-- `EP-ISSUE-03`（已指派，未关闭）：仓库全量测试长期保留两项既有本地 PowerShell smoke 失败 `tests/test_server_smoke_script.py::test_dry_run` 与 `::test_spaces`，与工作前基线相同，不属于任何 Gate 新增失败，也不影响 Gate 6 PASS（Gate 6 的判据是唯一 gate report，不依赖该 smoke 脚本）。**处置**：Gate 7 `EP-G7-10` 必须在 `EP-G7-11` 前给出修复或明确重界定结论；在此之前它仍是未解释的基线失败，不得当作“已解决”。
 - `EP-ISSUE-04`：本机（Lenovo 82L5，Windows build 26200）存在 GTX 1650（4 GiB，driver package `581.57`，Toolkit/nvcc `V13.0.88`，Nsight 2026.1.1 系列），但**尚未完成 Candidate qualification**（driver API 与 runtime 版本未知、schema 未审查、独占性未确认、A7 未闭合），因此当前不得作为真实 Q0/workload 平台；仅允许离线工作与已批准的非 case qualification。静态盘点见 `docs/v1_4_1/candidate_platform_inventory_v0_1.md`。
 - `EP-ISSUE-06`：S 层已建立 event/wait 查找索引并缓存重复 scope 建图；event/default-stream 密集型大 trace 的规模性能尚未在真实 Engineering 数据上验收。影响：需在 Engineering Pilot 记录耗时与峰值内存；不改变 S 语义正确性或数据资格。
 - `EP-ISSUE-07`：本机环境变量 `CL` 被配置为 MSVC 目录，但该名称会被 `cl.exe`/`nvcc` 解释为隐式编译参数。Q0 编译入口只在子进程环境中移除 `CL/_CL_`，不修改用户系统环境；GPU 平台资格检查仍需记录并复核实际编译环境。
 - `EP-ISSUE-16`（遗留未归因，**不再阻塞**）：512 MiB H2D、64 MiB H2D 与 64 MiB D2H 在 RTX 4090 上均未与 10 ms kernel 重叠；真实 trace 已排除相同/default stream、event wait、数据依赖和过早同步；GPU capability 为 `async_engine_count=5/device_overlap=1/concurrent_kernels=1`，只说明硬件声明支持相关能力。formal-shape 配对 diagnostic 证明 pre-capture same-kernel warm-up 可恢复该构造的 device overlap，因此“平台 incapable”解释不再成立；该 construction 已作为 manifest policy 在 final-04 验证为 `REAL_CASE_PASS`。**现有证据不能区分 WDDM／driver／Runtime／调度层，禁止根因归因，禁止在该平台重启参数搜索或诊断。**异平台 admission（`EP-G6-07`）只在需要第二平台时按 Gate 9 重启。
 - `EP-ISSUE-18`（冻结发布副本，**本轮不修**）：`dist/exposedpath_v3_pilot_deploy/payload/analysis/exposed_accounting.py` 是被发布校验和钉住的旧副本，仍含 Python <3.12 不兼容 f-string；Gate 7 server smoke 不读取该副本。若未来复用 payload，必须另立任务并重签校验和，不得在本轮静默改写。
+- `EP-ISSUE-21`（Gate 7 host-toolchain／解释器环境，静态 blocker 据服务器回报已解除，最终验收待验）：CUDA 12.4.131 在本机 VS2022/MSVC 19.38 x64 环境中因 legacy VC auxiliary 文件缺失而报 `Host compiler targets unsupported OS`；host-local 零字节 compatibility markers 的 A/B 使最小 CUDA 编译成功，Q0 CUDA source `37/37 PASS`。另一次全量 pytest 的 5 个 collection error 来自误用无 torch 的 base Anaconda；显式 repo `.venv` 后服务器回报 `917 passed, 1 skipped`。marker 是**本机诊断性 workaround**，不是源码修复或普遍 CUDA 结论；正式 VS 安装修复与 provenance 审核见 `gate7_windows_host_toolchain_incident.md`。后续系统 bugcheck 属独立事件，不改变这些已通过的静态结果；保留此项至 evidence 复核与 Gate 7 verdict。
+- `EP-ISSUE-22`（Gate 7 Windows kernel bugcheck，根因未证实）：服务器回报 fresh final smoke 执行期间 BugCheck `0x133`，Event 41/6008/1001 指向异常关机与重启；`ep-g7-11-final-12f6eae-20260923T061109Z` 仅作 `INTERRUPTED_BY_SYSTEM_BUGCHECK` incident evidence，不是 Gate 7 acceptance evidence。烟测与 crash 时间相关，但驱动、Nsight、脚本或执行阶段均未证实；见 `gate7_system_bugcheck_incident.md`。GPU smoke/续跑暂停，只读保全与取证。
 
 **已解决（保留历史，不再需要为正常前进执行而复查）：**
 
 | 编号 | 结论 |
 |---|---|
 | `EP-ISSUE-01` | `EP-G7-08` 已统一首/后续 Token 的 Host-readable completion boundary；EOS 使用已读取 Host 值，`inference_end_ns` 截止于最后一个 Token-ready 完成点，phase ranges 在校验/cleanup 前关闭；严格跨 pass phase parity 留给 `EP-G7-09` |
+| `EP-ISSUE-03` | `EP-G7-10` 已使两项 PowerShell smoke 测试在默认与受控 PATH 下均通过；属测试调用环境非封闭问题，不再是未解释基线失败 |
 | `EP-ISSUE-05` | 本地全页渲染与研究主体/协议文档 QA 已完成（渲染器只用于文档 QA，不改变研究 Gate） |
 | `EP-ISSUE-08` | r2 捕获结束同步未映射；r3 证明新增显式排空具有唯一 runtime 映射 |
 | `EP-ISSUE-09` | r3 request 后尾部同步无 runtime 候选；以唯一 full_request identity 限定 observation scope，标为 `HARNESS_OUTSIDE_REQUEST` warning |
@@ -344,9 +350,9 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 **最近应执行的任务（按顺序）：**
 
-1. 完成并部署 `EP-G7-11` 的 physical/logical GPU index 修复提交；确认目标 Python + CUDA 12.4 PyTorch 环境与 GPU UUID/PCI identity。CUDA 11.8 环境未经平台身份决定不得用于 Gate 7 evidence。
-2. `EP-G7-11`：非 GPU 全量验证＋当前声明目标平台（Windows/RTX 4090）真实 GPU smoke，形成 Gate 7 acceptance 决定。
-3. 已完成的 `EP-G7-08`～`EP-G7-10` 不再产生新任务；如后续发现需要放宽其 fail-closed 判据，属于新计划项，不得直接修改。
+1. 只读归档并复核事故前服务器静态 pytest、Q0 CUDA source、最小编译日志及环境身份；保留两个 host-local compatibility markers，不修改 VS/CUDA/driver/Windows。
+2. 只读保全 `ep-g7-11-final-12f6eae-20260923T061109Z` 全部原始文件，列出完整相对路径、大小与时间戳；核对 Event 41/6008/1001 和本次 minidump，确定已写出的阶段证据、最终 machine report 是否存在及内容。没有足够证据时保持未知，不续跑、不覆盖、不拼接。
+3. 完成独立事故审计并重新决策之前，不运行 GPU smoke、Nsight profile、压力测试或 Gate 8；已完成的 `EP-G7-08`～`EP-G7-10` 不再产生新任务。若后续需放宽 fail-closed 判据，属于新计划项，不得直接修改。
 
 （历史顺序，保留不删：`EP-G7-09` → `EP-G7-10` → `EP-G7-11`；`EP-G7-09` 已于 2026-09-21 完成。）
 
@@ -435,3 +441,5 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 | 7.3 | 2026-09-21 | 完成 `EP-G7-09`：冻结 Pass0/Pass1 parity identity（workload／GPU／execution strategy／phase boundary／environment snapshot／attempt plan 六组）并把 `cross_pass_parity.json` 升为 `exposedpath-v3-cross-pass-2`；attempt/exclusion/retry/data-role 机器可读；缺失身份、缺失/重复 repeat index 与有意差异一律 fail closed | EP-G7-09、EP-G7-03、EP-G7-04 | Gate 7 保持 `NOT_RUN`；不改变 Measurement Contract、`exposedpath_v141`、Gate 6 证据、数据资格或 Gate 7 PASS 判据 |
 | 7.4 | 2026-09-21 | 完成 `EP-G7-10`：新增 `exposedpath/platform_adapter.py` 作为唯一 Python 侧平台边界（结构化 argv、无 shell、工具解析与 fail closed），runner/manifest 的 `nvidia-smi`／`git` 调用全部改经 adapter（无 schema/字段语义变化）；两项既有 smoke 失败定位为测试非封闭（裸 `powershell`＋依赖环境 `PATH` 解析 `python`）并修复，新增 PATH 独立性与 AST 结构回归 | EP-G7-10、EP-G7-05、EP-G7-06、EP-ISSUE-03 | Gate 7 保持 `NOT_RUN`（`EP-G7-11` 真实 GPU smoke 未执行）；不改变 Measurement Contract、`exposedpath_v141`、Gate 6 证据、数据资格或 Gate 7 PASS 判据 |
 | 7.5 | 2026-09-22 | 补记 `7e67219` 的 Python <3.12 f-string portability 修复；在 EP-G7-11 smoke 前按 tests first 修复 physical/logical GPU index 混用：manifest 与 server smoke 共享纯 resolver，torch 查询使用 logical index，manifest/telemetry 保留 physical identity，runner remapping 零修改 | EP-G7-11、EP-ISSUE-18～20 | Gate 7 保持 `NOT_RUN`（未运行 GPU smoke）；不改变 Measurement Contract、S/A/B/D、Q0 oracle/evaluator、Gate 6 evidence、schema 或数据资格 |
+| 7.6 | 2026-09-23 | Gate 7 host-toolchain 故障归档：`85dc8ef`→`757934e`→`12f6eae` 代码链已核对；服务器回报 VS2022/MSVC 19.38 x64 + host-local markers 下最小 CUDA 编译与 Q0 CUDA source `37/37 PASS`，显式 repo `.venv` 下完整 pytest `917 passed, 1 skipped`；先前 smoke `BLOCKED`，最终 smoke 尚未重跑；新增事件记录与 smoke runbook 的解释器／报告验收规则 | EP-G7-11、EP-ISSUE-21 | Gate 7 保持 `NOT_RUN`、Gate 8 不启动；不改变冻结合同、runtime/measurement 语义、Q0 或 Gate 6 evidence；静态日志为服务器回报，仍须归档复核 |
+| 7.7 | 2026-09-23 | 服务器回报 `12f6eae` 的 fresh final smoke 已启动，但 Windows BugCheck `0x133` 导致重启；中断目录 `ep-g7-11-final-12f6eae-20260923T061109Z` 单独保全，精确阶段及根因待只读核验；事故前静态 `37 passed` 与 `917 passed, 1 skipped` 不改写 | EP-G7-11、EP-ISSUE-22 | Gate 7 正式状态仍 `NOT_RUN`，该 attempt 为 `INTERRUPTED_BY_SYSTEM_BUGCHECK` 而非 PASS／普通 smoke FAIL；Gate 8 不启动，暂停 GPU，不改变冻结合同或运行代码 |
