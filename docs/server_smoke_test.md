@@ -1,5 +1,7 @@
 # Server Smoke Test — ExposedPath v3 Pilot
 
+> 当前目录/部署入口为 [repository_layout](repository_layout.md)。下文旧文件复制、路径示例不构成新执行授权；不再用历史 SERVER_SYNC_MANIFEST 覆盖当前checkout。Gate7已收口，本轮无smoke任务。
+
 > Gate7 closeout (2026-09-24): PASS for the sole audited fresh 8d64f75 attempt.
 > See `docs/v1_4_1/gate7_closeout_v0_1.md` for execution identity, hashes and limitations.
 > This is Engineering integration acceptance only; Gate8 remains NOT_RUN and is not authorized.

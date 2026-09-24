@@ -16,5 +16,10 @@ models/
 .vscode/
 .worktrees/
 transfer/
+# Machine-local identities, private evidence and handoff (never publish)
+.local/
+AI_HANDOFF.md
+server_evidence_inbox/
+*.bundle
 *.lnk
 desktop.ini

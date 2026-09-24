@@ -57,12 +57,12 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.18`
+- 清单版本：`7.19`
 - 最近更新：`2026-09-24`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
-- 当前工作分支：`codex/gate7-postprocessing`；唯一验收执行commit `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，parent `dced3646b536430209224eb7e0e9f0896dc20a67`。本轮另作纯文档closeout提交，不作为执行身份；服务器不需为此重新部署。
+- 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（本轮禁止启动，仅待规划）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
 - 当前最高优先级：保留Gate7唯一合格证据和closeout限制；无待补证/重跑事项。下一阶段Gate8仅待独立规划/授权，不自动执行；完整scientific coverage仍属Gate8。
@@ -209,6 +209,8 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 ## 5. Gate 7～14 计划
 
 ### Gate 7：Runner 与执行链对齐
+
+**2026-09-24 目录收敛（7.19）：** Gate7 PASS保持；根main是唯一日常代码入口，五个退休worktree在保全独有资料后正常移除，分支/tag保留。gate7-audit原四份未提交文档先原样封存为a867d541d01f683ccfc462fcdec31afeeefbaecf，两份事故说明标注历史后整合，不覆盖当前进度。清理核实冗余的bundle、相同DOCX和缓存，原始证据/ZIP/冻结dist保持不变；本地handoff仅作索引，不形成第二事实源。服务器仅准备单根/固定checkout方案，未执行变更。Gate8 NOT_RUN，不运行GPU/Nsight；本轮验证和清理细项见repository_layout及本地回执。
 
 **2026-09-24 最终closeout（7.18）：Gate7 PASS，EP-G7-11 completed。** 唯一合格attempt为`fresh_8d64f75_20260924T084650Z_d75ef1b8a4fb46709dbb7cfc1c95d27f/collection/smoke_20260924T084657Z`，执行commit 8d64f7580d43d7c8e1cb7a416b459cec8f60b011、dirty=false。服务器执行、本地审计；完整ZIP/清单/77文件逐字节、源代码CRLF身份、manifest/prompt、run/wmpc、parity、四request token-ready边界、14telemetry、profile/REP/export/SQLite、legacy JSON/CSV/diagnostics和machine report均通过；审计前后证据未变。版本化依据与hash见`gate7_closeout_v0_1.md`。
 
@@ -539,3 +541,4 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 | 7.16 | 2026-09-24 | fresh dced364身份链BLOCKED：修复Git adapter参数冲突、preflight GPU字段传递、prompt/manifest哈希混淆；增加模型加载前身份gate及实际producer回归 | EP-G7-11 | 工程修复，不放宽验收、不改冻结科学语义；旧attempt保持BLOCKED，Gate7 NOT_RUN；新GPU/Nsight未授权，Gate8不启动 |
 | 7.17 | 2026-09-24 | 直接审计8d64f75服务器adapter/185定向/静态回执；关联已有环境、模型及补齐的compiler/marker快照；准备固定版本fresh草案 | EP-G7-11 | 仅文档、不提交/部署、不重跑测试；不将旧全量算作新版本验证；Gate7 NOT_RUN、旧attempt BLOCKED、新GPU/Nsight待授权、Gate8不启动 |
 | 7.18 | 2026-09-24 | fresh8d64f75完整证据只读审计通过，新增gate7_closeout_v0_1；本次1040/1全量、两pass、身份/边界/后处理/legacy验收闭环；关闭EP-G7-11，Gate7 PASS | EP-G7-11 | 仅Engineering integration；保留原始diagnostics/unknown与legacy限制，不改冻结科学语义、不追认旧attempt；Gate8 NOT_RUN待规划、未启动 |
+| 7.19 | 2026-09-24 | main统一入口；保全历史事故修改/审查笔记，移除五个worktree、核实冗余bundle/DOCX/缓存；单根固定checkout路径规范与GitHub同步 | 目录治理 | 根CPU-only1036 passed/5 skipped，原本机CUDA13编译失败另记；243证据文件不变，无代码语义修改，无服务器/GPU/Nsight执行；Gate7 PASS、Gate8 NOT_RUN |

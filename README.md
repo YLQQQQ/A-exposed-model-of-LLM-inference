@@ -1,263 +1,47 @@
-# ExposedPath v3 — LLM Inference Exposed-Latency Accounting (Pilot)
+# ExposedPath v1.4.1
 
-> PyTorch eager + NVTX + nsys → A/B layer exposed-latency attribution
-> Version: v3.0.0-pilot
+研究异步 LLM 推理中的 request-visible Host–device exposure。
+方法链：Raw → Canonical → S → A/B → D / Exposure Signature。
+Activity cost 不等于请求可见延迟贡献。
 
-## Project Structure
+**Gate0–7 PASS；Gate8 NOT_RUN、待独立规划与授权。** Gate7 仅通过 Windows/RTX4090 Engineering integration；legacy-only、A结构验证、coverage unknown 与 measurement validity NOT_ASSESSED 限制保留。
 
-```
-project/
-  exposedpath/                            # NEW: Pilot Python package
-    __init__.py, __main__.py, cli.py      #   CLI entry points
-    ids.py                                #   experiment/wmpc/run ID generation
-    manifest.py                           #   WMPC manifest creation & validation
-    workload.py                           #   prompt_tokens.json loading & validation
-    validation.py                         #   Validation helpers
-    nvtx.py                               #   NVTX label construction & parsing
-    runner.py                             #   Pass 0 / Pass 1 inference execution
-    results.py                            #   Result recording & exclusion logging
-  schemas/                                # NEW: JSON schemas
-    prompt_tokens.schema.json             #   Fixed input contract
-    wmpc_manifest.schema.json             #   WMPC manifest schema
-  scripts/
-    run_pass0.ps1                         # NEW: Pass 0 (no profiler)
-    run_pass1_nsys.ps1                    # NEW: Pass 1 (nsys-wrapped)
-    run_wmpc_pilot.ps1                    # NEW: Pass 0 + Pass 1 together
-    verify_pilot_install.ps1              # NEW: Environment verification
-    run_nsys_single.ps1                   # [LEGACY]
-    run_nsys_matrix.ps1                   # [LEGACY]
-    run_all_nsys_matrix.ps1               # [LEGACY]
-    batch_accounting.ps1                  # A/B accounting + matrix summary
-    export_nsys_sqlite.ps1                # .nsys-rep → .sqlite export
-  analysis/
-    exposed_accounting.py                 # A/B layer exposed-latency accounting
-    accounting_utils.py                   # Interval algorithms, NVTX parsing
-    summarize_matrix.py                   # Matrix result aggregation
-    parse_nsys_sqlite.py                  # SQLite → CSV/JSON (diagnostic)
-  configs/
-    workloads_16group.yaml                # [LEGACY] 16 groups — RTX 6000 Ada
-    workloads_16group_4090.yaml           # [LEGACY] 16 groups — RTX 4090
-  docs/
-    exposedpath_metric_spec_v2.md         # Metric definition (v2, still current)
-    pilot_runner_contract.md              # NEW: Pilot measurement contract
-  tests/
-    test_exposed_accounting.py            # Existing analyzer tests
-    test_summarize_matrix.py              # Existing matrix tests
-    test_exposedpath_v3.py                # NEW: v3 runner/validation tests
-  bench_eager.py                          # [LEGACY] Old benchmark script
-  run_one.py                              # [LEGACY] Old single-run wrapper
-  run_matrix.py                           # [LEGACY] Old matrix runner
-  requirements.txt
-  README.md
-  README_NVTX_DETAIL_USAGE.md
+## 唯一入口
+
+- [科研进度与下一步](docs/v1_4_1/research_progress.md)（唯一进度事实源）
+- [研究设计与实验协议](docs/current/)、[领域模型](CONTEXT.md)、[协作规范](AGENTS.md)
+- [Measurement Contract](docs/v1_4_1/measurement_contract_v0_2.md)
+- [Gate6 closeout](docs/v1_4_1/gate6_closeout_v0_1.md)、[Gate7 closeout](docs/v1_4_1/gate7_closeout_v0_1.md)
+- [目录、部署与证据保留约定](docs/repository_layout.md)
+
+日常只在本仓库根目录 `main` 工作。临时 worktree 必须有明确隔离理由，完成后整合移除；不按 Gate 复制仓库。机器绝对路径与私有交接仅存于忽略的 `.local/`、`AI_HANDOFF.md`。
+
+## 代码职责
+
+| 目录 | 职责 |
+|---|---|
+| `exposedpath/` | runner、manifest、执行身份、completion/parity |
+| `exposedpath_v141/` | Canonical/S/A/B/D、Q0评估；不是legacy analyzer别名 |
+| `analysis/` | legacy 工程分析及诊断 |
+| `q0/` | 受控微程序与独立oracle |
+| `scripts/` | 平台adapter、启动与只读validation |
+| `tests/` | CPU/合成回归、显式工具链检查 |
+| `docs/` | 当前合同、计划、closeout及标注的历史资料 |
+
+Gate7执行commit为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，收尾文档commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；后续目录整理commit不是实验执行身份。
+
+## 非实验验证
+
+使用已确认的 Python 解释器执行（不要依赖服务器 PATH 的默认 Python）：
+
+```text
+python -m compileall -q exposedpath analysis exposedpath_v141 scripts
+python -m pytest -q -p no:cacheprovider
+python -m exposedpath_v141 validate-contract
+python scripts/verify_canonical_raw_boundary.py
+python scripts/verify_q0_oracle_independence.py
 ```
 
----
+pytest 在存在 nvcc 时包含无GPU编译检查；CPU-only环境不暴露CUDA工具链时相关测试按原有规则skip，必须如实报告。上列静态检查不授权模型/GPU/Nsight或任何后续Gate。
 
-## 1. Environment Setup
-
-### 1.1 Prerequisites
-
-- Windows Server / 10 / 11 + PowerShell
-- Python 3.10+, CUDA Toolkit, NVIDIA Nsight Systems 2025.6+
-- GPU: RTX 6000 Ada (48 GB) or RTX 4090 (24 GB)
-
-### 1.2 Nsight Systems PATH
-
-```powershell
-$nsysDir = "<your Nsight Systems path>\target-windows-x64"
-$env:Path = "$nsysDir;$env:Path"
-nsys --version
-```
-
-### 1.3 Virtual Environment
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install torch --index-url https://download.pytorch.org/whl/cu121
-pip install -r requirements.txt
-python -c "import torch; print(torch.cuda.is_available())"
-```
-
-### 1.4 Verify Installation
-
-```powershell
-.\scripts\verify_pilot_install.ps1
-```
-
----
-
-## 2. Pilot Workflow (v3)
-
-### Step 1: Prepare prompt_tokens.json (offline, no inference)
-
-```powershell
-python -m exposedpath prepare-prompt-tokens `
-    --model-path "C:\Users\...\models\Qwen2.5-1.5B-Instruct" `
-    --fixed-input-tokens 128 `
-    --num-samples 16 `
-    --output ".\prompt_tokens.json"
-```
-
-### Step 2: Create WMPC Manifest
-
-```powershell
-python -c @"
-from exposedpath.manifest import create_manifest, finalize_manifest, save_manifest
-from exposedpath.workload import load_prompt_tokens
-
-m = create_manifest(
-    experiment_id='pilot_6000ada_test',
-    run_role='PILOT',
-    model_path='C:\\Users\\...\\models\\Qwen2.5-1.5B-Instruct',
-    prompt_tokens_file='.\\prompt_tokens.json',
-    batch_size=1,
-    fixed_output_tokens=16,
-    warmup_count=5,
-    repeat_count=10,
-    gpu=0,
-)
-
-pt = load_prompt_tokens('.\\prompt_tokens.json')
-m = finalize_manifest(m, pt)
-save_manifest(m, 'wmpc_manifest.json')
-print(f'Manifest saved. wmpc_id={m[\"wmpc_id\"]}, run_id={m[\"run_id\"]}')
-"@
-```
-
-### Step 3: Validate
-
-```powershell
-python -m exposedpath validate-manifest --manifest ".\wmpc_manifest.json"
-```
-
-### Step 4: Run Pass 0 (no profiler)
-
-```powershell
-.\scripts\run_pass0.ps1 -Manifest ".\wmpc_manifest.json"
-```
-
-### Step 5: Run Pass 1 (nsys profiling)
-
-```powershell
-.\scripts\run_pass1_nsys.ps1 `
-    -Manifest ".\wmpc_manifest.json" `
-    -NsysPath "C:\Program Files\NVIDIA Corporation\Nsight Systems 2025.6\target-windows-x64"
-```
-
-### Step 6: Both Passes at Once
-
-```powershell
-.\scripts\run_wmpc_pilot.ps1 `
-    -Manifest ".\wmpc_manifest.json" `
-    -NsysPath "C:\Program Files\NVIDIA Corporation\Nsight Systems 2025.6\target-windows-x64"
-```
-
----
-
-## 3. Output Directory Structure
-
-```
-<output_root>/
-  <experiment_id>/
-    <wmpc_id>/
-      <run_id>/
-        wmpc_manifest.json
-        pass0/
-          inference_results.jsonl
-          exclusion_log.jsonl
-          pass0_command.txt
-        pass1/
-          inference_results.jsonl
-          exclusion_log.jsonl
-          pass1_profile.nsys-rep
-          pass1_profile.sqlite
-          pass1_nsys_command.txt
-          nsys_console.log
-        analysis/
-          <analysis_run_id>/
-            accounting_result.json
-            accounting_summary.csv
-            b_sync_detail.csv
-```
-
----
-
-## 4. NVTX Label Structure (v3)
-
-```
-EXPOSEDPATH_INVOCATION:<experiment_id>:<wmpc_id>:<run_id>:pass1:<repeat_index>
-  EXPOSEDPATH_PHASE:full_request
-    EXPOSEDPATH_PHASE:prefill
-    EXPOSEDPATH_PHASE:decode
-```
-
-- Warmup has **no** formal NVTX ranges
-- Tokenization / prepare_input is **outside** full_request
-- Final device sync is **inside** full_request
-- **No** per-token synchronize() between decode steps
-
----
-
-## 5. Key Design Decisions (v3)
-
-- **Fixed input**: prompt_tokens.json generated offline, NO tokenizer in timing path
-- **Batch semantics**: batch uses distinct samples, cloning is rejected
-- **No streaming**: no per-token sync, no streaming callbacks
-- **Exact output count**: early EOS or wrong token count → exclusion
-- **repeat_count = plan**: NOT successful count; no silent auto-retry
-- **Pass 0 and Pass 1**: identical repeat_index plan, same manifest + prompt_tokens
-- **Directory safety**: existing non-empty run directories cause hard failure
-- **wmpc_id**: stable hash of W/M/P/C only (no timestamp, no run metadata)
-
----
-
-## 6. Legacy Commands
-
-The following are kept for backward compatibility but are NOT the primary Pilot entry point:
-
-```powershell
-# [LEGACY] Old single-run nsys profiling
-.\scripts\run_nsys_single.ps1 -ModelPath "..." -PromptLen 128 -BatchSize 1 -OutputLen 16 ...
-
-# [LEGACY] Old matrix profiling
-.\scripts\run_nsys_matrix.ps1 -ModelPath "..." -WorkloadYaml "configs\workloads_16group.yaml" ...
-
-# [LEGACY] Old all-in-one matrix
-.\scripts\run_all_nsys_matrix.ps1 -ModelPath "..." -WorkloadYaml "..." ...
-```
-
----
-
-## 7. Analyzer
-
-The existing A/B layer analyzer (`analysis/exposed_accounting.py`) supports both legacy and v3 NVTX labels. Use with:
-
-```powershell
-.\scripts\batch_accounting.ps1 -ResultsDir "<run_dir>"
-```
-
----
-
-## 8. Unsupported in Pilot
-
-- torch.compile / CUDA Graph
-- vLLM or serving frameworks
-- Continuous batching / concurrency
-- Streaming token delivery
-- MoE / quantization experiments
-- Formal statistical tests / bootstrap
-- Full experiment_analysis.sqlite
-
----
-
-## 9. Common Issues
-
-| Symptom | Cause | Solution |
-|---------|-------|----------|
-| `Manifest missing required field` | Incomplete manifest | Use `create_manifest()` to generate |
-| `Directory exists and is not empty` | Reusing run_id | Generate a new run_id for each collection |
-| `sample[0] and sample[1] have identical input_ids` | Cloned samples in batch | Generate distinct samples with different seeds |
-| `fixed_input_tokens mismatch` | Wrong prompt_tokens | Regenerate with correct --fixed-input-tokens |
-| `nsys not found` | Nsight not in PATH | Provide -NsysPath to scripts |
+旧版 [v3 README](docs/prototype_archive/README_v3_pilot.md)、根目录其他 `README_*`、`dist/`、`SERVER_SYNC_MANIFEST.json` 仅为历史 Prototype/部署资料，不是当前部署入口。原始 trace、模型、服务器日志包与本机配置不进入Git。

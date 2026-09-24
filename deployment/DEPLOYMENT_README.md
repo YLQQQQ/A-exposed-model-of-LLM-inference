@@ -1,5 +1,9 @@
 # ExposedPath v3 Pilot — Server Deployment
 
+> HISTORICAL ONLY：下文是2026-07历史payload流程，不用于当前checkout。
+> `SERVER_SYNC_MANIFEST.json` 保持旧发布字节；不得用它覆盖当前源码。
+> 当前单checkout/Git部署约定见 [repository_layout](../docs/repository_layout.md)。
+
 ## Prerequisites
 
 - Windows Server / 10 / 11 + PowerShell 5.1+
