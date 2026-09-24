@@ -1,5 +1,9 @@
 # Server Smoke Test — ExposedPath v3 Pilot
 
+> Gate7 closeout (2026-09-24): PASS for the sole audited fresh 8d64f75 attempt.
+> See `docs/v1_4_1/gate7_closeout_v0_1.md` for execution identity, hashes and limitations.
+> This is Engineering integration acceptance only; Gate8 remains NOT_RUN and is not authorized.
+
 > Gate7 current override (2026-09-24): `gate7-legacy-analyzer/1`, authorized in
 > `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md` §6, accepts only new
 > Engineering attempts. Historical resume examples below are not valid for this
