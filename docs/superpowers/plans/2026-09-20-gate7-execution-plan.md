@@ -79,3 +79,51 @@ Gate 7 的唯一目标：让 runner/launcher 的**可观察边界、身份与执
 - 不为“跨平台”生成无研究假设支撑的第二平台探针；平台范围决定见 §1。
 - 不引入新指标、新 accounting 定义或任何 D/Exposure Signature 改动。
 - 不在本计划内执行 N1/G1/G2 或任何 Formal 采集。
+
+## 6. Gate7 analyzer engineering acceptance amendment — gate7-legacy-analyzer/1
+
+2026-09-24 用户显式批准；这是 Gate7 工程验收规则修订，不是 Measurement Contract 修订。
+只适用于包含此修订的代码提交之后**新执行**的 Engineering attempt；不追认旧结果。
+launcher 拒绝 ExistingSmokeDir/ResumeFrom，旧 machine report 与 Raw 不变。
+
+旧 STEP6 要求顶层 a_summary/sync_coverage 存在，但实际 exposedpath-v2 producer 输出
+A_summary、trace_quality、B_summary、b_sync_details，并不输出 sync_coverage。
+该旧字段要求被以下版本化验收取代，不通过字段改名伪装符合 v1.4.1。
+
+必需条件（全部成立才是 analyzer engineering PASS）：
+
+1. analyzer process exit=0；此前 SQLite integrity/必需表字段门槛仍必须通过。
+2. accounting_result.json 是严格 JSON 对象；拒绝重复键、NaN/Infinity、空对象和未知版本。
+   顶层 metric_definition_version 与 metadata.metric_definition_version/parser_version 必须均为 exposedpath-v2。
+3. A_summary 的 prefill/decode/full_request 均为非空对象，五个 A 类别的 ms_mean 必须有限、非负且非 bool；
+   repeat_results 非空，必须含 request/repeat/phase、有限 window_duration_ms 和五个 A_ms 字段。
+   这是 VALIDATED_STRUCTURE_ONLY，不是科学守恒或完整 request validity 检查。
+4. raw_summary、overlap_summary、B_summary、legacy_compatibility 为非空对象；b_sync_details 非空，
+   physical_sync_uid 非空且唯一、身份/时间类型合法、无时间逆序、原始 validity 为布尔且无相互矛盾。
+   不解析未知 phase label 以重新分配 ownership，不聚合或改判其统计语义。
+5. accounting_summary.csv / b_sync_detail.csv 非空，具有 request/repeat/phase 或 physical_sync_uid
+   必需列与非空身份行；CSV/JSON 的 repeat/phase 和 physical sync 身份多重集必须一致。
+   raw/overlap/B 摘要必须具有非空的三个 phase 对象，B count 字段为非负整数。
+   缺产物/畸形产物不通过；这些类型/身份校验不建立新统计语义。
+6. metadata.workload_id 匹配本次 SQLite stem；metadata.git_commit 必须等于 manifest 的完整
+   runner_git_commit 的前 12 位；manifest 必须为 Engineering 且有 run_id/wmpc_id。
+   验收报告绑定 manifest、SQLite、JSON、两个 CSV 的 SHA256 及身份。这是本次 launcher invocation
+   的产物绑定；legacy 没有嵌入完整 run identity/输入 digest，不能称为 v1.4.1 scientific lineage 证明。
+7. trace_quality 必须有 request/repeat 数量和格式正确的 fatal_errors/warnings/missing_optional_tables。
+   fatal_errors 非空必阻塞；仅明确批准 legacy 的 CUDA event activity table unavailable optional warning。
+   其他 warning 必须另行审查，不能静默豁免。dropped_records_status 必须原样为已知 legacy unknown；
+   若出现 dropped 或新状态，阻塞并审查，不转换为 zero/valid。SQLite 原始诊断仍随输入保留；
+   本适配只校验 legacy trace_quality，不宣称重建了原始诊断的科学有效性判定。
+
+机器报告包含 acceptance_version=gate7-legacy-analyzer/1、analyzer_type=legacy-only、
+acceptance_scope=ENGINEERING_INTEGRATION_ONLY、measurement_validity=NOT_ASSESSED，
+window_coverage={status:unknown,count:null,duration:null,reason:LEGACY_OUTPUT_LACKS_WINDOW_IDENTITY_AND_FROZEN_VALIDITY}。
+保留 trace_quality 与原始 legacy_sync_diagnostics，不构造 supported/B-valid valid/total 比例。
+conservation_status=VALIDATED_STRUCTURE_ONLY 只代表结构校验。未知 coverage 不是零，也不是完整 request 可解释比例。
+
+coverage 只用于揭示 A 归属/B 解释的证据缺口、约束解释范围，不是新贡献指标。
+同步时长累计不得解释为 request-visible exposure。冻结 S/A/B、Q0、Gate6 evidence 和观察 profile 不变。
+v1.4.1 完整 request A 拆分已有实现；真实 workload 的 Raw→Canonical→S→A/B 全链、completion、
+A 互斥守恒、unattributed、validity 与证据覆盖仍属 Gate8 EP-G8-02。
+离线 helper PASS 或本地验收回归不替代该全链验收，也不等于 Gate7 PASS。
+Gate7 维持 NOT_RUN；本修订不授权 GPU smoke、真实 Nsight（包括 export）或 Gate8。

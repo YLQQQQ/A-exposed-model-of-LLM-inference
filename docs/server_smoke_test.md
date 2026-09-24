@@ -1,5 +1,16 @@
 # Server Smoke Test — ExposedPath v3 Pilot
 
+> Gate7 current override (2026-09-24): `gate7-legacy-analyzer/1`, authorized in
+> `docs/superpowers/plans/2026-09-20-gate7-execution-plan.md` §6, accepts only new
+> Engineering attempts. Historical resume examples below are not valid for this
+> revision. Do not use ResumeFrom/ExistingSmokeDir or SkipStaticTests for acceptance.
+> Analyzer PASS means legacy-only integration, not scientific qualification.
+> Inspect `analyzer.acceptance` and `logs/41_analyzer_acceptance_stdout.txt`:
+> window coverage remains unknown/null with its reason; A structure validation is
+> not conservation validation. Original diagnostics and artifact hashes remain
+> available. Full real-workload v1.4.1 analysis belongs to Gate8, which is not started.
+> This documentation does not authorize GPU smoke or real Nsight execution.
+
 ## 1. Server Prerequisites
 
 - Windows Server / 10 / 11 + PowerShell 5.1+

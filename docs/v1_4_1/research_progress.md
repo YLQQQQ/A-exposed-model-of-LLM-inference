@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-> 一句话状态：**Gate 0～6 = `PASS`；Gate 7 = `NOT_RUN`，`EP-G7-11` 进行中。服务器已部署 `5a37eb0`，静态验证暴露 Windows venv launcher 的测试 fixture PID mismatch；本轮仅修复 fixture 的直接解释器选择，生产 termination logic 不变。旧 `799fb8d` attempt 保持 `BLOCKED_BY_NSYS`，新 GPU smoke 未授权，Gate 8 不得启动。**
+> 一句话状态：**Gate 0～6 = `PASS`；Gate 7 = `NOT_RUN`，`EP-G7-11` 尚未验收。用户明确批准 gate7-legacy-analyzer/1：仅对修订后 fresh Engineering attempt 接受 legacy-only 集成诊断、窗口 coverage=unknown；已按 tests first 修复 consumer，验证与交付见下。旧 attempt 不追认；fresh GPU smoke 尚未授权，Gate 8 不启动。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -56,15 +56,15 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.9`
+- 清单版本：`7.14`
 - 最近更新：`2026-09-24`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
-- 当前工作分支：`codex/gate7-postprocessing`（独立本地修复 worktree；服务器报告已部署且 clean 的基线为 `5a37eb0848dea486c715750341ff8a07d0efcee1`；本次新增提交以该提交为 parent，不 amend 已部署提交）
+- 当前工作分支：`codex/gate7-postprocessing`；本次验收修订以服务器已验证的 `ecac54272230fe5feef517ad9d908c64e93d517f` 为 parent，形成新的独立提交/增量 bundle（精确提交与哈希见本地交付回执）。服务器仍停留 ecac542，须核对新包、detach 部署并静态复验，不自行追随分支 HEAD。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～6 = `PASS`；Gate 7 = `NOT_RUN`（`EP-G7-08`～`EP-G7-10` 已完成，`EP-G7-11` 仍待 fresh smoke 与逐项验收）；Gate 8 = `NOT_RUN`（不得在 Gate 7 acceptance 前启动）；Gate 9～11 = `BLOCKED`（Formal 平台未确定/未接入）；Gate 12～14 = `NOT_RUN`
-- 当前最高优先级：完成 Windows venv PID-sensitive fixture 修复、静态验证和增量 bundle，供服务器重新验证；不运行 GPU 或真实 Nsight。未来如获单独批准运行 smoke，必须使用新提交、全新 Engineering evidence，并逐项审计全部 acceptance；不得拼接旧 attempt 或离线诊断产物。
+- 当前最高优先级：核对并部署新版本化 legacy-only acceptance 修订、完成服务器静态复验；之后另行审查/授权 fresh smoke。unknown 窗口 coverage 已获 Gate7 工程验收授权，不再推导其分母或 validity；完整 scientific coverage 仍属 Gate8。
 - 当前总体判断（2026-09-20）：Gate 6 / Q0 已正式 `PASS`。frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21/21 `REAL_CASE_PASS`、2 个 synthetic-only case（`Q0-TERMINAL-TIE-001`、`Q0-SUBMISSION-RACE-001`）PASS、23/23 `SYNTHETIC_PASS`，且存在唯一一份 `q0_gate_report.json`（schema `exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`）。该 PASS 只说明当前 analyzer 在本目标 observation stack 上取得 **Q0 正确性资格**；不等于 Engineering Pilot、Pilot、Protocol Freeze 或 Formal 结果，也不建立第二平台等价性。身份、哈希、provenance caveat、根因映射与实现成熟度见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
 - 当前到达点（`EP-G7-11`）：此前一次 fresh smoke 在 Pass1/Nsight 启动边界遭系统 BugCheck `0x133` 中断，根因未获证明。随后服务器报告：`799fb8d` 在目标 Windows/RTX 4090 的 static preflight `940 passed, 1 skipped`、compileall、verify、合同/Canonical/oracle 检查通过；新 Engineering smoke `smoke_20260923T134310Z` 的 Pass0、Pass1 inference/telemetry/parity 和最小 Nsight collection 完成，生成非空 REP，且未再出现 BugCheck。但即时 `nsys export` 在约 51% 停滞，被人工终止后 machine report 为 `BLOCKED_BY_NSYS`、exit 1，Analyzer 未运行；该 attempt **不是** Gate 7 acceptance evidence。相同 SHA256 的 REP 副本后续离线 export 得到 integrity PASS 的 SQLite，诊断 analyzer exit 0；仅支持“REP 可离线导出/分析”，不证明即时 export 挂起的精确根因，也不追认原 attempt。Gate 7 仍为 `NOT_RUN`，Gate 8 未启动。
 
@@ -209,11 +209,50 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 ### Gate 7：Runner 与执行链对齐
 
-**Gate verdict：`NOT_RUN`。** `EP-G7-08`～`EP-G7-10` 已完成，`EP-G7-11` 进行中；Gate 7 只有在其全部 acceptance 判据满足后才形成 verdict。Token-ready completion、G1/N1 身份、Pass0/Pass1 parity identity 与 attempt provenance 已建立。BugCheck attempt 与 `799fb8d` 的 `BLOCKED_BY_NSYS` attempt 均为历史 Engineering 诊断记录，不拼接验收。服务器已部署 post-processing repair `5a37eb0`；当前阻塞及 fixture 修复见下一段，新 GPU smoke 未运行。
+**2026-09-24 用户批准的验收修订 / implementation checkpoint（7.14，取代 7.12/7.13 的待决状态）：** 权威执行计划 §6 冻结 `gate7-legacy-analyzer/1` 工程验收修订；这是对 Gate7 的显式修改，不修改 Measurement Contract。只适用于新执行 Engineering attempt；launcher 在任何采集前拒绝 ExistingSmokeDir/ResumeFrom，不覆盖或追认历史。保持静态、Pass0/Pass1、parity、telemetry、REP/SQLite 和 final machine report 全部门槛。
+
+新增验证分支只接收明确的 exposedpath-v2 JSON/metadata/parser identity。校验 A/repeat 输出结构、同步明细类型/UID/时间、CSV 必需列、版本/commit/workload/manifest 身份和 diagnostics；拒绝空对象、缺产物、NaN/重复键、fatal/unreviewed warning 与新 dropped 状态。仅保留已批准 optional event-table warning 和 dropped_records_status=unknown。报告显式 legacy-only / ENGINEERING_INTEGRATION_ONLY / measurement_validity=NOT_ASSESSED；window_coverage count/duration=null 并给出原因；原 trace_quality 和同步明细保留，不构造 valid/total。A 标记 VALIDATED_STRUCTURE_ONLY，绝非科学守恒 PASS。SHA256 绑定本次 invocation 的 manifest/input/output/CSV，明确不伪装为 legacy 自带的 scientific lineage。
+
+**测试与审查：** 先执行实际 PowerShell STEP6 validation block 红测，准确复现 sync_coverage missing；随后增加坏 CSV/矛盾 validity/非有限 diagnostics 红测和历史 resume 红测，再实现修复。自审发现 CSV/JSON 身份关联与摘要类型校验不足，先补 3 项红测后收紧校验。新增合成 fixture 不包含私有 trace 或服务器路径。最终 4 文件定向测试 130 passed（新增验收测试 33 项）；CPU-only 全量 1010 passed、5 skipped（141.10s，本地 Windows Python 3.12 venv，进程内 CUDA_VISIBLE_DEVICES=-1 并移除 CUDA PATH/确认 nvcc 不可见；5 skip 均为 Q0 CUDA source 的 nvcc 检查，不代表服务器 skip 原因）。compileall exposedpath/analysis/exposedpath_v141/scripts、contract 37/37、Canonical boundary、oracle independence 与 diff-check 均通过。本地自审覆盖 fail-close、native argv、report 传播、unknown 不补零及历史 evidence 防追认；不是独立外部评审、服务器或真实 Nsight 验证。生产 analyzer、runner、冻结 S/A/B/D、Q0、Gate6 evidence 和 observation profile 零修改。
+
+**交付与后续：** 原有未提交进度记录保留并纳入同一次代码提交；本地根 AI_HANDOFF 为未跟踪接力索引，不提交私有路径。服务器静态复验通过后也不能直接运行 smoke；fresh 草案须另行授权，固定新提交/模型/环境/新目录并读取机器报告。Gate7 NOT_RUN、Gate8 DO NOT START。v1.4.1 完整 request A 已实现，真实 workload Raw→Canonical→S→A/B、completion、互斥守恒、unattributed、validity/coverage 的验收仍为 Gate8 EP-G8-02，不由本次 offline PASS 代替。
+
+**2026-09-24 coverage 用途与字段充分性复核（7.13，收紧 7.12 建议）：** 用户原则同意分开记录 supported/B-valid，但要求 request/phase 范围、physical identity 去重、重叠与 unknown 处理有合同依据。coverage 仅用于揭示 A 归属/B 解释的证据覆盖与缺口，是质量/provenance 诊断，不是新增研究贡献指标，不能替代 request-level A 守恒或 validity；同步时长累计不是 request-visible exposure，同步 coverage 不是完整 request 的可解释比例。
+
+- **分母：部分字段存在，不足以完成所要求的窗口统计。** legacy 实物有 6 个不同 physical_sync_uid、request/repeat 数字和 sync_start/end_ns，可证明已输出 6 行无重复；不能由此证明 physical sync universe 完整。repeat_results 只有 window_duration_ms，未输出窗口 start/end；4/6 phase 为整段 structured label。legacy UID 和数字 request/repeat 不能未经核对替代冻结 sync_identity 的 run/pass/request/repeat/origin/callsite/ordinal。不能按 2 条规范 phase 摘要过滤后声称完整分母，也不能在 adapter 中重新猜测 ownership/phase。
+- **判定：冻结状态明确，legacy 不能无损映射。** Measurement Contract §9：VALID_NONEMPTY 与 VALID_EMPTY 可用于 A 有效归属，后者 B_NOT_APPLICABLE；AMBIGUOUS/INVALID 不可归有效同步。B 只有 B_VALID 才有有效解释。legacy wait_set_valid=false/NO_PENDING_ACTIVITY 并不证明冻结 INVALID 或 VALID_EMPTY；legacy B_valid 布尔也没有冻结 B_AMBIGUOUS/B_NOT_APPLICABLE 的状态区分。可原样保留 legacy 标志，不能命名为已恢复的 v1.4.1 supported/B-valid。
+- **count/duration：不把旧 audit 的 sum 当作新规则。** frozen §10 要求 A 使用窗口裁剪、interval union、invalid 片段优先；§11 禁止 additive B total。count 应基于同一 universe 的 distinct physical identity；phase 计数不可直接相加成 request count。现物 6 条区间无同 request 重叠，但不证明对重叠输入适配正确。同步窗口并集诊断与逐调用时长加权是不同口径；当有效/无效 sync 重叠，简单 union(valid) 也不等于 A 可归属片段。当前机器输出未定义 coverage 的独立重叠优先级与跨 phase 计数约定，不由 adapter 自行补成科学规则。
+- **零值与缺失：** 完整 universe 已知且为空才可记录 count=0；比例为 null/不适用而非 0% 或 100%。正数量、零总时长与空 universe 分开记录；缺少窗口/identity/状态则数值 null、明确原因，不能输出零或静默删行。INVALID、AMBIGUOUS、UNKNOWN、B_NOT_APPLICABLE 分开，不能折叠为 false；legacy 未提供的区分保持 unknown。上述为约束，尚未发布新的 schema 或改变 launcher 验收。
+
+**集中待决事项：** (1) Gate7 是否接受明确标记 legacy-only、不能恢复窗口 coverage 的诊断报告（缺失保持 unknown），及此状态如何影响既有 analyzer gate；这属于验收映射决定，不因 offline PASS 自动放行。(2) 若必须具备 request/phase coverage，则需批准补充稳定 identity/窗口/状态的 producer-side 证据输出及对应范围，不能把完整 v1.4.1 链静默提前到 Gate7。(3) coverage 独立 schema 的跨 phase count 和重叠 duration 口径需在完整输入合同上明确，禁止借此改写冻结 A/S/B。建议优先裁决 (1)，把 legacy 诊断与后续 scientific coverage 分开；不再推荐直接把全明细 duration 求和作为窗口覆盖。
+
+**实现与资格边界：** Gate7 当前调用 legacy analysis/exposed_accounting.py。v1.4.1 的完整 request A 拆分已有 a_accounting.py/ab_inputs.py/ab_bundle.py 实现：显式窗口、原子片段、invalid 优先、整数域守恒和去重校验；但真实 workload 的 Canonical→S→A/B 全链验收仍属 Gate8 EP-G8-02。此次离线 PASS 不替代该验收。本轮只读字段/源码核验并更新记录，未改代码或测试、未运行 GPU/Nsight；冻结合同与旧证据不变。生产修复继续暂停，不创建“全部 null 但 PASS”的适配来绕过门槛。
+
+**2026-09-24 本地完整诊断包审计（取代下方“未收到完整产物”的当前状态）：** 已直接读取诊断 `postprocess_ecac542_20260924T040753Z_a95e202b974d48eca6824b4c2564b460`。本地复核 ZIP 2024855 bytes、SHA256 `89C745A85EA62B7AB32B413751AB18195F8AFA2DE807914DBBDC81F50EB94909`、14 文件 CRC 及解压字节一致；v2 清单固定哈希及 12/12 项文件哈希匹配。SQLite 只读 integrity_check=ok；helper 首次 export PASS/analyzer_allowed=true 与回执一致。identity 中 helper/analyzer 源哈希分别匹配 ecac542 Git blob 的 CRLF checkout 字节，不把 LF/CRLF 差异误判为代码变化。旧服务器原始 machine report 未包含在此包，关于其不变性仍为 identity/transcript/用户回传证据，不声称本地读取过该原件。
+
+**已复现的阻塞与合同缺口：** 本地提取并执行当前 launcher STEP 6 的真实 validation block（不执行 analyzer/Nsight），给定 exit=0 和收到的 accounting_result.json，得到 analysis_ok=false、conservation=present、count/duration=unknown、errors=[sync_coverage missing]。PowerShell 对 A_summary 的大小写匹配正常。producer write_accounting_result 与 legacy metric spec §11 均未输出 sync_coverage；所以是 consumer/producer 合同脱节，不是 export 失败。离线诊断只检查 JSON 可解析，未覆盖此验收；不得称为完整 launcher PASS。
+
+**必须先确认的映射，不擅自修复：** 当前 Gate7 计划、pilot_runner_contract §9/§10 及 server_smoke_test 未定义 launcher 的 sync_count_valid/sync_duration_valid_ms 应指 wait-set supported 还是 B-valid，也未明确分母是否为全部 b_sync_details。旧 summarize_small_pilot 使用 B_summary.full_request 且 duration=null；generate_p1_audit 则对所有 b_sync_details 分别累计 wait_set_valid 与 B_valid 对应的 sync_duration_ms。两者不能无条件互换。实物 B_summary.full_request 为 2/2，但 b_sync_details 共 6 条、B_valid=2；另外 4 条 wait_set_valid=false/NO_PENDING_ACTIVITY，phase 为整段 structured NVTX label。不得从原因字符串改判 supported、用 B 2/6 冒充 sync coverage，或按 full_request 摘要漏计其余 4 条。建议修复位置为 launcher 侧显式 legacy-output adapter，保留 supported/B-valid 两组诊断、来源和未知状态；其具体字段/分母/缺失处理需先获确认，不改变 analyzer/S 语义。批准后先用脱敏 producer-shaped fixture 做真实 consumer 红测，再实现适配；本轮未添加测试或修改生产代码。
+
+**trace_quality / diagnostics 边界：** event activity table unavailable 为 legacy optional warning；fatal_errors=[] 不等于无采集诊断。SQLite DIAGNOSTIC_EVENT 有其他 globalPid 的 NVTX/CUDA 初始化或未采集警告；持有 NVTX/runtime 行的进程 globalPid 为 282358666231808，其日志记录 12 NVTX / 41975 CUDA events，未出现上述 severity=2 警告。不能据此推导 dropped=0：analyzer dropped_records_status 仍为 unknown，保持原值。B 摘要/structured phase 局限不升级为 v1.4.1 科学语义验收，也不在本次字段修复中扩大到 Gate8。
+
+**本轮收口：** 仅更新进度与本地 handoff，保留原有未提交记录；HEAD/parent 不变，无新 commit/bundle/部署动作。生产代码、测试、REP、旧 machine report、Gate6 evidence、Measurement Contract、S/A/B/D、Q0 和 observation profile 均不修改。Gate7 NOT_RUN，fresh smoke PAUSED，Gate8 DO NOT START。以下 7.11 回执与草案按历史记录保留，不能再作为当前执行指令。
+
+**Gate verdict：`NOT_RUN`。** `EP-G7-08`～`EP-G7-10` 已完成，`EP-G7-11` 尚未验收。用户回传 `ecac542` 静态及真实离线后处理成功路径通过；不据此修改生产代码。BugCheck attempt 与 `799fb8d` 的 `BLOCKED_BY_NSYS` attempt 保持历史 Engineering 记录，不拼接验收。fresh GPU smoke 尚未授权，本助手未执行服务器操作。
+
+**2026-09-24 用户回传的离线后处理回执（未直接取得完整服务器产物）：** commit `ecac54272230fe5feef517ad9d908c64e93d517f`，role `POSTPROCESSING_IMPLEMENTATION_VALIDATION`，诊断 id `postprocess_ecac542_20260924T040753Z_a95e202b974d48eca6824b4c2564b460`；Nsight `2026.2.1.210-262137639646v0`，repo .venv Python 3.11.16、base Conda gate7_py311。helper PASS、analyzer_allowed 检查通过，仅一次 export：PID 64844、exit 0、process_exited=true、timed_out=false、terminated_pid=null、validation_issues=[]、elapsed 0.312 秒。SQLite 2568192 bytes，SHA256 `310f119306414b7f740574566e59dcf9112c363141038125ab9e7230dc269b25`；成功 attempt/canonical/report 哈希一致，integrity/schema PASS、issues=[]、exit 0，legacy analyzer exit 0、accounting_result.json 可解析。源/副本 REP SHA256 均保持 `C2F561943C6465CA758845E8526652591363AD85EC8BCEAB074C9413AD6BB219`；原 machine report SHA256 保持 `CE3EFC198A3CA8D93B676AA77FEF1A5AB03E4409EE6E7E42B84D82D319192100`、原 verdict BLOCKED_BY_NSYS。结束 HEAD 不变/clean、无残留 nsys；独立 validation_result.json PASS/error=null。只证明该 REP 上真实离线成功路径的实现集成；未触发真实 timeout/kill/retry，不证明即时挂起根因修复。与前次手工诊断 SQLite hash 不同，不要求不同 export 产物逐字节相同；本次身份须以本次 REP lineage/attempt/canonical/report 一致性审计。
+
+**清单补救边界：** 初次流式枚举把正在写入的 artifact_sha256.csv 纳入输入而发生占用错误；先前的 PASS 不保证清单生成成功。用户报告协调窗口仅修复清单生成（快照文件列表、排除 artifact_sha256*.csv、写新文件并逐项复核），没有重跑 export/analyzer、没有改仓库代码。旧清单保留，有效 artifact_sha256_v2.csv 含 12 文件、逐项校验通过，清单自身 SHA256 `FCF2FAF38F7B58F8EE5D54A8B7B5A9CA10DD88BF23E93EC6A68640FE36B58735`。补救发生在原 transcript 结束后，来源仅为用户回传；不能声称原 transcript 包含补救过程。本地 handoff 草案已改为先快照/排除所有清单，再计算和写入新清单。
+
+**Analyzer scope 判断（沿用既有条款，不修改判据）：** exposedpath-v2 标记、CUDA event activity table unavailable 与 B valid=2/6 本身不违反 Gate7 integration smoke。依据：执行计划 §1/EP-G7-11 关注 runner/launcher 边界与身份；pilot_runner_contract §9 明确 A/B 来自 legacy analyzer，§10 尚不支持 full event synchronization recovery；此前已接受的 scope checkpoint 把真实 workload 完整 Canonical→S→A/B→D 链放在 Gate8 EP-G8-02。代码证据：analysis/accounting_utils.py 将 event_table 列为 missing_optional；gate7_smoke_validation.py 的必需表集合不含 event activity table；launcher STEP 6 要求 analyzer exit 0、可解析 JSON、a_summary 与 sync_coverage，并记录 count/duration coverage，未规定 B valid 比例阈值。故不能临时增加 6/6 阈值，也不能把 2/6 解释为 v1.4.1 语义 PASS。仅“JSON 可解析”的回执尚不能独立证明 a_summary/sync_coverage 字段齐全，需完整 accounting_result/SQLite/日志核验，尤其不得将缺表或 dropped-record 问题整体降为可忽略警告。
+
+**2026-09-24 用户回传的服务器验证结果（非本助手亲自执行）：** HEAD `ecac54272230fe5feef517ad9d908c64e93d517f`，parent `5a37eb0848dea486c715750341ff8a07d0efcee1`，验证前后 porcelain 均为空；bundle `ExposedPath_Gate7_fixture_ecac542.bundle`，3038 bytes，SHA256 `832B2EE632218C476EBBD1CC877442F6226D1A63F50606E855A5FE59D67B92B7`，bundle verify 通过。环境为 Windows PowerShell 5.1.20348.2849、Python 3.11.16 Anaconda 构建，测试使用 repo `.venv`，base interpreter 属于 Conda `gate7_py311`；VS host/target x64，VCToolsVersion 14.38.33130，CUDA_DEVICE_ORDER=PCI_BUS_ID、CUDA_VISIBLE_DEVICES=3。单测 `1 passed in 1.27s`；后处理文件 `19 passed in 39.83s`；三文件 targeted suite `97 passed in 35.84s`；全量 `981 passed, 1 skipped in 182.84s`。compileall、contract 37/37 PASS（CONTRACT_INTERNAL_CONSISTENCY_ONLY）、Canonical boundary PASS（7 个下游模块）、oracle independence PASS（STATIC_ORACLE_AND_EVALUATOR_INDEPENDENCE）、diff-check、show-check 均成功；用户报告上述所有命令 exit 0。单个 skipped 原因未提供，保持 UNKNOWN，不由本地 skip 结果推断；本轮回执未包含新的 verify_pilot_install 结果。本地只核对了提交/parent/bundle 与回传摘要的一致性，未获得或逐文件审计服务器原始日志。
+
+**后续操作边界：** 离线验证按用户回传已完成，不重复运行；完整目录及 v2 清单、独立清单修复回执待传回。fresh smoke 草案置于本地 AI_HANDOFF.md：继续固定 ecac542、核对环境与模型内容身份、先显式 verify_pilot_install，再由完整 launcher 自行执行静态/Pass0/Pass1/后处理/最终门槛；全新 evidence，不使用 ResumeFrom/ExistingSmokeDir/SkipStaticTests/DryRun。本轮未执行任何草案，未生成新提交或部署包；静态/离线成功不能授权 fresh GPU smoke，READY_FOR_SMALL_PILOT 机器字段也不能替代人工 Gate7 verdict。
 
 **2026-09-24 Windows venv fixture checkpoint：** 服务器静态验证的 timeout/retry 测试中，`Popen.pid=63380`、fake exporter `os.getpid()=27820`；成功 retry 不写 PID 文件，因此不是 PID 文件被覆盖。Windows venv launcher 与实际 interpreter 为两个进程，结束 launcher 不能证明 exporter 当时已退出。本地新建 Windows venv 后，先运行原测试复现同一断言失败（`8364 != 10756`），再仅把共享 fake-exporter fixture 的 Windows 默认 executable 改为原安装位置的 `sys._base_executable`；非 Windows 保持 `sys.executable`，显式 executable override 保留。直接使用 base interpreter 不涉及复制/搬迁，无需引入 copied-executable 场景的 `PYTHONHOME`/`PATH` 设置。保留 `Popen PID == fake exporter os.getpid()`、terminated PID、退出确认、partial 保留、独立 retry 输出及 canonical promotion 断言，并在真实第二次 `Popen` 前检查第一个进程已退出。生产 `Popen`/`kill`/`wait`、Nsight observation profile、Gate 7 acceptance、runner、Measurement Contract、S/A/B/D、Q0 与 Gate 6 evidence 均未修改。此项仅为 Engineering/static-validation 修复，不是 Gate 7 acceptance，也不证明真实 Nsight 超时路径。
 
-本轮本地 Windows venv 验证：原 PID-sensitive 单测先 `1 failed`，修复后 `1 passed`；后处理测试文件 `19 passed`；服务器同款 targeted suite `97 passed`；CPU-only 全量 `977 passed, 5 skipped`（进程内移除 CUDA PATH、确认 nvcc 不可见并设置 `CUDA_VISIBLE_DEVICES=-1`）。`compileall exposedpath analysis exposedpath_v141 scripts`、contract 37/37、Canonical boundary、oracle independence 与 diff-check 均 PASS。服务器该新提交仍需重新验证；本轮未运行 GPU 或真实 Nsight。
+此前本地 Windows venv 验证：原 PID-sensitive 单测先 `1 failed`，修复后 `1 passed`；后处理测试文件 `19 passed`；服务器同款 targeted suite `97 passed`；CPU-only 全量 `977 passed, 5 skipped`（进程内移除 CUDA PATH、确认 nvcc 不可见并设置 `CUDA_VISIBLE_DEVICES=-1`）。`compileall exposedpath analysis exposedpath_v141 scripts`、contract 37/37、Canonical boundary、oracle independence 与 diff-check 均 PASS。随后用户回传的目标服务器验证见上；本助手未运行 GPU 或真实 Nsight。
 
 **2026-09-23 scope / trace 审计与 repair checkpoint：** Gate 7 只验目标 Windows/RTX 4090 的 runner、identity、Pass0/Pass1、Token-ready、phase-boundary、CUDA+NVTX 和 launcher integration smoke；真实模型 workload 上完整 `Canonical Raw v1.4.1 → S → A/B → D / Exposure Signature` 首次属于 Gate 8 `EP-G8-02`，不提前纳入 Gate 7。前一次 fresh attempt 的已知边界是 `Pass0 completed → Pass1/Nsight launch boundary → system BugCheck 0x133`；exact root cause **NOT PROVEN**，不得归因 NVIDIA、Nsight、launcher script 或 admin PowerShell。Trace minimization 是删去 Gate 7 非必需采集项并分离后处理，**不是** BugCheck 根因修复。
 
@@ -254,7 +293,7 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
   - **STOP**：若某项必须先有真实 GPU 才能判定 → 移交 `EP-G7-11`，不得用 mock 结论代替。
   - **Dependency**：独立于 `EP-G7-08`/`EP-G7-09`，可并行；其结论不依赖 GPU。
   - **Unlock**：平台可移植性被结构性保护，测试基线不再含未解释失败。
-- [ ] `EP-G7-11`（进行中；`799fb8d` attempt 保持 `BLOCKED_BY_NSYS`；服务器已部署 `5a37eb0`，正处理 static validation 的 Windows venv fixture PID mismatch；新 GPU smoke 未授权；合并旧 `EP-G7-06` 的全量验证＋旧 `EP-G7-07`）
+- [ ] `EP-G7-11`（尚未验收；旧 attempt 保持 BLOCKED_BY_NSYS；用户回传 ecac542 静态/离线成功路径通过，完整产物待核；fresh GPU smoke 未授权；合并旧 `EP-G7-06` 的全量验证＋旧 `EP-G7-07`）
   - **Objective**：在 Windows/RTX 4090 上执行 runner 端到端 smoke（Pass0/Pass1、identity/phase boundary、exclusion/retry 记录），证明产出可被机器读取且与 Gate 7 合同一致，并完成 Gate 7 验收决定。
   - **Why**：只有真实 GPU smoke 能证明该执行链在真实执行栈上成立；Gate 8 必须以这份证据为入口。
   - **Implementation**：smoke 前置修复新增纯函数 `resolve_logical_cuda_index(physical_gpu_index, cuda_visible_devices)`，不读取 GPU 或 `torch.cuda.device_count()`；`manifest.py` 与 server smoke 共享该 helper，torch name 查询只使用 logical index，manifest 的 `gpu_index`/`gpu_index_physical` 保持 physical、`gpu_index_logical` 保持进程内 logical。`runner.py` 已有 remapping 不修改。修复部署及目标环境确认后，只执行既有 runner 链路并收集 manifest/receipt 证据。
@@ -356,7 +395,7 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 **最近应执行的任务（按顺序）：**
 
-1. 完成基于已部署 `5a37eb0` 的 Windows venv fixture 修复、同提交进度记录和增量 bundle；服务器重新运行静态验证后，按批准范围继续已有 REP 副本的独立离线验证。本轮不运行 GPU 或真实 Nsight。
+1. legacy-only acceptance 修订已获批准并实现；交付增量 bundle 后先做服务器静态复验，再单独审查 fresh smoke 授权。此前服务器静态 skip 原因仍 UNKNOWN，不推断。
 2. 若后续单独批准，`EP-G7-11` 必须用新代码身份、目标 Windows/RTX 4090 栈和全新 Engineering evidence 重跑完整 smoke；先审计机器报告与所有验收条件，再决定 Gate 7 verdict。历史 interrupted、`BLOCKED_BY_NSYS` 与离线诊断 evidence 不拼接。
 3. 已完成的 `EP-G7-08`～`EP-G7-10` 不再产生新任务；如后续发现需要放宽其 fail-closed 判据，属于新计划项，不得直接修改。
 
@@ -451,3 +490,8 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 | 7.7 | 2026-09-23 | 服务器报告 `799fb8d` fresh smoke 的最小 Nsight collection 成功、无本次 BugCheck，但即时 SQLite export 挂起且原 machine report 正确 `BLOCKED_BY_NSYS`；同 hash REP 副本离线 export/integrity/analyzer 通过，精确挂起根因仍未证明。测试先行实现有界 REP readiness、最多两次 180 秒独立 SQLite export、PID 定向结束、哈希/必需表字段/完整性校验、无覆盖 promotion、Analyzer 前校验、历史 machine report 防覆写与 attempt provenance；原 attempt 不追认 | EP-G7-11 | Gate 7 仍 `NOT_RUN`，Gate 8 不启动，新 GPU smoke 未授权；仅改变 Engineering 后处理可靠性与 fail-close，不改变 observation profile、Measurement Contract、S/A/B/D、Q0、Gate 6 evidence 或 Formal 数据 |
 | 7.8 | 2026-09-23 | 后处理 Windows path/argv 二审新增真实 `Popen` + fake exporter 回归：含空格 exe/REP/SQLite 路径逐项传递，stdout/stderr 可追溯；生产实现无需修改。等待独立 bundle 部署、服务器静态验证及已有 REP 的新目录离线后处理验证，不运行 GPU smoke | EP-G7-11 | Gate 7 仍 `NOT_RUN`，Gate 8 不启动；原 `799fb8d` attempt 继续 `BLOCKED_BY_NSYS`，不改变 Measurement Contract、科学 analyzer、Q0 或 Gate 6 evidence |
 | 7.9 | 2026-09-24 | 已部署 `5a37eb0` 的服务器 static validation 暴露 Windows venv launcher/fake exporter PID 分离；本地 venv 红测复现后，仅修复测试 fixture 使用直接 base interpreter，保留 PID 等值断言并检查 retry 前真实进程退出；生产 termination logic 不变 | EP-G7-11 | Engineering/static-validation 修复；Gate 7 仍 `NOT_RUN`，Gate 8 不启动，新 GPU smoke 未授权；旧 attempt 不追认 |
+| 7.10 | 2026-09-24 | 接收用户回传的 `ecac542` 目标服务器静态验证：1/19/97 项定向通过，全量 981 passed、1 skipped（原因未知），全部命令 exit 0；fixture 阻塞解除，准备独立 REP 副本离线验证方案，未执行 | EP-G7-11 | 仅 Engineering 回执与文档更新；无新提交/部署需求，Gate 7 仍 NOT_RUN，Gate 8 不启动，旧 attempt 不追认 |
+| 7.11 | 2026-09-24 | 接收用户回传的 ecac542 真实离线单次 export/analyzer 成功路径及 v2 清单补救结果；明确真实 timeout/kill/retry 未验证、legacy B 2/6 非 v1.4.1 语义验收；准备 fresh smoke 草案 | EP-G7-11 | 未取得完整服务器产物；仅文档更新，执行基线仍 ecac542；Gate7 NOT_RUN、Gate8 不启动，fresh smoke 未授权 |
+| 7.12 | 2026-09-24 | 直接审计完整本地诊断包并复核哈希；执行真实 STEP6 validation block 复现 sync_coverage missing；发现 legacy 摘要/明细覆盖不同且 valid 映射未定义，依用户要求暂停实现、先明确合同 | EP-G7-11 | 仅文档更新，无新提交；不改变冻结语义或判据，fresh smoke 暂停，Gate7 NOT_RUN、Gate8 不启动 |
+| 7.13 | 2026-09-24 | 明确 coverage 仅为证据缺口诊断；核对 physical UID、窗口缺失、legacy 与冻结 validity 不等价、union/跨 phase 口径及 null 约束；收紧全明细求和建议，集中待决验收映射与输入合同 | EP-G7-11 | 无运行代码/schema 改动；完整 request A 已实现但真实 workload 全链验收仍属 Gate8；Gate7 NOT_RUN、fresh smoke 暂停 |
+| 7.14 | 2026-09-24 | 用户批准并版本化 gate7-legacy-analyzer/1；tests first 修复 launcher/validation consumer，严格 legacy-only 结构/身份/diagnostics gate，窗口 coverage 显式 unknown，拒绝历史 resume | EP-G7-11 | Gate7 工程验收规则显式修订、仅对后续新 attempt 有效；不修改冻结测量语义或旧 evidence；Gate7 NOT_RUN，GPU/Nsight 未授权，Gate8 不启动 |

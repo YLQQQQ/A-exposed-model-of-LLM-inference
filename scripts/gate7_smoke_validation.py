@@ -7,7 +7,11 @@ from __future__ import annotations
 
 import argparse
 from contextlib import closing
+import csv
+import hashlib
 import json
+import math
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -164,6 +168,165 @@ def validate_evidence(manifest_path: Path, preflight_path: Path, pass0: Path, pa
     return issues
 
 
+def validate_analyzer(result_path: Path, sqlite_path: Path, manifest_path: Path) -> dict:
+    """Gate7 legacy-only integration acceptance, never scientific qualification.
+
+    The launcher separately gates analyzer exit and SQLite integrity/schema.
+    Hashes record the invocation's artifacts; legacy JSON has no embedded input
+    digest or stable run identity, so these are not a scientific lineage proof.
+    """
+    report = {
+        "acceptance_version": "gate7-legacy-analyzer/1",
+        "analyzer_type": "legacy-only",
+        "acceptance_scope": "ENGINEERING_INTEGRATION_ONLY",
+        "measurement_validity": "NOT_ASSESSED",
+        "window_coverage": {"status": "unknown", "count": None, "duration": None,
+            "reason": "LEGACY_OUTPUT_LACKS_WINDOW_IDENTITY_AND_FROZEN_VALIDITY"},
+        "a_structure_status": "NOT_VALIDATED", "status": "BLOCKED", "issues": [],
+    }
+    issues = report["issues"]
+
+    def require(condition: bool, message: str) -> None:
+        if not condition:
+            raise ValueError(message)
+
+    def number(value) -> bool:
+        return type(value) in (int, float) and math.isfinite(value) and value >= 0
+
+    def text(value) -> bool:
+        return isinstance(value, str) and bool(value.strip())
+
+    def digest(path: Path) -> str:
+        require(path.is_file() and path.stat().st_size > 0, f"Required artifact missing/empty: {path.name}")
+        sha = hashlib.sha256()
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                sha.update(chunk)
+        return sha.hexdigest()
+
+    def strict_json(path: Path) -> dict:
+        def reject_constant(value):
+            raise ValueError(f"Non-finite JSON number: {value}")
+        def unique_object(pairs):
+            result = {}
+            for key, value in pairs:
+                require(key not in result, f"Duplicate JSON key: {key}")
+                result[key] = value
+            return result
+        value = json.loads(path.read_text(encoding="utf-8-sig"),
+                           parse_constant=reject_constant, object_pairs_hook=unique_object)
+        require(isinstance(value, dict), "Expected JSON object")
+        return value
+
+    try:
+        result_path, sqlite_path, manifest_path = map(Path, (result_path, sqlite_path, manifest_path))
+        hashes = {"result_sha256": digest(result_path), "sqlite_sha256": digest(sqlite_path),
+                  "manifest_sha256": digest(manifest_path)}
+        csv_rows = {}
+        for name in ("accounting_summary.csv", "b_sync_detail.csv"):
+            hashes[name + "_sha256"] = digest(result_path.parent / name)
+            with (result_path.parent / name).open(encoding="utf-8-sig", newline="") as stream:
+                reader = csv.DictReader(stream)
+                fields = {"physical_sync_uid"} if name == "b_sync_detail.csv" else {"request_id", "repeat_id", "phase"}
+                require(fields <= set(reader.fieldnames or []), f"{name} required columns missing")
+                rows = list(reader)
+                require(bool(rows) and all(all(text(row.get(k)) for k in fields) for row in rows),
+                        f"{name} missing/malformed rows")
+                csv_rows[name] = rows
+        data = strict_json(result_path)
+        manifest = strict_json(manifest_path)
+        require(data.get("metric_definition_version") == "exposedpath-v2", "Unknown analyzer output version")
+        metadata = data.get("metadata")
+        require(isinstance(metadata, dict), "metadata missing/malformed")
+        for key in ("metric_definition_version", "parser_version"):
+            require(metadata.get(key) == "exposedpath-v2", f"metadata {key} mismatch")
+        require(metadata.get("workload_id") == sqlite_path.stem, "Analyzer input workload identity mismatch")
+        commit = manifest.get("runner_git_commit")
+        require(isinstance(commit, str) and re.fullmatch(r"[0-9a-f]{40}", commit) is not None,
+                "Manifest runner_git_commit missing/invalid")
+        require(metadata.get("git_commit") == commit[:12], "Analyzer/runner commit identity mismatch")
+        require(manifest.get("data_role") == "Engineering", "Manifest is not Engineering")
+        for key in ("run_id", "wmpc_id"):
+            require(text(manifest.get(key)), f"Manifest {key} missing/invalid")
+        report["identity"] = {**hashes, "runner_git_commit": commit,
+            "analyzer_git_commit": metadata["git_commit"], "run_id": manifest["run_id"],
+            "wmpc_id": manifest["wmpc_id"], "workload_id": metadata["workload_id"],
+            "binding": "LAUNCHER_INVOCATION_ARTIFACTS_NOT_SCIENTIFIC_LINEAGE"}
+        quality = data.get("trace_quality")
+        require(isinstance(quality, dict) and bool(quality), "trace_quality missing/malformed")
+        report["diagnostics"] = quality
+        for key in ("fatal_errors", "warnings", "missing_optional_tables"):
+            require(isinstance(quality.get(key), list) and all(text(x) for x in quality[key]),
+                    f"trace_quality {key} missing/malformed")
+        require(not quality["fatal_errors"], "Analyzer fatal diagnostics")
+        # This exact optional-table observation is known for this legacy parser.
+        # Other warnings require explicit review, not blanket warning immunity.
+        for warning in quality["warnings"] + quality["missing_optional_tables"]:
+            require(warning == "CUDA event activity table unavailable", "Unreviewed analyzer warning: " + warning)
+        require(quality.get("dropped_records_status") == "unknown",
+                "Unrecognized/dropped trace status; only legacy unknown is approved")
+        for key in ("request_count", "repeat_count"):
+            require(type(quality.get(key)) is int and quality[key] > 0, f"Invalid {key}")
+        for key in ("schema_version", "nsys_product_version"):
+            require(text(metadata.get(key)), f"metadata {key} missing")
+        categories = ("host_path", "cuda_api", "device_wait", "sync_residual", "unattributed")
+        summary = data.get("A_summary")
+        require(isinstance(summary, dict), "A_summary missing/malformed")
+        for phase in ("prefill", "decode", "full_request"):
+            values = summary.get(phase)
+            require(isinstance(values, dict) and bool(values), f"A_summary {phase} missing/empty")
+            for category in categories:
+                require(number(values.get(f"A_{category}_ms_mean")), f"A_summary {phase}/{category} invalid")
+            require(all(value is None or number(value) for value in values.values()),
+                    f"A_summary {phase} malformed numeric field")
+        for key in ("raw_summary", "overlap_summary", "B_summary", "legacy_compatibility"):
+            require(isinstance(data.get(key), dict) and bool(data[key]), f"{key} missing/empty/malformed")
+        for phase in ("prefill", "decode", "full_request"):
+            for key in ("raw_summary", "overlap_summary", "B_summary"):
+                require(isinstance(data[key].get(phase), dict) and bool(data[key][phase]),
+                        f"{key}/{phase} missing/malformed")
+            for key in ("total_syncs", "valid_wait_sets", "B_valid", "B_invalid"):
+                value = data["B_summary"][phase].get(key)
+                require(type(value) is int and value >= 0, f"B_summary/{phase}/{key} invalid")
+        repeats = data.get("repeat_results")
+        require(isinstance(repeats, list) and bool(repeats), "repeat_results missing/empty")
+        for row in repeats:
+            require(isinstance(row, dict), "repeat result malformed")
+            require(row.get("phase") in ("prefill", "decode", "full_request"), "repeat phase invalid")
+            require(all(type(row.get(k)) is int for k in ("request_id", "repeat_id")), "repeat identity invalid")
+            require(number(row.get("window_duration_ms")), "repeat duration invalid")
+            for category in categories:
+                require(number(row.get(f"A_{category}_ms")), "repeat A field invalid")
+        csv_repeat_ids = sorted((r["request_id"], r["repeat_id"], r["phase"])
+                                for r in csv_rows["accounting_summary.csv"])
+        json_repeat_ids = sorted((str(r["request_id"]), str(r["repeat_id"]), r["phase"]) for r in repeats)
+        require(csv_repeat_ids == json_repeat_ids, "CSV/JSON repeat identities differ")
+        details = data.get("b_sync_details")
+        require(isinstance(details, list) and bool(details), "b_sync_details missing/empty")
+        seen = set()
+        for row in details:
+            require(isinstance(row, dict), "legacy sync detail malformed")
+            uid = row.get("physical_sync_uid")
+            require(text(uid) and uid not in seen, "legacy physical sync UID missing/duplicate")
+            seen.add(uid)
+            require(text(row.get("phase")), "legacy phase label missing")
+            for key in ("request_id", "repeat_id", "sync_start_ns", "sync_end_ns"):
+                require(type(row.get(key)) is int, f"legacy {key} invalid")
+            require(row["sync_end_ns"] >= row["sync_start_ns"], "legacy sync time reversal")
+            for key in ("wait_set_valid", "B_valid"):
+                require(type(row.get(key)) is bool, f"legacy {key} invalid")
+            require(not row["B_valid"] or row["wait_set_valid"], "Contradictory legacy validity flags")
+            require(isinstance(row.get("invalid_reason"), str), "legacy invalid_reason missing")
+        require(sorted(r["physical_sync_uid"] for r in csv_rows["b_sync_detail.csv"]) == sorted(seen),
+                "CSV/JSON physical sync identities differ")
+        report["legacy_sync_diagnostics"] = details  # no reinterpretation or aggregation
+        report["a_structure_status"] = "VALIDATED_STRUCTURE_ONLY"
+        report["status"] = "PASS"
+    except (OSError, ValueError, TypeError, KeyError, OverflowError) as exc:
+        issues.append(str(exc))
+    return report
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="check", required=True)
@@ -172,7 +335,14 @@ def main() -> int:
     evidence = sub.add_parser("evidence")
     for name in ("manifest", "preflight", "pass0", "pass1"):
         evidence.add_argument(f"--{name}", type=Path, required=True)
+    analyzer = sub.add_parser("analyzer")
+    for name in ("result", "sqlite", "manifest"):
+        analyzer.add_argument(f"--{name}", type=Path, required=True)
     args = parser.parse_args()
+    if args.check == "analyzer":
+        report = validate_analyzer(args.result, args.sqlite, args.manifest)
+        print(json.dumps(report, allow_nan=False))
+        return 0 if report["status"] == "PASS" else 1
     issues = (validate_sqlite(args.sqlite) if args.check == "sqlite" else
               validate_evidence(args.manifest, args.preflight, args.pass0, args.pass1))
     print(json.dumps({"status": "PASS" if not issues else "BLOCKED", "issues": issues}))

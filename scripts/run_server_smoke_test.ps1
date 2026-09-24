@@ -3,13 +3,10 @@
     Server-side end-to-end Smoke Test for ExposedPath v3 Pilot.
 .DESCRIPTION
     Steps: 0-Params 1-Env 2-PromptTokens 3-Manifest 4-Pass0 5-Pass1 6-Analyzer 7-Report.
-    Supports -ResumeFrom, -ExistingSmokeDir, -SkipStaticTests.
+    gate7-legacy-analyzer/1 accepts fresh attempts only; resume flags are rejected.
     All subprocess success/failure is gated ONLY by exit code (never by stderr content).
 .EXAMPLE
     .\scripts\run_server_smoke_test.ps1 -ModelPath "D:\models\..." -GpuId 0 -NsysPath "C:\...\nsys.exe"
-.EXAMPLE
-    .\scripts\run_server_smoke_test.ps1 -ModelPath "D:\models\..." -GpuId 2 -NsysPath "C:\...\nsys.exe" `
-        -ExistingSmokeDir "D:\smoke\smoke_2026..." -ResumeFrom Pass0 -SkipStaticTests
 #>
 param(
     [Parameter(Mandatory=$true)][string]$ModelPath,
@@ -105,10 +102,13 @@ if ($ExistingSmokeDir) {
         Write-Host "ERROR: Refusing to resume a finalized attempt or overwrite its machine report: $PriorMachineReport"
         exit 1
     }
+    Write-Host "ERROR: gate7-legacy-analyzer/1 requires a fresh attempt; historical evidence cannot be reaccepted"
+    exit 1
 }
 
 # ---- Report skeleton ----
 $Report = @{
+    analyzer_acceptance_version="gate7-legacy-analyzer/1"
     gate_decision="UNKNOWN"; started_at=$ScriptStart
     paths=@{ project_root=$ProjectRoot; smoke_dir=$SmokeDir; model_path=$ModelPath; nsys_exe=$NsysExePath }
     environment=@{}; pass0=@{}; pass1=@{}; analyzer=@{}; errors=@()
@@ -751,12 +751,18 @@ if ($ResumeLevel -le 6) {
             $gate_errors += "accounting_result.json missing"
         } else {
             try {
-                $ar = Get-Content $ar_file -Raw | ConvertFrom-Json
-                if ($ar.PSObject.Properties["a_summary"]) { $cons="present" } else { $gate_errors += "a_summary missing" }
-                if ($ar.PSObject.Properties["sync_coverage"]) {
-                    $cov="$($ar.sync_coverage.sync_count_valid)/$($ar.sync_coverage.sync_count_total)"
-                    $dcov="$($ar.sync_coverage.sync_duration_valid_ms)/$($ar.sync_coverage.sync_duration_total_ms) ms"
-                } else { $gate_errors += "sync_coverage missing" }
+                $a = @(('"' + $ValidationScript + '"'),"analyzer","--result",('"' + $ar_file + '"'),"--sqlite",('"' + $NsysSqliteFile + '"'),"--manifest",('"' + $ManifestPath + '"'))
+                $rAcceptance = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "41_analyzer_acceptance" -WorkingDirectory $ProjectRoot -Label "Gate7 legacy-only acceptance"
+                $acceptance = $rAcceptance.Stdout | ConvertFrom-Json -ErrorAction Stop
+                $Report.analyzer["acceptance"] = $acceptance
+                if (($rAcceptance.ExitCode -ne 0) -or ($acceptance.status -ne "PASS") -or
+                    ($acceptance.acceptance_version -ne "gate7-legacy-analyzer/1")) {
+                    $gate_errors += "Legacy analyzer acceptance failed: $($acceptance.issues -join '; ')"
+                } else {
+                    $cons="VALIDATED_STRUCTURE_ONLY"
+                    # Unknown is explicit, not a fabricated numerator/denominator.
+                    $cov="unknown"; $dcov="unknown"
+                }
                 if ($gate_errors.Count -eq 0) { $analysis_ok=$true }
             } catch {
                 $gate_errors += "JSON parse failed: $($_.Exception.Message)"
