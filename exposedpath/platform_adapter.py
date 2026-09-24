@@ -202,10 +202,10 @@ def run_tool(
     argv = tool_argv(name, args, extra_candidates=extra_candidates, env=env)
     return subprocess.run(
         argv,
-        capture_output=True,
+        stdout=subprocess.PIPE,
         text=text,
         timeout=timeout,
-        stderr=stderr,
+        stderr=subprocess.PIPE if stderr is None else stderr,
         env=dict(env) if env is not None else None,
         cwd=str(cwd) if cwd is not None else None,
         shell=False,
@@ -246,5 +246,5 @@ def nvidia_smi(args: Sequence[str] = (), *, timeout: float = 10) -> str:
 
 
 def git(args: Sequence[str] = (), *, timeout: float = 5) -> str:
-    """Structured ``git`` query through the adapter (stderr suppressed)."""
-    return query_tool(TOOL_GIT, args, timeout=timeout, stderr=subprocess.DEVNULL)
+    """Structured ``git`` query; retain stderr to explain failed provenance."""
+    return query_tool(TOOL_GIT, args, timeout=timeout)

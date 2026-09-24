@@ -124,11 +124,15 @@ def create_manifest(
     framework_threading_config: Optional[str] = None,
     gpu_power_persistence_policy: Optional[str] = None,
     external_cuda_workload_policy: Optional[str] = None,
+    require_git_identity: bool = False,
+    git_worktree: Optional[Path] = None,
 ) -> Dict:
     """Create a new WMPC manifest dict from auto-detected + user-provided values.
 
     The caller is responsible for saving the manifest to disk and computing
     the wmpc_id after filling in any unknown fields.
+    Gate7 passes require_git_identity=True and an explicit git_worktree: query
+    errors then propagate with their original reason instead of becoming null.
     """
     # ---- Hardware auto-detect ----
     physical_gpu_index = gpu if gpu_index_physical is None else gpu_index_physical
@@ -223,8 +227,8 @@ def create_manifest(
         "external_cuda_workload_policy": external_cuda_workload_policy,
 
         # ---- Runner metadata ----
-        "runner_git_commit": _get_git_commit(),
-        "runner_git_dirty": _get_git_dirty(),
+        "runner_git_commit": _get_git_commit(required=require_git_identity, worktree=git_worktree),
+        "runner_git_dirty": _get_git_dirty(required=require_git_identity, worktree=git_worktree),
         "pass0_command": None,
         "pass1_nsys_command": None,
     }
@@ -355,23 +359,29 @@ def _get_nvidia_driver() -> str:
         return "unknown"
 
 
-def _get_git_commit() -> Optional[str]:
+def _get_git_commit(*, required=False, worktree=None) -> Optional[str]:
     """Get current git commit hash."""
     from exposedpath import platform_adapter
 
     try:
-        out = platform_adapter.git(["rev-parse", "HEAD"], timeout=5)
+        prefix = ["-C", str(worktree)] if worktree is not None else []
+        out = platform_adapter.git([*prefix, "rev-parse", "HEAD"], timeout=5)
         return out.strip()
     except Exception:
+        if required:
+            raise
         return None
 
 
-def _get_git_dirty() -> Optional[bool]:
+def _get_git_dirty(*, required=False, worktree=None) -> Optional[bool]:
     """Check if git working tree is dirty."""
     from exposedpath import platform_adapter
 
     try:
-        out = platform_adapter.git(["status", "--porcelain"], timeout=5)
+        prefix = ["-C", str(worktree)] if worktree is not None else []
+        out = platform_adapter.git([*prefix, "status", "--porcelain"], timeout=5)
         return len(out.strip()) > 0
     except Exception:
+        if required:
+            raise
         return None

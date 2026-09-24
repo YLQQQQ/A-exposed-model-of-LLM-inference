@@ -49,8 +49,8 @@ def test_manifest_queries_logical_gpu_but_preserves_physical_identity(monkeypatc
     )
     monkeypatch.setattr(manifest, "_read_model_config", lambda _path: {})
     monkeypatch.setattr(manifest, "_get_nvidia_driver", lambda: "test-driver")
-    monkeypatch.setattr(manifest, "_get_git_commit", lambda: "test-commit")
-    monkeypatch.setattr(manifest, "_get_git_dirty", lambda: False)
+    monkeypatch.setattr(manifest, "_get_git_commit", lambda **kwargs: "test-commit")
+    monkeypatch.setattr(manifest, "_get_git_dirty", lambda **kwargs: False)
 
     result = manifest.create_manifest(
         experiment_id="gpu-index-regression",
@@ -74,8 +74,8 @@ def test_explicit_physical_identity_controls_manifest_gpu_index(monkeypatch):
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "GPU-test-uuid")
     monkeypatch.setattr(manifest, "_read_model_config", lambda _path: {})
     monkeypatch.setattr(manifest, "_get_nvidia_driver", lambda: "test-driver")
-    monkeypatch.setattr(manifest, "_get_git_commit", lambda: "test-commit")
-    monkeypatch.setattr(manifest, "_get_git_dirty", lambda: False)
+    monkeypatch.setattr(manifest, "_get_git_commit", lambda **kwargs: "test-commit")
+    monkeypatch.setattr(manifest, "_get_git_dirty", lambda **kwargs: False)
 
     result = manifest.create_manifest(
         experiment_id="explicit-gpu-identities",

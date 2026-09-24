@@ -11,6 +11,7 @@ import csv
 import hashlib
 import json
 import math
+import os
 import re
 import sqlite3
 import sys
@@ -86,6 +87,51 @@ def validate_sqlite(path: Path) -> list[str]:
     except (sqlite3.DatabaseError, OSError, ValueError) as exc:
         return [f"SQLite schema unreadable: {exc}"]
     return []
+
+
+def validate_pre_model_identity(manifest_path: Path, preflight_path: Path, project_root: Path) -> list[str]:
+    """Gate7 provenance precondition, before either model process is launched."""
+    from exposedpath import platform_adapter
+    from exposedpath.manifest import resolve_logical_cuda_index
+    issues = []
+    try:
+        manifest = _read_json(manifest_path)
+        preflight = _read_json(preflight_path)
+        commit = manifest.get("runner_git_commit")
+        if not isinstance(commit, str) or re.fullmatch(r"[0-9a-f]{40}", commit) is None:
+            issues.append("Manifest runner_git_commit missing/invalid")
+        if manifest.get("runner_git_dirty") is not False:
+            issues.append("Manifest runner_git_dirty is not explicitly false")
+        # Explicit worktree, resolved Git executable, structured argv; never fallback.
+        actual = platform_adapter.git(["-C", str(project_root), "rev-parse", "HEAD"])
+        dirty = platform_adapter.git(["-C", str(project_root), "status", "--porcelain"])
+        if actual != commit or dirty:
+            issues.append("Current Git identity differs or worktree is dirty")
+        physical = manifest.get("gpu_index_physical")
+        logical = manifest.get("gpu_index_logical")
+        if type(physical) is not int or physical < 0 or type(logical) is not int:
+            raise ValueError("Manifest physical/logical GPU identity missing/invalid")
+        if manifest.get("gpu_index") != physical or manifest.get("gpu") != physical:
+            issues.append("Manifest physical GPU aliases conflict")
+        if os.environ.get("CUDA_DEVICE_ORDER") != "PCI_BUS_ID" or os.environ.get("CUDA_VISIBLE_DEVICES") != str(physical):
+            issues.append("Gate7 physical-index masking environment conflicts")
+        resolve_logical_cuda_index(physical_gpu_index=physical,
+            cuda_visible_devices=os.environ.get("CUDA_VISIBLE_DEVICES"), declared_logical_index=logical)
+        for key, pattern in (("gpu_uuid", r"GPU-[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}"),
+                             ("gpu_pci_bus_id", r"[0-9a-fA-F]{8}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}\.[0-7]")):
+            value = manifest.get(key)
+            if not isinstance(value, str) or re.fullmatch(pattern, value) is None or preflight.get(key) != value:
+                issues.append(f"Preflight/manifest {key} missing, invalid or conflicting")
+        for key, value in (("physical_gpu_index", physical), ("logical_gpu_index", logical)):
+            if type(preflight.get(key)) is not int or preflight[key] != value:
+                issues.append(f"Preflight {key} missing or conflicting")
+        if (manifest.get("data_role") != "Engineering" or manifest.get("study_mode") != "G1_NATURAL"
+                or manifest.get("n1_intervention") is not None):
+            issues.append("Gate7 Engineering/G1 identity conflicts")
+    except Exception as exc:
+        # Keep missing identity unknown and expose the precise adapter/IO error.
+        issues.append(f"Pre-model identity unavailable: {type(exc).__name__}: {exc}")
+    return issues
 
 
 def validate_evidence(manifest_path: Path, preflight_path: Path, pass0: Path, pass1: Path) -> list[str]:
@@ -338,7 +384,14 @@ def main() -> int:
     analyzer = sub.add_parser("analyzer")
     for name in ("result", "sqlite", "manifest"):
         analyzer.add_argument(f"--{name}", type=Path, required=True)
+    pre_model = sub.add_parser("pre-model")
+    for name in ("manifest", "preflight", "project-root"):
+        pre_model.add_argument(f"--{name}", type=Path, required=True)
     args = parser.parse_args()
+    if args.check == "pre-model":
+        issues = validate_pre_model_identity(args.manifest, args.preflight, args.project_root)
+        print(json.dumps({"status": "BLOCKED" if issues else "PASS", "issues": issues}))
+        return 1 if issues else 0
     if args.check == "analyzer":
         report = validate_analyzer(args.result, args.sqlite, args.manifest)
         print(json.dumps(report, allow_nan=False))

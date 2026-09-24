@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-> 一句话状态：**Gate 0～6 = `PASS`；Gate 7 = `NOT_RUN`，`EP-G7-11` 尚未验收。用户明确批准 gate7-legacy-analyzer/1：仅对修订后 fresh Engineering attempt 接受 legacy-only 集成诊断、窗口 coverage=unknown；已按 tests first 修复 consumer，验证与交付见下。旧 attempt 不追认；fresh GPU smoke 尚未授权，Gate 8 不启动。**
+> 一句话状态：**Gate 0～6 = `PASS`；Gate 7 = `NOT_RUN`。fresh dced364 attempt 已运行但身份链验收 BLOCKED，不追认；本地已定位并修复 Git adapter、preflight→manifest GPU 身份及报告哈希来源，新增模型加载前 fail-closed gate。新修复仍需服务器静态复验；无新 GPU/Nsight 授权，Gate8 不启动。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -56,15 +56,15 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.14`
+- 清单版本：`7.16`
 - 最近更新：`2026-09-24`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
-- 当前工作分支：`codex/gate7-postprocessing`；本次验收修订以服务器已验证的 `ecac54272230fe5feef517ad9d908c64e93d517f` 为 parent，形成新的独立提交/增量 bundle（精确提交与哈希见本地交付回执）。服务器仍停留 ecac542，须核对新包、detach 部署并静态复验，不自行追随分支 HEAD。
+- 当前工作分支：`codex/gate7-postprocessing`；服务器旧执行基线 `dced3646b536430209224eb7e0e9f0896dc20a67`。本轮身份链修复作为其直接子提交交付，不 amend 已部署基线；部署身份以提交回执完整SHA及bundle校验为准，不自行跟随HEAD。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～6 = `PASS`；Gate 7 = `NOT_RUN`（`EP-G7-08`～`EP-G7-10` 已完成，`EP-G7-11` 仍待 fresh smoke 与逐项验收）；Gate 8 = `NOT_RUN`（不得在 Gate 7 acceptance 前启动）；Gate 9～11 = `BLOCKED`（Formal 平台未确定/未接入）；Gate 12～14 = `NOT_RUN`
-- 当前最高优先级：核对并部署新版本化 legacy-only acceptance 修订、完成服务器静态复验；之后另行审查/授权 fresh smoke。unknown 窗口 coverage 已获 Gate7 工程验收授权，不再推导其分母或 validity；完整 scientific coverage 仍属 Gate8。
+- 当前最高优先级：完成身份链修复交付并在服务器做新版本静态复验；不重复使用 dced364 fresh 草案，不运行模型/Nsight。静态复验成功后再申请全新smoke；完整 scientific coverage 仍属 Gate8。
 - 当前总体判断（2026-09-20）：Gate 6 / Q0 已正式 `PASS`。frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21/21 `REAL_CASE_PASS`、2 个 synthetic-only case（`Q0-TERMINAL-TIE-001`、`Q0-SUBMISSION-RACE-001`）PASS、23/23 `SYNTHETIC_PASS`，且存在唯一一份 `q0_gate_report.json`（schema `exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`）。该 PASS 只说明当前 analyzer 在本目标 observation stack 上取得 **Q0 正确性资格**；不等于 Engineering Pilot、Pilot、Protocol Freeze 或 Formal 结果，也不建立第二平台等价性。身份、哈希、provenance caveat、根因映射与实现成熟度见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
 - 当前到达点（`EP-G7-11`）：此前一次 fresh smoke 在 Pass1/Nsight 启动边界遭系统 BugCheck `0x133` 中断，根因未获证明。随后服务器报告：`799fb8d` 在目标 Windows/RTX 4090 的 static preflight `940 passed, 1 skipped`、compileall、verify、合同/Canonical/oracle 检查通过；新 Engineering smoke `smoke_20260923T134310Z` 的 Pass0、Pass1 inference/telemetry/parity 和最小 Nsight collection 完成，生成非空 REP，且未再出现 BugCheck。但即时 `nsys export` 在约 51% 停滞，被人工终止后 machine report 为 `BLOCKED_BY_NSYS`、exit 1，Analyzer 未运行；该 attempt **不是** Gate 7 acceptance evidence。相同 SHA256 的 REP 副本后续离线 export 得到 integrity PASS 的 SQLite，诊断 analyzer exit 0；仅支持“REP 可离线导出/分析”，不证明即时 export 挂起的精确根因，也不追认原 attempt。Gate 7 仍为 `NOT_RUN`，Gate 8 未启动。
 
@@ -208,6 +208,28 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 ## 5. Gate 7～14 计划
 
 ### Gate 7：Runner 与执行链对齐
+
+**2026-09-24 fresh dced364 身份链故障 / bounded repair（7.16）：** 直接读取用户传回的 `fresh_dced364_20260924T074033Z_43e53591d86341b2b025e1daf174b62e` 中 `collection/smoke_20260924T074034Z`；服务器执行、本地只读审计。machine decision=BLOCKED、exit=1，Pass0/Pass1/REP→SQLite/SQLite validation/analyzer process 均 exit0，但 analyzer acceptance 因 manifest commit 缺失、evidence 因请求 UUID/PCI 缺失而失败。两个 pass 全部14条 telemetry 的 observed index/UUID/PCI 一致且 query exit0，requested UUID/PCI 均 null；不能把它解释为跑错 GPU。旧产物不补写、不重验追认。
+
+- 根因已在本地真实 Git 子进程入口复现：adapter 的 `capture_output=True` 与 `stderr=DEVNULL` 冲突，Python 抛 ValueError 后被 manifest 两个 getter 吞成 null，并非已证明的服务器 PATH/权限/timeout 问题。另 launcher producer 未传已有 preflight UUID/PCI；通用 `SHA256:` 输出实为 prompt 哈希，却写入 machine manifest 哈希。
+- 最小实现：adapter 用明确 stdout/stderr pipe，Git 保留失败 stderr；Gate7 producer 显式 worktree、严格 Git 查询（原异常进入日志，无替代值）、结构化传入 preflight GPU 字段；Pass0 前核验完整 commit/clean/GPU/mask/G1 Engineering 身份，失败即阻塞；报告分别保存真实 manifest 文件 SHA256 与 prompt SHA256。runner、analyzer、冻结 Measurement Contract/S/A/B/D、Q0、Gate6证据和 observation profile 不改。
+- 扩展审计：两 pass 的 manifest SHA 为 `e8e8b87042d0eff0bdb80def97b2ce40a0363d07b060cdbaa75f78842c40bc5b`，prompt SHA 为 `4dffd0ddcbd3185c656ae4a27efaf5aab302febba6ead5df4d37d903a2091920`；run/wmpc、G1 natural、mask、32/2 tokens 一致。runner source SHA `f3765d96f161f13a879c44b1f98adf3c36c8a9a2fdc7ff136af929b98301a6c3` 与 dced364 的 CRLF 文件字节一致（不是把 LF/CRLF 文件哈希视作相同）。analyzer metadata commit=dced3646b536；fatal_errors为空、dropped unknown、已批准的 CUDA event optional warning 仍保留，不升级科学有效性。
+- Tests first：先用实际 launcher Python producer + 临时真实 Git 仓库复现 null commit/异常被吞；再实现并验证 producer→manifest→现有 runner parity/telemetry（仅 GPU query 替身）及真实 Windows PowerShell pre-model block。新增负例覆盖 missing/malformed/mismatch/dirty/mask/Git error；未执行 GPU、真实 Nsight 或服务器命令。此前7.15未提交文档保留在同次提交。
+- 本地Windows/Python3.12 CPU-only最终验证：定向185 passed（含新增26项）、全量1036 passed/5 skipped（219.40s；屏蔽CUDA PATH并确认无nvcc，五项均Q0 source编译检查）；compileall四目录、contract37/37、Canonical boundary7模块、oracle independence、git diff --check通过。真实PowerShell block与真实Git调用不等于服务器/GPU验证；完成本地逐项自审，未声称独立外部审查。旧 attempt BLOCKED，Gate7仍 NOT_RUN，EP-G7-11未验收。部署新提交并完成服务器静态复验后，也必须另行授权全新 smoke；不得复用本次证据改变 verdict。完整真实 workload Canonical→S→A/B 仍属于 Gate8。
+
+以下7.15和更早段落为历史快照；其中“仅余环境补证/无代码缺陷/仅文档更新”等不再是当前执行指令，以7.16为准。
+
+**2026-09-24 dced364 服务器静态/环境/模型原始记录本地审计（7.15）：** 直接读取 targeted_dced364_20260924T070511Z_75d74c2e649e4303bd65a290d4185ded、static_dced364_20260924T070829Z_9bfeacd94903497ba472240b54b10f70、identity_dced364_20260924T072013Z_400f5980c94548b79d7b2e8aac66b26c、model_dced364_20260924T072133Z_d4a3ac4169ab48a1bba6d4f7d1f703ae 的四份 transcript 及模型清单。服务器执行、本地审计，未重跑测试：新增 33 passed、定向 130 passed、全量 1014 passed/1 skipped（263.79s）；skip 明确为 test_python_source_portability.py:98 的 pre-3.12 编译时已拒绝该 f-string，非未知失败。compileall、contract37/37、Canonical、oracle、diff/show-check 与 verify_pilot_install -SkipTests 均 exit0。HEAD/parent 与部署身份一致，记录显示检查后 clean；本地无服务器文件系统的独立实时观测。
+
+环境记录支持：Python3.11.16 / repo venv / Conda base、torch2.6.0+cu124 / CUDA12.4、transformers5.17.0、nvcc12.4.131、MSVC 环境变量14.38.33130；GPU3/目标 UUID/PCI/RTX4090/driver555.99、logical0 且唯一可见；Nsight2026.2.1.210-262137639646v0。**尚缺文件身份补证**：四份记录未输出实际 where cl 的首项及 cl.exe 文件版本，也未输出两个 0-byte marker 的绝对路径/length/SHA256。CUDA 两变量的名称仅见 transcript Host Application 命令文本，尚缺实值输出；一次纯文件/环境快照即可补齐，不需重跑静态测试或 GPU 初始化。不要混淆 Python 构建字符串 MSC v.1942 与当前 cl.exe。
+
+**模型与输入：** 本地复核 model_sha256.csv 为23行、合计3098976006 bytes、SHA256 `72465C906BAEB0CFA4FD94D21EF6C69C1CD8046BB68C61A94C02A1580D2541F9`。模型本体未传回，未本地重算权重 hash。七个 loader 输入候选为 config.json、generation_config.json、merges.txt、model.safetensors、tokenizer.json、tokenizer_config.json、vocab.json；其余为13个 .cache 辅助文件及3个文档/仓库辅助文件，不据缓存文件名推断 revision。Engineering runner 的 model_revision 默认 unknown，manifest schema revision 仅要求 string，Gate7 合同未要求可解析 hub commit；因此 unknown+明确本地内容快照满足本次工程身份限制，不宣称 upstream revision 已知或 Formal 资格。fresh attempt 必须关联该清单、保留 unknown，模型内容若改变先 STOP。
+
+源码核对：launcher STEP2 生成4组各32 tokens 的合成 token IDs；cli 使用 seed=42+i*1000、合法 vocab 范围，无 chat template。batch1 使用第一样本，prompt 文件在测量窗口外生成，并由两 pass 共用且校验 SHA256。32 input / 2 output（首 token prefill，第二 token decode）、warmup1/repeat2 符合 pilot_runner_contract §§2/4/5 和当前 launcher 默认范围；不构成 Pilot workload 选择。执行身份为 eager/fp16/sdpa、do_sample=false、G1_NATURAL/natural_token_ready、n1_intervention=null、run_role=PILOT/data_role=Engineering，非 N1 实验。实际新 prompt digest/manifest 由 fresh launcher 创建并回传，不提前伪造或要求另跑一遍。
+
+**既有 JSON 适配核验：** 本地运行 dced364 的 validate_analyzer，只读取旧 JSON/SQLite/CSV，临时合成 manifest 提供旧 ecac542 commit 与明确 SYNTHETIC-SHAPE-CHECK-ONLY 身份（原旧诊断包没有完整 manifest）。结构兼容 PASS、issues=[]、窗口 coverage unknown/null；将临时 manifest 换成 dced364 则正确 BLOCKED（Analyzer/runner commit identity mismatch）。这是适配逻辑检查，不是旧 attempt 的 lineage 或新验收。14个源文件检查前后哈希不变；未运行 analyzer、Nsight、模型或 GPU。未发现需要改代码的缺陷。
+
+**下一步最小动作与授权边界：** 补上述 cl/marker/mask 快照后，请求一次固定身份的完整 fresh smoke 授权；不重复手工静态检查，但不跳过 launcher 自身 static/verify。完整新目录关联四组快照、模型清单和最终补证，保留全部 machine report/日志/manifest/prompt/parity/telemetry/REP/SQLite/analyzer 产物；失败保留现场、不 resume/覆盖。成功进程码与 READY_FOR_SMALL_PILOT 仍须后续逐项审计，不直接 Gate7 PASS。本地 handoff 的新 final-review 草案为入口；本轮仅文档更新，无新提交/部署包。
 
 **2026-09-24 用户批准的验收修订 / implementation checkpoint（7.14，取代 7.12/7.13 的待决状态）：** 权威执行计划 §6 冻结 `gate7-legacy-analyzer/1` 工程验收修订；这是对 Gate7 的显式修改，不修改 Measurement Contract。只适用于新执行 Engineering attempt；launcher 在任何采集前拒绝 ExistingSmokeDir/ResumeFrom，不覆盖或追认历史。保持静态、Pass0/Pass1、parity、telemetry、REP/SQLite 和 final machine report 全部门槛。
 
@@ -395,7 +417,7 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 **最近应执行的任务（按顺序）：**
 
-1. legacy-only acceptance 修订已获批准并实现；交付增量 bundle 后先做服务器静态复验，再单独审查 fresh smoke 授权。此前服务器静态 skip 原因仍 UNKNOWN，不推断。
+1. fresh dced364已BLOCKED且不得追认；交付身份链最小修复并完成服务器新版本静态复验后，再申请全新smoke授权；本轮不运行GPU/Nsight。
 2. 若后续单独批准，`EP-G7-11` 必须用新代码身份、目标 Windows/RTX 4090 栈和全新 Engineering evidence 重跑完整 smoke；先审计机器报告与所有验收条件，再决定 Gate 7 verdict。历史 interrupted、`BLOCKED_BY_NSYS` 与离线诊断 evidence 不拼接。
 3. 已完成的 `EP-G7-08`～`EP-G7-10` 不再产生新任务；如后续发现需要放宽其 fail-closed 判据，属于新计划项，不得直接修改。
 
@@ -495,3 +517,5 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 | 7.12 | 2026-09-24 | 直接审计完整本地诊断包并复核哈希；执行真实 STEP6 validation block 复现 sync_coverage missing；发现 legacy 摘要/明细覆盖不同且 valid 映射未定义，依用户要求暂停实现、先明确合同 | EP-G7-11 | 仅文档更新，无新提交；不改变冻结语义或判据，fresh smoke 暂停，Gate7 NOT_RUN、Gate8 不启动 |
 | 7.13 | 2026-09-24 | 明确 coverage 仅为证据缺口诊断；核对 physical UID、窗口缺失、legacy 与冻结 validity 不等价、union/跨 phase 口径及 null 约束；收紧全明细求和建议，集中待决验收映射与输入合同 | EP-G7-11 | 无运行代码/schema 改动；完整 request A 已实现但真实 workload 全链验收仍属 Gate8；Gate7 NOT_RUN、fresh smoke 暂停 |
 | 7.14 | 2026-09-24 | 用户批准并版本化 gate7-legacy-analyzer/1；tests first 修复 launcher/validation consumer，严格 legacy-only 结构/身份/diagnostics gate，窗口 coverage 显式 unknown，拒绝历史 resume | EP-G7-11 | Gate7 工程验收规则显式修订、仅对后续新 attempt 有效；不修改冻结测量语义或旧 evidence；Gate7 NOT_RUN，GPU/Nsight 未授权，Gate8 不启动 |
+| 7.15 | 2026-09-24 | 直接审计服务器 dced364 的33/130/1014测试及环境/23文件模型快照；确认 skip 和 revision unknown 的 Engineering 限制；旧实际 JSON 本地结构兼容、跨 commit 拒绝；只余 cl/marker/mask 最小补证 | EP-G7-11 | 仅文档更新、执行基线不变，无重跑测试/模型/Nsight；旧 attempt 不追认，Gate7 NOT_RUN，fresh smoke 未授权、Gate8不启动 |
+| 7.16 | 2026-09-24 | fresh dced364身份链BLOCKED：修复Git adapter参数冲突、preflight GPU字段传递、prompt/manifest哈希混淆；增加模型加载前身份gate及实际producer回归 | EP-G7-11 | 工程修复，不放宽验收、不改冻结科学语义；旧attempt保持BLOCKED，Gate7 NOT_RUN；新GPU/Nsight未授权，Gate8不启动 |

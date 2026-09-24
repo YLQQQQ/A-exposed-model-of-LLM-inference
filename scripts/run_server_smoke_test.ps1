@@ -478,7 +478,9 @@ import os
 from exposedpath.manifest import create_manifest, finalize_manifest, resolve_logical_cuda_index, save_manifest
 from exposedpath.workload import load_prompt_tokens
 from pathlib import Path
+import json
 pt_path = Path(r'$PtFile'); pt = load_prompt_tokens(pt_path)
+identity = json.loads(Path(r'$PreflightGpuIdentityPath').read_text(encoding='utf-8-sig'))
 physical_gpu_index = $GpuId
 logical_gpu_index = resolve_logical_cuda_index(
     physical_gpu_index=physical_gpu_index,
@@ -488,11 +490,13 @@ m = create_manifest(experiment_id='$ExperimentId', run_role='PILOT', data_role='
     prompt_tokens_file=str(pt_path.resolve()), batch_size=1, fixed_output_tokens=$FixedOutputTokens,
     warmup_count=$WarmupCount, repeat_count=$RepeatCount, gpu=physical_gpu_index,
     gpu_index_physical=physical_gpu_index, gpu_index_logical=logical_gpu_index,
+    gpu_uuid=identity['gpu_uuid'], gpu_pci_bus_id=identity['gpu_pci_bus_id'],
+    require_git_identity=True, git_worktree=Path(r'$ProjectRoot'),
     external_cuda_workload_policy='none')
 m = finalize_manifest(m, pt, prompt_tokens_path=pt_path)
 out_dir = Path(r'$SmokeDir'); save_manifest(m, out_dir / 'wmpc_manifest.json')
 print('MANIFEST_PATH:' + str(out_dir / 'wmpc_manifest.json'))
-print('WMPC_ID:' + m['wmpc_id']); print('RUN_ID:' + m['run_id']); print('SHA256:' + m['prompt_tokens_sha256'])
+print('WMPC_ID:' + m['wmpc_id']); print('RUN_ID:' + m['run_id']); print('PROMPT_SHA256:' + m['prompt_tokens_sha256'])
 "@
         $manifest_script = Join-Path $LogDir "10_create_manifest.py"
         [System.IO.File]::WriteAllText($manifest_script, $manifest_py, [System.Text.UTF8Encoding]::new($false))
@@ -507,7 +511,7 @@ print('WMPC_ID:' + m['wmpc_id']); print('RUN_ID:' + m['run_id']); print('SHA256:
             if ($l -match "^MANIFEST_PATH:(.*)") { $ManifestPath = $Matches[1].Trim() }
             if ($l -match "^WMPC_ID:(.*)")       { $WmpcId = $Matches[1].Trim() }
             if ($l -match "^RUN_ID:(.*)")         { $RunId = $Matches[1].Trim() }
-            if ($l -match "^SHA256:(.*)")         { $Report.environment["manifest_sha256"] = $Matches[1].Trim() }
+            if ($l -match "^PROMPT_SHA256:(.*)") { $Report.environment["prompt_tokens_sha256"] = $Matches[1].Trim() }
         }
         if (-not $ManifestPath -or -not (Test-Path $ManifestPath)) { Set-GateFailure "BLOCKED_BY_RUNNER" "Manifest not created" }
     }
@@ -525,6 +529,20 @@ print('WMPC_ID:' + m['wmpc_id']); print('RUN_ID:' + m['run_id']); print('SHA256:
     if ($r.ExitCode -ne 0) { Set-GateFailure "BLOCKED_BY_RUNNER" "validate-manifest failed (exit=$($r.ExitCode))" }
     Write-Host "  Manifest validated: $ManifestPath"
 }
+
+# ===================================================================
+# Pre-model identity gate (no inference or Nsight). Failure preserves native logs.
+# ===================================================================
+$ValidationScript = Join-Path -Path (Join-Path -Path $ProjectRoot -ChildPath "scripts") -ChildPath "gate7_smoke_validation.py"
+$a = @(('"' + $ValidationScript + '"'),"pre-model","--manifest",('"' + $ManifestPath + '"'),"--preflight",('"' + $PreflightGpuIdentityPath + '"'),"--project-root",('"' + $ProjectRoot + '"'))
+$r = Invoke-Native -Executable $PythonExe -Arguments $a -OutBase "12_pre_model_identity" -WorkingDirectory $ProjectRoot -Label "pre-model identity"
+if ($r.ExitCode -ne 0) { Set-GateFailure "BLOCKED_BY_RUNNER" "Pre-model identity failed. See logs/12_pre_model_identity_*" }
+try {
+    $Report.environment["manifest_sha256"] = (Get-FileHash -LiteralPath $ManifestPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+    $identityReport = $r.Stdout | ConvertFrom-Json -ErrorAction Stop
+    if ($identityReport.status -ne "PASS") { throw "Pre-model identity report is not PASS" }
+    $Report.environment["pre_model_identity"] = $identityReport
+} catch { Set-GateFailure "BLOCKED_BY_RUNNER" "Pre-model identity report/hash invalid: $_" }
 
 # ===================================================================
 # STEP 4: Pass 0
