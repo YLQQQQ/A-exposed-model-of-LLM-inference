@@ -1,0 +1,921 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exposedpath.dev/design/gate8/observation-boundary-0.1.0",
+  "$comment": "Approved design only; not loaded by production v0.2. Semantic constraints in gate8_observation_boundary_amendment_v0_1.md are mandatory in addition to shape validation.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/boundary_payload"
+    },
+    {
+      "$ref": "#/$defs/anchor"
+    },
+    {
+      "$ref": "#/$defs/projection"
+    },
+    {
+      "$ref": "#/$defs/pass_identity"
+    },
+    {
+      "$ref": "#/$defs/device_mapping"
+    },
+    {
+      "$ref": "#/$defs/integrity"
+    },
+    {
+      "$ref": "#/$defs/error"
+    }
+  ],
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ns": {
+      "type": "integer",
+      "minimum": -9223372036854775808,
+      "maximum": 9223372036854775807
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "experiment_id",
+        "wmpc_id",
+        "run_id",
+        "run_role",
+        "data_role",
+        "pass_id",
+        "attempt_id",
+        "request_id",
+        "repeat_id"
+      ],
+      "properties": {
+        "experiment_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "wmpc_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "run_role": {
+          "const": "ENGINEERING"
+        },
+        "data_role": {
+          "const": "Engineering"
+        },
+        "pass_id": {
+          "enum": [
+            "pass0",
+            "pass1"
+          ]
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repeat_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "raw_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_sqlite_sha256",
+        "record_id",
+        "source_table",
+        "source_rowid"
+      ],
+      "properties": {
+        "source_sqlite_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "record_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_table": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_rowid": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "artifact_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sha256",
+        "selector"
+      ],
+      "properties": {
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "selector": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "boundary_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "kind",
+        "identity",
+        "boundary_id",
+        "boundary_kind",
+        "token_index",
+        "completion_mechanism",
+        "marker_role"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "exposedpath-boundary-payload/0.1.0"
+        },
+        "kind": {
+          "const": "boundary"
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "boundary_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "boundary_kind": {
+          "enum": [
+            "request_start",
+            "token_ready"
+          ]
+        },
+        "token_index": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "completion_mechanism": {
+          "enum": [
+            "predrained_inputs_resident",
+            "device_to_host_token_ids"
+          ]
+        },
+        "marker_role": {
+          "const": "non_sync_marker"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "boundary_kind": {
+                "const": "request_start"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "token_index": {
+                "type": "null"
+              },
+              "completion_mechanism": {
+                "const": "predrained_inputs_resident"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "token_index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "completion_mechanism": {
+                "const": "device_to_host_token_ids"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "payload",
+        "raw_ref",
+        "trace_ns",
+        "clock_domain_id",
+        "pid",
+        "tid",
+        "host_observed_ns",
+        "host_before_marker_ns",
+        "host_after_marker_ns",
+        "host_clock_id",
+        "producer_ledger_ref"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "exposedpath-completion-anchor/0.1.0"
+        },
+        "payload": {
+          "$ref": "#/$defs/boundary_payload"
+        },
+        "raw_ref": {
+          "$ref": "#/$defs/raw_ref"
+        },
+        "trace_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "clock_domain_id": {
+          "const": "NSYS_TRACE_RELATIVE_NS"
+        },
+        "pid": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "tid": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "host_observed_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "host_before_marker_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "host_after_marker_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "host_clock_id": {
+          "const": "PYTHON_PERF_COUNTER_NS"
+        },
+        "producer_ledger_ref": {
+          "$ref": "#/$defs/artifact_ref"
+        }
+      }
+    },
+    "projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "identity",
+        "phase",
+        "start_boundary_id",
+        "end_boundary_id",
+        "start_ref",
+        "end_ref",
+        "start_ns",
+        "end_ns",
+        "clock_domain_id",
+        "canonical_manifest_sha256",
+        "anchor_artifact_sha256",
+        "pass_identity_sha256",
+        "dependency_evidence"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "exposedpath-scope-projection/0.1.0"
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "phase": {
+          "enum": [
+            "full_request",
+            "prefill",
+            "decode"
+          ]
+        },
+        "start_boundary_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "end_boundary_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start_ref": {
+          "$ref": "#/$defs/raw_ref"
+        },
+        "end_ref": {
+          "$ref": "#/$defs/raw_ref"
+        },
+        "start_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "end_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "clock_domain_id": {
+          "const": "NSYS_TRACE_RELATIVE_NS"
+        },
+        "canonical_manifest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "anchor_artifact_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "pass_identity_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "dependency_evidence": {
+          "const": false
+        }
+      }
+    },
+    "request_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity",
+        "request_role",
+        "expected_output_tokens",
+        "actual_output_tokens",
+        "expected_boundary_ids",
+        "observed_boundary_ids",
+        "outcome",
+        "early_eos",
+        "reasons"
+      ],
+      "properties": {
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "request_role": {
+          "enum": [
+            "measured",
+            "warmup"
+          ]
+        },
+        "expected_output_tokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "actual_output_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expected_boundary_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "observed_boundary_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "outcome": {
+          "enum": [
+            "COMPLETE",
+            "EXCLUDED",
+            "FAILED"
+          ]
+        },
+        "early_eos": {
+          "type": "boolean"
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "pass_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "experiment_id",
+        "wmpc_id",
+        "run_id",
+        "run_role",
+        "data_role",
+        "pass_id",
+        "attempt_id",
+        "pid",
+        "wmpc_manifest_sha256",
+        "prompt_sha256",
+        "runner_source_sha256",
+        "runner_git_commit",
+        "runner_git_dirty",
+        "planned_request_ids",
+        "requests",
+        "raw_artifact_sha256",
+        "device_mapping_sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "exposedpath-pass-identity/0.1.0"
+        },
+        "experiment_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "wmpc_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "run_role": {
+          "const": "ENGINEERING"
+        },
+        "data_role": {
+          "const": "Engineering"
+        },
+        "pass_id": {
+          "enum": [
+            "pass0",
+            "pass1"
+          ]
+        },
+        "attempt_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pid": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "wmpc_manifest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "prompt_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "runner_source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "runner_git_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "runner_git_dirty": {
+          "const": false
+        },
+        "planned_request_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "requests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/request_entry"
+          }
+        },
+        "raw_artifact_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "device_mapping_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "device_mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "source_sqlite_sha256",
+        "pid",
+        "gpu_index",
+        "gpu_index_physical",
+        "gpu_index_logical",
+        "trace_device_id",
+        "nsys_inventory_gpu_id",
+        "gpu_uuid",
+        "pci_bus_id",
+        "cuda_device_order",
+        "cuda_visible_devices",
+        "preflight_ref",
+        "cuda_probe_ref",
+        "cuda_device_ref",
+        "inventory_ref",
+        "context_refs"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "exposedpath-device-mapping/0.1.0"
+        },
+        "source_sqlite_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "pid": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "gpu_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gpu_index_physical": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gpu_index_logical": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "trace_device_id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nsys_inventory_gpu_id": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gpu_uuid": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "pci_bus_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\\.[0-7]$"
+        },
+        "cuda_device_order": {
+          "const": "PCI_BUS_ID"
+        },
+        "cuda_visible_devices": {
+          "type": "string",
+          "minLength": 1
+        },
+        "preflight_ref": {
+          "$ref": "#/$defs/artifact_ref"
+        },
+        "cuda_probe_ref": {
+          "$ref": "#/$defs/artifact_ref"
+        },
+        "cuda_device_ref": {
+          "$ref": "#/$defs/raw_ref"
+        },
+        "inventory_ref": {
+          "$ref": "#/$defs/raw_ref"
+        },
+        "context_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/raw_ref"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "capture_session_id",
+        "source_raw_sha256",
+        "pass_identity_sha256",
+        "channel",
+        "scope_pid",
+        "scope_start_ns",
+        "scope_end_ns",
+        "clock_domain_id",
+        "status",
+        "dropped_count",
+        "basis",
+        "collector_version",
+        "finalized",
+        "coverage_complete",
+        "evidence_refs",
+        "reasons"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "exposedpath-observation-integrity/0.1.0"
+        },
+        "capture_session_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_raw_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "pass_identity_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "channel": {
+          "enum": [
+            "CUDA_ACTIVITY",
+            "NVTX"
+          ]
+        },
+        "scope_pid": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "scope_start_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "scope_end_ns": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "clock_domain_id": {
+          "const": "NSYS_TRACE_RELATIVE_NS"
+        },
+        "status": {
+          "enum": [
+            "ZERO_CONFIRMED",
+            "NONZERO",
+            "UNKNOWN",
+            "CONFLICT"
+          ]
+        },
+        "dropped_count": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "basis": {
+          "enum": [
+            "COLLECTOR_COUNTER",
+            "COLLECTOR_ATTESTATION",
+            "UNAVAILABLE",
+            "CONFLICTING_EVIDENCE"
+          ]
+        },
+        "collector_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "finalized": {
+          "type": "boolean"
+        },
+        "coverage_complete": {
+          "type": "boolean"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifact_ref"
+          }
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "UNKNOWN"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "dropped_count": {
+                "type": "null"
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "ZERO_CONFIRMED"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "basis": {
+                "enum": [
+                  "COLLECTOR_COUNTER",
+                  "COLLECTOR_ATTESTATION"
+                ]
+              },
+              "finalized": {
+                "const": true
+              },
+              "coverage_complete": {
+                "const": true
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/artifact_ref"
+                },
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "ZERO_CONFIRMED"
+              },
+              "basis": {
+                "const": "COLLECTOR_COUNTER"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "dropped_count": {
+                "const": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "ZERO_CONFIRMED"
+              },
+              "basis": {
+                "const": "COLLECTOR_ATTESTATION"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "dropped_count": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "NONZERO"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "dropped_count": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/artifact_ref"
+                },
+                "minItems": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "stage",
+        "code",
+        "affected_request_ids",
+        "source_refs",
+        "action"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "exposedpath-gate8-design-error/0.1.0"
+        },
+        "stage": {
+          "enum": [
+            "IDENTITY",
+            "ANCHOR",
+            "PROJECTION",
+            "INTEGRITY",
+            "COVERAGE"
+          ]
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "affected_request_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifact_ref"
+          }
+        },
+        "action": {
+          "enum": [
+            "REJECT_RUN",
+            "REJECT_WINDOW",
+            "BLOCK_SCIENCE_ACCEPTANCE"
+          ]
+        }
+      }
+    }
+  }
+}

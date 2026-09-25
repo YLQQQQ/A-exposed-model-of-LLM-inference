@@ -1,0 +1,386 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://exposedpath.dev/design/gate8/sync-call-coverage-0.1.0",
+  "$comment": "Design only. Fractions are exact counts/durations, not B totals. Cross-record arithmetic and completeness require semantic validation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "data_role",
+    "window_ref",
+    "canonical_manifest_sha256",
+    "s_manifest_sha256",
+    "ab_manifest_sha256",
+    "integrity_artifact_sha256",
+    "denominator_status",
+    "members",
+    "observed_unique_count",
+    "supported_count_coverage",
+    "supported_duration_coverage",
+    "b_valid_count_coverage",
+    "b_valid_duration_coverage",
+    "reasons",
+    "duration_interpretation"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "exposedpath-sync-call-coverage/0.1.0"
+    },
+    "data_role": {
+      "const": "Engineering"
+    },
+    "window_ref": {
+      "$ref": "#/$defs/artifact_ref"
+    },
+    "canonical_manifest_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "s_manifest_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ab_manifest_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "integrity_artifact_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "denominator_status": {
+      "enum": [
+        "COMPLETE",
+        "INCOMPLETE",
+        "UNKNOWN"
+      ]
+    },
+    "members": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "physical_sync_uid",
+              "s_record_ref",
+              "b_record_ref",
+              "clipped_duration_ns",
+              "supported",
+              "b_valid"
+            ],
+            "properties": {
+              "physical_sync_uid": {
+                "type": "string",
+                "minLength": 1
+              },
+              "s_record_ref": {
+                "$ref": "#/$defs/artifact_ref"
+              },
+              "b_record_ref": {
+                "$ref": "#/$defs/artifact_ref"
+              },
+              "clipped_duration_ns": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "supported": {
+                "type": "boolean"
+              },
+              "b_valid": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "observed_unique_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "supported_count_coverage": {
+      "$ref": "#/$defs/ratio"
+    },
+    "supported_duration_coverage": {
+      "$ref": "#/$defs/ratio"
+    },
+    "b_valid_count_coverage": {
+      "$ref": "#/$defs/ratio"
+    },
+    "b_valid_duration_coverage": {
+      "$ref": "#/$defs/ratio"
+    },
+    "reasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "duration_interpretation": {
+      "const": "PHYSICAL_CALL_CLIPPED_DURATION_NOT_REQUEST_EXPOSURE"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "denominator_status": {
+            "enum": [
+              "INCOMPLETE",
+              "UNKNOWN"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "supported_count_coverage": {
+            "properties": {
+              "status": {
+                "const": "UNKNOWN"
+              }
+            }
+          },
+          "supported_duration_coverage": {
+            "properties": {
+              "status": {
+                "const": "UNKNOWN"
+              }
+            }
+          },
+          "b_valid_count_coverage": {
+            "properties": {
+              "status": {
+                "const": "UNKNOWN"
+              }
+            }
+          },
+          "b_valid_duration_coverage": {
+            "properties": {
+              "status": {
+                "const": "UNKNOWN"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "denominator_status": {
+            "const": "COMPLETE"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "physical_sync_uid",
+                "s_record_ref",
+                "b_record_ref",
+                "clipped_duration_ns",
+                "supported",
+                "b_valid"
+              ],
+              "properties": {
+                "physical_sync_uid": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "s_record_ref": {
+                  "$ref": "#/$defs/artifact_ref"
+                },
+                "b_record_ref": {
+                  "$ref": "#/$defs/artifact_ref"
+                },
+                "clipped_duration_ns": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "supported": {
+                  "type": "boolean"
+                },
+                "b_valid": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "supported_count_coverage": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "VALID",
+                  "NOT_APPLICABLE"
+                ]
+              }
+            }
+          },
+          "supported_duration_coverage": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "VALID",
+                  "NOT_APPLICABLE"
+                ]
+              }
+            }
+          },
+          "b_valid_count_coverage": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "VALID",
+                  "NOT_APPLICABLE"
+                ]
+              }
+            }
+          },
+          "b_valid_duration_coverage": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "VALID",
+                  "NOT_APPLICABLE"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "artifact_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sha256",
+        "selector"
+      ],
+      "properties": {
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "selector": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "ratio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "numerator",
+        "denominator"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "VALID",
+            "NOT_APPLICABLE",
+            "UNKNOWN"
+          ]
+        },
+        "numerator": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "denominator": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "VALID"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "numerator": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "denominator": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "NOT_APPLICABLE"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "numerator": {
+                "const": 0
+              },
+              "denominator": {
+                "const": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "UNKNOWN"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "numerator": {
+                "type": "null"
+              },
+              "denominator": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
