@@ -15,7 +15,7 @@ from .sync_semantics import load_canonical_bundle
 
 
 def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_session_id,
-                       integrity_receipts=None, synthetic_fixture=False):
+                       integrity_receipts=None, synthetic_fixture=False, scope_assessment=None):
     canonical_path, scope_path, output_dir = map(Path, (canonical_path, scope_path, output_dir))
     if output_dir.exists():
         raise FileExistsError("refusing to overwrite Gate8 derived output")
@@ -41,6 +41,18 @@ def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_sessi
         reasons.append('REQUEST_ATTEMPT_NOT_COMPLETE')
     if not synthetic_fixture:
         reasons.append("NSYS_AFFIRMATIVE_PROVIDER_NOT_IMPLEMENTED")
+    if scope_assessment is not None:
+        from .gate8_target_quality import validate_projection, validate_assessment
+        from .time_representation import time_representation, SIGNED
+        if not synthetic_fixture or integrity_receipts is not None:
+            raise ValueError('SYNTHETIC scoped evidence only; no mixed quality modes')
+        validate_assessment(scope_assessment, synthetic_fixture)
+        with time_representation(SIGNED):
+            scoped_inputs = build_projected_ab_inputs(canonical_path, scope_path)
+        can_calculate = validate_projection(scope_assessment, projections, scoped_inputs) and requests_complete
+        reasons = [*scope_assessment['reasons'], 'COLLECTOR_INTEGRITY_UNKNOWN_NOT_ZERO']
+        if not requests_complete:
+            reasons.append('REQUEST_ATTEMPT_NOT_COMPLETE')
     result = {
         "schema_version":"exposedpath-gate8-local-analysis/0.2.0",
         "observation_profile":PROFILE, "adapter_version":ADAPTER_VERSION,
@@ -52,6 +64,9 @@ def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_sessi
                   "pass_identity_sha256":pass_ref["sha256"]}, "files":{},
     }
     destination = output_dir
+    if scope_assessment is not None:
+        result['schema_version'] = 'exposedpath-gate8-local-analysis/0.3.0'
+        result['target_scope'] = scope_assessment
     destination.parent.mkdir(parents=True, exist_ok=True)
     output_dir = Path(tempfile.mkdtemp(prefix=f'.{destination.name}-partial-', dir=destination.parent))
 
@@ -86,6 +101,9 @@ def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_sessi
         }, denominator_status="COMPLETE" if not inputs.global_quality_reasons else "INCOMPLETE")
                     for i,window in enumerate(inputs.windows)]
         write("coverage", "coverage.json", coverage)
+        if scope_assessment is not None:
+            from .gate8_target_quality import publication
+            write('publication', 'publication.json', publication(a))
         eligible = (loaded['manifest']['quality']['status'] == 'VALID'
                     and all(r['primary_reason'] is None and r['A_unattributed_ns'] == 0 for r in a)
                     and all(r['validity'] in ('B_VALID','B_NOT_APPLICABLE') for r in b)

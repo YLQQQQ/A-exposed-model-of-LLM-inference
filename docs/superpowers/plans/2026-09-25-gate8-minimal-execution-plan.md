@@ -1,5 +1,11 @@
 # Gate8 最小执行计划 v0.1
 
+**当前7.27覆盖规则：** 用户批准路线A及目标request/必要依赖质量门，见
+[Route A amendment 0.1](../../v1_4_1/gate8_route_a_quality_amendment_v0_1.md)。
+厂商询证暂停，统一全capture认证不再前置；UNKNOWN仍保留。下方历史编号保留，
+合并/缩减/后移以新amendment处置表为准。Gate7 PASS、Gate8 NOT_RUN。
+本轮为本地实现、受控文件链与服务器前准备，不授权服务器采集。
+
 **当前7.26：** 安装只读取证与审查完成，仍未找到充分完整性来源。下一项为用户审阅[一次厂商询证草稿](../../v1_4_1/gate8_nsys_vendor_inquiry_v0_1.md)，未发送；不再执行7.25安装搜索。答复后按有限路线裁决，UNKNOWN继续阻塞，未授权部署/采集。Q0与真实workload验收顺序不变。
 
 **当前7.25覆盖说明：** 用户要求暂停扩功能，先做完整性可行性与新版Q0计划。已形成[决策备忘录](../../v1_4_1/gate8_integrity_q0_decision_memo_v0_1.md)：B一次目标安装文件只读取证→有界厂商询证/裁决→必要本地provider/资格接口→授权新Q0→再授权workload。无部署/GPU/Nsight授权，以下本地实现队列不作为本轮继续编码指令。

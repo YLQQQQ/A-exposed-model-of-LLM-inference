@@ -1,5 +1,9 @@
 # Gate8 完整性调查收口与厂商询证 v0.1
 
+**7.27：用户已暂停询证，不发送。** 新执行采用
+[Route A目标scope质量门](gate8_route_a_quality_amendment_v0_1.md)，不以统一全capture认证
+为前置。以下保留为未发送的历史调查草稿，不再是下一步指令。
+
 2026-09-25；状态 `DRAFT_NOT_SENT`。仅 Engineering 文档，不是 observation amendment、采集指令或厂商能力认证。Gate7 PASS；Gate8 NOT_RUN；完整性 UNKNOWN 继续阻塞科学验收。
 
 ## 1. 有界调查结论
