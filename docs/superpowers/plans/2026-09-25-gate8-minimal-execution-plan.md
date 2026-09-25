@@ -1,5 +1,7 @@
 # Gate8 最小执行计划 v0.1
 
+**当前7.25覆盖说明：** 用户要求暂停扩功能，先做完整性可行性与新版Q0计划。已形成[决策备忘录](../../v1_4_1/gate8_integrity_q0_decision_memo_v0_1.md)：B一次目标安装文件只读取证→有界厂商询证/裁决→必要本地provider/资格接口→授权新Q0→再授权workload。无部署/GPU/Nsight授权，以下本地实现队列不作为本轮继续编码指令。
+
 2026-09-25，当前状态：**用户已批准时间表示amendment，本地文件链及显式API已接通并做确定性验证；真实完整性仍UNKNOWN。服务器部署和采集未授权，Gate8 NOT_RUN**。当前执行状态以[本地实现v0.2](../../v1_4_1/gate8_local_implementation_v0_2.md)及 research_progress 7.24 为准；下方历史实施队列不表示实验完成，EP-G8-01～04仍未勾选。
 
 本计划使用既有 EP-G8-01～04，不新增Gate、不创建worktree。输入依据为研究设计v7.1、实验协议v2.1 Pre-Pilot、冻结Measurement Contract及[接口审计](../../v1_4_1/gate8_interface_gap_audit_v0_1.md)。不修改冻结S/A/B、Q0或旧证据。

@@ -1,6 +1,6 @@
 # Gate8 Observation / Boundary Amendment v0.1
 
-**ID `G8-OBS-BOUNDARY/0.1.0`；2026-09-25，D1方向已获用户批准。** 最初设计授权之后，用户另行批准本地 tests-first 实现；第一批实现及尚未完成的 signed-time/编排适配见[实现状态](gate8_local_implementation_v0_1.md)。未授权服务器部署或Q0/GPU/Nsight采集；本次状态更新不改变下述合同。
+**ID `G8-OBS-BOUNDARY/0.1.0`；2026-09-25，D1方向已获用户批准。** 最初设计授权之后，用户另行批准本地 tests-first 实现；signed-time及文件链状态见[实现v0.2](gate8_local_implementation_v0_2.md)，最新完整性/Q0前置工作见[决策备忘录](gate8_integrity_q0_decision_memo_v0_1.md)。未授权服务器部署或Q0/GPU/Nsight采集；本次状态更新不改变下述合同。
 
 ## 1. 适用性与不变量
 
