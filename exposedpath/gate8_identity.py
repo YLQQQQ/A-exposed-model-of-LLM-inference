@@ -1,0 +1,83 @@
+"""Opt-in Gate8 identity producer. No device access or experiment qualification."""
+from copy import deepcopy
+import json
+from pathlib import Path
+
+from jsonschema import Draft202012Validator, ValidationError
+
+PROFILE = "G8-OBS-BOUNDARY/0.1.0"
+ADAPTER_VERSION = "exposedpath-gate8-adapter/0.1.0"
+IDENTITY_FIELDS = (
+    "experiment_id", "wmpc_id", "run_id", "run_role", "data_role",
+    "pass_id", "attempt_id", "request_id", "repeat_id",
+)
+PASS_FIELDS = IDENTITY_FIELDS[:-2]
+_SCHEMA = json.loads((Path(__file__).resolve().parents[1] / "docs/v1_4_1/contracts/gate8/observation_boundary_schema_v0_1.json").read_text(encoding="utf-8"))
+
+
+def validate_shape(kind, value):
+    """Validate an approved closed schema; cross-record checks are separate."""
+    try:
+        Draft202012Validator({"$defs": _SCHEMA["$defs"], "$ref": f"#/$defs/{kind}"}).validate(value)
+    except ValidationError as exc:
+        raise ValueError(f"IDENTITY_CONFLICT: {kind}: {exc.message}") from exc
+
+
+def validate_pass_identity(value, *, finalized=False):
+    validate_shape("pass_identity", value)
+    planned = value["planned_request_ids"]
+    requests = value["requests"]
+    ids = [r["identity"]["request_id"] for r in requests]
+    if not planned or len(set(planned)) != len(planned) or len(set(ids)) != len(ids) or set(ids) != set(planned):
+        raise ValueError("IDENTITY_CONFLICT: planned/request IDs must be unique and exact")
+    repeats = []
+    boundaries = []
+    for entry in requests:
+        identity = entry["identity"]
+        if any(identity[k] != value[k] for k in PASS_FIELDS):
+            raise ValueError("IDENTITY_CONFLICT: request/pass identity")
+        repeats.append((entry["request_role"], identity["repeat_id"]))
+        expected, observed = entry["expected_boundary_ids"], entry["observed_boundary_ids"]
+        if len(set(expected)) != len(expected) or len(set(observed)) != len(observed):
+            raise ValueError("IDENTITY_CONFLICT: duplicate boundary")
+        if not set(observed) <= set(expected):
+            raise ValueError("IDENTITY_CONFLICT: unplanned boundary")
+        if entry["request_role"] == "measured" and len(expected) != entry["expected_output_tokens"] + 1:
+            raise ValueError("IDENTITY_CONFLICT: boundary plan/token count")
+        if entry["outcome"] == "COMPLETE":
+            if (entry["actual_output_tokens"] != entry["expected_output_tokens"]
+                    or entry["early_eos"] or entry["reasons"] or observed != expected):
+                raise ValueError("IDENTITY_CONFLICT: incomplete COMPLETE request")
+        elif not entry["reasons"]:
+            raise ValueError("IDENTITY_CONFLICT: failed/excluded request needs reasons")
+        boundaries.extend(expected)
+    if len(set(repeats)) != len(repeats) or len(set(boundaries)) != len(boundaries):
+        raise ValueError("IDENTITY_CONFLICT: duplicate repeat/boundary across requests")
+    if finalized and value["pass_id"] == "pass1" and (
+        value["raw_artifact_sha256"] is None or value["device_mapping_sha256"] is None
+    ):
+        raise ValueError("IDENTITY_CONFLICT: pass1 final lineage missing")
+
+
+def make_gate8_pass_identity(*, requests, **pass_fields):
+    """Construct the producer ledger without mutating a shared WMPC manifest.
+
+    This is the pre-export form. The adapter writes a distinct finalized copy
+    after Raw/device hashes exist; neither input nor Raw is back-patched.
+    """
+    for field, required in (("run_role", "ENGINEERING"), ("data_role", "Engineering")):
+        if field in pass_fields and pass_fields[field] != required:
+            raise ValueError(f"IDENTITY_CONFLICT: producer {field}")
+    result = {
+        "schema_version": "exposedpath-pass-identity/0.1.0",
+        **deepcopy(pass_fields), "run_role": "ENGINEERING", "data_role": "Engineering",
+        "planned_request_ids": [r["request_id"] for r in requests],
+        "requests": [], "raw_artifact_sha256": None, "device_mapping_sha256": None,
+    }
+    for source in requests:
+        entry = deepcopy(source)
+        identity = {k: result[k] for k in PASS_FIELDS}
+        identity.update(request_id=entry.pop("request_id"), repeat_id=entry.pop("repeat_id"))
+        result["requests"].append({"identity": identity, **entry})
+    validate_pass_identity(result)
+    return result

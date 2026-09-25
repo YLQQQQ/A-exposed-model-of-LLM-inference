@@ -117,6 +117,9 @@ def _api_category(api: Mapping[str, object], api_by_correlation: Mapping[object,
 def _trusted_owner_identity(candidate: Mapping[str, object]) -> Mapping[str, object] | None:
     """仅返回与 Canonical 缓存完整一致的结构化 NVTX text identity。"""
 
+    from .gate8_scope import ProjectedScope
+    if isinstance(candidate, ProjectedScope):
+        return candidate["structured_identity"]
     text = candidate.get("text")
     if not isinstance(text, str) or not text.startswith(_STRUCTURED_PREFIX):
         return None
@@ -261,7 +264,10 @@ def _window_record(inputs: ABInputs, window: RequestPhaseWindow) -> dict[str, ob
 
     apis: list[tuple[Mapping[str, object], tuple[int, int]]] = []
     nvtx_records = tuple(
-        record for record in inputs.canonical.records.get("nvtx", ()) if isinstance(record, Mapping)
+        record for record in (
+            inputs.canonical.projected_ownership if inputs.canonical.projected_ownership is not None
+            else inputs.canonical.records.get("nvtx", ())
+        ) if isinstance(record, Mapping)
     )
     api_by_correlation: dict[object, list[Mapping[str, object]]] = {}
     for api in inputs.canonical.records.get("cuda_api", ()):

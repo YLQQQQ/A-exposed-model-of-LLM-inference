@@ -546,6 +546,7 @@ def convert_sqlite_to_canonical(
     raw_sha256: str | None = None,
     collector_version: str | None = None,
     source_manifest: Path | None = None,
+    gate8_sources: Mapping[str, Path] | None = None,
 ) -> Path:
     """只读转换 Nsight SQLite；返回最终 canonical manifest 路径。"""
 
@@ -555,7 +556,8 @@ def convert_sqlite_to_canonical(
         raise FileExistsError(f"拒绝覆盖已有输出目录: {output_dir}")
     schema = load_canonical_raw_schema()
     observation = inspect_sqlite(
-        sqlite_path, data_role, raw_sha256, collector_version, source_manifest
+        sqlite_path, data_role, raw_sha256, collector_version,
+        gate8_sources.get("pass_identity") if gate8_sources is not None else source_manifest,
     )
     if observation["validity"]["status"] == "invalid":
         raise ValueError("observation invalid，拒绝 Canonical Raw 转换")
@@ -572,6 +574,13 @@ def convert_sqlite_to_canonical(
     try:
         with _open_readonly(sqlite_path) as connection:
             records, nvtx_identity_issues = _extract_records(connection, schema)
+            gate8 = None
+            if gate8_sources is not None:
+                from .gate8_adapter import prepare_identity
+                if data_role != "Engineering" or source_manifest is not None:
+                    raise ValueError("IDENTITY_CONFLICT: Gate8 uses explicit Engineering per-pass sources")
+                gate8 = prepare_identity(connection, records, gate8_sources,
+                                         _sha256(sqlite_path).lower(), raw_sha256, staging)
         files: dict[str, dict[str, Any]] = {}
         for kind, spec in schema["record_types"].items():
             for record in records[kind]:
@@ -669,6 +678,12 @@ def convert_sqlite_to_canonical(
                 "blocking_reasons": ["CANONICAL_RAW_ONLY", "Q0_NOT_RUN"],
             },
         }
+        if gate8 is not None:
+            selected_device = gate8.pop("selected_device_id")
+            canonical_manifest.update(gate8)
+            canonical_manifest["source"]["source_manifest"] = source_fact["source_manifest"]
+            canonical_manifest["execution_context"]["selected_device_id"] = selected_device
+            canonical_manifest["research_eligibility"]["blocking_reasons"].append("GATE8_PROFILE_NOT_QUALIFIED")
         manifest_path = staging / schema["bundle_manifest"]["filename"]
         with manifest_path.open("x", encoding="utf-8", newline="\n") as handle:
             json.dump(canonical_manifest, handle, ensure_ascii=False, indent=2)

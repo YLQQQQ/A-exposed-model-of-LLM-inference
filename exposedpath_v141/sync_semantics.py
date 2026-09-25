@@ -1130,7 +1130,7 @@ def build_semantic_inventory(bundle: Mapping[str, Any]) -> dict[str, Any]:
     records = bundle["records"]
     manifest = bundle["manifest"]
     input_status, input_reasons = _manifest_input_status(manifest)
-    nvtx = list(records["nvtx"])
+    nvtx = list(bundle.get("ownership_records", records["nvtx"]))
     cuda_api = list(records["cuda_api"])
     cuda_apis_by_correlation: dict[Any, list[Mapping[str, Any]]] = defaultdict(list)
     for api in cuda_api:

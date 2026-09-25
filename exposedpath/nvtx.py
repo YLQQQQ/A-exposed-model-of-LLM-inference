@@ -7,6 +7,8 @@ Format:
 """
 
 import json
+from exposedpath.gate8_identity import make_gate8_pass_identity, validate_shape
+from exposedpath.gate8_boundary import Gate8BoundaryRecorder
 import re
 from dataclasses import dataclass
 from typing import Mapping, Optional, Tuple
@@ -24,6 +26,9 @@ _COMMON_IDENTITY_FIELDS = (
 
 
 def _validated_identity_base(identity_base: Mapping) -> dict:
+    if "attempt_id" in identity_base:
+        validate_shape("identity", dict(identity_base))
+        return dict(identity_base)
     missing = [field for field in _COMMON_IDENTITY_FIELDS if not identity_base.get(field)]
     if missing:
         raise ValueError(f"Structured NVTX identity missing fields: {', '.join(missing)}")

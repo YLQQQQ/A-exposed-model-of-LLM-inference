@@ -1,12 +1,12 @@
 # Gate8 Observation / Boundary Amendment v0.1
 
-**ID `G8-OBS-BOUNDARY/0.1.0`；2026-09-25，D1方向已获用户批准，设计已编制、生产尚未实现。** 本轮授权只含amendment/schema/独立测试预期及文档提交，不含生产修改、服务器部署或Q0/GPU/Nsight采集。
+**ID `G8-OBS-BOUNDARY/0.1.0`；2026-09-25，D1方向已获用户批准。** 最初设计授权之后，用户另行批准本地 tests-first 实现；第一批实现及尚未完成的 signed-time/编排适配见[实现状态](gate8_local_implementation_v0_1.md)。未授权服务器部署或Q0/GPU/Nsight采集；本次状态更新不改变下述合同。
 
 ## 1. 适用性与不变量
 
 增补[Measurement Contract v0.2](measurement_contract_v0_2.md) §3–5、§9、§15的观测接口，不覆盖其正文，不改变host-readable语义、W(s)、terminal、A优先级、B/D公式。依据研究设计v7.1及实验协议v2.1 Pre-Pilot。仅用于实现本amendment、明确绑定版本后的**新Engineering attempt**；旧Gate7/Prototype不能改名升级。历史Gate6资格仍绑定原commit/adapter/schema，PASS不撤销。
 
-JSON Schema：[observation_boundary_schema_v0_1.json](contracts/gate8/observation_boundary_schema_v0_1.json)，Draft2020-12，闭合对象、拒绝未知版本。它是**独立设计schema**，不是把现有Canonical0.2声明为已支持新字段。现有loader未消费它；实现时采用显式新profile `G8-OBS-BOUNDARY/0.1.0` 和独立sidecar，旧v0.2路径不静默fallback；生产package/adapter版本必须随实现另行发布并记录。Raw v0.2时间和record ID不改写。
+JSON Schema：[observation_boundary_schema_v0_1.json](contracts/gate8/observation_boundary_schema_v0_1.json)，Draft2020-12，闭合对象、拒绝未知版本。它是独立schema，不是把现有Canonical0.2声明为已支持新字段。新显式loader消费profile `G8-OBS-BOUNDARY/0.1.0` 和独立sidecar，旧v0.2路径不静默fallback；package/adapter版本见实现状态。Raw v0.2时间和record ID不改写。
 
 | 记录schema | 职责与版本 |
 |---|---|

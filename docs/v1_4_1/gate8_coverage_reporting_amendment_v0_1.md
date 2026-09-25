@@ -1,6 +1,6 @@
 # Gate8 Coverage Reporting Amendment v0.1
 
-**ID `G8-COVERAGE/0.1.0`；2026-09-25，D2方向已批准；设计完成、生产尚未实现。** 增补实验协议v2.1 §3.6及Measurement Contract v0.2 §6/9–12的报告细则，不覆盖冻结正文、S/A/B公式或旧结果。仅适用于显式绑定本版本的新Engineering报告，Gate8 NOT_RUN。
+**ID `G8-COVERAGE/0.1.0`；2026-09-25，D2方向已批准；本地第一批实现见[实现状态](gate8_local_implementation_v0_1.md)。** 增补实验协议v2.1 §3.6及Measurement Contract v0.2 §6/9–12的报告细则，不覆盖冻结正文、S/A/B公式或旧结果。仅适用于显式绑定本版本的新Engineering报告，Gate8 NOT_RUN；确定性测试不是新Q0或真实workload验收。
 
 Schema：[coverage_reporting_schema_v0_1.json](contracts/gate8/coverage_reporting_schema_v0_1.json)，记录版本`exposedpath-sync-call-coverage/0.1.0`。独立sidecar读取版本绑定的projection、Canonical、S和A/B；不从legacy analyzer字段猜测，不让D/Signature默认把新增字段作为新指标。
 

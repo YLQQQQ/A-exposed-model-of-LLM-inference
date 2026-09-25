@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-> 一句话状态：**Gate 0～7 = `PASS`；Gate7 Engineering/legacy-only限制保留。Gate8 D1/D2方向获批，amendment/schema与独立手算预期已设计，尚未实现；肯定零丢失来源仍UNKNOWN/技术阻塞。Gate8验收仍`NOT_RUN`，不执行服务器/GPU/Nsight/Q0采集，不升级旧证据。**
+> 一句话状态：**Gate 0～7 = `PASS`；Gate7 Engineering/legacy-only限制保留。Gate8 已授权并完成第一批本地 tests-first API 实现（身份/锚点/projection/S-A-B接口/coverage/完整性入口），尚非完整部署就绪；零丢失来源仍 UNKNOWN，另有 signed trace 与冻结 A/B 非负时间表示的兼容缺口。Gate8验收仍 `NOT_RUN`，无服务器/GPU/Nsight/Q0采集，不升级旧证据。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -58,16 +58,16 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.22`
+- 清单版本：`7.23`
 - 最近更新：`2026-09-25`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
 - 当前研究阶段：`Engineering`
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（已开始差距审计/执行规划，未实施或采集）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：D1/D2已获设计授权；按`gate8_observation_boundary_amendment_v0_1.md`、`gate8_coverage_reporting_amendment_v0_1.md`及独立测试预期审查下一阶段最小本地实现，生产修改尚未授权。目标Nsight 2026.2全会话肯定零丢失证据仍未确认，不以无警告放行、不擅自换collector。保留Gate7限制，无Gate7补跑任务。
-- 当前本地/服务器身份：本地main规划基线`f8c6b050476cf91b53bf158645bb09c36a1b960f`；服务器仍`8d64f7580d43d7c8e1cb7a416b459cec8f60b011`。用户回传固定checkout clean，YLQ下evidence/diagnostics/logs/transfer已创建；本轮未直接读取layout receipt、未操作服务器。机器位置在忽略的本地handoff，不随main自动部署。
+- 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（第一批本地实现，未部署/采集/验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
+- 当前最高优先级：继续本地实现收口，见 `gate8_local_implementation_v0_1.md`：新 profile 的 signed 时间与冻结 A/B 非负字段兼容、实际 preflight/probe/多pass编排及 D/Signature 包装尚待完成。package/analyzer `0.3.0` / Gate8 adapter `0.1.0` 未获新 Q0 资格。目标 Nsight 全会话肯定零丢失来源仍 UNKNOWN，默认本地分析入口 BLOCKED；不得以无警告放行、不得部署或启动实验。
+- 当前本地/服务器身份：本地第一批实现基于main `8ea177e15fa09f28f1d1603f88c412d8fb3f416c`，具体交付commit由Git记录；服务器仍`8d64f7580d43d7c8e1cb7a416b459cec8f60b011`。用户回传固定checkout clean，YLQ下evidence/diagnostics/logs/transfer已创建；本轮未直接读取layout receipt、未操作服务器。机器位置在忽略的本地handoff，不随main自动部署。
 - 历史总体判断（2026-09-20）：Gate 6 / Q0 已正式 `PASS`。frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21/21 `REAL_CASE_PASS`、2 个 synthetic-only case（`Q0-TERMINAL-TIE-001`、`Q0-SUBMISSION-RACE-001`）PASS、23/23 `SYNTHETIC_PASS`，且存在唯一一份 `q0_gate_report.json`（schema `exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`）。该 PASS 只说明当前 analyzer 在本目标 observation stack 上取得 **Q0 正确性资格**；不等于 Engineering Pilot、Pilot、Protocol Freeze 或 Formal 结果，也不建立第二平台等价性。身份、哈希、provenance caveat、根因映射与实现成熟度见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
 - 历史到达点（已由7.18取代）（`EP-G7-11`）：此前一次 fresh smoke 在 Pass1/Nsight 启动边界遭系统 BugCheck `0x133` 中断，根因未获证明。随后服务器报告：`799fb8d` 在目标 Windows/RTX 4090 的 static preflight `940 passed, 1 skipped`、compileall、verify、合同/Canonical/oracle 检查通过；新 Engineering smoke `smoke_20260923T134310Z` 的 Pass0、Pass1 inference/telemetry/parity 和最小 Nsight collection 完成，生成非空 REP，且未再出现 BugCheck。但即时 `nsys export` 在约 51% 停滞，被人工终止后 machine report 为 `BLOCKED_BY_NSYS`、exit 1，Analyzer 未运行；该 attempt **不是** Gate 7 acceptance evidence。相同 SHA256 的 REP 副本后续离线 export 得到 integrity PASS 的 SQLite，诊断 analyzer exit 0；仅支持“REP 可离线导出/分析”，不证明即时 export 挂起的精确根因，也不追认原 attempt。Gate 7 仍为 `NOT_RUN`，Gate 8 未启动。
 
@@ -351,15 +351,21 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 ### Gate 8：Engineering Pilot
 
-**Gate verdict：`NOT_RUN`（2026-09-25开始审计/规划，未启动实现或新采集）。** Gate7 acceptance仅满足前序依赖，不能代替EP-G8-02科学全链。版本化产物：`gate8_interface_gap_audit_v0_1.md`及`../superpowers/plans/2026-09-25-gate8-minimal-execution-plan.md`。
+**Gate verdict：`NOT_RUN`（本地第一批实现及确定性验证完成，尚有本地适配/编排缺口；无新采集）。** Gate7 acceptance仅满足前序依赖，不能代替EP-G8-02科学全链。当前入口：[本地实现状态](gate8_local_implementation_v0_1.md)及`../superpowers/plans/2026-09-25-gate8-minimal-execution-plan.md`。下方7.21/7.22及历史差距为当次记录，不覆盖7.23授权和状态。
 
 **本轮实证差距：** 在根main用现有8d64f75 Gate7 SQLite只读派生到`.local/diagnostics/gate8-gap-v0_1-20260925-r3/`：observation valid（不等于dropped=0）；Canonical identity AMBIGUOUS（缺pass/repeat）、selected_device_id=3但trace device_id=0；12个NVTX range中8 legacy/4 structured sync，无结构化request/phase。S exit1、354条全invalid；A/B exit1、0窗口、FAIL_CLOSED；D未执行。354是全进程而非request分母。原REP/SQLite/manifest/report四文件hash前后不变。只证明历史输入兼容性缺口，不是Gate8 evidence、不撤销Gate7 PASS。未运行pytest、GPU、真实Nsight/export。
 
-**未决与下一步：** 先审查共同completion/clock表达、多repeat来源合同、coverage跨phase/重叠/null规则、非Q0目标scope与零丢失证据；显式device namespace映射与default-stream事实也须补齐。可复用既有模型/环境来源，候选32/2 tokens、batch1、warmup1/repeat2仅Engineering可行性。先批准本地tests-first实施，再固定checkout静态复验，最后另行授权新采集；不能因规划完成勾选以下实验任务。
+**当前未决与下一步：** D1/D2已经批准并进入本地实现；先补新profile signed-time与冻结A/B非负表示的适配、实际preflight/probe/pass文件生命周期及D/Signature编排接口回归。肯定零丢失provider仍未落实，科学验收继续BLOCKED；不得clock平移或放宽旧合同。当前无服务器操作，不能因本地测试完成勾选以下实验任务。
 
 **7.21合同收敛：** 见`gate8_contract_decisions_v0_1.md`，细化上段但不冻结新语义。重新核对协议v2.1 §3.6，确认B_valid coverage分母已定义为“支持sync”，不是全部sync；支持率的physical universe/去重/null已有依据，仅duration运算及跨phase计数需报告细则。历史SQLite另证实physical3/logical0/Nsight inventory2/activity device0经PID/UUID/PCI可联结，给出明确adapter映射。D1推荐同trace边界点派生scope而不转换perf_counter；D2推荐调用裁剪时长加权（不是request exposure）；两者均待批准并版本化。零drop无肯定来源仍阻塞，无警告不能等价为0；不自动授权新增collector或扩大Q0。只读核验/文档更新，未跑测试或GPU/Nsight，历史Gate7诊断不升级。
 
 **7.22批准及交付：** 用户接受D1/D2，仅授权设计/独立预期与文档提交推送。发布独立`G8-OBS-BOUNDARY/0.1.0`、`G8-COVERAGE/0.1.0`设计及`contracts/gate8/`两份Draft2020-12 schema，未改原MC/C/S/A-B合同正文和生产loader。手算规格覆盖三窗口、跨phase/重叠/零时长/空分母/unknown、身份映射与完整性负例；schema自身检查及8正例/11负例通过，3语义反例只验证不被shape检查冒充解决。目标2026.2归档与69条历史SQLite诊断仍未给出全会话肯定零证据，记录在`gate8_nsys_integrity_evidence_note_v0_1.md`。D1影响ownership/phase/device/correlation/完整性资格，须在实现diff后按影响矩阵验证；未执行Q0，不自动继承新版本资格、不撤销历史Gate6 PASS。计划及handoff同步；此设计提交不是服务器执行commit，服务器继续8d64f75，无部署操作。
+
+**7.23本地第一批实现：** 用户授权基于8ea177e的根main tests-first实现。显式per-pass ledger/device adapter、实际runner共同point/host ledger、可重算scope、S/A共享ownership、独立D2报告和完整性入口已实现；package `0.3.0` / adapter `exposedpath-gate8-adapter/0.1.0`，旧默认路径保持。详见[实现状态与剩余清单](gate8_local_implementation_v0_1.md)。未修改冻结MC/schema、W(s)/A/B公式、Q0/oracle/evaluator或历史证据；新版本资格不继承。
+
+本地Python 3.12.7确定性验证：新增四文件56 passed；CPU全量 `1092 passed, 5 skipped in 139.97s`。全量命令通过子进程设置 `CUDA_VISIBLE_DEVICES=-1`，仅在该进程PATH排除CUDA/nvcc，断言nvcc不可用后运行 `pytest -q -p no:cacheprovider -rs`；五项skip来自既有 `test_v141_q0_cuda_source.py` 的nvcc检查（93/109/121/367/478行），未修改skip规则。`compileall -q exposedpath analysis exposedpath_v141 scripts`、`validate-contract` 37/37、Canonical boundary（7模块）、oracle independence、`git diff --check`均通过。提交前角色冲突红测覆盖producer不得重标记，以及NVTX显式data_role冲突不得被兼容分支忽略。上述为本地CPU检查，不是服务器/真实Nsight或新Q0结果。
+
+剩余：signed-int64 Raw/projection已保留，但旧A/B非负时间表示暂以明确错误阻塞；真实完整性provider仍UNKNOWN；实际producer文件编排及D/Signature发布包装未接通。只交付第一批，不要求部署/采集。手算与mock链路不替代真实workload；Gate7 PASS、Gate8 NOT_RUN不变。
 
 - [ ] `EP-G8-01`（未开始，依赖 `EP-G7-11`）运行最小端到端开发 workload。
 - [ ] `EP-G8-02`（未开始，依赖 `EP-G7-11`）验证 benchmark → runner → Nsight → Canonical Raw → S → A/B → D/Signature 全链路。
@@ -555,3 +561,4 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 | 7.20 | 2026-09-25 | Gate8实际producer/consumer审计与版本化最小计划；历史SQLite只读转换揭示identity/窗口/trace-device/quality/coverage缺口；记录用户回传服务器目录完成但未读取原receipt | EP-G8-01～04规划 | 无业务代码/冻结合同改变；无新GPU/Nsight、无Gate8验收证据；Gate7 PASS限制不变，Gate8 NOT_RUN，四实验任务未勾选 |
 | 7.21 | 2026-09-25 | 合同收敛为D1共同completion锚点与D2 coverage统计细则；协议确认B-valid分母=支持sync；设备映射/多repeat来源给出确定工程设计，零丢失肯定证据仍为技术阻塞 | EP-G8-01～04规划 | 仅建议amendment、尚未批准/实施；未改冻结合同或Q0，不升级旧证据；Gate7 PASS、Gate8 NOT_RUN |
 | 7.22 | 2026-09-25 | 用户批准D1/D2设计；新增两份独立amendment/schema、手算预期、版本化Nsight完整性调查；正常提交推送设计文档，不部署服务器 | EP-G8-01～04设计 | 仅schema/文档，无生产修改；shape检查不等于语义/真实验证；新资格待验证、零丢失仍UNKNOWN；Gate7 PASS、Gate8 NOT_RUN |
+| 7.23 | 2026-09-25 | 授权本地tests-first第一批：多请求/device身份、共同point/projection、S/A ownership接口、D2 coverage、UNKNOWN完整性门；56项新回归及CPU全量1092 passed/5 skipped | EP-G8-01～04实现前置 | signed-time A/B及文件/全链编排仍待收口；无服务器/GPU/Nsight、无新Q0资格；Gate7 PASS、Gate8 NOT_RUN |

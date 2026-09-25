@@ -1,14 +1,14 @@
 # Gate8 最小执行计划 v0.1
 
-2026-09-25，状态：**D1/D2方向获批，amendment/schema及独立测试预期设计完成；生产实现/采集未授权，Gate8 NOT_RUN**。
+2026-09-25，当前状态：**用户已授权本地 tests-first 实现；第一批显式 API 已完成，完整实现仍有时间表示/编排缺口。服务器部署和采集未授权，Gate8 NOT_RUN**。当前执行状态以[本地实现记录](../../v1_4_1/gate8_local_implementation_v0_1.md)及 research_progress 7.23 为准；EP-G8-01～04 的实验验收仍未勾选。
 
 本计划使用既有 EP-G8-01～04，不新增Gate、不创建worktree。输入依据为研究设计v7.1、实验协议v2.1 Pre-Pilot、冻结Measurement Contract及[接口审计](../../v1_4_1/gate8_interface_gap_audit_v0_1.md)。不修改冻结S/A/B、Q0或旧证据。
 
 实施前问题已进一步收敛为[合同决策稿D1/D2](../../v1_4_1/gate8_contract_decisions_v0_1.md)。该稿细化本计划中的审查入口，不自动授权实现或实验；多repeat/设备identity工程细节无需用户逐项选择。
 
-当前规范：[G8-OBS-BOUNDARY/0.1.0](../../v1_4_1/gate8_observation_boundary_amendment_v0_1.md)、[G8-COVERAGE/0.1.0](../../v1_4_1/gate8_coverage_reporting_amendment_v0_1.md)、[独立预期](../../v1_4_1/gate8_design_test_expectations_v0_1.md)。两份JSON Schema位于`docs/v1_4_1/contracts/gate8/`，尚未被生产loader读取。完整性调查见[目标版本记录](../../v1_4_1/gate8_nsys_integrity_evidence_note_v0_1.md)。旧段落中的“先审查四项”已由用户本次D1/D2批准取代，但不表示授权代码修改。
+当前规范：[G8-OBS-BOUNDARY/0.1.0](../../v1_4_1/gate8_observation_boundary_amendment_v0_1.md)、[G8-COVERAGE/0.1.0](../../v1_4_1/gate8_coverage_reporting_amendment_v0_1.md)、[独立预期](../../v1_4_1/gate8_design_test_expectations_v0_1.md)。两份JSON Schema位于`docs/v1_4_1/contracts/gate8/`，已由新显式本地API消费，不自动切换旧路径。完整性调查见[目标版本记录](../../v1_4_1/gate8_nsys_integrity_evidence_note_v0_1.md)。D1/D2及本地实施均获批准，服务器执行仍未授权。
 
-### 下一阶段最小实现队列（待授权；在根main逐项tests-first）
+### 本地实现队列（已授权；在根main逐项tests-first）
 
 - [ ] adapter身份单元：`platform_adapter.py` / `canonical_raw.py`与独立sidecar loader，先以ID-01/02、GPU-01和坏hash/PID负例复现producer→consumer断链；再接per-pass多request及namespace映射，不改W(s)。
 - [ ] boundary单元：`runner.py` / `nvtx.py`共同helper点、host诊断ledger；新增专责scope projection模块，按D1-01～11先写预期；不把projection伪造成Raw range、不做clock平移。新模块须由Canonical sidecar向S/A共享ownership入口显式提供，拒绝旧/新profile混用。
@@ -16,7 +16,7 @@
 - [ ] observation gate单元：肯定完整性证据provider未落实时只实现UNKNOWN/冲突拒绝路径；不写假成功provider。loss正例只可标synthetic。
 - [ ] 资格/编排单元：核对boundary amendment §6 Q0影响矩阵、离线回归、CPU全量/contract/Canonical/oracle检查，审查新package/adapter版本资格；新增Gate8全链编排而不修改Gate7 legacy验收历史。服务器部署、相关真实Q0及新Engineering采集分别另授权。
 
-本轮已完成设计schema检查（8正例、11结构负例）；3个跨记录语义反例特意不由schema假装拦截。以上实现任务均未勾选，完整科学链和EP-G8-01～04未验收。
+第一批已实现显式身份/device adapter、共同marker/projection、coverage和UNKNOWN完整性门，四阶段红绿回归见实现记录。以上队列保留未勾选，因为真实producer文件编排、signed-time A/B兼容及全链包装尚未完整完成；不是这些单元毫无实现，也不是完整科学链或EP-G8-01～04已验收。此前设计schema检查（8正例、11结构负例）只属于设计阶段证据。
 
 ## 最小目标与工作量
 
@@ -30,13 +30,13 @@
 
 | 阶段 / 既有编号 | 输入与负责人 | 产物 / 通过条件 | 停止条件 |
 |---|---|---|---|
-| a 本地设计与确定性修复（EP-G8-01/02前置） | 主窗口；先审查接口审计§4，用户确认必要新增合同；仅根main | 版本化边界/多repeat/trace-device/coverage/quality适配设计；先红后绿的真实producer→consumer fixtures；负例涵盖缺字段、冲突、时钟逆序、缺completion、跨phase、外部ownership、dropped unknown；CPU回归/合同/Canonical/oracle/diff审查 | 需要改变冻结语义、无法证明边界或zero-drop、以fallback隐藏unsupported；本轮到规划为止 |
+| a 本地设计与确定性修复（EP-G8-01/02前置） | 主窗口；D1/D2已批准，仅根main | 版本化边界/多repeat/trace-device/coverage/quality适配；先红后绿的真实producer→consumer fixtures；负例涵盖缺字段、冲突、时钟逆序、缺completion、跨phase、外部ownership、dropped unknown；CPU回归/合同/Canonical/oracle/diff审查 | 超出冻结语义先报告；zero-drop未知不阻塞确定性实现，但阻塞科学验收及后续采集方案 |
 | b 固定checkout部署与静态检查 | 用户服务器执行，协调窗口审查命令；固定批准的新commit/parent，不追随main | Git/bundle来源、clean；显式repo Python；VS x64/CUDA/Nsight/GPU mask/UUID/PCI/模型内容身份；pytest/compileall/verify及合同/边界/oracle原始回执；新pre-model门在模型加载前检查全部身份/输出冲突 | 身份/测试不符、环境变更未经核对、代码dirty；不额外复制checkout或移动venv |
 | c 最小新Engineering采集（EP-G8-01） | b通过后另行请求明确GPU/Nsight授权；用户服务器执行 | 全新run，Pass0/1、warmup/repeat/attempt/EOS、telemetry、NVTX/REP/SQLite完整；逐层lineage；approved observation profile，timeout/retry独立产物 | 模型/OOM/EOS/时间逆序、身份错误、缺REP/SQLite/必需事实、异常退出；保留失败attempt，禁止resume拼接 |
 | d 科学链与质量审计（EP-G8-02/03） | 主窗口只读回传包；协调窗口传输校验 | 六个request/phase窗口（两repeat各三窗）、精确completion；S/B原因与有效性；A原子互斥、守恒、unattributed；coverage口径/分母；D/Signature纯派生；逐项trace完整性、存储、可靠性与overhead报告 | 无窗口/全unknown不能写科学链通过；缺必需global证据整窗阻塞；局部失败保留unattributed而非填Host；不得用数值守恒替代归属正确 |
 | e EP-G8-04报告与人工verdict | 主窗口 | 固定执行commit/输入/环境/包哈希、每阶段结果、失败原因和限制；四任务分别按证据勾选；下一阶段另规划 | 无全链证据不写Gate8 PASS；不把Engineering报告作为Formal或自动启动后续Gate |
 
-实施文件候选（本轮不改）：`exposedpath/nvtx.py`、`runner.py`（仅必要身份/边界instrumentation，保持completion语义）、manifest/平台adapter（trace namespace显式映射）、`exposedpath_v141/canonical_raw.py`/`observation.py`及必要的输入适配/schema、独立Gate8编排/报告；仅在设计证明需要时触及相应consumer，不先重构S/A/B算法。每一项必须有producer-shaped回归；不能只修改测试fixture使consumer看似兼容。Gate7 launcher与legacy acceptance历史规则保持可追溯。
+实施范围：`exposedpath/nvtx.py`、`runner.py`（仅必要身份/边界instrumentation，保持completion语义）、平台adapter（trace namespace显式映射）、`exposedpath_v141/canonical_raw.py`及独立sidecar/编排/报告。已改文件和范围见实现记录；不重构S/A/B算法。每一项必须有producer-shaped回归；不能只修改测试fixture使consumer看似兼容。Gate7 launcher与legacy acceptance历史规则保持可追溯。
 
 ## 判定规则与研究限制
 
@@ -45,15 +45,15 @@
 - §10：整数纳秒duplicate/uncovered/out-of-window均0，五项互斥守恒；unattributed必须显式；守恒仅必要条件，不证明正确归属。Host residual不能掩盖缺证据。
 - §9/11：VALID_EMPTY对应B_NOT_APPLICABLE，ambiguous/invalid的B数值null；不跨sync相加。§12：D/Signature只纯派生；零分母null，不造0。保留失败原因分布。
 - 协议v2.1 Pre-Pilot质量要求：dropped=0、NVTX完整、无request-owned bleed必须有证据；当前Gate7的dropped unknown豁免不能沿用。对局部失败允许报告可分析部分，但是否达到Engineering报告的可解释性目标须如实评估；本计划不发明supported/B-valid百分比阈值，也不允许全invalid作为全链验收成功。
-- Coverage是揭示A归属/B解释证据缺口的诊断，不是新增贡献指标，不能代替request A validity/守恒；跨phase/重叠规则未决前不输出伪精确比例。
+- Coverage是揭示A归属/B解释证据缺口的诊断，不是新增贡献指标，不能代替request A validity/守恒；按已批准D2处理跨phase/重叠，缺证据仍输出unknown而非伪精确比例。
 - EP-G8-03：记录REP/SQLite/派生产物字节数、解析耗时、失败/attempt数、每repeat Pass0/1时间及描述性相对开销（分母非正则unknown）。repeat=2只检查可行性，不做置信区间、性能排名或正式overhead阈值；后续Pilot决定政策。capture时间与纯模型时间分开。
 
 ## 路径、身份与回传
 
 沿用[目录规范](../../repository_layout.md)：固定 `$CodeRoot`；新证据 `$ServerRoot/evidence/gate8/<run>`，非采集诊断 `diagnostics/<task>`，操作回执 `logs/<operation>`，传输包 `transfer/`。精确机器路径只在`.local`/忽略handoff，不移动历史模型或证据，不另建repo_<commit>。
 
-本地规划基线main f8c6b05；服务器仍8d64f75。后续实现commit及bundle尚不存在，本计划不是可部署新版本。服务器布局完成仅来自用户回传，原receipt待协调窗口传回并核验。
+本地第一批实现基线main 8ea177e；服务器仍8d64f75。本地实现提交不是部署授权，不提供服务器bundle或采集命令。服务器布局完成仅来自用户回传，原receipt待协调窗口传回并核验。
 
 未来回传：部署/静态/环境及模型清单来源、命令/transcript、manifest/prompt/源码身份、Pass0/1 JSONL/parity/attempt/exclusion/telemetry、原REP与采集诊断、export attempts/SQLite及schema检查、Canonical/S/A-B/Derived各manifest与数据文件、coverage/QA/存储/耗时/overhead/可靠性报告、机器报告与退出回执。包内清单先快照输入并排除清单自身；逐项大小/hash及ZIP hash，不能覆盖旧包。
 
-**下一项具体动作：主窗口按已批准D1/D2的本轮设计请求最小本地实现授权，同时继续核验肯定零丢失来源；协调窗口只审查设计/回传已有材料；用户服务器本阶段无模型/Nsight操作。** 本次设计提交不需要服务器部署；b通过后另行授权c。
+**下一项具体动作：主窗口继续已授权的本地接口收口，优先signed-time A/B表示及producer文件生命周期回归；继续核验肯定零丢失来源。协调窗口可审查本地实现；用户服务器本阶段无操作。** 本地提交不需要服务器部署；实现审查及完整性证据方案明确后，才提出阶段b/c的具体方案。

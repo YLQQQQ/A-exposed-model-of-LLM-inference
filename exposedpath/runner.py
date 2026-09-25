@@ -87,6 +87,7 @@ def observe_token_ready_boundary(
     phase: str,
     clock_ns: Callable[[], int] = time.perf_counter_ns,
     emit_nvtx: bool,
+    gate8_recorder=None,
 ) -> TokenReadyBoundary:
     """Block until token IDs are Host-readable, then timestamp completion."""
     identity = make_natural_token_ready_identity(
@@ -105,6 +106,8 @@ def observe_token_ready_boundary(
         if not host_token_ids:
             raise RuntimeError(f"Token-ready boundary {token_index} produced no Host-readable IDs")
         completed_ns = clock_ns()
+        if gate8_recorder is not None:
+            gate8_recorder.observe(completed_ns, token_index)
     finally:
         if emit_nvtx:
             torch.cuda.nvtx.range_pop()
@@ -241,6 +244,7 @@ def run_one_invocation(
     eos_token_id: Optional[int] = None,
     token_ready_identity_base: Optional[Mapping] = None,
     clock_ns: Callable[[], int] = time.perf_counter_ns,
+    gate8_recorder=None,
 ) -> Dict:
     """Execute a single inference invocation with NVTX annotation.
 
@@ -249,22 +253,31 @@ def run_one_invocation(
     """
     batch_size, prompt_len = input_ids.shape
 
+    if gate8_recorder is not None:
+        if gate8_recorder.identity != token_ready_identity_base or len(gate8_recorder.boundary_ids) != output_len + 1:
+            raise ValueError("IDENTITY_CONFLICT: Gate8 recorder/request plan")
+    gate8_pass0 = gate8_recorder is not None and gate8_recorder.identity["pass_id"] == "pass0"
+    range_push = (lambda _label: None) if gate8_pass0 else torch.cuda.nvtx.range_push
+    range_pop = (lambda: None) if gate8_pass0 else torch.cuda.nvtx.range_pop
+
     # ---- Final drain before timing ----
     torch.cuda.synchronize()
 
     # ==================== NVTX: invocation ====================
-    torch.cuda.nvtx.range_push(nvtx_invocation_label)
+    range_push(nvtx_invocation_label)
 
     if token_ready_identity_base is None:
         raise RuntimeError("token_ready_identity_base is required")
 
     t_start_ns = clock_ns()
+    if gate8_recorder is not None:
+        gate8_recorder.observe(t_start_ns)
 
     # ==================== NVTX: full_request ====================
-    torch.cuda.nvtx.range_push(nvtx_full_request_label)
+    range_push(nvtx_full_request_label)
 
     # ==================== PREFILL ====================
-    torch.cuda.nvtx.range_push(nvtx_prefill_label)
+    range_push(nvtx_prefill_label)
 
     with torch.inference_mode():
         outputs = model(input_ids=input_ids, attention_mask=attention_mask, use_cache=True)
@@ -280,14 +293,15 @@ def run_one_invocation(
             phase="prefill",
             clock_ns=clock_ns,
             emit_nvtx=bool(nvtx_invocation_label),
+            gate8_recorder=gate8_recorder,
         )
     ]
     t_first_token_ns = token_ready_boundaries[0].completed_ns
 
-    torch.cuda.nvtx.range_pop()  # prefill
+    range_pop()  # prefill
 
     # ==================== DECODE ====================
-    torch.cuda.nvtx.range_push(nvtx_decode_label)
+    range_push(nvtx_decode_label)
 
     actual_output_tokens = 1  # first token from prefill
     early_eos = (
@@ -312,6 +326,7 @@ def run_one_invocation(
             phase="decode",
             clock_ns=clock_ns,
             emit_nvtx=bool(nvtx_invocation_label),
+            gate8_recorder=gate8_recorder,
         )
         token_ready_boundaries.append(boundary)
 
@@ -324,9 +339,9 @@ def run_one_invocation(
 
     # Close measured ranges immediately after the final Token-ready marker.
     # Boundary validation and all other Host cleanup stay outside the ranges.
-    torch.cuda.nvtx.range_pop()  # decode
-    torch.cuda.nvtx.range_pop()  # full_request
-    torch.cuda.nvtx.range_pop()  # invocation
+    range_pop()  # decode
+    range_pop()  # full_request
+    range_pop()  # invocation
 
     validate_token_ready_boundaries(
         t_start_ns, token_ready_boundaries, expected_count=actual_output_tokens,
@@ -364,6 +379,70 @@ def run_one_invocation(
         "output_len_expected": output_len,
         "token_ready_boundaries": token_ready_boundaries,
     }
+
+
+def run_gate8_requests(*, model, input_ids, attention_mask, output_len, device,
+                       pass_fields, request_plan, eos_token_id=None,
+                       clock_ns=time.perf_counter_ns):
+    """Explicit local Gate8 producer API over already-resident inputs.
+
+    Not enabled by the legacy CLI/launcher. The caller supplies preflight-bound
+    artifact identities; this function records actual per-request outcomes and
+    does not fabricate Raw/device hashes that only exist after collection.
+    """
+    import hashlib
+    import json
+    import os
+    from exposedpath.gate8_identity import make_gate8_pass_identity, validate_pass_identity
+    from exposedpath.gate8_boundary import Gate8BoundaryRecorder
+
+    if pass_fields.get("pid") != os.getpid():
+        raise ValueError("IDENTITY_CONFLICT: producer PID must be current process")
+    requests = []
+    for plan in request_plan:
+        identity_key = {**pass_fields, **plan}
+        prefix = hashlib.sha256(json.dumps(identity_key, sort_keys=True).encode()).hexdigest()
+        boundary_ids = [f"{prefix}:start", *[f"{prefix}:token:{i}" for i in range(output_len)]]
+        if plan["request_role"] == "warmup":
+            boundary_ids = []
+        requests.append({**plan, "expected_output_tokens":output_len, "actual_output_tokens":0,
+                         "expected_boundary_ids":boundary_ids, "observed_boundary_ids":[],
+                         "outcome":"FAILED", "early_eos":False, "reasons":["NOT_EXECUTED"]})
+    ledger = make_gate8_pass_identity(requests=requests, **pass_fields)
+    host_records = []
+    emit = ledger["pass_id"] == "pass1"
+    for entry in ledger["requests"]:
+        if entry["request_role"] == "warmup":
+            try:
+                run_warmup(model, input_ids, attention_mask, output_len, 1)
+                entry.update(actual_output_tokens=output_len, outcome="COMPLETE", reasons=[])
+            except Exception as exc:
+                entry["reasons"] = [f"WARMUP_FAILED:{type(exc).__name__}"]
+                break
+            continue
+        recorder = Gate8BoundaryRecorder(entry["identity"], entry["expected_boundary_ids"],
+                                         marker_sink=torch.cuda.nvtx.mark if emit else None,
+                                         clock_ns=clock_ns)
+        try:
+            result = run_one_invocation(
+                model, input_ids, attention_mask, output_len, device,
+                "GATE8_REQUEST" if emit else "", "", "", "", eos_token_id,
+                token_ready_identity_base=entry["identity"], clock_ns=clock_ns,
+                gate8_recorder=recorder,
+            )
+            excluded = result["early_eos"] or result["actual_output_tokens"] != output_len
+            entry.update(actual_output_tokens=result["actual_output_tokens"],
+                         early_eos=result["early_eos"], outcome="EXCLUDED" if excluded else "COMPLETE",
+                         reasons=["EARLY_EOS_OR_OUTPUT_COUNT_MISMATCH"] if excluded else [])
+        except Exception as exc:
+            entry.update(actual_output_tokens=max(0,len(recorder.records)-1),
+                         outcome="FAILED", reasons=[f"RUNTIME_ERROR:{type(exc).__name__}"])
+        entry["observed_boundary_ids"] = [r["payload"]["boundary_id"] for r in recorder.records]
+        host_records.extend(recorder.records)
+        if entry["outcome"] == "FAILED":
+            break  # Do not continue model work with a failed invocation's state.
+    validate_pass_identity(ledger)
+    return ledger, host_records
 
 
 def _write_cross_pass_parity(manifest, pass_label, output_dir, manifest_path, model_path, device):

@@ -60,6 +60,7 @@ class CanonicalBundle:
     cuda_api_by_id: dict[str, dict[str, Any]]
     activity_by_id: dict[str, dict[str, Any]]
     physical_sync_by_id: dict[str, SemanticSyncCandidate]
+    projected_ownership: tuple[Mapping[str, Any], ...] | None = None
 
     @property
     def semantic_sync_by_id(self) -> dict[str, SemanticSyncCandidate]:
