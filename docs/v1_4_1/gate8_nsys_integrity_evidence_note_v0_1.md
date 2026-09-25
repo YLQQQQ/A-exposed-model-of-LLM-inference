@@ -1,5 +1,7 @@
 # Nsight 2026.2 完整性证据核验 v0.1
 
+**7.26当前覆盖：** 目标安装四份完整说明已审查并本地复核hash，仍无充分全capture CUDA/NVTX肯定完整性来源；不是工具不支持的断言。[调查收口及厂商草稿](gate8_nsys_vendor_inquiry_v0_1.md)为当前下一步，DRAFT_NOT_SENT；不重复安装搜索，UNKNOWN继续阻塞。下方7.25的B已完成。
+
 **7.25更新：** 已重新直接核对历史SQLite全部69条diagnostics、metadata白名单和collector日志，并经官方Archives链接成功读取2026.2相关正文。当前结论与停止点、CUPTI DLL实际身份、scope/flush/API过滤歧义及新版Q0计划统一见[决策备忘录v0.1](gate8_integrity_q0_decision_memo_v0_1.md)。选择B（一次安装内容只读取证）；仍UNKNOWN，不运行Nsight。下方7.24访问失败是历史记录，不代表本轮仍无法访问。
 
 2026-09-25，仅官方文档与既有本地产物只读核验；未启动Nsight GUI/CLI/export或服务器。结论：**目标2026.2.1.210采集的全会话肯定零丢失证据来源尚未确认，保持UNKNOWN及Gate8科学验收技术阻塞。** 不是声称工具绝不可能提供它，也不是要求更换collector。

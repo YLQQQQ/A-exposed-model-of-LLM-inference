@@ -58,7 +58,7 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.25`
+- 清单版本：`7.26`
 - 最近更新：`2026-09-25`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
@@ -66,7 +66,7 @@
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（本地文件计算链已实现，未部署/采集/验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：完整性调查结论B及新版Q0影响矩阵见 `gate8_integrity_q0_decision_memo_v0_1.md`；用户协调窗口下一项仅一次读取2026.2.1安装组件版本/hash及本地说明，不执行任何Nsight/模型。主窗口取得明确通道/全会话/重置/flush合同后才能制定provider；仍不足则一次厂商询证后停止，提交替代路线裁决。package0.3.1/adapter0.2.0未获新Q0，真实入口UNKNOWN/BLOCKED。暂停扩功能、部署和采集。
+- 当前最高优先级：安装只读取证B已完成，完整性充分来源仍未找到（不是工具绝不支持）。见 `gate8_nsys_vendor_inquiry_v0_1.md`：用户审阅一次英文厂商询证草稿、决定是否发送；当前DRAFT_NOT_SENT。不再重复服务器安装搜索。答复支持/不支持/无答复均有有限决策路线；package0.3.1/adapter0.2.0未获新Q0，真实入口UNKNOWN/BLOCKED。暂停扩功能、部署和采集。
 - 当前本地/服务器身份：本地实现main `160ad1be95cb49384e92f81e5ce9c6c4eab13ebe`，本轮仅审计/计划文档；服务器仍`8d64f7580d43d7c8e1cb7a416b459cec8f60b011`。用户回传固定checkout clean，YLQ下evidence/diagnostics/logs/transfer已创建；本轮未操作服务器。机器位置在忽略的本地handoff，不随main自动部署。
 - 历史总体判断（2026-09-20）：Gate 6 / Q0 已正式 `PASS`。frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21/21 `REAL_CASE_PASS`、2 个 synthetic-only case（`Q0-TERMINAL-TIE-001`、`Q0-SUBMISSION-RACE-001`）PASS、23/23 `SYNTHETIC_PASS`，且存在唯一一份 `q0_gate_report.json`（schema `exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`）。该 PASS 只说明当前 analyzer 在本目标 observation stack 上取得 **Q0 正确性资格**；不等于 Engineering Pilot、Pilot、Protocol Freeze 或 Formal 结果，也不建立第二平台等价性。身份、哈希、provenance caveat、根因映射与实现成熟度见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
 - 历史到达点（已由7.18取代）（`EP-G7-11`）：此前一次 fresh smoke 在 Pass1/Nsight 启动边界遭系统 BugCheck `0x133` 中断，根因未获证明。随后服务器报告：`799fb8d` 在目标 Windows/RTX 4090 的 static preflight `940 passed, 1 skipped`、compileall、verify、合同/Canonical/oracle 检查通过；新 Engineering smoke `smoke_20260923T134310Z` 的 Pass0、Pass1 inference/telemetry/parity 和最小 Nsight collection 完成，生成非空 REP，且未再出现 BugCheck。但即时 `nsys export` 在约 51% 停滞，被人工终止后 machine report 为 `BLOCKED_BY_NSYS`、exit 1，Analyzer 未运行；该 attempt **不是** Gate 7 acceptance evidence。相同 SHA256 的 REP 副本后续离线 export 得到 integrity PASS 的 SQLite，诊断 analyzer exit 0；仅支持“REP 可离线导出/分析”，不证明即时 export 挂起的精确根因，也不追认原 attempt。Gate 7 仍为 `NOT_RUN`，Gate 8 未启动。
@@ -459,6 +459,8 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 ## 7. 固定执行顺序与最近任务
 
+**7.26覆盖说明：** 已直接读取目标安装盘点回执及四份完整说明，四文件bytes/SHA256本地复核全部一致。CPU sampling lost-events段落不能证明CUDA/NVTX完整性；条件性teardown/flush建议不等于每会话认证；API subset与cuda-trace-all-apis适用性保留询证。组件hash来自服务器回执、非本地二进制复算。已准备[英文草稿及有限决策路线](gate8_nsys_vendor_inquiry_v0_1.md)，未发送。安装搜索结束，服务器无下一操作；不再执行7.25安装指令。无生产/冻结合同变化，无新测试或实验成绩。Q0影响矩阵继续有效但资格未取得；Gate7 PASS、Gate8 NOT_RUN，UNKNOWN阻塞科学验收。
+
 当前顺序：`Gate 1 合同 → Gate 2 oracle → Gate 3 Canonical Raw → Gate 4 S → Gate 5 A/B/D/Signature → Gate 6 Q0 → Gate 7 runner/执行链对齐 → Gate 8 Engineering Pilot → Gate 9～12 正式实验准备 → Gate 13 N1/G1 → Gate 14 G2`。Gate 0 已完成封存。
 
 **最近应执行的任务（按顺序）：**
@@ -574,3 +576,4 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 | 7.23 | 2026-09-25 | 授权本地tests-first第一批：多请求/device身份、共同point/projection、S/A ownership接口、D2 coverage、UNKNOWN完整性门；56项新回归及CPU全量1092 passed/5 skipped | EP-G8-01～04实现前置 | signed-time A/B及文件/全链编排仍待收口；无服务器/GPU/Nsight、无新Q0资格；Gate7 PASS、Gate8 NOT_RUN |
 | 7.24 | 2026-09-25 | 批准时间表示amendment：A/B、Derived 0.3显式signed-int64/uint64；实际producer/receipt→Canonical/projection→S/A/B/coverage/D文件入口，CPU全量1116 passed/5 skipped | EP-G8-01～04本地实现前置 | 旧0.2路径/冻结公式不变；新Q0未取得，真实完整性仍UNKNOWN，服务器部署/采集未授权；Gate7 PASS、Gate8 NOT_RUN |
 | 7.25 | 2026-09-25 | 只读核验真实SQLite/collector与官方2026.2；选择B一次安装取证并设停止点；新版Q0影响矩阵、独立oracle与真实编排缺口计划 | EP-G8-01～04资格前置规划 | 无代码/collector/冻结语义变化，无实验；历史PASS不继承，完整性UNKNOWN，Gate8 NOT_RUN |
+| 7.26 | 2026-09-25 | 安装资料回传直接审查与四文件hash复核；有界调查收口，英文厂商询证DRAFT_NOT_SENT及支持/不支持/无答复路线 | EP-G8-01～04资格前置调查 | 未找到充分来源而非断言工具不支持；无外发/服务器搜索/实验/代码变化；UNKNOWN继续阻塞，Gate7 PASS、Gate8 NOT_RUN |
