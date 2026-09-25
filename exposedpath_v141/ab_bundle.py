@@ -20,6 +20,7 @@ from . import __version__
 from .a_accounting import calculate_a_windows, validate_a_record
 from .ab_inputs import ABInputError, load_ab_inputs
 from .b_provenance import BProvenanceError, calculate_b_syncs, validate_b_record
+from .time_representation import time_representation, LEGACY, SIGNED
 
 
 class ABBundleError(ValueError):
@@ -46,14 +47,17 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest().upper()
 
 
-def _schema(root: Path | None = None) -> dict[str, Any]:
+def _schema(root: Path | None = None, *, version: str = LEGACY) -> dict[str, Any]:
+    if version not in (LEGACY, SIGNED):
+        raise ABBundleError("A/B schema VERSION_UNSUPPORTED")
     root = Path(__file__).resolve().parents[1] if root is None else Path(root)
     try:
-        value = json.loads((root / _SCHEMA_PATH).read_text(encoding="utf-8"))
+        path = _SCHEMA_PATH if version == LEGACY else _SCHEMA_PATH.with_name("ab_schema_v0_3.json")
+        value = json.loads((root / path).read_text(encoding="utf-8"))
         Draft202012Validator.check_schema(value)
     except (OSError, json.JSONDecodeError, ValidationError) as exc:
         raise ABBundleError(f"A/B schema 无法加载: {exc}") from exc
-    if value.get("schema_version") != "exposedpath-ab/0.2.0":
+    if value.get("schema_version") != version:
         raise ABBundleError("A/B schema 版本不匹配")
     return value
 
@@ -144,7 +148,8 @@ def _load_records(
                 value = json.loads(line)
                 record = dict(_mapping(value, f"{expected_filename} 第 {line_number} 行"))
                 _validate_schema(schema, definition, record, f"{expected_filename} 第 {line_number} 行")
-                _validate_record_semantics(definition, record, f"{expected_filename} 第 {line_number} 行")
+                with time_representation(schema["schema_version"]):
+                    _validate_record_semantics(definition, record, f"{expected_filename} 第 {line_number} 行")
                 records.append(record)
     except ABBundleError:
         raise
@@ -175,6 +180,8 @@ def _validate_external_lineage(
             raise ABBundleError("A/B Canonical manifest 无法读取") from exc
         if _mapping(canonical, "Canonical manifest").get("data_role") != manifest.get("data_role"):
             raise ABBundleError("A/B data_role 不得升级 Canonical 数据角色")
+        if manifest['schema_version'] == SIGNED and source['pass_identity_sha256'] != canonical['gate8_sources']['pass_identity']['sha256'].upper():
+            raise ABBundleError('A/B pass identity SOURCE_MISMATCH')
         sqlite = _mapping(_mapping(canonical, "Canonical manifest").get("source"), "Canonical source").get("sqlite")
         if _mapping(sqlite, "Canonical source.sqlite").get("sha256") != source.get("source_sqlite_sha256"):
             raise ABBundleError("A/B source SQLite SHA-256 与 Canonical 不匹配")
@@ -193,6 +200,8 @@ def _validate_external_lineage(
         if s.get("data_role") != manifest.get("data_role"):
             raise ABBundleError("A/B data_role 不得升级 S 数据角色")
         s_source = _mapping(s.get("source"), "S source")
+        if manifest['schema_version'] == SIGNED and source['scope_manifest_sha256'] != s_source.get('scope_manifest_sha256'):
+            raise ABBundleError('A/B scope SOURCE_MISMATCH')
         if s_source.get("canonical_manifest_sha256") != source.get("canonical_manifest_sha256"):
             raise ABBundleError("A/B S-to-Canonical lineage 不匹配")
         if s_source.get("source_sqlite_sha256") != source.get("source_sqlite_sha256"):
@@ -217,11 +226,11 @@ def load_ab_bundle(
     manifest_path = Path(manifest_path).resolve()
     if manifest_path.name != "ab_manifest.json" or not manifest_path.is_file():
         raise ABBundleError(f"A/B manifest 不存在或名称错误: {manifest_path}")
-    schema = _schema()
     try:
         manifest = dict(_mapping(json.loads(manifest_path.read_text(encoding="utf-8")), "A/B manifest"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ABBundleError("A/B manifest 无法读取") from exc
+    schema = _schema(version=manifest.get("schema_version"))
     _validate_schema(schema, "manifest", manifest, "A/B manifest")
     _validate_current_qualification(manifest)
     files = _mapping(manifest.get("files"), "A/B files")
@@ -258,7 +267,13 @@ def load_ab_bundle(
     }
 
 
-def analyze_ab(canonical_manifest: Path, s_manifest: Path, output_dir: Path) -> Path:
+def analyze_ab(canonical_manifest: Path, s_manifest: Path, output_dir: Path, *, scope_manifest: Path | None = None) -> Path:
+    version = LEGACY if scope_manifest is None else SIGNED
+    with time_representation(version):
+        return _analyze_ab(canonical_manifest, s_manifest, output_dir, scope_manifest=scope_manifest, version=version)
+
+
+def _analyze_ab(canonical_manifest, s_manifest, output_dir, *, scope_manifest, version):
     """Project trusted Canonical+S input into an atomic, immutable A/B bundle."""
 
     canonical_manifest = Path(canonical_manifest).resolve()
@@ -266,9 +281,23 @@ def analyze_ab(canonical_manifest: Path, s_manifest: Path, output_dir: Path) -> 
     output_dir = Path(output_dir).resolve()
     if output_dir.exists():
         raise FileExistsError(f"拒绝覆盖已有输出目录: {output_dir}")
-    schema = _schema()
+    schema = _schema(version=version)
     try:
-        inputs = load_ab_inputs(canonical_manifest, s_manifest)
+        if scope_manifest is None:
+            inputs = load_ab_inputs(canonical_manifest, s_manifest)
+        else:
+            from dataclasses import replace
+            from .gate8_scope import build_projected_ab_inputs
+            from .ab_inputs import _load_s_records, _validate_lineage, _validate_s_join
+            inputs = build_projected_ab_inputs(canonical_manifest, scope_manifest)
+            sm, sr = _load_s_records(s_manifest)
+            _validate_lineage(canonical_manifest, inputs.canonical, sm)
+            _validate_s_join(inputs.canonical, sr)
+            if (sm.get("observation_profile") != inputs.canonical.manifest.get("observation_profile")
+                    or sm["source"].get("scope_manifest_sha256") != _sha256(Path(scope_manifest))
+                    or {r["sync_id"]:r for r in sr} != {r["sync_id"]:r for r in inputs.s_records}):
+                raise ABBundleError("S scope/record SOURCE_MISMATCH")
+            inputs = replace(inputs, s_manifest=sm, s_records=sr)
         a_records = calculate_a_windows(inputs)
         b_records = calculate_b_syncs(inputs)
     except (ABInputError, BProvenanceError, ValueError, OSError, json.JSONDecodeError) as exc:
@@ -325,6 +354,11 @@ def analyze_ab(canonical_manifest: Path, s_manifest: Path, output_dir: Path) -> 
                 "scope": "A_B_LAYER_ONLY",
             },
         }
+        if version == SIGNED:
+            manifest['validation_role'] = 'LOCAL_DETERMINISTIC_ONLY'
+            manifest['measurement_validity'] = 'NOT_ASSESSED'
+            manifest['source']['scope_manifest_sha256'] = _sha256(Path(scope_manifest))
+            manifest['source']['pass_identity_sha256'] = inputs.canonical.manifest['gate8_sources']['pass_identity']['sha256'].upper()
         _validate_schema(schema, "manifest", manifest, "A/B manifest")
         manifest_path = staging / "ab_manifest.json"
         with manifest_path.open("x", encoding="utf-8", newline="\n") as handle:

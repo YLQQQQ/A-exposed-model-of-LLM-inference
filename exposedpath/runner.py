@@ -445,6 +445,45 @@ def run_gate8_requests(*, model, input_ids, attention_mask, output_len, device,
     return ledger, host_records
 
 
+def run_gate8_requests_to_files(*, output_dir, **request_arguments):
+    """Persist actual pass outcomes; no collection/export or hash back-patching.
+
+    The caller still owns model/input initialization. Existing output is rejected
+    before model work. A failed request remains FAILED, never a success receipt.
+    """
+    import json
+    import hashlib
+    import os
+    import tempfile
+    output_dir = Path(output_dir).resolve()
+    if output_dir.exists():
+        raise FileExistsError(output_dir)
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=f'.{output_dir.name}-partial-',dir=output_dir.parent))
+    ledger, host_records = run_gate8_requests(**request_arguments)
+    files = {}
+    for name, value in (('pass_identity.json',ledger),('host_boundaries.json',host_records)):
+        path = staging/name
+        with path.open('x',encoding='utf-8',newline='\n') as handle:
+            json.dump(value,handle,sort_keys=True,indent=2)
+            handle.write('\n')
+            handle.flush()
+            os.fsync(handle.fileno())
+        files[name] = {'filename':name,'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
+                       'size_bytes':path.stat().st_size}
+    receipt = {'schema_version':'exposedpath-gate8-producer-receipt/0.1.0',
+               'run_id':ledger['run_id'],'pass_id':ledger['pass_id'],'attempt_id':ledger['attempt_id'],
+               'status':'COMPLETE' if all(r['outcome']=='COMPLETE' for r in ledger['requests']) else 'INCOMPLETE',
+               'files':files, 'gate8_verdict':'NOT_RUN'}
+    with (staging/'producer_receipt.json').open('x',encoding='utf-8') as handle:
+        json.dump(receipt,handle,sort_keys=True,indent=2)
+        handle.write('\n')
+        handle.flush()
+        os.fsync(handle.fileno())
+    staging.rename(output_dir)
+    return output_dir/'producer_receipt.json'
+
+
 def _write_cross_pass_parity(manifest, pass_label, output_dir, manifest_path, model_path, device):
     """Write cross_pass_parity.json for later cross-pass validation."""
     import hashlib, json as _json, os as _os, platform as _platform

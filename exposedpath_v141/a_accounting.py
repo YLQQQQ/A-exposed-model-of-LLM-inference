@@ -13,6 +13,7 @@ from typing import Any
 from .ab_inputs import ABInputs, RequestPhaseWindow
 from .intervals import atomic_segments
 from .sync_semantics import classify_cuda_api
+from .time_representation import timestamp, duration, signed_time
 
 
 _TOP_LEVEL = (
@@ -52,14 +53,16 @@ _STRUCTURED_PREFIX = "EXPOSEDPATH_JSON_V1:"
 def _integer(value: object, label: str) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise ValueError(f"{label} 必须是非负整数纳秒")
-    return value
+    return duration(value, label)
 
 
 def _interval(record: Mapping[str, object], start_key: str, end_key: str, label: str) -> tuple[int, int]:
-    start = _integer(record.get(start_key), f"{label}.{start_key}")
-    end = _integer(record.get(end_key), f"{label}.{end_key}")
+    start = timestamp(record.get(start_key), f"{label}.{start_key}")
+    end = timestamp(record.get(end_key), f"{label}.{end_key}")
     if end < start:
         raise ValueError(f"{label} 的半开区间逆序")
+    if signed_time():
+        duration(end - start, label)
     return start, end
 
 
@@ -398,8 +401,8 @@ def validate_a_record(record: Mapping[str, object]) -> None:
             raise ValueError(f"{field} 必须是非空字符串")
     if record["phase"] not in {"full_request", "prefill", "decode"}:
         raise ValueError("phase 不属于冻结集合")
-    start = _integer(record.get("window_start_ns"), "window_start_ns")
-    end = _integer(record.get("window_end_ns"), "window_end_ns")
+    start = timestamp(record.get("window_start_ns"), "window_start_ns")
+    end = timestamp(record.get("window_end_ns"), "window_end_ns")
     if end < start:
         raise ValueError("A window 半开区间逆序")
     if _integer(record.get("T_window_ns"), "T_window_ns") != end - start:

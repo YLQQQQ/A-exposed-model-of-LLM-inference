@@ -6,7 +6,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, ValidationError
 
 PROFILE = "G8-OBS-BOUNDARY/0.1.0"
-ADAPTER_VERSION = "exposedpath-gate8-adapter/0.1.0"
+ADAPTER_VERSION = "exposedpath-gate8-adapter/0.2.0"
 IDENTITY_FIELDS = (
     "experiment_id", "wmpc_id", "run_id", "run_role", "data_role",
     "pass_id", "attempt_id", "request_id", "repeat_id",

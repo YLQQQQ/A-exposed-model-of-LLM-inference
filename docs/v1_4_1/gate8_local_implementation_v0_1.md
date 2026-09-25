@@ -1,5 +1,7 @@
 # Gate8 本地实现状态 v0.1
 
+历史第一批记录；当前状态已由[v0.2](gate8_local_implementation_v0_2.md)取代，以下“未完成”是当次状态。
+
 2026-09-25；基线 `8ea177e15fa09f28f1d1603f88c412d8fb3f416c`。用户已授权 D1/D2 本地 tests-first 实现、文档及正常提交推送；未授权服务器部署、GPU/Nsight 或旧证据重新验收。
 
 **这是第一批本地实现，不是完整 Gate8 就绪声明。** Gate7 历史 PASS 保留；Gate8 / 新版本 Q0 均 NOT_RUN。package/analyzer 升为 `0.3.0`；新 adapter `exposedpath-gate8-adapter/0.1.0`，不继承历史 `0.2.2` 的 Q0 资格。旧默认 Q0 路径、冻结 schema、oracle、evaluator、Gate6/7 closeout 不改。

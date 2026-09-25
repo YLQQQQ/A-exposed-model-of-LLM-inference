@@ -1,6 +1,6 @@
 # Gate8 最小执行计划 v0.1
 
-2026-09-25，当前状态：**用户已授权本地 tests-first 实现；第一批显式 API 已完成，完整实现仍有时间表示/编排缺口。服务器部署和采集未授权，Gate8 NOT_RUN**。当前执行状态以[本地实现记录](../../v1_4_1/gate8_local_implementation_v0_1.md)及 research_progress 7.23 为准；EP-G8-01～04 的实验验收仍未勾选。
+2026-09-25，当前状态：**用户已批准时间表示amendment，本地文件链及显式API已接通并做确定性验证；真实完整性仍UNKNOWN。服务器部署和采集未授权，Gate8 NOT_RUN**。当前执行状态以[本地实现v0.2](../../v1_4_1/gate8_local_implementation_v0_2.md)及 research_progress 7.24 为准；下方历史实施队列不表示实验完成，EP-G8-01～04仍未勾选。
 
 本计划使用既有 EP-G8-01～04，不新增Gate、不创建worktree。输入依据为研究设计v7.1、实验协议v2.1 Pre-Pilot、冻结Measurement Contract及[接口审计](../../v1_4_1/gate8_interface_gap_audit_v0_1.md)。不修改冻结S/A/B、Q0或旧证据。
 
@@ -16,7 +16,7 @@
 - [ ] observation gate单元：肯定完整性证据provider未落实时只实现UNKNOWN/冲突拒绝路径；不写假成功provider。loss正例只可标synthetic。
 - [ ] 资格/编排单元：核对boundary amendment §6 Q0影响矩阵、离线回归、CPU全量/contract/Canonical/oracle检查，审查新package/adapter版本资格；新增Gate8全链编排而不修改Gate7 legacy验收历史。服务器部署、相关真实Q0及新Engineering采集分别另授权。
 
-第一批已实现显式身份/device adapter、共同marker/projection、coverage和UNKNOWN完整性门，四阶段红绿回归见实现记录。以上队列保留未勾选，因为真实producer文件编排、signed-time A/B兼容及全链包装尚未完整完成；不是这些单元毫无实现，也不是完整科学链或EP-G8-01～04已验收。此前设计schema检查（8正例、11结构负例）只属于设计阶段证据。
+上述为历史实施队列：显式身份/device adapter、共同marker/projection、coverage、UNKNOWN门以及signed-time A/B兼容、producer落盘与计算文件链均已有本地确定性验证，详见实现v0.2。未勾选不代表尚未实现；新Q0、真实完整性provider和目标机采集验收仍未完成。此前设计schema检查（8正例、11结构负例）仅属设计证据，本地回归也不等于EP-G8-01～04实验验收。
 
 ## 最小目标与工作量
 
@@ -56,4 +56,4 @@
 
 未来回传：部署/静态/环境及模型清单来源、命令/transcript、manifest/prompt/源码身份、Pass0/1 JSONL/parity/attempt/exclusion/telemetry、原REP与采集诊断、export attempts/SQLite及schema检查、Canonical/S/A-B/Derived各manifest与数据文件、coverage/QA/存储/耗时/overhead/可靠性报告、机器报告与退出回执。包内清单先快照输入并排除清单自身；逐项大小/hash及ZIP hash，不能覆盖旧包。
 
-**下一项具体动作：主窗口继续已授权的本地接口收口，优先signed-time A/B表示及producer文件生命周期回归；继续核验肯定零丢失来源。协调窗口可审查本地实现；用户服务器本阶段无操作。** 本地提交不需要服务器部署；实现审查及完整性证据方案明确后，才提出阶段b/c的具体方案。
+**下一项具体动作：主窗口/协调窗口审查本地v0.2交付及新版本Q0影响清单；按完整性调查的有界路径取得目标版本肯定证据说明，而不是重复无结果的检索或模型采集。用户服务器本阶段无操作。** 本地提交不需要部署；实现审查及完整性方案明确后，才提出阶段b/c的具体方案。

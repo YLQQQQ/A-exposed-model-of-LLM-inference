@@ -18,6 +18,20 @@
 
 ## 下一项最小动作（仍非实验）
 
+### 本地文件链接通后的有界复核（7.24）
+
+本次检索了官方Nsight Archives/2026.2条目及[CUPTI Activity API](https://docs.nvidia.com/cupti/api/group__CUPTI__ACTIVITY__API.html)。CUPTI dropped计数查询有读取后清零语义；这是计数器接口说明，不是Nsight 2026.2已向用户交付全会话证明的保证。目标2026.2 AnalysisGuide/ReleaseNotes归档URL本次工具访问失败；不把失败写成重新核验全文成功，也不以latest 2026.5说明替代目标版本。
+
+本地只读核对历史8d64f75的`pass1_postprocess_report.json`字段：export attempt带REP/SQLite hash、exit/process_exited/timeout/validation_issues，报告PASS/analyzer_allowed=true。它适合导出lineage适配，**没有全会话CUDA/NVTX零丢失attestation字段**。旧SQLite schema及69条diagnostics的已核对事实见上文，本轮不重复解析后声称新科学证据、不重验旧attempt。
+
+当前可明确判定为“现有可得材料无法满足肯定完整性合同”的观测能力阻塞，但不能断言厂商任何接口都不可能支持。停止重复相同网页/同一批diagnostics的循环搜索。剩余可行路径只有：
+
+1. 优先取得**目标安装版本随附文档/字段说明或厂商答复**，需明确CUDA与NVTX、session/进程范围、final flush及所有计数读取/重置后的累积语义。可以由用户复制已有说明文件，无需运行Nsight/profile/export或模型；不能只回传exit0/无warning。
+2. 若厂商确认该栈没有可用证明，另行裁决新collector/附加collector-side记录的研究与工程成本，包括互斥订阅、观测开销和重新Q0资格；当前不采用、不修改collector。
+3. 或另行裁决证据政策缩减，仅允许明确UNKNOWN的工程诊断、继续禁止科学链验收；这将是质量规则amendment，当前没有降低门槛的授权，不执行。
+
+当前推荐路径1；无需服务器部署或新采集。路径1无肯定结果前，UNKNOWN保持，不能以本地完整文件链通过代替它。
+
 本地实现阶段再次核对官方 Nsight 文档和 CUPTI Activity API 资料，仍未获得可绑定目标 Nsight 全会话的肯定零丢失 provider。新增 `gate8_integrity.py` 只把真实 Nsight 入口映射为 UNKNOWN；允许验证未来 receipt 的形状/身份，不把此形状验证称为 collector authenticity 或 PASS。未运行真实 Nsight 或改写旧报告；本轮对历史 SQLite 仅以 immutable/read-only 查询设备表列名与 UUID 的 SQLite 存储类型（TEXT），用于确定 adapter 字段接口，不产生新历史 verdict。
 
 主窗口先核对目标安装包已存在的帮助/本地文档或获取该版本官方字段说明，寻找可绑定session、通道、完整范围和最终状态的肯定counter/attestation；有来源再设计adapter，不能先设计一个永远填0的字段。若必须借助目标机材料，只请求用户复制已有帮助/诊断说明，不能附带profile/export/model命令。若资料仍不足，保持UNKNOWN并报告平台证据能力阻塞；更换collector、降低验收或扩大Q0均需另行明确授权。

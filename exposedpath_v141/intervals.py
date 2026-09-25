@@ -2,12 +2,14 @@
 
 The functions in this module deliberately have no knowledge of the research
 domain.  Intervals use the usual half-open form ``[start, end)`` and all
-coordinates are non-negative integers.
+coordinates retain the legacy non-negative domain unless the explicit A/B 0.3
+representation context selects signed-int64. Lengths are never negative.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable
+from .time_representation import timestamp, duration
 
 
 Interval = tuple[int, int]
@@ -16,9 +18,7 @@ Interval = tuple[int, int]
 def _validate_integer(value: object, label: str) -> int:
     if not isinstance(value, int) or isinstance(value, bool):
         raise TypeError(f"{label} must be an integer")
-    if value < 0:
-        raise ValueError(f"{label} must be non-negative")
-    return value
+    return timestamp(value, label)
 
 
 def _validate_interval(interval: Interval, label: str = "interval") -> Interval:
@@ -86,7 +86,7 @@ def union_intervals(intervals: Iterable[Interval]) -> tuple[Interval, ...]:
 def interval_length(intervals: Iterable[Interval]) -> int:
     """Return the length of the union without enumerating individual points."""
 
-    return sum(end - start for start, end in union_intervals(intervals))
+    return duration(sum(end - start for start, end in union_intervals(intervals)), 'union duration')
 
 
 def atomic_segments(window: Interval, boundaries: Iterable[int]) -> tuple[Interval, ...]:

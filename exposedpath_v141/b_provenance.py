@@ -13,6 +13,7 @@ from typing import Any
 
 from .ab_inputs import ABInputs
 from .intervals import intersect_interval, interval_length
+from .time_representation import timestamp, duration, hidden_lower_bound
 
 
 class BProvenanceError(ValueError):
@@ -43,7 +44,7 @@ _TERMINAL_FIELDS = frozenset({"status", "kind", "activity_id", "end_ns", "clock_
 def _nonnegative_integer(value: object, label: str) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise BProvenanceError(f"{label} 必须是非负整数")
-    return value
+    return duration(value, label)
 
 
 def _optional_text(value: object, label: str) -> str | None:
@@ -66,16 +67,16 @@ def _activity_interval(inputs: ABInputs, activity_id: str) -> tuple[int, int]:
     if activity is None:
         raise BProvenanceError(f"S wait-set activity 不在 Canonical 中: {activity_id}")
     return (
-        _nonnegative_integer(activity.get("start_ns"), f"activity {activity_id}.start_ns"),
-        _nonnegative_integer(activity.get("end_ns"), f"activity {activity_id}.end_ns"),
+        timestamp(activity.get("start_ns"), f"activity {activity_id}.start_ns"),
+        timestamp(activity.get("end_ns"), f"activity {activity_id}.end_ns"),
     )
 
 
 def _calculate_valid_timing(
     inputs: ABInputs, s_record: Mapping[str, object], terminal: Mapping[str, object],
 ) -> dict[str, int | None]:
-    sync_start = _nonnegative_integer(s_record.get("host_start_ns"), "S host_start_ns")
-    sync_end = _nonnegative_integer(s_record.get("host_end_ns"), "S host_end_ns")
+    sync_start = timestamp(s_record.get("host_start_ns"), "S host_start_ns")
+    sync_end = timestamp(s_record.get("host_end_ns"), "S host_end_ns")
     if sync_start > sync_end:
         raise BProvenanceError("S sync 时间区间逆序")
     raw_wait_set = s_record.get("wait_set_activity_ids")
@@ -85,7 +86,7 @@ def _calculate_valid_timing(
     activity_intervals = [_activity_interval(inputs, str(activity_id)) for activity_id in raw_wait_set]
     hidden = [
         overlap for interval in activity_intervals
-        if (overlap := intersect_interval(interval, (0, sync_start))) is not None
+        if (overlap := intersect_interval(interval, (hidden_lower_bound(), sync_start))) is not None
     ]
     exposed = [
         overlap for interval in activity_intervals
@@ -93,13 +94,13 @@ def _calculate_valid_timing(
     ]
 
     terminal_kind = terminal.get("kind")
-    terminal_end = _nonnegative_integer(terminal.get("end_ns"), "terminal.end_ns")
+    terminal_end = timestamp(terminal.get("end_ns"), "terminal.end_ns")
     if terminal_kind == "ACTIVITY":
         terminal_id = terminal.get("activity_id")
         if not isinstance(terminal_id, str) or not terminal_id:
             raise BProvenanceError("ACTIVITY terminal 缺少 activity_id")
         terminal_interval = _activity_interval(inputs, terminal_id)
-        terminal_pre = intersect_interval(terminal_interval, (0, sync_start))
+        terminal_pre = intersect_interval(terminal_interval, (hidden_lower_bound(), sync_start))
         terminal_overlap = intersect_interval(terminal_interval, (sync_start, sync_end))
         terminal_pre_ns: int | None = 0 if terminal_pre is None else terminal_pre[1] - terminal_pre[0]
         terminal_overlap_ns: int | None = (
@@ -185,8 +186,8 @@ def validate_b_record(record: Mapping[str, object]) -> None:
     ):
         _optional_text(record[field], field)
     if record["validity"] in {"B_VALID", "B_NOT_APPLICABLE"}:
-        start = _nonnegative_integer(record["sync_start_ns"], "sync_start_ns")
-        end = _nonnegative_integer(record["sync_end_ns"], "sync_end_ns")
+        start = timestamp(record["sync_start_ns"], "sync_start_ns")
+        end = timestamp(record["sync_end_ns"], "sync_end_ns")
         if start > end:
             raise BProvenanceError("B sync 时间区间逆序")
     else:
@@ -194,8 +195,8 @@ def validate_b_record(record: Mapping[str, object]) -> None:
         if (start is None) != (end is None):
             raise BProvenanceError("B invalid/ambiguous sync 时间必须同时存在或同时为空")
         if start is not None:
-            start = _nonnegative_integer(start, "sync_start_ns")
-            end = _nonnegative_integer(end, "sync_end_ns")
+            start = timestamp(start, "sync_start_ns")
+            end = timestamp(end, "sync_end_ns")
             if start > end:
                 raise BProvenanceError("B sync 时间区间逆序")
     if not isinstance(record["cross_phase_dependency"], bool):
@@ -230,13 +231,13 @@ def validate_b_record(record: Mapping[str, object]) -> None:
     if kind == "ACTIVITY":
         if status != "VALID" or not isinstance(activity_id, str) or not activity_id:
             raise BProvenanceError("ACTIVITY terminal 必须是有效且具 identity")
-        _nonnegative_integer(terminal_end, "terminal.end_ns")
+        timestamp(terminal_end, "terminal.end_ns")
         if not isinstance(clock, str) or not clock:
             raise BProvenanceError("ACTIVITY terminal 缺少 clock")
     elif kind == "COMPLETION_BOUNDARY":
         if status != "VALID" or activity_id is not None:
             raise BProvenanceError("COMPLETION_BOUNDARY terminal 非法")
-        _nonnegative_integer(terminal_end, "terminal.end_ns")
+        timestamp(terminal_end, "terminal.end_ns")
         if not isinstance(clock, str) or not clock:
             raise BProvenanceError("COMPLETION_BOUNDARY terminal 缺少 clock")
     elif any(value is not None for value in (activity_id, terminal_end, clock)):

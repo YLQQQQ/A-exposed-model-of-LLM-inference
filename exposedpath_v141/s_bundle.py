@@ -85,7 +85,7 @@ def _write_records(path: Path, records: list[Mapping[str, Any]]) -> dict[str, An
     }
 
 
-def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path) -> Path:
+def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path, *, scope_manifest: Path | None = None) -> Path:
     """只读分析 Canonical Raw，写入不可覆盖的 S bundle。"""
 
     canonical_manifest = Path(canonical_manifest).resolve()
@@ -100,6 +100,10 @@ def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path) -> Path:
     )
     registry = load_sync_registry(repository_root)
     bundle = load_canonical_bundle(canonical_manifest)
+    if scope_manifest is not None:
+        from .gate8_scope import load_projected_ownership
+        ownership, _ = load_projected_ownership(canonical_manifest, bundle, scope_manifest)
+        bundle = {**bundle, "ownership_records": ownership}
     inventory = build_semantic_inventory(bundle)
     records = [analyze_sync_semantics(inventory, sync) for sync in inventory["syncs"]]
     records.sort(
@@ -155,6 +159,9 @@ def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path) -> Path:
                 "scope": "S_LAYER_ONLY",
             },
         }
+        if scope_manifest is not None:
+            manifest["observation_profile"] = bundle["manifest"]["observation_profile"]
+            manifest["source"]["scope_manifest_sha256"] = _sha256(Path(scope_manifest))
         manifest_path = staging / schema["manifest_filename"]
         manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

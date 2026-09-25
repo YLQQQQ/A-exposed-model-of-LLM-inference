@@ -187,10 +187,10 @@ def build_projected_ab_inputs(canonical_path, scope_path):
     canonical_path, scope_path = Path(canonical_path), Path(scope_path)
     bundle = load_canonical_bundle(canonical_path)
     ownership, projections = load_projected_ownership(canonical_path, bundle, scope_path)
-    # D1 preserves signed trace coordinates, whereas frozen A/B 0.2 and
-    # interval primitives reject negative endpoints. Do not normalize clocks
-    # or silently widen that frozen output contract in this adapter.
-    if (any(p["start_ns"] < 0 or p["end_ns"] < 0 for p in projections)
+    # The default remains frozen A/B 0.2. Only an explicitly selected 0.3
+    # time representation admits signed coordinates; never normalize clocks.
+    from .time_representation import signed_time
+    if not signed_time() and (any(p["start_ns"] < 0 or p["end_ns"] < 0 for p in projections)
             or any(isinstance(r.get(k), int) and r[k] < 0
                    for kind in ("device_activity", "cuda_sync")
                    for r in bundle["records"][kind] for k in ("start_ns", "end_ns"))):

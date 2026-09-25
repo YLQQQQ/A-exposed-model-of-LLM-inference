@@ -73,14 +73,17 @@ def _mapping(value: Any, label: str) -> Mapping[str, Any]:
     return value
 
 
-def _schema(root: Path | None = None) -> dict[str, Any]:
+def _schema(root: Path | None = None, *, version="exposedpath-derived/0.2.0") -> dict[str, Any]:
+    if version not in ("exposedpath-derived/0.2.0", "exposedpath-derived/0.3.0"):
+        raise DerivedBundleError("Derived schema VERSION_UNSUPPORTED")
     root = Path(__file__).resolve().parents[1] if root is None else Path(root)
     try:
-        schema = json.loads((root / _SCHEMA_PATH).read_text(encoding="utf-8"))
+        path = _SCHEMA_PATH if version.endswith("/0.2.0") else _SCHEMA_PATH.with_name("derived_schema_v0_3.json")
+        schema = json.loads((root / path).read_text(encoding="utf-8"))
         Draft202012Validator.check_schema(schema)
     except (OSError, UnicodeError, json.JSONDecodeError, ValidationError) as exc:
         raise DerivedBundleError(f"Derived schema 无法加载: {exc}") from exc
-    if schema.get("schema_version") != "exposedpath-derived/0.2.0":
+    if schema.get("schema_version") != version:
         raise DerivedBundleError("Derived schema 版本不匹配")
     return schema
 
@@ -291,6 +294,8 @@ def _validate_external_lineage(manifest: Mapping[str, Any], ab_manifest: Path | 
     if source.get("ab_manifest_name") != ab_manifest.name or source.get("ab_manifest_sha256") != _sha256(ab_manifest):
         raise DerivedBundleError("Derived A/B manifest lineage 不匹配")
     source_files = _mapping(bundle["manifest"].get("files"), "A/B files")
+    if manifest.get("input_schema_version") != bundle["manifest"].get("schema_version"):
+        raise DerivedBundleError("Derived A/B input VERSION_MISMATCH")
     if (
         source.get("a_window_records_sha256") != source_files["a_window_records"]["sha256"]
         or source.get("b_sync_records_sha256") != source_files["b_sync_records"]["sha256"]
@@ -305,11 +310,11 @@ def load_derived_bundle(manifest_path: Path, *, ab_manifest: Path | None = None)
     manifest_path = Path(manifest_path).resolve()
     if manifest_path.name != "derived_manifest.json" or not manifest_path.is_file():
         raise DerivedBundleError(f"Derived manifest 不存在或名称错误: {manifest_path}")
-    schema = _schema()
     try:
         manifest = dict(_mapping(json.loads(manifest_path.read_text(encoding="utf-8")), "Derived manifest"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise DerivedBundleError("Derived manifest 无法读取") from exc
+    schema = _schema(version=manifest.get("schema_version"))
     _validate_schema(schema, "manifest", manifest, "Derived manifest")
     _validate_current_qualification(manifest)
     files = _mapping(manifest.get("files"), "Derived files")
@@ -339,9 +344,17 @@ def derive_exposure(ab_manifest: Path, output_dir: Path) -> Path:
         ab_bundle = load_ab_bundle(ab_manifest)
     except (ABBundleError, OSError, ValueError, json.JSONDecodeError) as exc:
         raise DerivedBundleError(f"A/B 输入不可验证: {exc}") from exc
-    schema = _schema()
+    input_version = ab_bundle["manifest"]["schema_version"]
+    schema = _schema(version={"exposedpath-ab/0.2.0":"exposedpath-derived/0.2.0",
+                              "exposedpath-ab/0.3.0":"exposedpath-derived/0.3.0"}[input_version])
     a_records = sorted(ab_bundle["a_window_records"], key=lambda record: str(record["window_id"]))
     b_records = ab_bundle["b_sync_records"]
+    if input_version == 'exposedpath-ab/0.3.0' and (
+        ab_bundle['manifest']['quality']['status'] != 'VALID'
+        or any(r['primary_reason'] is not None or r['A_unattributed_ns'] != 0 for r in a_records)
+        or any(r['validity'] not in ('B_VALID','B_NOT_APPLICABLE') for r in b_records)
+    ):
+        raise DerivedBundleError('DERIVED_UPSTREAM_NOT_QUALIFIED')
     d_records = tuple(_build_d_record(record) for record in a_records)
     signatures = tuple(_build_signature(record, b_records) for record in a_records)
     for record in d_records:
@@ -375,6 +388,9 @@ def derive_exposure(ab_manifest: Path, output_dir: Path) -> Path:
             "summary": {"d_window_count": len(d_records), "exposure_signature_count": len(signatures)},
             "research_eligibility": dict(_QUALIFICATION),
         }
+        if input_version == 'exposedpath-ab/0.3.0':
+            manifest['validation_role'] = ab_bundle['manifest']['validation_role']
+            manifest['measurement_validity'] = ab_bundle['manifest']['measurement_validity']
         _validate_schema(schema, "manifest", manifest, "Derived manifest")
         manifest_path = staging / "derived_manifest.json"
         with manifest_path.open("x", encoding="utf-8", newline="\n") as handle:
