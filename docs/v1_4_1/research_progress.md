@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-> 一句话状态：**Gate 0～7 = `PASS`，历史限制保留；0.1受控trace正确 BLOCKED。0.2执行commit07625b7已构建/采集，17原件回执链直接审计通过；新REP离线export/audit草案待审，尚未trace语义验收。S/A/B与旧证据不变；模型同流epoch未决，UNKNOWN不改零；新Q0与Gate8=`NOT_RUN`。**
+> 一句话状态：**Gate 0～7 = `PASS`，历史限制保留；0.2采集07625b7已export，原audit因lazy MEMSET缺表BLOCKED。窄adapter/diagnostic scope本地修复与实文件前瞻：六A窗unknown0、四目标B匹配oracle，另五scope外B_INVALID使Derived保持阻断。仅Engineering/NOT_ASSESSED，旧report不改；新Q0与Gate8=`NOT_RUN`。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -58,7 +58,9 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.34`
+- 清单版本：`7.35`
+- 7.34后续已到件审计：[可选表/diagnostics审计](gate8_controlled_optional_tables_audit_v0_1.md)核29文件/28清单。MEMSET缺失由明确lazy元数据与版本文档支持，窄adapter红绿回归完成；现SQLite只读前瞻仍停19条diagnostics，未静默豁免。暂不部署，不重采/export/编译DLL；现REP/SQLite可复用，新分析版本应独立留痕。Gate8/新Q0 NOT_RUN。
+- 7.34后续用户回传（原件待收）：0.2首次export PASS，audit因`RAW_TABLE_MISSING:CUPTI_ACTIVITY_KIND_MEMSET` BLOCKED，尚未本地核验实际schema。先据对应版本的按需表规则审计，不默认缺表为空、不重采/重export；若只需分析adapter修复，使用原输入新目录离线复验。Gate8/新Q0仍NOT_RUN。
 - 7.33后续用户回传（原件待收）：07625b7的0.2窄受控capture已结束，run `controlled_20260926T133649Z_8dd7210fc970474eb1b6358a9e91d8cd`，plan/REP生成、capture exit0；未export/analysis/模型。本窗口尚未取得完整目录，不能声称trace语义或文件身份链通过。下一步仅到件只读审计及新run绑定后处理草案；Gate8/新Q0仍NOT_RUN。
 - 7.32验证：37项受控定向通过；本地Python3.12.7 CPU-only全量1169 passed/5 skipped（nvcc编译项），compileall/合同37/37/Canonical7模块/oracle/diff-check通过。不是目标机新native编译或采集资格。
 - 最近更新：`2026-09-26`
@@ -68,7 +70,7 @@
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（本地文件计算链已实现，未部署/采集/验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：[0.2 capture原件审计与后处理草案](gate8_controlled_launch_v0_2.md)完成；服务器固定07625b7，对新run独立副本准备bounded export/audit。协调审阅后按授权执行，不重采、不追随文档HEAD；原始REP未解析、旧0.1 BLOCKED不变。
+- 当前最高优先级：[lazy表与diagnostics窄adapter审计](gate8_controlled_optional_tables_audit_v0_1.md)收口；只准备新analysis版本离线复用现REP/SQLite，capture身份保持07625b7。无需DLL编译/采集/export，不修改S/A/B或Derived门；工程计算与科学资格分开，旧BLOCKED报告原样保留。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -598,3 +600,4 @@ compile/graph后移。以下原任务保留编号及历史。
 | 7.32 | 2026-09-26 | 直接审计29文件离线原件，单次export PASS、Raw因四处缺GetLastError正确BLOCKED；tests-first新0.2直接检查launch返回码、版本隔离与实文件回归 | EP-G8-01/02受控可观察性对齐 | 仅本地实现，不改S/A/B/registry/observation profile/旧证据；新目标编译与采集未执行，不授新Q0或A科学资格；Gate7 PASS、Gate8 NOT_RUN |
 | 7.33 | 2026-09-26 | 直接审计07625b7目标机37项定向/静态/native构建五原件，DLL哈希及源码CRLF表示一致；核验未变capture草案固定身份 | EP-G8-01/02执行前审查 | 仅文档审计，无本窗口服务器/GPU/Nsight执行；源码本体未回传，不冒称读取；新采集待授权、旧attempt BLOCKED；Gate7 PASS、Gate8 NOT_RUN |
 | 7.34 | 2026-09-26 | 0.2新capture17原件/8封存引用、commit/构造/19argv/token/GPU及source/DLL身份直接审计；新run绑定bounded离线脚本及17文件只读preflight | EP-G8-01/02受控诊断 | 仅回执链通过，REP尚未解析，无本窗口export/GPU；旧attempt不追认，后处理待审；Gate7 PASS、Gate8 NOT_RUN |
+| 7.35 | 2026-09-26 | 29离线原件审计；明确lazy metadata驱动MEMSET适配，固定源码/版本诊断scope分类；本地实文件前瞻六A/四目标B与独立预期，五scope外INVALID使Derived仍阻断 | EP-G8-01/02分析adapter | 原capture/失败report不改，无重采/export/编译；NOT_ASSESSED不授新Q0，Derived输入选择域未改变；Gate7 PASS、Gate8 NOT_RUN |

@@ -94,6 +94,54 @@ def test_extra_error_query_is_not_ignored_by_new_construction(tmp_path):
         check_controlled_raw(path,producer)
 
 
+def lazy_memset_absent(path):
+    with sqlite3.connect(path) as db:
+        db.execute('DROP TABLE CUPTI_ACTIVITY_KIND_MEMSET')
+        db.executemany('UPDATE META_DATA_EXPORT SET value=? WHERE name=?',[
+            ('2026.2.1.210','EXPORT_PRODUCT_VERSION'),('3.25.0','EXPORT_SCHEMA_VERSION'),
+            ('true','EXPORT_PARAM_LAZY')])
+
+
+def test_known_lazy_export_without_memset_preserves_unknown_integrity(tmp_path):
+    path,producer=controlled_raw(tmp_path)
+    lazy_memset_absent(path)
+    from exposedpath_v141.gate8_controlled_raw import check_controlled_raw
+    report=check_controlled_raw(path,producer)
+    assert report['status']=='CONTROLLED_RAW_MATCH'
+    assert report['memset_table_status']=='ABSENT_SUPPORTED_LAZY_EXPORT'
+    assert report['collector_integrity_status']=='UNKNOWN' and report['dropped_count'] is None
+    assert [len(s['wait_set_refs']) for s in report['sync_expectations']]==[2,4,2,4]
+
+
+def test_lazy_adapter_does_not_waive_diagnostics(tmp_path):
+    path,producer=controlled_raw(tmp_path); lazy_memset_absent(path)
+    with sqlite3.connect(path) as db:
+        db.execute('DROP TABLE DIAGNOSTIC_EVENT')
+        db.execute('CREATE TABLE DIAGNOSTIC_EVENT(text TEXT)')
+        db.execute("INSERT INTO DIAGNOSTIC_EVENT VALUES ('unreviewed diagnostic')")
+    from exposedpath_v141.gate8_controlled_raw import check_controlled_raw
+    with pytest.raises(ValueError,match='UNBOUNDED_DIAGNOSTIC_REQUIRES_REVIEW'):
+        check_controlled_raw(path,producer)
+
+
+@pytest.mark.parametrize('fault',['nonlazy','version','duplicate','cuda_disabled','memset_api',
+                                  'missing_kernel','missing_copy','missing_sync'])
+def test_lazy_missing_memset_never_waives_required_evidence(tmp_path,fault):
+    path,producer=controlled_raw(tmp_path); lazy_memset_absent(path)
+    with sqlite3.connect(path) as db:
+        if fault=='nonlazy': db.execute("UPDATE META_DATA_EXPORT SET value='false' WHERE name='EXPORT_PARAM_LAZY'")
+        elif fault=='version': db.execute("UPDATE META_DATA_EXPORT SET value='unknown' WHERE name='EXPORT_SCHEMA_VERSION'")
+        elif fault=='duplicate': db.execute("INSERT INTO META_DATA_EXPORT VALUES ('EXPORT_PARAM_LAZY','true')")
+        elif fault=='cuda_disabled': db.execute("DELETE FROM META_DATA_CAPTURE WHERE name='CAPTURE_EVENT_TYPE' AND value='Cuda'")
+        elif fault=='memset_api':
+            db.execute("UPDATE StringIds SET value='cudaMemsetAsync' WHERE value='cudaLaunchKernel_v7000'")
+        else:
+            table={'missing_kernel':'KERNEL','missing_copy':'MEMCPY','missing_sync':'SYNCHRONIZATION'}[fault]
+            db.execute('DROP TABLE CUPTI_ACTIVITY_KIND_'+table)
+    from exposedpath_v141.gate8_controlled_raw import check_controlled_raw
+    with pytest.raises(ValueError): check_controlled_raw(path,producer)
+
+
 @pytest.mark.parametrize('damage',['missing_api','extra_driver','wrong_stream','extra_activity','boundary','wrong_token',
                                   'extra_sync','duplicate_sync','prior_memset','driver_table'])
 def test_raw_checker_refuses_unexplained_target_evidence(tmp_path,damage):

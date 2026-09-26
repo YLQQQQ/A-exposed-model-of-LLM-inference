@@ -134,7 +134,26 @@ def check_controlled_raw(sqlite_path,producer_dir):
                 used_api.add(a['source_rowid'])
             selected[key]=found
         kernels=rows('CUPTI_ACTIVITY_KIND_KERNEL'); copies=rows('CUPTI_ACTIVITY_KIND_MEMCPY')
-        syncs=rows('CUPTI_ACTIVITY_KIND_SYNCHRONIZATION'); memsets=rows('CUPTI_ACTIVITY_KIND_MEMSET')
+        syncs=rows('CUPTI_ACTIVITY_KIND_SYNCHRONIZATION')
+        if 'CUPTI_ACTIVITY_KIND_MEMSET' in tables:
+            memsets=rows('CUPTI_ACTIVITY_KIND_MEMSET')
+            memset_table_status='PRESENT'
+        else:
+            # Only the verified lazy exporter may omit this zero-expected table.
+            # Not a missing-record/loss certificate; required activity tables above
+            # and every observed target API remain independently checked.
+            _require({'META_DATA_EXPORT','META_DATA_CAPTURE'}<=tables,'MEMSET_ABSENCE_UNPROVEN')
+            expected_metadata={'EXPORT_PRODUCT_VERSION':'2026.2.1.210',
+                               'EXPORT_SCHEMA_VERSION':'3.25.0','EXPORT_PARAM_LAZY':'true'}
+            for key,value in expected_metadata.items():
+                actual=[r[0] for r in conn.execute('SELECT value FROM META_DATA_EXPORT WHERE name=?',(key,))]
+                _require(actual==[value],'MEMSET_ABSENCE_UNPROVEN')
+            capture=[r[0] for r in conn.execute("SELECT value FROM META_DATA_CAPTURE WHERE name='CAPTURE_EVENT_TYPE'")]
+            _require('Cuda' in capture,'MEMSET_ABSENCE_UNPROVEN')
+            _require(not any(_pid(a['globalTid'])==pid and 'memset' in strings.get(a['nameId'],'').lower()
+                             for a in apis),'MEMSET_TABLE_ABSENT_WITH_API_EVIDENCE')
+            memsets=[]
+            memset_table_status='ABSENT_SUPPORTED_LAZY_EXPORT'
         activities=[('CUPTI_ACTIVITY_KIND_KERNEL',r) for r in kernels]+[('CUPTI_ACTIVITY_KIND_MEMCPY',r) for r in copies]
         expectations=[]; windows=[]; all_activity_refs=set(); request_streams=[]
         previous_end=None
@@ -207,13 +226,22 @@ def check_controlled_raw(sqlite_path,producer_dir):
                                 dependency_start_ns=drain['start'],first_token_ns=first))
         tables={r[0] for r in conn.execute('SELECT name FROM sqlite_master')}
         diagnostics=rows('DIAGNOSTIC_EVENT') if 'DIAGNOSTIC_EVENT' in tables else None
-        _require(not diagnostics,'UNBOUNDED_DIAGNOSTIC_REQUIRES_REVIEW')
-        return dict(schema_version='exposedpath-controlled-raw-check/0.1.0',construction=CONSTRUCTION,
+        diagnostic_assessment=None
+        if diagnostics:
+            from .gate8_controlled_diagnostics import assess_diagnostics
+            diagnostic_assessment=assess_diagnostics(conn,diagnostics,pid=pid,sqlite_sha256=sha,
+                observed_cuda_pids={_pid(a['globalTid']) for a in apis} |
+                                  {_pid(a['globalPid']) for _,a in activities} |
+                                  {_pid(a['globalPid']) for a in syncs+memsets})
+        return dict(schema_version='exposedpath-controlled-raw-check/0.1.1',construction=CONSTRUCTION,
             status='CONTROLLED_RAW_MATCH',source_sqlite_sha256=sha,
             producer_receipt_sha256=_sha(root/'producer_receipt.json'),
             controlled_receipt_sha256=_sha(root/'controlled_receipt.json'),
             collector_integrity_status='UNKNOWN',dropped_count=None,
-            diagnostics_status='NO_EXPORTED_RECORDS' if diagnostics is not None else 'NOT_EXPORTED',
+            memset_table_status=memset_table_status,
+            diagnostic_assessment=diagnostic_assessment,
+            diagnostics_status=('SCOPED_ENGINEERING_REVIEW' if diagnostics else
+                                'NO_EXPORTED_RECORDS' if diagnostics is not None else 'NOT_EXPORTED'),
             windows=windows,sync_expectations=expectations,request_streams=request_streams,
             scope_limit='THIS_CLOSED_CONSTRUCTION_ONLY_NOT_ARBITRARY_MODEL',
             gate8_verdict='NOT_RUN',q0_status='NOT_RUN',formal_evidence=False)
