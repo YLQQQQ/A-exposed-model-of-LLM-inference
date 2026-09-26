@@ -70,12 +70,11 @@ def test_controlled_raw_proof_enters_file_chain_without_synthetic_zero_counter(t
     assert len(report['controlled_scope']['sync_expectations'])==4
     from exposedpath_v141.ab_bundle import load_ab_bundle
     ab=load_ab_bundle(out.parent/'analysis/ab/ab_manifest.json')
-    # cudaGetLastError is not in the frozen NON_BLOCKING_QUERY registry.
-    # Preserve each observed 10ns helper call, never silently relabel it Host.
-    assert [r['A_unattributed_ns'] for r in ab['a_window_records']]==[20,10,10,20,10,10]
-    assert all(r['primary_reason']=='CUDA_API_SEMANTICS_UNRESOLVED' for r in ab['a_window_records'])
+    # New controlled source performs only a checked launch, copy and wait.
+    # This does not grant support to an unobserved API in arbitrary models.
+    assert [r['A_unattributed_ns'] for r in ab['a_window_records']]==[0,0,0,0,0,0]
     assert all(r['validity']=='B_VALID' for r in ab['b_sync_records'])
-    assert not list(out.parent.rglob('derived_manifest.json'))
+    assert list(out.parent.rglob('derived_manifest.json'))
     mod.load_chain_result(out)
 
 

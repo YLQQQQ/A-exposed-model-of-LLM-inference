@@ -40,7 +40,7 @@ def test_refuse_before_backend_load(tmp_path,monkeypatch,fault):
 def test_prepare_has_explicit_versions_hashes_and_no_qualification(tmp_path,monkeypatch):
     mod,plan,_=prepare(tmp_path,monkeypatch)
     doc=json.loads(plan.read_text())
-    assert doc['construction']=='CONTROLLED-D2H-REQUEST/0.1.0'
+    assert doc['construction']=='CONTROLLED-D2H-REQUEST/0.2.0'
     assert doc['expected_commit']=='d'*40
     assert doc['gate8_verdict']=='NOT_RUN'
     assert {'wmpc_manifest','prompt','preflight','runner_source'} <= set(doc['inputs'])
@@ -63,3 +63,32 @@ def test_wrapper_records_cleanup_not_just_producer_success(tmp_path,monkeypatch,
     assert report['status']==('BLOCKED' if cleanup_fails else 'COMPLETE')
     assert report['process_exit_code']==(1 if cleanup_fails else 0)
     assert report['gate8_verdict']=='NOT_RUN'
+
+
+def test_old_construction_rejected_before_loading_backend(tmp_path,monkeypatch):
+    mod,plan,_=prepare(tmp_path,monkeypatch)
+    value=json.loads(plan.read_text()); value['construction']='CONTROLLED-D2H-REQUEST/0.1.0'
+    write_json(plan,value)
+    def forbidden(_): raise AssertionError('old construction must not load')
+    with pytest.raises(ValueError,match='CONTROLLED_PLAN_VERSION_INVALID'):
+        mod.execute_controlled(plan,tmp_path/'run',backend_factory=forbidden)
+    assert not (tmp_path/'run').exists()
+
+
+@pytest.mark.parametrize('method',['submit','copy','wait'])
+def test_native_nonzero_status_never_seals_success(tmp_path,monkeypatch,method):
+    """Real NativeBackend status handling and producer; no CUDA library loaded."""
+    from types import SimpleNamespace
+    from test_gate8_controlled_producer import Backend,fields
+    from exposedpath_v141.gate8_controlled import run_controlled_to_files
+    mod=importlib.import_module('exposedpath_v141.gate8_controlled_cli')
+    native=mod.NativeBackend.__new__(mod.NativeBackend)
+    native.library=SimpleNamespace(**{'ep_'+method:lambda *args:719})
+    backend=Backend()
+    setattr(backend,method,getattr(native,method))
+    receipt=run_controlled_to_files(tmp_path/'producer',pass_fields=fields(),backend=backend)
+    result=json.loads(receipt.read_text())
+    assert result['status']=='INCOMPLETE'
+    ledger=json.loads((receipt.parent/'pass_identity.json').read_text())
+    assert ledger['requests'][0]['outcome']=='FAILED'
+    assert ledger['requests'][0]['actual_output_tokens']==0

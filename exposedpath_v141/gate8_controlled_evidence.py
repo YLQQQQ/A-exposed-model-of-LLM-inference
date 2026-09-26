@@ -31,7 +31,7 @@ class ControlledEvidence:
         ledger=json.loads(paths['pass_identity'].read_text())
         if (self.sources['controlled_receipt']!=producer/'controlled_receipt.json'
                 or self.sources['operation_ledger']!=producer/'operation_ledger.json'
-                or plan.get('schema_version')!=PLAN_VERSION or plan.get('construction')!='CONTROLLED-D2H-REQUEST/0.1.0'
+                or plan.get('schema_version')!=PLAN_VERSION or plan.get('construction')!='CONTROLLED-D2H-REQUEST/0.2.0'
                 or plan['expected_commit']!=manifest['runner_git_commit']
                 or any(plan['identity'][k]!=manifest[k] for k in plan['identity'])
                 or manifest['runner_source_sha256']!=digest(SOURCE)

@@ -1,5 +1,8 @@
 # Gate8 controlled bridge 0.1.0
 
+> 历史 construction 说明。当前新执行候选为 [0.2.0](gate8_controlled_launch_v0_2.md)：
+> 直接检查 launch 返回值。旧 0.1 trace 缺 GetLastError 仍 BLOCKED，不适用新 API 集合。
+
 2026-09-26；Engineering，实现说明与待授权服务器草案，不是新Q0资格。
 承接 Route A quality amendment 0.1.0；Gate7历史PASS，Gate8 NOT_RUN。
 

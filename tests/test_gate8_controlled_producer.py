@@ -83,3 +83,14 @@ def test_controlled_uuid_uses_cuda124_runtime_properties_without_changing_device
     assert 'if (e != cudaSuccess) return int(e);' in identity
     assert 'std::memcpy(uuid, properties.uuid.bytes, 16);' in identity
     assert 'cudaDeviceGetPCIBusId(pci, capacity, 0)' in identity
+
+
+def test_native_submit_checks_launch_return_and_argument_storage():
+    """Static source guard only; target compilation and runtime remain required."""
+    from pathlib import Path
+    source=Path('scripts/gate8_controlled_token.cu').read_text()
+    submit=source.split('EP_EXPORT int ep_submit(',1)[1].split('EP_EXPORT int ep_copy()',1)[0]
+    assert 'void* args[] = {&device_token, &value};' in submit
+    assert 'return int(cudaLaunchKernel(' in submit
+    assert 'reinterpret_cast<const void*>(g8_token_kernel), dim3(1), dim3(1), args, 0, stream' in submit
+    assert 'cudaGetLastError' not in submit

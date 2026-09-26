@@ -15,7 +15,7 @@ from exposedpath.gate8_identity import make_gate8_pass_identity, validate_pass_i
 from exposedpath.nvtx import make_structured_nvtx_label
 from .gate8_files import _write, _entry
 
-CONSTRUCTION = 'CONTROLLED-D2H-REQUEST/0.1.0'
+CONSTRUCTION = 'CONTROLLED-D2H-REQUEST/0.2.0'
 OP_PREFIX = 'EXPOSEDPATH_CONTROLLED_OP_V1:'
 TOKEN_PLAN = ((11, 12), (21, 22))
 

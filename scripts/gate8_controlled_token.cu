@@ -1,4 +1,4 @@
-// Engineering construction CONTROLLED-D2H-REQUEST/0.1.0; not historical Q0.
+// Engineering construction CONTROLLED-D2H-REQUEST/0.2.0; not historical Q0.
 // Only the explicit Python execution entry loads this library.
 #include <cuda_runtime.h>
 #include <nvtx3/nvToolsExt.h>
@@ -49,8 +49,11 @@ EP_EXPORT int ep_prepare() {
     return 0;
 }
 EP_EXPORT int ep_submit(int value) {
-    g8_token_kernel<<<1, 1, 0, stream>>>(device_token, value);
-    return int(cudaGetLastError());
+    // CUDA copies the parameter values from these addresses during launch.
+    // device_token storage remains allocated through wait/read and cleanup.
+    void* args[] = {&device_token, &value};
+    return int(cudaLaunchKernel(
+        reinterpret_cast<const void*>(g8_token_kernel), dim3(1), dim3(1), args, 0, stream));
 }
 EP_EXPORT int ep_copy() {
     return int(cudaMemcpyAsync(host_token, device_token, sizeof(int), cudaMemcpyDeviceToHost, stream));

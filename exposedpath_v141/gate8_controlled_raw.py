@@ -11,12 +11,12 @@ import sqlite3
 
 from .q0_oracle import calculate_expected_timing
 
-CONSTRUCTION='CONTROLLED-D2H-REQUEST/0.1.0'
+CONSTRUCTION='CONTROLLED-D2H-REQUEST/0.2.0'
 OP_PREFIX='EXPOSEDPATH_CONTROLLED_OP_V1:'
 BOUNDARY_PREFIX='EXPOSEDPATH_BOUNDARY_V1:'
 API_NAMES={
     'prepare':({'cudaDeviceSynchronize','cudaDeviceSynchronize_v3020'},),
-    'submit':({'cudaLaunchKernel','cudaLaunchKernel_v7000'},{'cudaGetLastError','cudaGetLastError_v3020'}),
+    'submit':({'cudaLaunchKernel','cudaLaunchKernel_v7000'},),
     'copy':({'cudaMemcpyAsync','cudaMemcpyAsync_v3020'},),
     'wait':({'cudaStreamSynchronize','cudaStreamSynchronize_v3020'},),
 }

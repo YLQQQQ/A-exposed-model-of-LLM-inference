@@ -46,7 +46,7 @@ def controlled_raw(tmp_path,pass_fields=None):
             db.execute('INSERT INTO NVTX_EVENTS(start,end,eventType,text,globalTid) VALUES (?,?,59,?,?)',(start,clock(),label,tid))
         def prepare(self): self.stream+=1; self.api('cudaDeviceSynchronize_v3020')
         def submit(self,token):
-            self.token=token; self.launch=self.api('cudaLaunchKernel_v7000'); self.api('cudaGetLastError_v3020')
+            self.token=token; self.launch=self.api('cudaLaunchKernel_v7000')
         def copy(self): self.copy_api=self.api('cudaMemcpyAsync_v3020')
         def wait(self):
             start,end,corr=self.api('cudaStreamSynchronize_v3020')
@@ -72,6 +72,26 @@ def test_raw_independent_controlled_match_not_zero_loss_or_qualification(tmp_pat
     assert len(report['sync_expectations'])==4
     assert [len(s['wait_set_refs']) for s in report['sync_expectations']]==[2,4,2,4]
     assert report['gate8_verdict']=='NOT_RUN'
+
+
+def test_old_sealed_construction_cannot_use_new_api_set(tmp_path):
+    path,producer=controlled_raw(tmp_path)
+    receipt=producer/'controlled_receipt.json'
+    value=json.loads(receipt.read_text()); value['construction']='CONTROLLED-D2H-REQUEST/0.1.0'
+    receipt.write_text(json.dumps(value))
+    from exposedpath_v141.gate8_controlled_raw import check_controlled_raw
+    with pytest.raises(ValueError,match='CONTROLLED_EXECUTION_INCOMPLETE_OR_VERSION'):
+        check_controlled_raw(path,producer)
+
+
+def test_extra_error_query_is_not_ignored_by_new_construction(tmp_path):
+    path,producer=controlled_raw(tmp_path)
+    with sqlite3.connect(path) as db:
+        db.execute("INSERT INTO StringIds VALUES (999,'cudaGetLastError_v3020')")
+        db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME SELECT start,end,eventClass,globalTid,9999,999,0,NULL FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE nameId=(SELECT id FROM StringIds WHERE value=?) LIMIT 1',('cudaLaunchKernel_v7000',))
+    from exposedpath_v141.gate8_controlled_raw import check_controlled_raw
+    with pytest.raises(ValueError,match='EXPECTED_API_SET_MISSING_OR_EXTRA'):
+        check_controlled_raw(path,producer)
 
 
 @pytest.mark.parametrize('damage',['missing_api','extra_driver','wrong_stream','extra_activity','boundary','wrong_token',
