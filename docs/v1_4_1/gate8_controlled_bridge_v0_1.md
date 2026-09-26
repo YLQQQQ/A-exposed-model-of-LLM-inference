@@ -3,6 +3,14 @@
 2026-09-26；Engineering，实现说明与待授权服务器草案，不是新Q0资格。
 承接 Route A quality amendment 0.1.0；Gate7历史PASS，Gate8 NOT_RUN。
 
+7.29兼容修复：服务器24f58f8的native构建在cudaDeviceGetUuid未定义处失败。
+改用已有`q0/cuda/exposedpath_q0.cu`的Runtime方式：
+`cudaGetDeviceProperties(&properties, 0)`取得`properties.uuid.bytes`，仍复制16字节；
+失败返回、logical device0、PCI查询及Python UUID比对不变。这不是改为physical index。
+依据[CUDA12.4.1 Device API](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__DEVICE.html)
+和[cudaDeviceProp.uuid](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/structcudaDeviceProp.html)。
+源合同回归不替代目标nvcc编译；服务器恢复只构建，不运行GPU。
+
 ## 支持域与文件合同
 
 仅 `CONTROLLED-D2H-REQUEST/0.1.0`：单进程单线程，两个request，各两个int token

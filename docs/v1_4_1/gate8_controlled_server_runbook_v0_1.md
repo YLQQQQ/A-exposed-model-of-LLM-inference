@@ -4,6 +4,13 @@
 适用[controlled bridge 0.1](gate8_controlled_bridge_v0_1.md)，不是模型smoke。
 使用现有固定checkout，不创建新repo/worktree。机器路径由忽略的本地交付清单提供。
 
+**7.29更新：** 下方A的8d64f75首部署块已完成，不能再次执行。
+服务器已到24f58f8；全量1165 passed/1 skipped，合同/Canonical/oracle通过，
+但native UUID接口编译失败。修复只将UUID改从cudaGetDeviceProperties().uuid读取。
+恢复须使用基于**24f58f8**的新增量包和完整恢复脚本；最小复验为30项受控定向、
+compileall及native真实编译，不重复已通过的全量，不加载DLL，不采集。
+必须记录此前全量属于24f58f8，不写成修复commit的全量成绩。
+
 ## A. 部署和静态构建（无profile/export/CUDA程序）
 
 先核对交付清单中的完整commit、bundle prerequisite/bytes/SHA256；服务器必须clean。
@@ -48,8 +55,11 @@ if ($LASTEXITCODE -ne 0) { throw 'Diff check failed' }
 
 在上述编译相关测试前，显式载入已验证VS2022 x64/MSVC14.38/CUDA12.4环境；
 不能依赖重启前状态，两个0-byte compatibility marker仅记录length/hash，不能作为初始化脚本。
-使用VS安装目录 `Common7\Tools\Launch-VsDevShell.ps1` 的
-`-Arch amd64 -HostArch amd64 -DevCmdArguments '-vcvars_ver=14.38'`，
+目标安装的Launch-VsDevShell wrapper不支持DevCmdArguments，旧草案已实机失败。
+改为导入 `Common7\Tools\Microsoft.VisualStudio.DevShell.dll`，用
+`Get-Command Enter-VsDevShell -Module Microsoft.VisualStudio.DevShell`检查
+VsInstallPath/SkipAutomaticLocation/DevCmdArguments参数都存在后，调用
+`Enter-VsDevShell -VsInstallPath $VsRoot -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64 -vcvars_ver=14.38'`，
 核实实际第一cl路径及19.38.33135、VCToolsVersion14.38.33130、nvcc12.4.131。
 不符停止，不用allow-unsupported-compiler。完整transcript存logs下全新目录。
 

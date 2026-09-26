@@ -70,3 +70,16 @@ def test_controlled_native_has_real_d2h_read_and_explicit_stream():
     assert 'cudaStreamNonBlocking' in source
     assert 'cudaStreamSynchronize' in source
     assert 'g8_token_kernel' in source
+
+
+def test_controlled_uuid_uses_cuda124_runtime_properties_without_changing_device():
+    """Source contract regression, not a substitute for target nvcc compilation."""
+    from pathlib import Path
+    source=Path('scripts/gate8_controlled_token.cu').read_text()
+    identity=source.split('EP_EXPORT int ep_identity(',1)[1].split('EP_EXPORT int ep_prepare()',1)[0]
+    assert 'cudaDeviceGetUuid' not in identity
+    assert 'cudaDeviceProp properties{};' in identity
+    assert 'cudaGetDeviceProperties(&properties, 0)' in identity
+    assert 'if (e != cudaSuccess) return int(e);' in identity
+    assert 'std::memcpy(uuid, properties.uuid.bytes, 16);' in identity
+    assert 'cudaDeviceGetPCIBusId(pci, capacity, 0)' in identity

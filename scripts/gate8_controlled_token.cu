@@ -35,10 +35,10 @@ EP_EXPORT int ep_init(int logical_device) {
     return int(cudaMallocHost(&host_token, sizeof(int)));
 }
 EP_EXPORT int ep_identity(unsigned char* uuid, char* pci, int capacity) {
-    cudaUUID_t value;
-    cudaError_t e = cudaDeviceGetUuid(&value, 0);
+    cudaDeviceProp properties{};
+    cudaError_t e = cudaGetDeviceProperties(&properties, 0);
     if (e != cudaSuccess) return int(e);
-    std::memcpy(uuid, value.bytes, 16);
+    std::memcpy(uuid, properties.uuid.bytes, 16);
     return int(cudaDeviceGetPCIBusId(pci, capacity, 0));
 }
 EP_EXPORT int ep_prepare() {
