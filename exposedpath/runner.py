@@ -387,9 +387,10 @@ def run_one_invocation(
     }
 
 
-def run_gate8_requests(*, model, input_ids, attention_mask, output_len, device,
+def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, output_len, device,
                        pass_fields, request_plan, eos_token_id=None,
-                       clock_ns=time.perf_counter_ns, record_drains=False):
+                       clock_ns=time.perf_counter_ns, record_drains=False,
+                       record_stages=False, model_setup=None):
     """Explicit local Gate8 producer API over already-resident inputs.
 
     Not enabled by the legacy CLI/launcher. The caller supplies preflight-bound
@@ -404,12 +405,17 @@ def run_gate8_requests(*, model, input_ids, attention_mask, output_len, device,
 
     if pass_fields.get("pid") != os.getpid():
         raise ValueError("IDENTITY_CONFLICT: producer PID must be current process")
+    if record_stages and not record_drains:
+        raise ValueError('STAGE_DRAIN_RECORDING_REQUIRED')
+    if model_setup is not None and (not record_stages or any(
+            v is not None for v in (model,input_ids,attention_mask,eos_token_id))):
+        raise ValueError('STAGE_SETUP_RESIDENT_INPUT_CONFLICT')
     if record_drains:
         device_text = str(device)
         if not device_text.startswith('cuda:') or not device_text[5:].isdigit():
             raise ValueError('DRAIN_EXPLICIT_LOGICAL_DEVICE_REQUIRED')
         logical_device = int(device_text[5:])
-        if torch.cuda.current_device() != logical_device:
+        if model_setup is None and torch.cuda.current_device() != logical_device:
             raise ValueError('DRAIN_CURRENT_DEVICE_CONFLICT')
     requests = []
     for plan in request_plan:
@@ -425,10 +431,79 @@ def run_gate8_requests(*, model, input_ids, attention_mask, output_len, device,
     host_records = []
     drain_records = []
     emit = ledger["pass_id"] == "pass1"
+    stages = None
+    def products():
+        validate_pass_identity(ledger)
+        result = [ledger,host_records]
+        if record_drains:
+            from exposedpath.gate8_drain import DRAIN_VERSION
+            result.append(dict(schema_version=DRAIN_VERSION,drains=drain_records))
+        if stages is not None:
+            from exposedpath.gate8_stages import validate_stage_ledger
+            validate_stage_ledger(stages.value,ledger)
+            result.append(stages.value)
+        return tuple(result)
+    if record_stages:
+        from exposedpath.gate8_stages import StageRecorder
+        stages = StageRecorder(ledger,logical_device,torch.cuda,clock_ns,
+                               setup_observed=model_setup is not None)
+    if model_setup is not None:
+        # This is an opt-in producer entry, not a replacement for launcher
+        # preflight/target qualification. Check CPU-side input/mask before load.
+        from exposedpath.manifest import resolve_logical_cuda_index
+        if set(model_setup) != {'model_path','prompt_path','physical_gpu_index','batch_size','manifest_path'}:
+            raise ValueError('STAGE_SETUP_SHAPE')
+        physical = model_setup['physical_gpu_index']
+        batch_size = model_setup['batch_size']
+        if (type(physical) is not int or physical<0 or type(batch_size) is not int or batch_size<1
+                or os.environ.get('CUDA_DEVICE_ORDER')!='PCI_BUS_ID'
+                or os.environ.get('CUDA_VISIBLE_DEVICES')!=str(physical)):
+            raise ValueError('STAGE_SETUP_DEVICE_OR_BATCH')
+        resolve_logical_cuda_index(physical_gpu_index=physical,
+            cuda_visible_devices=os.environ.get('CUDA_VISIBLE_DEVICES'),declared_logical_index=logical_device)
+        prompt_path = Path(model_setup['prompt_path'])
+        if hashlib.sha256(prompt_path.read_bytes()).hexdigest()!=ledger['prompt_sha256']:
+            raise ValueError('STAGE_SETUP_PROMPT_HASH')
+        manifest_bytes=Path(model_setup['manifest_path']).read_bytes()
+        if (hashlib.sha256(manifest_bytes).hexdigest()!=ledger['wmpc_manifest_sha256']
+                or hashlib.sha256(Path(__file__).read_bytes()).hexdigest()!=ledger['runner_source_sha256']):
+            raise ValueError('STAGE_SETUP_MANIFEST_OR_SOURCE_HASH')
+        manifest=json.loads(manifest_bytes)
+        batch = get_batch_inputs(load_prompt_tokens(prompt_path),batch_size,run_role=ledger['run_role'])
+        expected={k:ledger[k] for k in ('experiment_id','wmpc_id','run_id','run_role','data_role',
+                                        'runner_git_commit','runner_git_dirty','runner_source_sha256')}
+        expected.update(model_id=model_setup['model_path'],batch_size=batch_size,
+            fixed_output_tokens=output_len,prompt_tokens_sha256=ledger['prompt_sha256'],
+            gpu_index_physical=physical,gpu_index_logical=logical_device,
+            execution_mode='eager',fixed_input_tokens=batch['fixed_input_tokens'],
+            warmup_count=sum(r['request_role']=='warmup' for r in ledger['requests']),
+            repeat_count=sum(r['request_role']=='measured' for r in ledger['requests']),
+            study_mode='G1_NATURAL',n1_intervention=None)
+        if (any(k not in manifest or type(manifest[k]) is not type(v) or manifest[k]!=v
+                for k,v in expected.items())
+                or ledger['runner_git_dirty'] is not False):
+            raise ValueError('STAGE_SETUP_MANIFEST_IDENTITY')
+        def initialize():
+            loaded, tokenizer, _, actual_device = load_model(model_setup['model_path'],physical)
+            if actual_device!=device or torch.cuda.current_device()!=logical_device:
+                raise ValueError('STAGE_SETUP_DEVICE_CONFLICT')
+            ids=torch.tensor(batch['input_ids'],dtype=torch.long,device=device)
+            mask=torch.tensor(batch['attention_mask'],dtype=torch.long,device=device)
+            return loaded,ids,mask,tokenizer.eos_token_id
+        try:
+            model,input_ids,attention_mask,eos_token_id = stages.observe('setup',None,initialize)
+        except Exception as exc:
+            for entry in ledger['requests']:
+                entry['reasons']=[f'SETUP_FAILED:{type(exc).__name__}']
+            return products()
     for entry in ledger["requests"]:
         if entry["request_role"] == "warmup":
             try:
-                run_warmup(model, input_ids, attention_mask, output_len, 1)
+                warmup=lambda:run_warmup(model, input_ids, attention_mask, output_len, 1)
+                if stages is None:
+                    warmup()
+                else:
+                    stages.observe('warmup',entry['identity'],warmup)
                 entry.update(actual_output_tokens=output_len, outcome="COMPLETE", reasons=[])
             except Exception as exc:
                 entry["reasons"] = [f"WARMUP_FAILED:{type(exc).__name__}"]
@@ -445,13 +520,14 @@ def run_gate8_requests(*, model, input_ids, attention_mask, output_len, device,
                 push=torch.cuda.nvtx.range_push if emit else None,
                 pop=torch.cuda.nvtx.range_pop if emit else None)
         try:
-            result = run_one_invocation(
+            invocation = lambda:run_one_invocation(
                 model, input_ids, attention_mask, output_len, device,
                 "GATE8_REQUEST" if emit else "", "", "", "", eos_token_id,
                 token_ready_identity_base=entry["identity"], clock_ns=clock_ns,
                 gate8_recorder=recorder,
                 drain_recorder=drain_recorder,
             )
+            result = invocation() if stages is None else stages.observe('measured',entry['identity'],invocation)
             excluded = result["early_eos"] or result["actual_output_tokens"] != output_len
             entry.update(actual_output_tokens=result["actual_output_tokens"],
                          early_eos=result["early_eos"], outcome="EXCLUDED" if excluded else "COMPLETE",
@@ -465,17 +541,13 @@ def run_gate8_requests(*, model, input_ids, attention_mask, output_len, device,
         host_records.extend(recorder.records)
         if entry["outcome"] == "FAILED":
             break  # Do not continue model work with a failed invocation's state.
-    validate_pass_identity(ledger)
-    if record_drains:
-        from exposedpath.gate8_drain import DRAIN_VERSION
-        return ledger, host_records, dict(schema_version=DRAIN_VERSION, drains=drain_records)
-    return ledger, host_records
+    return products()
 
 
 def run_gate8_requests_to_files(*, output_dir, **request_arguments):
     """Persist actual pass outcomes; no collection/export or hash back-patching.
 
-    The caller still owns model/input initialization. Existing output is rejected
+    The caller either supplies resident inputs or explicit model_setup. Existing output is rejected
     before model work. A failed request remains FAILED, never a success receipt.
     """
     import json
@@ -491,8 +563,10 @@ def run_gate8_requests_to_files(*, output_dir, **request_arguments):
     ledger, host_records = products[:2]
     files = {}
     outputs = [('pass_identity.json',ledger),('host_boundaries.json',host_records)]
-    if len(products) == 3:
+    if len(products) >= 3:
         outputs.append(('drain_ledger.json', products[2]))
+    if len(products) == 4:
+        outputs.append(('stage_ledger.json', products[3]))
     for name, value in outputs:
         path = staging/name
         with path.open('x',encoding='utf-8',newline='\n') as handle:
@@ -506,8 +580,10 @@ def run_gate8_requests_to_files(*, output_dir, **request_arguments):
                'run_id':ledger['run_id'],'pass_id':ledger['pass_id'],'attempt_id':ledger['attempt_id'],
                'status':'COMPLETE' if all(r['outcome']=='COMPLETE' for r in ledger['requests']) else 'INCOMPLETE',
                'files':files, 'gate8_verdict':'NOT_RUN'}
-    if len(products) == 3:
+    if len(products) >= 3:
         receipt['schema_version'] = 'exposedpath-gate8-producer-receipt/0.2.0'
+    if len(products) == 4:
+        receipt['schema_version'] = 'exposedpath-gate8-producer-receipt/0.3.0'
     with (staging/'producer_receipt.json').open('x',encoding='utf-8') as handle:
         json.dump(receipt,handle,sort_keys=True,indent=2)
         handle.write('\n')

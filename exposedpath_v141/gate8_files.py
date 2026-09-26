@@ -14,6 +14,8 @@ from .gate8_adapter import digest, normalized_uuid, normalized_pci
 
 RECEIPT_VERSION = 'exposedpath-gate8-input-receipt/0.1.0'
 DRAIN_RECEIPT_VERSION = 'exposedpath-gate8-input-receipt/0.2.0'
+STAGE_RECEIPT_VERSION = 'exposedpath-gate8-input-receipt/0.3.0'
+STAGE_RESULT_VERSION = 'exposedpath-gate8-file-chain/0.5.0'
 CLOSED_RESULT_VERSION = 'exposedpath-gate8-file-chain/0.4.0'
 RESULT_VERSION = 'exposedpath-gate8-file-chain/0.1.0'
 SCOPED_RESULT_VERSION = 'exposedpath-gate8-file-chain/0.2.0'
@@ -58,8 +60,14 @@ def _identities(paths):
     validate_pass_identity(ledger)
     producer = _json(paths['producer_receipt'])
     with_drains = 'drain_ledger' in paths
+    with_stages = 'stage_ledger' in paths
     producer_version = 'exposedpath-gate8-producer-receipt/0.2.0' if with_drains else 'exposedpath-gate8-producer-receipt/0.1.0'
     producer_files = {'pass_identity.json','host_boundaries.json'} | ({'drain_ledger.json'} if with_drains else set())
+    if with_stages:
+        producer_version='exposedpath-gate8-producer-receipt/0.3.0'
+        producer_files.add('stage_ledger.json')
+        from exposedpath.gate8_stages import validate_stage_ledger
+        validate_stage_ledger(_json(paths['stage_ledger']),ledger)
     if (producer.get('schema_version') != producer_version
             or any(producer.get(k) != ledger[k] for k in ('run_id','pass_id','attempt_id'))
             or producer.get('gate8_verdict') != 'NOT_RUN'
@@ -69,6 +77,8 @@ def _identities(paths):
     source_pairs = [('pass_identity','pass_identity.json'),('host_ledger','host_boundaries.json')]
     if with_drains:
         source_pairs.append(('drain_ledger','drain_ledger.json'))
+    if with_stages:
+        source_pairs.append(('stage_ledger','stage_ledger.json'))
     for key,name in source_pairs:
         if _resolve(Path(paths['producer_receipt']).resolve().parent,producer['files'][name]) != Path(paths[key]).resolve():
             raise ValueError('SOURCE_HASH_MISMATCH: producer receipt')
@@ -114,7 +124,7 @@ def write_input_receipt(output_path, *, artifacts, collector_version, capture_se
     output_path = Path(output_path).resolve()
     if output_path.exists():
         raise FileExistsError(output_path)
-    if set(artifacts) not in (ARTIFACTS, ARTIFACTS | {'drain_ledger'}):
+    if set(artifacts) not in (ARTIFACTS, ARTIFACTS | {'drain_ledger'}, ARTIFACTS | {'drain_ledger','stage_ledger'}):
         raise ValueError('INPUT_ARTIFACT_SET_INVALID')
     if not isinstance(collector_version,str) or not collector_version or not isinstance(capture_session_id,str) or not capture_session_id:
         raise ValueError('COLLECTOR_SESSION_IDENTITY_MISSING')
@@ -123,6 +133,8 @@ def write_input_receipt(output_path, *, artifacts, collector_version, capture_se
     if len({e['filename'] for e in entries.values()}) != len(entries):
         raise ValueError('INPUT_ARTIFACT_ALIAS')
     version = DRAIN_RECEIPT_VERSION if 'drain_ledger' in artifacts else RECEIPT_VERSION
+    if 'stage_ledger' in artifacts:
+        version=STAGE_RECEIPT_VERSION
     _write(output_path, dict(schema_version=version, identity=identity, artifacts=entries,
                             collector_version=collector_version, capture_session_id=capture_session_id))
     return output_path
@@ -131,9 +143,11 @@ def write_input_receipt(output_path, *, artifacts, collector_version, capture_se
 def load_input_receipt(path):
     path = Path(path).resolve()
     value = _json(path)
-    expected_artifacts = ARTIFACTS | ({'drain_ledger'} if value.get('schema_version')==DRAIN_RECEIPT_VERSION else set())
+    expected_artifacts = ARTIFACTS | ({'drain_ledger'} if value.get('schema_version') in (DRAIN_RECEIPT_VERSION,STAGE_RECEIPT_VERSION) else set())
+    if value.get('schema_version')==STAGE_RECEIPT_VERSION:
+        expected_artifacts=expected_artifacts | {'stage_ledger'}
     if (set(value) != {'schema_version','identity','artifacts','collector_version','capture_session_id'}
-            or value['schema_version'] not in (RECEIPT_VERSION,DRAIN_RECEIPT_VERSION) or set(value['artifacts']) != expected_artifacts):
+            or value['schema_version'] not in (RECEIPT_VERSION,DRAIN_RECEIPT_VERSION,STAGE_RECEIPT_VERSION) or set(value['artifacts']) != expected_artifacts):
         raise ValueError('INPUT_RECEIPT_VERSION_OR_SHAPE_INVALID')
     paths = {k:_resolve(path.parent,e) for k,e in value['artifacts'].items()}
     if value['identity'] != _identities(paths):
@@ -150,7 +164,11 @@ def process_gate8_receipt(receipt_path, output_dir, *, integrity_receipts_path=N
     if output_dir.exists():
         raise FileExistsError(output_dir)
     receipt, paths = load_input_receipt(receipt_path)
-    if ('drain_ledger' in paths) != (closed_prior_bindings_path is not None):
+    with_stages='stage_ledger' in paths
+    if with_stages and any(v is not None for v in (integrity_receipts_path,scope_assessment_path,
+                                                  controlled_sources,closed_prior_bindings_path)):
+        raise ValueError('STAGE_SOURCE_NOT_QUALIFIED: diagnostic-only entry cannot admit S/A/B')
+    if not with_stages and ('drain_ledger' in paths) != (closed_prior_bindings_path is not None):
         raise ValueError('CLOSED_PRIOR_DRAIN_BINDINGS_REQUIRED')
     if closed_prior_bindings_path is not None and controlled_sources is not None:
         raise ValueError('CLOSED_PRIOR_CONTROLLED_PROFILE_CONFLICT')
@@ -193,6 +211,9 @@ def process_gate8_receipt(receipt_path, output_dir, *, integrity_receipts_path=N
         raw_sha256=digest(paths['raw']), collector_version=receipt['collector_version'],
         gate8_sources={k:paths[k] for k in ('pass_identity','preflight','cuda_probe')})
     scope = project_completion_scopes(canonical, paths['host_ledger'], staging/'projection/scope.json')
+    if with_stages:
+        from .gate8_stage_scope import derive_stage_diagnostics
+        _write(staging/'projection/stages.json',derive_stage_diagnostics(canonical,paths['stage_ledger']))
     closed_path = None
     if closed_prior_bindings_path is not None:
         from .gate8_closed_prior import VERSION
@@ -230,6 +251,8 @@ def process_gate8_receipt(receipt_path, output_dir, *, integrity_receipts_path=N
     if digest(receipt_path) != receipt_hash or (integrity_hash is not None and digest(integrity_receipts_path) != integrity_hash):
         raise ValueError('SOURCE_HASH_CHANGED_DURING_PROCESSING')
     report = _json(analysis)
+    if with_stages and report['status']!='BLOCKED':
+        raise ValueError('STAGE_SOURCE_NOT_QUALIFIED')
     if closed_path is not None:
         if (digest(closed_prior_bindings_path)!=bindings_hash or digest(provenance/'lifetime_bindings.json')!=bindings_hash
                 or digest(closed_path.parent/'drain.json')!=digest(paths['drain_ledger'])):
@@ -249,6 +272,9 @@ def process_gate8_receipt(receipt_path, output_dir, *, integrity_receipts_path=N
         final['schema_version']=CLOSED_RESULT_VERSION
         final['closed_prior_bindings_sha256']=bindings_hash
         final['closed_prior_manifest_sha256']=digest(closed_path)
+    if with_stages:
+        final['schema_version']=STAGE_RESULT_VERSION
+        final['stage_diagnostics_sha256']=digest(staging/'projection/stages.json')
     _write(staging/'chain_result.json',final)
     staging.rename(output_dir)
     return output_dir/'chain_result.json'
@@ -257,7 +283,7 @@ def process_gate8_receipt(receipt_path, output_dir, *, integrity_receipts_path=N
 def load_chain_result(path):
     path = Path(path).resolve()
     value = _json(path)
-    if value.get('schema_version') not in (RESULT_VERSION, SCOPED_RESULT_VERSION, CONTROLLED_RESULT_VERSION, CLOSED_RESULT_VERSION) or value.get('gate8_verdict') != 'NOT_RUN' or value.get('q0_status') != 'NOT_RUN':
+    if value.get('schema_version') not in (RESULT_VERSION, SCOPED_RESULT_VERSION, CONTROLLED_RESULT_VERSION, CLOSED_RESULT_VERSION,STAGE_RESULT_VERSION) or value.get('gate8_verdict') != 'NOT_RUN' or value.get('q0_status') != 'NOT_RUN':
         raise ValueError('CHAIN_VERSION_OR_QUALIFICATION_INVALID')
     if value['schema_version'] != CLOSED_RESULT_VERSION and (value['schema_version'] == SCOPED_RESULT_VERSION) != ('target_scope_assessment_sha256' in value):
         raise ValueError('CHAIN_SCOPE_VERSION_CONFLICT')
@@ -272,6 +298,42 @@ def load_chain_result(path):
     if value['identity'] != canonical['identity']['values']:
         raise ValueError('CHAIN_IDENTITY_MISMATCH')
     provenance = path.parent/'provenance'
+    # Choose the interpretation from the sealed input AND producer, never from
+    # the result's self-declared version alone (including downgrade attacks).
+    receipt = _json(provenance/'input_receipt.json')
+    contracts = {
+        RECEIPT_VERSION: (ARTIFACTS, {RESULT_VERSION,SCOPED_RESULT_VERSION,CONTROLLED_RESULT_VERSION},
+                          'exposedpath-gate8-producer-receipt/0.1.0'),
+        DRAIN_RECEIPT_VERSION: (ARTIFACTS | {'drain_ledger'}, {CLOSED_RESULT_VERSION},
+                                'exposedpath-gate8-producer-receipt/0.2.0'),
+        STAGE_RECEIPT_VERSION: (ARTIFACTS | {'drain_ledger','stage_ledger'}, {STAGE_RESULT_VERSION},
+                                'exposedpath-gate8-producer-receipt/0.3.0'),
+    }
+    if receipt.get('schema_version') not in contracts:
+        raise ValueError('CHAIN_INPUT_VERSION_INVALID')
+    expected_artifacts, result_versions, producer_version = contracts[receipt['schema_version']]
+    if set(receipt.get('artifacts',{})) != expected_artifacts or value['schema_version'] not in result_versions:
+        raise ValueError('CHAIN_INPUT_RESULT_VERSION_OR_ARTIFACT_CONFLICT')
+    producer = _json(provenance/'producer_receipt.json')
+    producer_names={'pass_identity.json','host_boundaries.json'} | {
+        name+'.json' for name in ('drain_ledger','stage_ledger') if name in expected_artifacts}
+    if producer.get('schema_version')!=producer_version or set(producer.get('files',{}))!=producer_names:
+        raise ValueError('CHAIN_PRODUCER_VERSION_OR_ARTIFACT_CONFLICT')
+    for name, present in (('provenance/stage_ledger.json','stage_ledger' in expected_artifacts),
+                          ('projection/stages.json','stage_ledger' in expected_artifacts),
+                          ('provenance/drain_ledger.json','drain_ledger' in expected_artifacts),
+                          ('closed_prior/evidence.json',receipt['schema_version']==DRAIN_RECEIPT_VERSION)):
+        if (path.parent/name).is_file()!=present:
+            raise ValueError('CHAIN_VERSION_ARTIFACT_PRESENCE_CONFLICT')
+    if (value['schema_version']==STAGE_RESULT_VERSION)!=('stage_diagnostics_sha256' in value):
+        raise ValueError('CHAIN_STAGE_VERSION_CONFLICT')
+    if value['schema_version']==STAGE_RESULT_VERSION:
+        from .gate8_stage_scope import derive_stage_diagnostics
+        stage_path=path.parent/'projection/stages.json'
+        if (digest(stage_path)!=value['stage_diagnostics_sha256'] or value['status']!='BLOCKED'
+                or _json(stage_path)!=derive_stage_diagnostics(path.parent/'canonical/canonical_manifest.json',
+                    provenance/'stage_ledger.json')):
+            raise ValueError('CHAIN_STAGE_SOURCE_MISMATCH')
     if (value['schema_version']==CLOSED_RESULT_VERSION) != ('closed_prior_manifest_sha256' in value):
         raise ValueError('CHAIN_CLOSED_PRIOR_VERSION_CONFLICT')
     if value['schema_version']==CLOSED_RESULT_VERSION:
@@ -307,7 +369,6 @@ def load_chain_result(path):
                 raise ValueError('CHAIN_TARGET_EVIDENCE_HASH_MISMATCH')
     if digest(provenance/'input_receipt.json') != value['input_receipt_sha256']:
         raise ValueError('CHAIN_INPUT_RECEIPT_HASH_MISMATCH')
-    receipt = _json(provenance/'input_receipt.json')
     if receipt['identity'] != value['identity']:
         raise ValueError('CHAIN_INPUT_IDENTITY_MISMATCH')
     for role,item in receipt['artifacts'].items():

@@ -76,6 +76,7 @@ class ClosedPriorAdmissions:
 
 def load_admissions(path, canonical_path, scope_path, bundle, projections, inventory):
     from .gate8_scope import sidecar
+    from .sync_semantics import classify_cuda_api
     path = Path(path)
     value = json.loads(path.read_text(encoding='utf-8'))
     _require(set(value) == {'schema_version','canonical_manifest_sha256','scope_sha256','drain_ledger','lifetimes'}
@@ -177,7 +178,8 @@ def load_admissions(path, canonical_path, scope_path, bundle, projections, inven
                  and marker['thread_id']==entry['thread_id'] and type(marker['end_ns']) is int, 'DRAIN_CLOCK_OR_THREAD')
         apis = [a for a in records['cuda_api'] if a['global_tid']==marker['global_tid']
                 and marker['start_ns']<=a['start_ns']<=a['end_ns']<=marker['end_ns']]
-        _require(len(apis)==1 and apis[0]['api_name']=='cudaDeviceSynchronize', 'DRAIN_API_MISSING_OR_AMBIGUOUS')
+        _require(len(apis)==1 and classify_cuda_api(apis[0]['api_name'])['registry_rule_id']=='SYNC-DEVICE-RUNTIME-001',
+                 'DRAIN_API_MISSING_OR_AMBIGUOUS')
         api = apis[0]
         _require(api['return_value']==0 and api['clock_domain_id']==clock
                  and marker['end_ns']<=full[key]['start_ns'], 'DRAIN_RETURN_OR_CLOCK')

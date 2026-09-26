@@ -10,7 +10,8 @@ from test_gate8_boundaries import project, record_request
 from test_gate8_identity import write_json, sha
 
 
-def closed_sources(tmp_path, monkeypatch, requests=2, shift=0, damage=None, return_inputs=False):
+def closed_sources(tmp_path, monkeypatch, requests=2, shift=0, damage=None, return_inputs=False,
+                   drain_api='cudaDeviceSynchronize'):
     from exposedpath.gate8_drain import DrainRecorder, DRAIN_VERSION
     inputs, host = signed_inputs(tmp_path, monkeypatch, shift=shift, return_sources=True)
     ledger = json.loads(inputs[3].read_text())
@@ -35,7 +36,7 @@ def closed_sources(tmp_path, monkeypatch, requests=2, shift=0, damage=None, retu
                 db.execute('INSERT INTO NVTX_EVENTS(start,end,eventType,text,globalTid) VALUES (?,NULL,34,?,?)',(t+shift,label,tid))
             for (a,b),label in zip(((730,780),(850,900)), ranges):
                 db.execute('INSERT INTO NVTX_EVENTS(start,end,eventType,text,globalTid) VALUES (?,?,59,?,?)',(a+shift,b+shift,label,tid))
-        db.execute("INSERT INTO StringIds VALUES (21,'cudaDeviceSynchronize')")
+        db.execute('INSERT INTO StringIds VALUES (21,?)', (drain_api,))
         db.execute("INSERT INTO ENUM_CUPTI_SYNC_TYPE VALUES (2,'CONTEXT','Context synchronize')")
         for index, request in enumerate(ledger['requests']):
             labels = []
@@ -178,6 +179,28 @@ def test_drain_api_name_and_marker_do_not_prove_scope(monkeypatch,tmp_path,damag
         calculate(paths)
 
 
+def test_registered_runtime_drain_abi_suffix_preserves_closed_prior(monkeypatch,tmp_path):
+    paths = closed_sources(tmp_path,monkeypatch,drain_api='cudaDeviceSynchronize_v3020')
+    _,a,b = calculate(paths)
+    row = next(r for r in b if r['request_id']=='request-1')
+    assert row['validity']=='B_VALID'
+    assert len(row['wait_set_activity_ids'])==2
+    assert [row[k] for k in ('wait_set_hidden_union_ns','wait_set_exposed_union_ns','sync_return_tail_ns')]==[40,20,10]
+    assert row['cross_request_dependency'] is True
+    full = next(r for r in a if r['request_id']=='request-1' and r['phase']=='full_request')
+    assert [full[k] for k in ('A_device_wait_ns','A_sync_residual_ns','A_unattributed_ns')]==[20,10,0]
+
+
+@pytest.mark.parametrize('drain_api', [
+    'cudaDeviceSynchronizeAsync_v3020', 'cudaDeviceSynchronize_v3020_extra',
+    'cudaDeviceSynchronize_vfuture', 'cuCtxSynchronize', 'unknownCudaWait',
+])
+def test_unregistered_or_other_sync_api_cannot_substitute_for_runtime_drain(monkeypatch,tmp_path,drain_api):
+    paths = closed_sources(tmp_path,monkeypatch,drain_api=drain_api)
+    with pytest.raises(ValueError,match='DRAIN_API_MISSING_OR_AMBIGUOUS'):
+        calculate(paths)
+
+
 def test_lifecycle_counterevidence_overrides_continuous_marker(monkeypatch,tmp_path):
     paths=closed_sources(tmp_path,monkeypatch,damage='lifecycle_change')
     with pytest.raises(ValueError,match='LIFETIME'):
@@ -299,6 +322,14 @@ def test_full_receipt_chain_persists_drains_and_blocks_unknown(monkeypatch,tmp_p
     ab=load_ab_bundle(path.parent/'analysis/ab/ab_manifest.json')
     assert next(r for r in ab['b_sync_records'] if r['request_id']=='request-1')['wait_set_hidden_union_ns']==40
     assert {k:sha(p) for k,p in files.items()}==before
+    downgraded=deepcopy(loaded)
+    downgraded['schema_version']='exposedpath-gate8-file-chain/0.1.0'
+    downgraded.pop('closed_prior_manifest_sha256')
+    downgraded.pop('closed_prior_bindings_sha256')
+    write_json(path,downgraded)
+    with pytest.raises(ValueError,match='VERSION'):
+        load_chain_result(path)
+    write_json(path,loaded)
     (path.parent/'closed_prior/drain.json').write_text('{}')
     with pytest.raises(ValueError,match='HASH'):
         load_chain_result(path)

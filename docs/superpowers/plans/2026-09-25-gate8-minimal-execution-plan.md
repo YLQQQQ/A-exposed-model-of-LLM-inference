@@ -1,5 +1,16 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.40 当前：eager source 接线与明确的剩余资格边界
+
+[来源对齐0.1](../../v1_4_1/gate8_eager_source_alignment_v0_1.md)记录真实历史Raw及第一方
+torch/CUDA核查；本地显式model_setup→stage producer/input0.3→Canonical诊断→file-chain0.5
+已接通，保持HOST_CALL_ONLY、worker/default/lifetime UNKNOWN。真实模型归属未就绪，
+stage不供S/Derived消费；现drain只改已登记ABI别名匹配，不改同步或选流。
+下一项仍由主窗口本地把目标torch/default/worker来源descriptor及必要前驱/可证无关scope
+闭合起来；确需目标资料时只交付一次有界只读补证方案，不重复全capture调查、不重采旧controlled。
+本地接口测试不是资格；服务器f5edc64不更新，GPU/Nsight未授权，新Q0/Gate8 NOT_RUN。
+下方7.37/7.38的等待裁决、旧下一步是历史；7.39已批准，不重复请求普通工程授权。
+
 ## 7.39当前覆盖（2026-09-27）
 
 用户已批准7.38 closed-prior方向；[amendment0.1](../../v1_4_1/gate8_closed_prior_amendment_v0_1.md)

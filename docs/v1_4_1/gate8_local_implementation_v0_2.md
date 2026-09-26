@@ -1,5 +1,10 @@
 # Gate8 本地文件链接口状态 v0.2
 
+> 7.40新增：[eager来源接线0.1](gate8_eager_source_alignment_v0_1.md)。显式model_setup可
+> 在真实加载/初始化处记录stage，warmup/measured保留原identity，producer/input0.3、
+> file-chain0.5只作Canonical Host-call诊断；不是S ownership或default/lifetime证明。
+> 新stage诊断始终BLOCKED/NOT_ASSESSED；不改变下列旧入口和S/A/B/Derived资格。
+
 > 7.39更新（2026-09-27）：本文件保留时间表示/旧文件入口历史。新增显式
 > [closed-prior0.1](gate8_closed_prior_amendment_v0_1.md)使用producer/input receipt0.2、
 > S0.3、A-B0.4、analysis0.5、file-chain0.4；Derived未支持新ownership版本而拒绝。

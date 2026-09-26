@@ -58,7 +58,13 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.39`
+- 清单版本：`7.40`
+- 7.40本地source接线：[eager来源对齐0.1](gate8_eager_source_alignment_v0_1.md)。直接只读历史真实Raw确认default/null stream7、窗前setup/warmup及worker提交、真实`_v3020` drain别名；不能把旧trace补写为新资格。复用既有精确registry修复别名；显式model_setup接原load_model/输入初始化，新增HOST_CALL_ONLY stage/stream观察、producer/input0.3/file-chain0.5诊断。setup无伪request，warmup/measured保留原identity；stream mode/lifetime和worker ownership不猜测。WMPC/输入/source/mode/次数/mask在模型加载前匹配，失败不继续；新入口不替代全launcher preflight。S/A/B/Derived不消费stage作为准入证据，UNKNOWN继续阻塞。
+- 7.40验证与边界：先producer RED8、file入口RED4、ABI别名RED1；review所提截断stage/状态矛盾RED2、实际WMPC执行合同RED5、自审logical mapping RED1等先失败后修复。第一轮定向113 passed/64.69s、全量1274/5；随后协调只读review发现结果版本降级绕过校验，stage5/closed-prior1反例先RED，再绑定input/producer/result版本、精确artifact集合及存在性。修复后三文件61 passed/73.81s；最终CPU全量1279 passed/5 skipped（251.18s，Python3.12.7，进程内mask=-1且nvcc不可见），五skip均既有Q0 CUDA source编译项，未改skip政策。一条定向命令曾因测试文件名错误未收集测试，纠正后运行上述三文件，不计为验证成绩。compileall、contract37/37内部一致性、Canonical7模块、oracle静态独立性、diff检查、增量隐私和修改Markdown链接均通过。独立review与协调只读复核所提具体缺口已关闭；未改变同步次数/stream选择、冻结MC/旧schema/Q0或历史证据；没有服务器/GPU/Nsight操作。
+- 7.40剩余最小工作：真实model producer已接阶段文件，但default-mode/目标二进制来源、worker归属与必要依赖closure尚未证明，不能称一般模型科学链收口。all-inventory仍是窄profile限制而非研究全capture门。下一项主窗口本地完成source descriptor及必要/无关scope成对准入；若现有本地材料不足，只提出一次针对目标torch来源/相关default调用与worker提交的最小只读补证方案，不先跑模型、换流或重采旧controlled。服务器仍f5edc64，不更新部署；Gate7 PASS，新Q0/Gate8 NOT_RUN。
+
+以下7.37/7.38为历史快照：7.38“等待批准”已被7.39用户批准覆盖；7.37“以旧计划为准”不再是当前待办。当前只按7.40/7.39已批准范围执行，不重复申请同一语义授权。
+
 - 7.39用户批准后的本地实现：[closed-prior amendment0.1](gate8_closed_prior_amendment_v0_1.md)，producer仅观察现有drain、在warmup与drain前检查actual current logical device；真实API+physical sync绑定PID/device/context/clock及NVTX/receipt，保留失败。S0.3/A-B0.4明确逐activity来源与cross-request，不改A/W/B公式；signed整数边界精确，旧读取路径隔离，Derived不接受新版本。两/三request与同request已完成前驱、负时间、scope/生命周期/版本/hash反例及文件链已做本地确定性验证，全部为合成/CPU替身；不是新Q0或模型验收。
 - 7.39验证：本地Python3.12.7；初始producer RED4/closed-prior RED10、文件接口RED及后续review各缺口先失败后修复。最后一轮定向73 passed/55.99s，其后新增的未知drain版本与负时间文件回归由最终CPU全量覆盖：`pytest -q -p no:cacheprovider -rs` 为1240 passed/5 skipped（237.07s）。在Python进程内明确mask=-1并确认nvcc不可见，五skip均现有Q0 CUDA source编译项，未修改skip政策；首次外层PATH隔离检查失败即停止，未启动该次pytest。compileall、contract37/37（仅内部一致性）、Canonical7模块、oracle静态独立性与diff检查通过。独立只读review复核11项通过，所提device/scope/lifecycle/host-clock/精确整数/未知版本缺口关闭；协调只读审查确认窄支持域限制。冻结旧schema、MC正文、Q0源码/oracle、Gate6/7证据未改。
 - 7.39就绪边界：continuous nondefault producer-owned范围声明仍需目标资格；当前all-inventory/完整measured projection限制会拒绝未标记setup/warmup，不能称一般模型已接通，也不是Route A新增全capture门。下一项本地审查可用source→必要前驱/可证无关scope→owner/lifetime映射，default/continuous/recreated分开，不强制所有路径create/destroy；不造证据、不换stream。无需用户服务器操作，不交付未就绪部署包。
@@ -616,3 +622,4 @@ compile/graph后移。以下原任务保留编号及历史。
 | 7.37 | 2026-09-26 | f5edc64服务器73原件/72清单审计，四phase修复且其余A/S/B不变；129目标机定向原始日志核验，字段修复关闭；收敛资格/模型最小准备及epoch独立预期 | EP-G8-01/02审计与计划 | 仅文档，无业务改动/重复实验；不追认历史错误B，不颁新Q0；Derived门保留，epoch仅待裁决提案；Gate7 PASS、Gate8 NOT_RUN |
 | 7.38 | 2026-09-26 | 共享stream裁决稿0.2：纠正7.37截断W提案，推荐保留物理前缀/原owner/B进度的closed-prior准入；列drain实证、五类独立预期、现runner绑定缺口及Q0最小影响 | EP-G8-01/02语义待决 | 仅文档设计，未批准/实施ownership变化；冻结合同/历史数据/资格不变，无新测试或服务器执行；Gate7 PASS，新Q0/Gate8 NOT_RUN |
 | 7.39 | 2026-09-27 | 用户批准后新增closed-prior0.1及S0.3/A-B0.4：观察原drain、Raw physical scope绑定、历史owner/lifetime、全W/B进度与A裁窗、文件链/版本/失败隔离；tests-first及只读review | EP-G8-01/02本地窄域实现 | 仅Engineering确定性验证，旧schema/Q0/证据不改、不自动授新资格；真实torch setup/warmup/lifetime来源仍缺，all-inventory限制非全capture要求；Derived拒绝新版本、服务器不更新；Gate7 PASS，新Q0/Gate8 NOT_RUN |
+| 7.40 | 2026-09-27 | 真实历史eager Raw/第一方源码核查；登记drain别名对齐，实际model setup/warmup/stage身份与Canonical诊断文件链；严格执行合同及失败状态回归 | EP-G8-01/02本地source接线 | 仅Host-call关联，不授worker/default/lifetime或S准入；必要依赖closure仍待来源闭合，不修改W/A/B/Derived门或旧证据；服务器不部署/采集；Gate7 PASS，新Q0/Gate8 NOT_RUN |
