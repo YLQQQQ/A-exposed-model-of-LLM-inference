@@ -1,5 +1,11 @@
 # Gate8 最小执行计划 v0.1
 
+**7.28最新覆盖（2026-09-26）：** [窄受控桥接](../../v1_4_1/gate8_controlled_bridge_v0_1.md)
+已有本地确定性验证，[服务器草案](../../v1_4_1/gate8_controlled_server_runbook_v0_1.md)
+分静态编译、受控采集、后处理三段，均未执行。模型跨request同流epoch未决，
+GetLastError未分类；不得把controlled包准备完成表述为模型/Q0/Gate8就绪。
+Gate7 PASS、Gate8 NOT_RUN；下方7.25/7.26厂商路径是已暂停历史，不作为当前待办。
+
 **当前7.27覆盖规则：** 用户批准路线A及目标request/必要依赖质量门，见
 [Route A amendment 0.1](../../v1_4_1/gate8_route_a_quality_amendment_v0_1.md)。
 厂商询证暂停，统一全capture认证不再前置；UNKNOWN仍保留。下方历史编号保留，

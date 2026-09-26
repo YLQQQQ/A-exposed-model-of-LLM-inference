@@ -15,7 +15,8 @@ from .sync_semantics import load_canonical_bundle
 
 
 def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_session_id,
-                       integrity_receipts=None, synthetic_fixture=False, scope_assessment=None):
+                       integrity_receipts=None, synthetic_fixture=False, scope_assessment=None,
+                       controlled_evidence=None):
     canonical_path, scope_path, output_dir = map(Path, (canonical_path, scope_path, output_dir))
     if output_dir.exists():
         raise FileExistsError("refusing to overwrite Gate8 derived output")
@@ -53,6 +54,18 @@ def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_sessi
         reasons = [*scope_assessment['reasons'], 'COLLECTOR_INTEGRITY_UNKNOWN_NOT_ZERO']
         if not requests_complete:
             reasons.append('REQUEST_ATTEMPT_NOT_COMPLETE')
+    controlled_report=None
+    if controlled_evidence is not None:
+        from .gate8_controlled_evidence import ControlledEvidence
+        from .time_representation import time_representation,SIGNED
+        if type(controlled_evidence) is not ControlledEvidence or scope_assessment is not None or integrity_receipts is not None:
+            raise ValueError('CONTROLLED_FILE_PROOF_REQUIRED')
+        with time_representation(SIGNED):
+            controlled_inputs=build_projected_ab_inputs(canonical_path,scope_path)
+        controlled_report=controlled_evidence.validate_projection_and_s(manifest,projections,controlled_inputs.s_records)
+        reasons=[*controlled_inputs.global_quality_reasons,*controlled_report['s_comparison_issues'],
+                 'COLLECTOR_INTEGRITY_UNKNOWN_NOT_ZERO']
+        can_calculate=requests_complete and not controlled_inputs.global_quality_reasons and not controlled_report['s_comparison_issues']
     result = {
         "schema_version":"exposedpath-gate8-local-analysis/0.2.0",
         "observation_profile":PROFILE, "adapter_version":ADAPTER_VERSION,
@@ -67,6 +80,12 @@ def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_sessi
     if scope_assessment is not None:
         result['schema_version'] = 'exposedpath-gate8-local-analysis/0.3.0'
         result['target_scope'] = scope_assessment
+    if controlled_report is not None:
+        result['schema_version']='exposedpath-gate8-local-analysis/0.4.0'
+        result['controlled_scope']=controlled_report
+        if not synthetic_fixture:
+            result['validation_role']='CONTROLLED_ENGINEERING_DIAGNOSTIC_ONLY'
+            result['status']='CONTROLLED_CALCULATION_ONLY' if can_calculate else 'BLOCKED'
     destination.parent.mkdir(parents=True, exist_ok=True)
     output_dir = Path(tempfile.mkdtemp(prefix=f'.{destination.name}-partial-', dir=destination.parent))
 
@@ -101,10 +120,23 @@ def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_sessi
         }, denominator_status="COMPLETE" if not inputs.global_quality_reasons else "INCOMPLETE")
                     for i,window in enumerate(inputs.windows)]
         write("coverage", "coverage.json", coverage)
-        if scope_assessment is not None:
+        if scope_assessment is not None or controlled_report is not None:
             from .gate8_target_quality import publication
-            write('publication', 'publication.json', publication(a))
+            write('publication', 'publication.json', publication(a,result['validation_role']))
+        b_oracle_ok=True
+        if controlled_report is not None:
+            by_id={row['sync_id']:row for row in b}
+            for expected_sync in controlled_report['sync_expectations']:
+                ref=expected_sync['sync_ref']
+                row=by_id.get(f"cuda_sync:{ref['source_table']}:{ref['source_rowid']}",{})
+                if row.get('validity')!='B_VALID' or any(row.get(k)!=v for k,v in expected_sync['timing'].items()):
+                    b_oracle_ok=False
+            controlled_report['b_oracle_match']=b_oracle_ok
+            if not b_oracle_ok:
+                result['status']='BLOCKED'
+                result['reasons'].append('CONTROLLED_INDEPENDENT_ORACLE_B_MISMATCH')
         eligible = (loaded['manifest']['quality']['status'] == 'VALID'
+                    and b_oracle_ok
                     and all(r['primary_reason'] is None and r['A_unattributed_ns'] == 0 for r in a)
                     and all(r['validity'] in ('B_VALID','B_NOT_APPLICABLE') for r in b)
                     and all(r['denominator_status'] == 'COMPLETE' for r in coverage))

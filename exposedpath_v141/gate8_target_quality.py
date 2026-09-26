@@ -96,9 +96,9 @@ def validate_projection(value, projections, inputs):
     return True
 
 
-def publication(a_records):
+def publication(a_records, validation_role='SYNTHETIC_REGRESSION_ONLY'):
     return {'schema_version': 'exposedpath-accounting-publication/0.1.0',
-            'validation_role': 'SYNTHETIC_REGRESSION_ONLY', 'windows': [
+            'validation_role': validation_role, 'windows': [
                 {'window_id': r['window_id'],
                  'accounting_D_margin_ns': r['A_device_wait_ns'] - r['A_host_path_ns'] - r['A_cuda_api_ns'],
                  'unattributed_ns': r['A_unattributed_ns'],

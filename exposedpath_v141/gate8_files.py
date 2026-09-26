@@ -15,6 +15,7 @@ from .gate8_adapter import digest, normalized_uuid, normalized_pci
 RECEIPT_VERSION = 'exposedpath-gate8-input-receipt/0.1.0'
 RESULT_VERSION = 'exposedpath-gate8-file-chain/0.1.0'
 SCOPED_RESULT_VERSION = 'exposedpath-gate8-file-chain/0.2.0'
+CONTROLLED_RESULT_VERSION = 'exposedpath-gate8-file-chain/0.3.0'
 ARTIFACTS = {'raw','sqlite','pass_identity','host_ledger','preflight','cuda_probe',
              'wmpc_manifest','prompt','runner_source','producer_receipt','export_report'}
 
@@ -131,7 +132,7 @@ def load_input_receipt(path):
 
 
 def process_gate8_receipt(receipt_path, output_dir, *, integrity_receipts_path=None, synthetic_fixture=False,
-                          scope_assessment_path=None):
+                          scope_assessment_path=None, controlled_sources=None):
     from .canonical_raw import convert_sqlite_to_canonical
     from .gate8_scope import project_completion_scopes
     from .gate8_analysis import analyze_gate8_local
@@ -142,6 +143,12 @@ def process_gate8_receipt(receipt_path, output_dir, *, integrity_receipts_path=N
     if any(p.is_relative_to(output_dir) for p in [receipt_path,*paths.values()]):
         raise ValueError('OUTPUT_CONTAINS_INPUT')
     receipt_hash = digest(receipt_path)
+    controlled=None
+    if controlled_sources is not None:
+        from .gate8_controlled_evidence import ControlledEvidence
+        if scope_assessment_path is not None or integrity_receipts_path is not None:
+            raise ValueError('CONFLICTING_QUALITY_INPUTS')
+        controlled=ControlledEvidence(receipt_path,controlled_sources)
     assessment, assessment_sources, assessment_hash = None, [], None
     if scope_assessment_path is not None:
         from .gate8_target_quality import load_assessment
@@ -156,6 +163,9 @@ def process_gate8_receipt(receipt_path, output_dir, *, integrity_receipts_path=N
     provenance = staging/'provenance'
     provenance.mkdir()
     shutil.copyfile(receipt_path,provenance/'input_receipt.json')
+    if controlled is not None:
+        for key,path in controlled.sources.items():
+            shutil.copyfile(path,provenance/f'controlled_{key}.json')
     if assessment is not None:
         shutil.copyfile(scope_assessment_path, provenance/'target_scope_assessment.json')
         for i, source in enumerate(assessment_sources):
@@ -170,7 +180,11 @@ def process_gate8_receipt(receipt_path, output_dir, *, integrity_receipts_path=N
     scope = project_completion_scopes(canonical, paths['host_ledger'], staging/'projection/scope.json')
     analysis = analyze_gate8_local(canonical,scope,staging/'analysis',capture_session_id=receipt['capture_session_id'],
                                   integrity_receipts=integrity,synthetic_fixture=synthetic_fixture,
-                                  scope_assessment=assessment)
+                                  scope_assessment=assessment,controlled_evidence=controlled)
+    if controlled is not None:
+        controlled.review()
+        if any(digest(provenance/f'controlled_{k}.json')!=v for k,v in controlled.hashes.items()):
+            raise ValueError('CONTROLLED_PROVENANCE_COPY_CONFLICT')
     if assessment is not None:
         load_assessment(scope_assessment_path, receipt_hash, synthetic_fixture)
         if digest(scope_assessment_path) != assessment_hash:
@@ -192,6 +206,9 @@ def process_gate8_receipt(receipt_path, output_dir, *, integrity_receipts_path=N
     if assessment is not None:
         final['schema_version'] = SCOPED_RESULT_VERSION
         final['target_scope_assessment_sha256'] = assessment_hash
+    if controlled is not None:
+        final['schema_version']=CONTROLLED_RESULT_VERSION
+        final['controlled_source_hashes']=controlled.hashes
     _write(staging/'chain_result.json',final)
     staging.rename(output_dir)
     return output_dir/'chain_result.json'
@@ -200,10 +217,12 @@ def process_gate8_receipt(receipt_path, output_dir, *, integrity_receipts_path=N
 def load_chain_result(path):
     path = Path(path).resolve()
     value = _json(path)
-    if value.get('schema_version') not in (RESULT_VERSION, SCOPED_RESULT_VERSION) or value.get('gate8_verdict') != 'NOT_RUN' or value.get('q0_status') != 'NOT_RUN':
+    if value.get('schema_version') not in (RESULT_VERSION, SCOPED_RESULT_VERSION, CONTROLLED_RESULT_VERSION) or value.get('gate8_verdict') != 'NOT_RUN' or value.get('q0_status') != 'NOT_RUN':
         raise ValueError('CHAIN_VERSION_OR_QUALIFICATION_INVALID')
     if (value['schema_version'] == SCOPED_RESULT_VERSION) != ('target_scope_assessment_sha256' in value):
         raise ValueError('CHAIN_SCOPE_VERSION_CONFLICT')
+    if (value['schema_version']==CONTROLLED_RESULT_VERSION)!=('controlled_source_hashes' in value):
+        raise ValueError('CHAIN_CONTROLLED_VERSION_CONFLICT')
     resolved = [_resolve(path.parent,e) for e in value['files']]
     actual = {p.resolve() for p in path.parent.rglob('*') if p.is_file() and p != path}
     if len(resolved) != len(set(resolved)) or set(resolved) != actual:
@@ -213,6 +232,13 @@ def load_chain_result(path):
     if value['identity'] != canonical['identity']['values']:
         raise ValueError('CHAIN_IDENTITY_MISMATCH')
     provenance = path.parent/'provenance'
+    if 'controlled_source_hashes' in value:
+        for key,sha in value['controlled_source_hashes'].items():
+            if digest(provenance/f'controlled_{key}.json')!=sha:
+                raise ValueError('CHAIN_CONTROLLED_HASH_CONFLICT')
+        if (report.get('controlled_scope',{}).get('source_hashes')!=value['controlled_source_hashes']
+                or report['controlled_scope'].get('input_receipt_sha256')!=value['input_receipt_sha256']):
+            raise ValueError('CHAIN_CONTROLLED_REPORT_CONFLICT')
     if 'target_scope_assessment_sha256' in value:
         assessment = provenance/'target_scope_assessment.json'
         if digest(assessment) != value['target_scope_assessment_sha256']:

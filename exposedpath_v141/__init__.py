@@ -1,3 +1,3 @@
 """ExposedPath v1.4.1 并行 analyzer 入口。"""
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
