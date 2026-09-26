@@ -98,7 +98,91 @@ compileall、contract37/37内部一致性、Canonical7模块、oracle静态独�
 不能靠新 stage marker 或 Python 对象存在替代。本轮**不删** all-inventory 保守拒绝，
 因为一般模型必要依赖 closure 尚无合格 source 描述；它仍只是窄实现限制，不是全capture门。
 
-## 4. 剩余最小动作 / 停止点
+## 4. 精确版本来源核查（7.41；非目标安装证实）
+
+本地 `.local/server_receipts` 与历史 evidence inbox 已有环境版本、Nsight安装说明和
+controlled源码，但没有下列目标Torch/Transformers安装源码字节或default-mode构建依据。
+不重复安装搜索，不从敏感Raw metadata导出环境来补充它们。
+
+| 来源 | 能支持的源码级事实 | 不能据此推出 |
+|---|---|---|
+| [Transformers v5.17.0 modeling_utils.py](https://raw.githubusercontent.com/huggingface/transformers/v5.17.0/src/transformers/modeling_utils.py)，`_load_pretrained_model` | Windows safetensors路径选择pread/CPU，获取slice后交给`convert_and_load_state_dict_in_model` | 目标wheel字节完全相同、所有实际输入都采用此分支 |
+| [同tag integrations/accelerate.py](https://raw.githubusercontent.com/huggingface/transformers/v5.17.0/src/transformers/integrations/accelerate.py)，`check_and_set_device_map`、`get_device` | runner的`cuda:N`字符串转为整模型设备映射，再解析各参数目的设备；此字典不是自动分配 | 目标文件已经核对或实际模型没有自定义加载路径 |
+| [同tag core_model_loading.py](https://raw.githubusercontent.com/huggingface/transformers/v5.17.0/src/transformers/core_model_loading.py)，`spawn_materialize`、`_materialize_copy`、`WeightTransform.materialize_tensors` | 一般异步路径用最多4个worker；job执行slice和`tensor.to(device,dtype)`，主路径读取Future结果。禁异步环境开关、disk offload、on-the-fly quantization会走另一分支 | 旧Raw的四个TID就是该pool；CPU future结束等于任意CUDA工作的完成；仅凭setup时间范围认领worker |
+| [PyTorch v2.6.0 Copy.cu](https://raw.githubusercontent.com/pytorch/pytorch/v2.6.0/aten/src/ATen/native/cuda/Copy.cu)，`copy_kernel_cuda` | CPU/GPU copy使用current stream；blocking分支进入`memcpy_and_sync` | 所有模型operator都使用同一流；不存在其他依赖 |
+| [同tag CUDAFunctions.h](https://raw.githubusercontent.com/pytorch/pytorch/v2.6.0/c10/cuda/CUDAFunctions.h)，`memcpy_and_sync` | CUDA分支依次调用`cudaMemcpyAsync`与`cudaStreamSynchronize` | 目标wheel每个编译单元的default-mode；历史Token-ready每个调用已经完成资格认证 |
+
+runner已有`load_model`传FP16及单CUDA device_map、调用AutoModel与AutoTokenizer；没有
+显式禁异步或指定worker归属。它的`trust_remote_code`及fallback也不能被源码tag
+掩盖：将来执行描述必须绑定实际加载来源与分支，不能因model_type字符串就视为已证明。
+本轮不改变加载行为、不关异步、不换stream、不增加sync来躲避问题。
+特别注意：core loader最终使用`shutdown(wait=False, cancel_futures=True)`，不是全pool
+join。已消费Future返回不能覆盖异常/跳过/重试下仍运行的任务；不能先把所有worker
+判为setup完成。目标加载分支、实际model class及任务/TID/correlation仍须后续来源绑定。
+
+**停止点明确：** 现证据只能给出可核对的候选来源链，不能形成可被S消费的合格
+source descriptor。先取得一次目标安装字节；default-mode仍需相关编译单元/实际API
+语义来源，DLL哈希只能固定二进制身份。回件不自动放行；若仍无构建依据，明确记录
+该单项缺口并评估已有API/来源能否闭合必要依赖，不重复请求整包或全capture认证。
+
+## 5. 一次只读补证工具与精确范围
+
+`scripts/gate8_install_source_snapshot.py`，schema `gate8-install-source-snapshot/0.1.0`。
+独立工具，不接入producer、Canonical、S/A/B或任何验收gate，不新增准入fallback。
+使用固定checkout `.venv/Scripts/python.exe -I -S`，显式解析同venv的`Lib/site-packages`，
+不用PATH Python、`sys.prefix`或site初始化；不import Torch/Transformers、不执行被读源码。
+只对两个包读取Name/Version、WHEEL tag及对应RECORD条目，不输出pip配置、环境或全包清单。
+
+| 限定文件（相对site-packages） | 取得目的 |
+|---|---|
+| `torch/version.py` | AST读取version/cuda/git_version字面量，绑定2.6.0+cu124/12.4；不是执行源码 |
+| `torch/cuda/__init__.py`、`torch/cuda/streams.py` | 对齐Python stream/current/default入口及lazy-init来源 |
+| `torch/include/c10/cuda/CUDAFunctions.h`、`CUDAStream.h` | 对齐copy/sync及stream包装声明；不假装header就是编译参数 |
+| `torch/lib/c10_cuda.dll`、`torch_cuda.dll` | 仅流式读取bytes/SHA256/RECORD匹配，**不加载、不复制**二进制 |
+| `transformers/modeling_utils.py`、`core_model_loading.py` | 对齐实际loader/worker/materialize/Future来源与分支 |
+| `transformers/integrations/accelerate.py` | 闭合字符串device_map→参数目的设备的来源链，而非扫描另一个包 |
+
+共10个文件，最多拷贝8份限定源码。缺失、版本冲突、RECORD不符或路径重定向等保留
+issue并非零退出，不扩大搜索范围；仅完整快照才标`SNAPSHOT_COMPLETE_NOT_QUALIFICATION`。
+`default_stream_mode=UNKNOWN`、`worker_trace_ownership=UNKNOWN`、`qualification=NOT_ASSESSED`
+固定保留。RECORD一致性不是wheel真实性认证，也不是编译mode证明。
+METADATA的Name/Version从同一已hash字节解析，各必须唯一；不重新读取后只取首值。
+WHEEL tag缺失或git_version未知不补造；即使所有文件已读取，也不代表来源充分。
+输出只写全新独立目录，拒绝覆盖/写入安装树；manifest显式列已完成产物，排除自身。
+本工具无网络、子进程、模型、CUDA或Nsight操作；CLI只支持这次Windows目标安装取证。
+
+### 交接操作（只准备，须用户另行执行）
+
+不用部署新commit、不生成bundle、不重跑full/static/controlled。只将已审查的**一个工具文件**
+复制至`$ServerRoot/transfer`，用交付索引SHA256核对；服务器checkout继续固定`f5edc64`。
+机器路径与完整PowerShell封装在忽略的本地交付索引中，不进入Git。
+
+核心调用（协调窗口先审查固定变量和工具hash；下列不是本轮已执行的命令）：
+
+```powershell
+$PythonExe = Join-Path $CodeRoot '.venv\Scripts\python.exe'
+$RunId = 'source_snapshot_' + (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssZ') + '_' + [guid]::NewGuid().ToString('N')
+$RunRoot = Join-Path (Join-Path $ServerRoot 'diagnostics') $RunId
+New-Item -ItemType Directory -Path $RunRoot -ErrorAction Stop | Out-Null
+& $PythonExe -I -S $TransferredTool --repo $CodeRoot --output (Join-Path $RunRoot 'snapshot')
+$SnapshotExit = $LASTEXITCODE
+```
+
+完整封装还核对操作前后Git HEAD/clean，保存工具hash、输出和退出码；任何冲突即停，
+失败目录保留且不重试补填。只回传本次RunRoot（源码快照、身份receipt、stdout/stderr、
+两个相对路径清单）及transfer ZIP的bytes/SHA256；不传DLL、Raw、模型或环境dump。
+快照清单只覆盖快照，外层传输清单覆盖操作receipt/工具，均排除自身避免循环hash。
+用户回传后本地主窗口比对版本源码、引用与目标字节，协调窗口复核封装/清单；只有
+来源合同明确的部分才继续本地scope接口，不要求用户选择底层文件组织。
+
+本地验证：初始10个失败测试先RED后GREEN；独立/协调review的重复metadata identity
+三个负例和补全device_map源文件检查先RED后修复。最终15项通过（3.12s）；隔离子进程
+用假安装文件并禁止目标包import/网络连接/子进程/动态库加载。一次测试误把标准库
+间接import socket当网络操作，定位后改为事件级禁止，未改变工具边界。
+这是本地Python3.12.7确定性验证，不是目标Python3.11安装回执。不为只读工具重复
+上轮全量或旧controlled；运行代码、S/A/B/Derived和历史证据不变。
+
+## 6. 后续资格边界
 
 不再复验旧独立 stream controlled capture。主窗口下一项是把已定位的真实 eager
 提交来源（含 setup worker）和 default-mode/生命周期来源做成可解引用、目标限定的

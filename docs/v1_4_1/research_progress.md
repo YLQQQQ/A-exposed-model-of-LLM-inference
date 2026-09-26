@@ -58,7 +58,11 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.40`
+- 清单版本：`7.41`
+- 7.41有界来源收口：[eager来源对齐§4～5](gate8_eager_source_alignment_v0_1.md)记录Torch2.6 copy/sync与Transformers5.17字符串device_map、worker/materialize/Future及非等待shutdown的精确第一方出处。标签源码不是目标二进制/历史TID证明；本地已有安装/环境回执无这些目标源码，default-mode/worker ownership仍UNKNOWN。未添加S准入或必要scope猜测，不换流/禁异步/加sync。
+- 7.41唯一最小外部动作已准备：stdlib-only安装快照0.1用固定repo的.venv -I -S，不import Torch/模型/环境dump/GPU/Nsight；只读10白名单（8源码+2DLL仅hash）、两个包有限metadata/RECORD，写新独立诊断目录与排除自身清单。完成状态只表示快照，不是资格；服务器仍f5edc64，不部署repo、不生成bundle。本轮未执行该服务器命令；须用户经协调窗口审查后执行一次并回传，主窗口再核来源，不重复宽泛搜索或旧controlled。
+- 7.41本地验证：先RED10后实现；只读review的重复Name/Version3例与device_map源文件缺失1例先RED后修复，15 passed/3.12s（本地Python3.12.7）。隔离fixture子进程验证不import目标包、不网络/子进程/动态库加载；曾因测试误禁stdlib socket导入出现1失败，定位改为事件级限制后通过。未重跑上一轮1279/5全量，不称目标3.11正向CLI已验证。运行代码、冻结MC/S/A/B/Derived/Q0及旧证据未改；Gate7 PASS，新Q0/Gate8 NOT_RUN。
+- 7.41交付检查：本轮新增脚本/测试compileall、完整PowerShell草案语法解析、修改Markdown相对链接、增量私有路径/敏感模式与diff-check通过；独立及协调只读review关闭同字节metadata唯一性缺口，最终协调核对工具hash和交付流程无具体阻塞。仅传一个9694-byte工具副本，脚本SHA256及完整机器命令在忽略交付索引；服务器不追随本地文档/工具commit。
 - 7.40本地source接线：[eager来源对齐0.1](gate8_eager_source_alignment_v0_1.md)。直接只读历史真实Raw确认default/null stream7、窗前setup/warmup及worker提交、真实`_v3020` drain别名；不能把旧trace补写为新资格。复用既有精确registry修复别名；显式model_setup接原load_model/输入初始化，新增HOST_CALL_ONLY stage/stream观察、producer/input0.3/file-chain0.5诊断。setup无伪request，warmup/measured保留原identity；stream mode/lifetime和worker ownership不猜测。WMPC/输入/source/mode/次数/mask在模型加载前匹配，失败不继续；新入口不替代全launcher preflight。S/A/B/Derived不消费stage作为准入证据，UNKNOWN继续阻塞。
 - 7.40验证与边界：先producer RED8、file入口RED4、ABI别名RED1；review所提截断stage/状态矛盾RED2、实际WMPC执行合同RED5、自审logical mapping RED1等先失败后修复。第一轮定向113 passed/64.69s、全量1274/5；随后协调只读review发现结果版本降级绕过校验，stage5/closed-prior1反例先RED，再绑定input/producer/result版本、精确artifact集合及存在性。修复后三文件61 passed/73.81s；最终CPU全量1279 passed/5 skipped（251.18s，Python3.12.7，进程内mask=-1且nvcc不可见），五skip均既有Q0 CUDA source编译项，未改skip政策。一条定向命令曾因测试文件名错误未收集测试，纠正后运行上述三文件，不计为验证成绩。compileall、contract37/37内部一致性、Canonical7模块、oracle静态独立性、diff检查、增量隐私和修改Markdown链接均通过。独立review与协调只读复核所提具体缺口已关闭；未改变同步次数/stream选择、冻结MC/旧schema/Q0或历史证据；没有服务器/GPU/Nsight操作。
 - 7.40剩余最小工作：真实model producer已接阶段文件，但default-mode/目标二进制来源、worker归属与必要依赖closure尚未证明，不能称一般模型科学链收口。all-inventory仍是窄profile限制而非研究全capture门。下一项主窗口本地完成source descriptor及必要/无关scope成对准入；若现有本地材料不足，只提出一次针对目标torch来源/相关default调用与worker提交的最小只读补证方案，不先跑模型、换流或重采旧controlled。服务器仍f5edc64，不更新部署；Gate7 PASS，新Q0/Gate8 NOT_RUN。
@@ -83,7 +87,7 @@
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（窄受控capture/离线计算已有实际证据，非模型或新Q0/整Gate验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：7.39窄closed-prior本地实现/回归收口后，只补真实模型source/lifetime/setup必要映射与受影响资格计划，不重复共享流语义审批、不扩大功能。历史未变Q0结论复用，但新S0.3/A-B0.4不自动继承；Derived门不删。B phase修复已关闭，服务器仍f5edc64，无部署/重验/采集/export。
+- 当前最高优先级：7.41已收敛到一次目标安装10文件只读补证；工具/精确步骤交协调审查，用户执行后主窗口比对源码与字节，再按有证据部分实现descriptor/scope，不猜default-mode或worker owner。不重复共享流审批/旧controlled，不扩大调查。历史未变Q0结论复用，新S0.3/A-B0.4不自动继承；Derived门不删。服务器仍f5edc64，无部署/采集/export。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -487,6 +491,10 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ## 7. 固定执行顺序与最近任务
 
+**7.41当前覆盖：** 以来源对齐§4～5的一次只读补证为唯一外部待办。服务器不更新
+checkout、不运行模型/collector；目标资料回传前不为形式增加scope准入实现。
+7.39共享stream语义已批准；下方“模型epoch未决”等旧顺序不再要求重复裁决。
+
 **7.39当前覆盖：** f5edc64目标服务器B phase修复关闭。用户已批准closed-prior并推进本地tests-first实现，不能截断W；新S0.3/A-B0.4窄域来源/失败验证见amendment0.1。Derived仍拒绝新版本，五历史INVALID不删。当前未证明一般torch模型lifetime/setup来源，先做必要本地映射；服务器无操作，7.38待批准与7.36待复验仅历史。
 
 **7.36当前覆盖：** 0.2受控capture与c827b61离线复验原件已审计；本地S→B phase字段已最小修复并实文件复核，准备审查后的增量离线交付，服务器暂不操作。五范围外B_INVALID保持，Derived范围如改变需单独明确合同，不能借字段修复过滤。下述7.26询证/固定长路线均为历史；路线A和最近用户授权优先，厂商询证仍暂停。
@@ -623,3 +631,4 @@ compile/graph后移。以下原任务保留编号及历史。
 | 7.38 | 2026-09-26 | 共享stream裁决稿0.2：纠正7.37截断W提案，推荐保留物理前缀/原owner/B进度的closed-prior准入；列drain实证、五类独立预期、现runner绑定缺口及Q0最小影响 | EP-G8-01/02语义待决 | 仅文档设计，未批准/实施ownership变化；冻结合同/历史数据/资格不变，无新测试或服务器执行；Gate7 PASS，新Q0/Gate8 NOT_RUN |
 | 7.39 | 2026-09-27 | 用户批准后新增closed-prior0.1及S0.3/A-B0.4：观察原drain、Raw physical scope绑定、历史owner/lifetime、全W/B进度与A裁窗、文件链/版本/失败隔离；tests-first及只读review | EP-G8-01/02本地窄域实现 | 仅Engineering确定性验证，旧schema/Q0/证据不改、不自动授新资格；真实torch setup/warmup/lifetime来源仍缺，all-inventory限制非全capture要求；Derived拒绝新版本、服务器不更新；Gate7 PASS，新Q0/Gate8 NOT_RUN |
 | 7.40 | 2026-09-27 | 真实历史eager Raw/第一方源码核查；登记drain别名对齐，实际model setup/warmup/stage身份与Canonical诊断文件链；严格执行合同及失败状态回归 | EP-G8-01/02本地source接线 | 仅Host-call关联，不授worker/default/lifetime或S准入；必要依赖closure仍待来源闭合，不修改W/A/B/Derived门或旧证据；服务器不部署/采集；Gate7 PASS，新Q0/Gate8 NOT_RUN |
+| 7.41 | 2026-09-27 | 精确Torch/Transformers源码链及worker非join边界；一次限定10文件安装快照工具、tests-first/只读review与服务器只读交接准备 | EP-G8-01/02来源补证准备 | 不是生产descriptor或资格，不改冻结语义/准入/历史，UNKNOWN保留；无服务器操作/部署/采集；Gate7 PASS，新Q0/Gate8 NOT_RUN |

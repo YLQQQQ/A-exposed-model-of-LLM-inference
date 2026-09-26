@@ -1,5 +1,17 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.41 当前停止点：一次目标安装来源补证，不部署/采集
+
+已核精确Torch2.6与Transformers5.17第一方源码；现回传没有目标包相关源码字节。
+loader worker只在已消费Future上等待，最终pool shutdown不等待全部任务，不能以
+源码或主线程stage认领历史worker/推断default-mode。详见[来源对齐§4～5](../../v1_4_1/gate8_eager_source_alignment_v0_1.md)。
+下一项唯一外部动作：协调审查一次只读安装快照命令后，由用户用现固定checkout的
+`.venv -I -S`运行单一工具副本，回传10个白名单文件的身份（8源码+2DLL仅hash）、
+两包有限metadata及操作回执。无GPU/Nsight/import Torch/部署，无环境dump/全盘搜索。
+本地主窗口随后核对来源，再完成合同内必要scope接口；缺证据不猜测、不删UNKNOWN。
+本地工具及确定性测试完成不等于descriptor资格或模型验收；服务器仍f5edc64，
+Gate7 PASS、新Q0/Gate8 NOT_RUN。无需重复旧controlled或全量服务器检查。
+
 ## 7.40 当前：eager source 接线与明确的剩余资格边界
 
 [来源对齐0.1](../../v1_4_1/gate8_eager_source_alignment_v0_1.md)记录真实历史Raw及第一方
