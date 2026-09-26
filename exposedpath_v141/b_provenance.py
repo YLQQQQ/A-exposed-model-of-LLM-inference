@@ -130,6 +130,12 @@ def _project_b_record(inputs: ABInputs, s_record: Mapping[str, object]) -> dict[
     wait_set = s_record.get("wait_set_activity_ids")
     if not isinstance(wait_set, list):
         raise BProvenanceError("S wait_set_activity_ids 必须是数组")
+    origins = s_record.get("activity_origin_phases")
+    if not isinstance(origins, Mapping):
+        raise BProvenanceError("S activity_origin_phases 必须是 activity -> phase 对象")
+    if set(origins) != set(wait_set):
+        raise BProvenanceError("S activity_origin_phases 必须覆盖且仅覆盖 wait set")
+    phases = {_optional_text(value, "S activity_origin_phases 成员") for value in origins.values()}
     record: dict[str, object] = {
         "sync_id": s_record.get("sync_id"),
         "registry_rule_id": s_record.get("registry_rule_id"),
@@ -139,7 +145,9 @@ def _project_b_record(inputs: ABInputs, s_record: Mapping[str, object]) -> dict[
         "request_id": s_record.get("request_id"),
         "repeat_id": s_record.get("repeat_id"),
         "sync_owner_phase": s_record.get("sync_owner_phase"),
-        "activity_origin_phases": list(s_record.get("activity_origin_phases", [])),
+        # S retains activity -> phase; B's existing schema is unique phases.
+        # Explicit null remains unknown. Stable order is serialization only.
+        "activity_origin_phases": sorted(phases, key=lambda value: (value is None, value or "")),
         "terminal_origin_phase": s_record.get("terminal_origin_phase"),
         "cross_phase_dependency": s_record.get("cross_phase_dependency"),
         "sync_start_ns": s_record.get("host_start_ns"),

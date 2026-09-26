@@ -65,7 +65,10 @@ def _inputs(case_id: str, *, reverse_syncs: bool = False) -> tuple[ABInputs, dic
             "validity": expected["validity"],
             "primary_reason": expected.get("primary_reason"),
             "secondary_reasons": expected["secondary_reasons"],
-            "activity_origin_phases": [construction.get("activity_origin_phase", "PREFILL")],
+            "activity_origin_phases": {
+                activities[label]["record_id"]: construction.get("activity_origin_phase", "PREFILL")
+                for label in expected["wait_set_activity_labels"]
+            },
             "terminal_origin_phase": construction.get("activity_origin_phase", "PREFILL") if terminal_label else None,
             "cross_phase_dependency": case_id == "Q0-PHASE-SPILL-001",
         })
@@ -186,3 +189,37 @@ def test_validation_rejects_extra_aggregate_field_and_zero_for_nonvalid_state():
     fabricated["wait_set_hidden_union_ns"] = 0
     with pytest.raises(ValueError, match="null"):
         _b_module().validate_b_record(fabricated)
+
+
+@pytest.mark.parametrize(("values", "want"), [
+    (("prefill", "prefill"), ["prefill"]),
+    (("prefill", "decode"), ["decode", "prefill"]),
+    ((None, "prefill"), ["prefill", None]),
+    ((None, None), [None]),
+])
+def test_b_projects_real_s_mapping_values_not_activity_keys(values, want):
+    """The real S shape is a mapping, unlike the old list-only B fixture."""
+    inputs, _ = _inputs("Q0-STREAM-001")
+    sr = inputs.s_records[0]
+    first, second = sr["wait_set_activity_ids"]
+    sr["activity_origin_phases"] = {second: values[1], first: values[0]}
+    record = _b_module().calculate_b_syncs(inputs)[0]
+    assert record["activity_origin_phases"] == want
+    sr["activity_origin_phases"] = {first: values[0], second: values[1]}
+    assert _b_module().calculate_b_syncs(inputs)[0] == record
+
+
+@pytest.mark.parametrize("damage", ["missing", "null", "list", "missing_member", "extra_member", "empty_phase", "nontext_phase"])
+def test_b_rejects_malformed_s_phase_mapping_without_guessing(damage):
+    inputs, _ = _inputs("Q0-STREAM-001")
+    sr = inputs.s_records[0]
+    first = sr["wait_set_activity_ids"][0]
+    if damage == "missing": del sr["activity_origin_phases"]
+    elif damage == "null": sr["activity_origin_phases"] = None
+    elif damage == "list": sr["activity_origin_phases"] = ["prefill"]
+    elif damage == "missing_member": del sr["activity_origin_phases"][first]
+    elif damage == "extra_member": sr["activity_origin_phases"]["outside"] = "prefill"
+    elif damage == "empty_phase": sr["activity_origin_phases"][first] = ""
+    else: sr["activity_origin_phases"][first] = 1
+    with pytest.raises(ValueError, match="activity_origin_phases"):
+        _b_module().calculate_b_syncs(inputs)

@@ -89,7 +89,9 @@ enum/clock冲突、源码不匹配或未闭合依赖仍拒绝。原07625b7失败
 | 1/prefill | 561438 | 404624 | 26440 | 0 | 2112 | 128262 | 0 |
 | 1/decode | 881035 | 357863 | 228392 | 0 | 85695 | 209085 | 0 |
 
-六窗top-level守恒差均0。sync residual是既有有证据的同步return-tail分类，
+六窗top-level守恒差均0。依据Measurement Contract §10，sync residual是valid sync
+内未被W(s) activity区间并集覆盖的片段，包含执行前/执行间隙及return tail，
+**不等于B的sync_return_tail**，不能解释为已识别的runtime overhead。
 不是把缺失证据挪入residual；unknown0不代表开销为0、也不独立证明归属正确。
 共9条B：4目标B_VALID；5条窗口外warmup/prepare/cleanup保持B_INVALID/
 INVOCATION_BOUNDARY_INVALID，不能总括“B全部通过”。现有Derived门检查全部B，
@@ -97,7 +99,100 @@ INVOCATION_BOUNDARY_INVALID，不能总括“B全部通过”。现有Derived门
 publication中的记账margin仍禁止mechanism claim。若需要per-request Derived选择域，
 必须另行明确输入集合，不混入本次adapter修复。
 
-## 下一动作
+## 2026-09-26 目标服务器离线复验实物审计
+
+已直接读取用户传回的完整新目录，不再仅依据聊天回执。本轮本地只读审计，
+未运行Nsight/export/native/模型，也没有重跑服务器测试。
+
+- capture commit：`07625b72e90d5fbb5bcb581d03a6f7582b2e0dc6`；
+  analysis commit：`c827b61ebe3ec08eae26fe9ab0d063892914a22e`。
+- 清单SHA256：`d96fec461a0c55f2c1c265ae7f3f6bc73ead5699aea6644797ecc06304ccbddf`；
+  72项大小/hash逐项通过，恰覆盖其余全部文件，总73文件。38个派生链引用通过；
+  prior_inputs内29文件与此前直接取得的原件逐字节hash一致，旧BLOCKED报告未变。
+- 主分析报告SHA256：`b6294b66936efe99f700be1327057a56aeb2708c819c040ab6c3350cf42c28ab`。
+  receipt为`REANALYZED_CONTROLLED_CALCULATION_ONLY_NOT_ACCEPTED`，static/audit exit0，
+  error=null；不是科学验收或Gate PASS。路径只记录于忽略的本地handoff。
+- 原始transcript：Python3.11.16，98 passed/91.36s；contract37/37、Canonical7、
+  oracle independence PASS。脚本含compileall/diff检查，static_exit=0，未重跑全量。
+- SQLite以`mode=ro&immutable=1`读取，integrity_check=ok；只证明数据库完整，
+  不证明采集零丢失。19条diagnostic逐字段与原表匹配：15状态、4窄范围外Warning。
+  dropped_count=null、collector UNKNOWN、measurement NOT_ASSESSED全部保留。
+
+### 独立数值核验与不能扩大之处
+
+本地审计脚本不导入A/B/S实现：按固定构造的两request、各kernel→D2H两次顺序，
+直接从原SQLite核对sync rows 3/4/6/7的活动集合2/4/2/4及D2H terminal。
+Host阻塞区间使用correlation唯一联结的Runtime API，不误用内部CUPTI synchronization
+activity较窄的端点。活动顺序不重叠已核验，独立区间算术得到上表全部六行A。
+request=prefill∪decode，分界相等、无重叠；unattributed、守恒差均0。
+
+四个目标B的五个时长字段全部匹配独立预期（ns）：
+
+| sync row | hidden union | exposed union | terminal pre | terminal overlap | return tail |
+|---|---:|---:|---:|---:|---:|
+| 3 | 0 | 33312 | 0 | 1088 | 8695 |
+| 4 | 33312 | 11840 | 0 | 1184 | 7776 |
+| 6 | 0 | 2112 | 0 | 1024 | 7504 |
+| 7 | 2112 | 85695 | 0 | 14080 | 29533 |
+
+这些是逐sync值，不构成可相加B指标。其余rows 1/2/5/8/9确在六窗外，
+保持B_INVALID/INVOCATION_BOUNDARY_INVALID、request=null与null timing。
+现有gate8_analysis.py全B资格门仍阻断Derived；目录无Derived/Signature产物。
+publication只保留CONTROLLED_ACCOUNTING_ONLY差值，mechanism_claim_allowed=false。
+
+### 新发现：B phase provenance字段未贯通
+
+**不能把上述数值匹配称为B全部字段通过。** S的activity_origin_phases是
+activity ID→phase映射；b_provenance.py `_project_b_record`使用`list(mapping)`，
+输出映射的键。四个真实B的同名字段因此装入activity IDs，而非phase名称。
+S本身保留正确映射：prefill同步仅prefill；decode同步含prefill/decode，
+terminal_origin_phase和cross_phase_dependency与构造一致。
+现有B单测却手工提供phase列表，没覆盖实际S producer的mapping形状；
+schema只验证唯一string/null数组，未揭示语义错位。
+
+此为可定位的S→B字段投影缺陷，不证明W(s)/A/timing公式错误，也不授权改写
+历史B产物或撤销/重跑Gate6。当前B phase摘要不应用于机制解释。
+修复应先用真实S形状写失败回归，显式核对旧A/B读取与新输出兼容，
+补actual-file-chain断言；不得借机改变B可加性、Derived范围或冻结公式。
+
+### 本地最小修复及兼容边界
+
+已依持续授权完成tests-first局部修复；不是新的测量语义amendment。
+依据Measurement Contract §10–11保留origin要求、S实际producer映射及A/B 0.2/0.3
+既有unique string/null数组合同，B取映射**值**而非键、去重并按字符串排序，null末尾。
+排序仅稳定序列化，不代表执行顺序；不归一phase大小写。显式null保留unknown，
+缺字段/非mapping/漏成员/额外成员/空或非字符串phase均报错，不填补或猜测。
+S映射键必须恰为W(s)活动；原S、W(s)、terminal、validity与五timing逻辑不改。
+
+修复前13 failed/31 passed，包含实际文件链的四行phase断言；首次GREEN扩大检查
+发现共享旧S夹具仍伪造list，15 failed/29 passed。已将两处夹具对齐真实mapping，
+未添加生产fallback；提前启动的CPU全量因此中止，不作为验证成绩。
+修复后B/AB输入/AB bundle/Derived/controlled文件链定向129 passed（33.50s）。
+最终CPU全量1204 passed/5 skipped（226.39s，Python3.12.7，子进程mask=-1、
+PATH排除nvcc且断言不可解析；五skip均为Q0 CUDA source编译项）。compileall、
+contract37/37、Canonical7、oracle independence及diff-check通过；协调只读审查无阻塞。
+未改生产skip，没有本轮CUDA编译/服务器测试。冻结合同、S、Q0、Derived门、runner、
+原始evidence均zero diff；生产改动只在B字段投影，不改变公式。
+旧A/B 0.2及0.3读取器不变：回归证明旧错误phase字节仍原样读取、不偷偷修复；
+历史产物仍按原commit解释，不因新实现追认phase provenance资格。
+
+对既有真实Raw在全新本地诊断目录重分析：S全部记录完全相同，A仅新Canonical
+lineage带来的window_id改变，所有边界/身份/数值相同；B仅四目标origin数组修正，
+其他字段与五范围外INVALID逐字段不变。旧29输入hash前后一致。沿用明确记录的
+本地source-byte诊断适配，不把本次未提交源码的本地计算称服务器版本复验。
+Derived仍阻断、UNKNOWN/NOT_ASSESSED不变。测试及私有复核脚本路径见本地handoff。
+
+## 下一动作（取代此前待部署状态）
+
+本次adapter已在服务器c827b61完成离线复验；无需重复部署/导出/采集。
+phase修复完成本地审查后，只需新分析commit的窄静态检查及一次已有SQLite离线复验，
+不需重复DLL/采集/export或服务器全量测试；部署及执行须先协调审查交付包，不自动执行。
+Derived范围问题与此分开：如拟从整bundle资格变更为逐窗口依赖闭合集合资格，
+必须明确可排除的范围外记录及跨窗依赖/未知影响的阻断规则，不能直接过滤INVALID。
+本轮未作该选择；shared-stream epoch也未被本独立stream构造验证。
+未知完整性不改零，不重新要求全capture厂商认证；模型/new-Q0资格仍需后续证据。
+
+历史下一动作（已执行，保留来源）：
 
 完成回归和审查后，只一次部署必要分析adapter。复用现REP/SQLite及sealed输入，
 在新版本/新诊断目录重分析；执行commit07625b7与分析commit分开记录。

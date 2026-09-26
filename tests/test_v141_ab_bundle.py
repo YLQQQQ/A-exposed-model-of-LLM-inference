@@ -39,6 +39,31 @@ def _update_file_metadata(manifest_path: Path, file_key: str) -> None:
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
 
+@pytest.mark.parametrize("version", ["0.2.0", "0.3.0"])
+def test_existing_b_origin_bytes_remain_readable_without_silent_repair(tmp_path, monkeypatch, version):
+    """Old artifacts retain their literal fields; reading cannot silently upgrade provenance."""
+    if version == "0.2.0":
+        canonical, s_manifest = _make_inputs(tmp_path)
+        manifest_path = analyze_ab(canonical, s_manifest, tmp_path / "ab")
+    else:
+        from test_gate8_controlled_chain import chain_inputs
+        from exposedpath_v141.gate8_files import process_gate8_receipt
+        receipt, sources = chain_inputs(tmp_path, monkeypatch)
+        result = process_gate8_receipt(receipt, tmp_path / "result", controlled_sources=sources, synthetic_fixture=True)
+        manifest_path = result.parent / "analysis/ab/ab_manifest.json"
+    loaded = load_ab_bundle(manifest_path)
+    assert loaded['manifest']['schema_version'] == 'exposedpath-ab/' + version
+    records = list(loaded['b_sync_records'])
+    old_ids = list(records[0]['wait_set_activity_ids'])
+    records[0]['activity_origin_phases'] = old_ids
+    path = manifest_path.parent / 'b_sync_records.jsonl.gz'
+    _rewrite_gzip_jsonl(path, records)
+    _update_file_metadata(manifest_path, 'b_sync_records')
+    before = path.read_bytes()
+    assert load_ab_bundle(manifest_path)['b_sync_records'][0]['activity_origin_phases'] == old_ids
+    assert path.read_bytes() == before
+
+
 def test_analyze_ab_writes_reloadable_deterministic_bundle(tmp_path):
     """Changing gzip metadata or omitting a record must break this observable bundle contract."""
 

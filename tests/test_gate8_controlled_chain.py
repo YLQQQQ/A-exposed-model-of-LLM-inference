@@ -77,6 +77,10 @@ def test_controlled_raw_proof_enters_file_chain_without_synthetic_zero_counter(t
     # This does not grant support to an unobserved API in arbitrary models.
     assert [r['A_unattributed_ns'] for r in ab['a_window_records']]==[0,0,0,0,0,0]
     assert all(r['validity']=='B_VALID' for r in ab['b_sync_records'])
+    assert [r['activity_origin_phases'] for r in ab['b_sync_records']]==[
+        ['prefill'], ['decode','prefill'], ['prefill'], ['decode','prefill']]
+    assert [r['terminal_origin_phase'] for r in ab['b_sync_records']]==['prefill','decode','prefill','decode']
+    assert [r['cross_phase_dependency'] for r in ab['b_sync_records']]==[False,True,False,True]
     assert list(out.parent.rglob('derived_manifest.json'))
     mod.load_chain_result(out)
 
