@@ -108,3 +108,28 @@ transcript 五个文件，没有执行服务器命令、重新测试或加载 DL
 `e5557cba5bb004215c00bc1c34fb0acdae39af96ce10c07696e812968fe073c4`：
 固定07625b7、新 build receipt→DLL/source hash、绝对 Nsight路径/完整版本；未修改。
 不复用旧 DLL 或旧 REP，不自动 export，不将本轮判为新Q0/Gate8 PASS。
+
+## 7.34 0.2 capture 回执审计与离线草案
+
+用户完成新 run `controlled_20260926T133649Z_8dd7210fc970474eb1b6358a9e91d8cd`，
+本窗口直接审计完整17文件及8封存引用，前后hash不变。执行仍为07625b7；
+construction0.2、clean身份、PID61832、GPU physical3/logical0与UUID/PCI匹配，
+两个request四token11/12/21/22、无early EOS，init/warmup/cleanup COMPLETE；
+inner自报与外层collection exit均0，精确19项argv/profile不变。
+
+- REP82560 bytes，SHA256 `edf4c429969f9315b988cf3fb6cee84fa51810ea282ca6165768308c883967d9`。
+- collection SHA256 `0e318d424e3c5cebfd8e801888805a9c4103df2d1e6d67cc5a91a4ac47cdb62d`。
+- plan SHA256 `eb778af381c4d1ff3140944fda6785d53332370e0ce5e31e034de9c82e3067a5`。
+- execution SHA256 `9842f7e53c7db8776384c99fd091b06ef8897e9e26632f233b0a611c505bb7b2`。
+
+三项source hash均等于执行commit的CRLF表示；plan内producer源码字节实际存在，
+native/CLI仍由commit表示与receipt比对。新DLL hash与上一节已回传构建原件一致。
+结论 `CAPTURE_RECEIPTS_CHECKED_NOT_TRACE_ACCEPTANCE`，不是S/A/B/oracle通过。
+
+新后处理草案固定本run与07625b7、17项实际哈希；不得套用旧7f61102固定输入脚本。
+全新diagnostics先复制并核验全部输入，保存server source字节；既有bounded helper
+最多两次180秒export、仅结束其记录的PID；audit300秒人工停止点，失败保留partial。
+结束复核原件/副本不变；清单先快照再写入、排除清单自身。只对副本派生，不重采。
+草案9628 bytes，SHA256 `56ee06a95eca189de53fe8a5b624d88187ff4ad06d9d2cacf591c3e0521c4e43`。
+本地仅Parser及提取的Hash/Check-Original函数对17文件只读检查通过；
+没有运行真实export、audit或GPU。协调窗口审阅后按授权执行；Gate8/新Q0仍NOT_RUN。
