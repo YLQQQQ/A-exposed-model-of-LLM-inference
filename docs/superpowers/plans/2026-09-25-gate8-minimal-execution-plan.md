@@ -1,5 +1,46 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.37当前最小推进（2026-09-26，替代下方历史待办）
+
+固定capture07625b7、分析f5edc64的受控计算原件已审计，B phase修复关闭。
+它证明此独立stream构造的接口/边界及具体A/B计算，不是完整新版Q0资格、模型支持
+或Gate8 PASS。服务器等待；本轮不部署、不采集、不要求再传话确认普通工程步骤。
+详细证据见[实物审计](../../v1_4_1/gate8_controlled_optional_tables_audit_v0_1.md)。
+
+### 最少剩余工作及负责人
+
+| 顺序 | 主窗口可直接做的本地工作 | 所需证据/停止条件 |
+|---|---|---|
+| 1 新版资格影响表 | 沿用23-case独立oracle与旧结果，只补改变接口的资格映射；当前STREAM两request/D1/device/phase计算列为已取得窄Engineering证据，不修改旧qualification | signed表示、D2、文件hash和phase序列化仅回归；未变W(s)/A/B公式复用历史结论。未证明的API族不授资格，不默认21次全重采 |
+| 2 必要反例 | 优先复用现有局部correlation缺失、未知影响、混run/clock、已完成前驱、无关流测试；若对真实Raw作故障注入，只在新诊断副本中标注注入及来源 | 当前真实controlled checker对破坏闭合构造的输入应拒绝，不强迫其输出partial A；局部unknown已有独立合成文件链证据，不能冒称真实collector故障验证 |
+| 3 模型入口接线 | 列出真实runner→D1 producer落盘→新receipt/双pass的缺口；复用Gate7 pre-model身份门、固定model/prompt和Pass0/1规则，不改自然completion | 现controlled native成功不能代替torch模型API universe、warmup依赖范围或model receipt。新入口只能在下面epoch语义确定后完成适用域准入，不用新stream掩盖问题 |
+| 4 有界资格/模型验证 | 本地实现及独立预期收口后，才给用户一次最小受控补证/单模型计划；允许复用环境/模型内容来源，但新执行固定commit | 只补所声明路径受影响接口；新Q0范围报告经审查后才进入真实模型。GPU/Nsight须另授权；失败保留、不自动retry |
+
+**当前唯一优先研究裁决：shared-stream request epoch。** MC §7.2/7.3保持已完成的
+语义前驱，当前第二request同stream被`INVOCATION_BLEED`拒绝；D1 marker本身不是
+dependency证据。推荐批准窄epoch规则：原Raw保留；只有可解引用的完整drain完成点、
+对应device/context/stream范围、无未决event/外部工作时，才允许从后续request的
+**request-local分析域**排除已独立完成的旧request成员。同request已完成成员必须保留。
+这是边界/ownership资格的显式amendment提案，不是已实施选择，也不宣布CUDA原始
+同步语义被改变。备选是继续仅声明独立stream构造，不宣称一般eager模型已支持。
+
+供裁决的独立预期（仅设计，不增加GPU实验；时间单位ns）：
+
+| 构造 | 当前/提案预期 |
+|---|---|
+| 旧request活动[0,20)，完整drain在25结束；新request起于30，B[40,50)，sync[45,60) | 当前同流拒绝；若窄epoch获批且范围证据充分，新request W={B}，hidden5/exposed5/tail10 |
+| 同一新request早活动B[32,35)、C[40,50)，sync[45,60) | 即使B早已完成，W仍{B,C}；hidden8/exposed5/tail10，不按pending集合裁剪 |
+| drain缺失/无scope、未决跨epoch event或外部提交 | 不建立epoch资格，保留invalid/ambiguous，不通过删除旧记录凑出可分析结果 |
+
+**Derived不是此刻必须放开的门。** 现五条范围外B_INVALID保留，不删除全B检查。
+后续若要发布逐request D/Signature，需版本化规定：如何凭稳定identity及依赖闭合
+证明哪些B属于目标窗、哪些仅外部诊断、未知影响如何向窗口传播；不能仅按时间不重叠
+过滤。目前先完成A/B正确性资格，保留记账差值的有限解释。非零unknown整窗机制发布
+仍按RouteA amendment等待Pilot质量门，不在本次指定百分比。
+
+无需新增全capture厂商认证、全面扫描、第二平台或G2；它们不成为上述局部工作的前置。
+Gate7历史PASS；新版Q0/Gate8 NOT_RUN。后续普通工程由主窗口推进，服务器当前无操作。
+
 **7.28最新覆盖（2026-09-26）：** [窄受控桥接](../../v1_4_1/gate8_controlled_bridge_v0_1.md)
 已有本地确定性验证，[服务器草案](../../v1_4_1/gate8_controlled_server_runbook_v0_1.md)
 分静态编译、受控采集、后处理三段，均未执行。模型跨request同流epoch未决，

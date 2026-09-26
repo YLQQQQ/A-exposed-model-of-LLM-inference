@@ -182,11 +182,38 @@ lineage带来的window_id改变，所有边界/身份/数值相同；B仅四目�
 本地source-byte诊断适配，不把本次未提交源码的本地计算称服务器版本复验。
 Derived仍阻断、UNKNOWN/NOT_ASSESSED不变。测试及私有复核脚本路径见本地handoff。
 
-## 下一动作（取代此前待部署状态）
+## 2026-09-26 f5edc64服务器实物对照：字段修复关闭
+
+用户执行后回传的新73文件已直接读取。分析commit
+`f5edc64862a8d5fbe94a7bf19be68303a4874b7f`，parent
+`c827b61ebe3ec08eae26fe9ab0d063892914a22e`；capture仍07625b7。
+清单SHA256 `84dff0dbf83596142d1a0381e53690204e1de3d8cdab322a227e10eb9765a2a7`，
+72项size/hash全部匹配、恰覆盖其余全部文件；38派生引用及29旧输入逐项核验一致。
+主分析报告SHA256 `7d51b53807487ccdd83566eeb8ce1041ca105dd89572803dfc697a7a26f02aa2`。
+
+服务器原始transcript：Python3.11.16、129 passed/27.75s，contract37/37、Canonical7、
+oracle PASS，CLI及phase检查exit0；receipt static/audit=0、error=null，最终HEAD/parent正确。
+这是用户执行、本地审核的目标机证据，不是本窗口新测试或新采集。
+
+对原SQLite再作只读独立算术及新旧产物逐字段对照：
+
+- 六A窗口边界/类别时长/身份相同，仍unattributed=0、整数守恒差=0；仅新Canonical
+  lineage导致window_id变化，不能据此把历史输出改为新身份。
+- S九条全字段相同；四目标B的phase数组为`[prefill]`、`[decode,prefill]`各两次，
+  其余所有B字段（W(s)、terminal、五timing、validity等）不变。
+- 五范围外B_INVALID及null timing不变；19条诊断逐字段保留，collector UNKNOWN/null。
+- 无Derived/Signature产物，publication仍禁止机制claim；最终
+  `REANALYZED_CONTROLLED_CALCULATION_ONLY_NOT_ACCEPTED`、NOT_ASSESSED。
+
+**关闭范围：** B phase工程投影缺陷已在目标服务器验证，不再要求重复部署、测试或
+离线重分析。旧c827b61错误B与07625b7 BLOCKED报告不改、不追认；不撤销Gate6/7历史PASS。
+该结论不是新版Q0资格或真实模型验收。最小剩余工作见
+[当前执行计划的7.37覆盖段](../superpowers/plans/2026-09-25-gate8-minimal-execution-plan.md)。
+
+## 后续范围（取代此前待部署状态）
 
 本次adapter已在服务器c827b61完成离线复验；无需重复部署/导出/采集。
-phase修复完成本地审查后，只需新分析commit的窄静态检查及一次已有SQLite离线复验，
-不需重复DLL/采集/export或服务器全量测试；部署及执行须先协调审查交付包，不自动执行。
+phase修复服务器离线复验已经完成，不再生成此修复的下一部署/重验包。
 Derived范围问题与此分开：如拟从整bundle资格变更为逐窗口依赖闭合集合资格，
 必须明确可排除的范围外记录及跨窗依赖/未知影响的阻断规则，不能直接过滤INVALID。
 本轮未作该选择；shared-stream epoch也未被本独立stream构造验证。

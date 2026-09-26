@@ -1,5 +1,10 @@
 # Gate8 完整性可行性与新版 Q0 决策备忘录 v0.1
 
+> **历史调查与资格矩阵。** 本文统一全capture肯定证明、厂商询证和默认全部real-case
+> 重采顺序已由用户批准的[RouteA amendment](gate8_route_a_quality_amendment_v0_1.md)
+> 替代，不再作为当前执行指令。UNKNOWN保留；按具体接口影响复用历史证据。
+> 当前受控原件及最小剩余工作见[执行计划7.37](../superpowers/plans/2026-09-25-gate8-minimal-execution-plan.md)。
+
 ## 决策与下一项最小动作
 
 **7.26当前覆盖：** B安装资料已回传并审查；本轮调查收口仍无充分来源，不等于工具绝不支持。下一项仅用户审阅[厂商询证草稿](gate8_nsys_vendor_inquiry_v0_1.md)，未发送，不重复执行下方安装指令。Q0矩阵及资格前置保持有效；UNKNOWN继续阻塞。下方B是7.25历史决策。
