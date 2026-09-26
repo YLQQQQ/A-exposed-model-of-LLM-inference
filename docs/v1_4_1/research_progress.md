@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-> 一句话状态：**Gate 0～7 = `PASS`；f5edc64服务器离线复验73原件及新旧对照已通过，B phase工程缺陷关闭；A/S/B数值与五范围外INVALID不变，Derived仍阻断。仅Engineering/NOT_ASSESSED，旧产物不追认；新Q0与Gate8=`NOT_RUN`。下一步最小资格/模型准备聚焦shared-stream epoch语义，不再重验本次修复，服务器无操作。**
+> 一句话状态：**Gate 0～7 = `PASS`；f5edc64服务器B phase修复已审计关闭，新Q0与Gate8=`NOT_RUN`。共享stream裁决稿0.2推荐保留物理W(s)，仅对有drain闭合证据的旧request增加ownership准入；撤回7.37截断前缀提案，尚未批准/实现。Derived仍阻断，服务器无操作。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -58,7 +58,8 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.37`
+- 清单版本：`7.38`
+- 7.38有界裁决设计：只读核对MC §4.1/7.2/7.3/9/10/11、S ownership与runner现有窗前drain，形成[共享stream裁决稿0.2](gate8_controlled_bridge_v0_1.md)。保留物理前缀和B历史进度、A按窗口裁剪；明确修正7.37的W截断预期。列出Raw drain/clock/context/lifetime/owner证据、五类独立正负预期、现有producer缺口及最小Q0影响。仅提案，不修改冻结合同/生产代码，不运行新测试/实验；Derived全B门保留。等待一次集中语义裁决，常规已授权工作不重复请求审批；服务器仍固定f5edc64，无新部署。
 - 7.37直接原件审计：f5edc64服务器新73文件/72清单、38派生引用及29旧输入全部匹配；清单SHA84dff0dbf83596142d1a0381e53690204e1de3d8cdab322a227e10eb9765a2a7。目标机原始日志129 passed/27.75s、静态成功，非本窗口执行。四phase已纠正，S全字段、B其余字段/五INVALID、A数值及边界不变（window_id仅fresh lineage变化）。19诊断/UNKNOWN/NOT_ASSESSED/Derived阻断保留。关闭B phase修复，不再要求相同部署/静态/离线重复；当前待办以[计划7.37](../superpowers/plans/2026-09-25-gate8-minimal-execution-plan.md)为准。
 - 7.36本地修复验证：真实S mapping→B unique phase values，null保留、缺失/畸形fail closed、旧A/B 0.2/0.3读取不变。RED13/31；对齐残留伪list夹具后定向129 passed，CPU全量1204 passed/5 skipped（226.39s；nvcc隔离，均CUDA source编译项）；compileall/37条contract/Canonical7/oracle/diff-check通过。前一次提前启动的全量因已知夹具失败中止，不算通过。新本地真实输入派生S/五INVALID/B timing不变，仅四phase数组修正；A除fresh lineage window_id外完全相同，Derived仍阻断。协调只读review无阻塞；不是修复版本服务器成绩。
 - 7.36直接实物审计：[controlled adapter审计](gate8_controlled_optional_tables_audit_v0_1.md)核72清单/73文件、38派生引用、29旧输入全部一致。capture07625b7/analysis c827b61分开；服务器原始日志98 passed/91.36s、静态检查通过，不是本窗口新测试。六A独立Raw算术吻合、四B W(s)/terminal/五时长吻合，但实际B activity_origin_phases错误装入S映射的activity ID键；需本地最小兼容修复，暂不称B全字段通过。五窗外INVALID/19diagnostics保留，Derived阻断、UNKNOWN/NOT_ASSESSED不变；纠正旧文档把sync residual等同return tail的表述，无公式变更。
@@ -477,7 +478,7 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ## 7. 固定执行顺序与最近任务
 
-**7.37当前覆盖：** f5edc64目标服务器B phase投影已验证并关闭。下一项为资格影响及模型入口的本地最小准备；优先裁决有证据的request epoch，Independent手算预期已列计划，不静默改变W(s)。Derived作用域发布后置，五INVALID保留。服务器等待，无重复修复交付；以下7.36待复验状态为历史。
+**7.38当前覆盖：** f5edc64目标服务器B phase修复关闭。共享stream只推荐有证据的closed-prior ownership例外，不能截断物理W(s)；具体一次裁决及独立预期见bridge裁决稿0.2。生产实现须待批准，已有drain优先绑定，不隐式增加同步。Derived作用域发布后置，五INVALID保留。服务器等待，无重复部署/复验；以下7.36待复验状态为历史。
 
 **7.36当前覆盖：** 0.2受控capture与c827b61离线复验原件已审计；本地S→B phase字段已最小修复并实文件复核，准备审查后的增量离线交付，服务器暂不操作。五范围外B_INVALID保持，Derived范围如改变需单独明确合同，不能借字段修复过滤。下述7.26询证/固定长路线均为历史；路线A和最近用户授权优先，厂商询证仍暂停。
 
@@ -610,3 +611,4 @@ compile/graph后移。以下原任务保留编号及历史。
 | 7.35 | 2026-09-26 | 29离线原件审计；明确lazy metadata驱动MEMSET适配，固定源码/版本诊断scope分类；本地实文件前瞻六A/四目标B与独立预期，五scope外INVALID使Derived仍阻断 | EP-G8-01/02分析adapter | 原capture/失败report不改，无重采/export/编译；NOT_ASSESSED不授新Q0，Derived输入选择域未改变；Gate7 PASS、Gate8 NOT_RUN |
 | 7.36 | 2026-09-26 | c827b61服务器离线73原件核验，独立Raw算术六A/四B集合与时长匹配；发现并tests-first修复S映射取键造成B phase误写；129定向、1204/5 CPU、旧0.2/0.3读兼容及真实输入新派生核验 | EP-G8-01/02字段对齐 | 无新服务器采集/export，旧产物不改/不追认；不改公式/S/Q0/Derived资格域；UNKNOWN/NOT_ASSESSED、五范围外INVALID保留；Gate7 PASS，新Q0/Gate8 NOT_RUN |
 | 7.37 | 2026-09-26 | f5edc64服务器73原件/72清单审计，四phase修复且其余A/S/B不变；129目标机定向原始日志核验，字段修复关闭；收敛资格/模型最小准备及epoch独立预期 | EP-G8-01/02审计与计划 | 仅文档，无业务改动/重复实验；不追认历史错误B，不颁新Q0；Derived门保留，epoch仅待裁决提案；Gate7 PASS、Gate8 NOT_RUN |
+| 7.38 | 2026-09-26 | 共享stream裁决稿0.2：纠正7.37截断W提案，推荐保留物理前缀/原owner/B进度的closed-prior准入；列drain实证、五类独立预期、现runner绑定缺口及Q0最小影响 | EP-G8-01/02语义待决 | 仅文档设计，未批准/实施ownership变化；冻结合同/历史数据/资格不变，无新测试或服务器执行；Gate7 PASS，新Q0/Gate8 NOT_RUN |

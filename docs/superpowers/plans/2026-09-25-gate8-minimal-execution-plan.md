@@ -1,6 +1,6 @@
 # Gate8 最小执行计划 v0.1
 
-## 7.37当前最小推进（2026-09-26，替代下方历史待办）
+## 7.38当前最小推进（2026-09-26，替代下方历史待办）
 
 固定capture07625b7、分析f5edc64的受控计算原件已审计，B phase修复关闭。
 它证明此独立stream构造的接口/边界及具体A/B计算，不是完整新版Q0资格、模型支持
@@ -16,21 +16,16 @@
 | 3 模型入口接线 | 列出真实runner→D1 producer落盘→新receipt/双pass的缺口；复用Gate7 pre-model身份门、固定model/prompt和Pass0/1规则，不改自然completion | 现controlled native成功不能代替torch模型API universe、warmup依赖范围或model receipt。新入口只能在下面epoch语义确定后完成适用域准入，不用新stream掩盖问题 |
 | 4 有界资格/模型验证 | 本地实现及独立预期收口后，才给用户一次最小受控补证/单模型计划；允许复用环境/模型内容来源，但新执行固定commit | 只补所声明路径受影响接口；新Q0范围报告经审查后才进入真实模型。GPU/Nsight须另授权；失败保留、不自动retry |
 
-**当前唯一优先研究裁决：shared-stream request epoch。** MC §7.2/7.3保持已完成的
-语义前驱，当前第二request同stream被`INVOCATION_BLEED`拒绝；D1 marker本身不是
-dependency证据。推荐批准窄epoch规则：原Raw保留；只有可解引用的完整drain完成点、
-对应device/context/stream范围、无未决event/外部工作时，才允许从后续request的
-**request-local分析域**排除已独立完成的旧request成员。同request已完成成员必须保留。
-这是边界/ownership资格的显式amendment提案，不是已实施选择，也不宣布CUDA原始
-同步语义被改变。备选是继续仅声明独立stream构造，不宣称一般eager模型已支持。
-
-供裁决的独立预期（仅设计，不增加GPU实验；时间单位ns）：
-
-| 构造 | 当前/提案预期 |
-|---|---|
-| 旧request活动[0,20)，完整drain在25结束；新request起于30，B[40,50)，sync[45,60) | 当前同流拒绝；若窄epoch获批且范围证据充分，新request W={B}，hidden5/exposed5/tail10 |
-| 同一新request早活动B[32,35)、C[40,50)，sync[45,60) | 即使B早已完成，W仍{B,C}；hidden8/exposed5/tail10，不按pending集合裁剪 |
-| drain缺失/无scope、未决跨epoch event或外部提交 | 不建立epoch资格，保留invalid/ambiguous，不通过删除旧记录凑出可分析结果 |
+**当前唯一优先研究裁决：closed-prior ownership准入，而非截断W(s)。**
+详见[共享stream裁决稿0.2](../../v1_4_1/gate8_controlled_bridge_v0_1.md)。
+7.37提案把旧request排除后给出`W={B}/hidden5`，现明确撤回该方向；未曾实现。
+新推荐保留完整物理前缀、原owner及B进度，仅对有原始drain闭合证据的前一request
+增加版本化S ownership准入；A继续按窗口裁剪，不把旧进度解释为当前request贡献。
+同样的旧活动[0,20)、新B[40,50)、sync[45,60)例，证据齐全时提案应为
+`W={旧活动,B}/hidden25/exposed5/tail10`，sync内A_wait5/residual10。
+缺drain、未决event/外部ownership、clock/lifetime冲突仍拒绝；详稿含五类独立预期。
+现runner已有窗前drain，首先补其非同步身份绑定，不增加新同步或改变自然行为。
+此处仅待批语义设计，现代码/冻结合同保持原样。服务器无操作。
 
 **Derived不是此刻必须放开的门。** 现五条范围外B_INVALID保留，不删除全B检查。
 后续若要发布逐request D/Signature，需版本化规定：如何凭稳定identity及依赖闭合
