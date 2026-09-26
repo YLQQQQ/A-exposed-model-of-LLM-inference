@@ -58,7 +58,7 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.30`
+- 清单版本：`7.31`
 - 最近更新：`2026-09-26`
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
@@ -66,13 +66,14 @@
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（本地文件计算链已实现，未部署/采集/验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：[7f61102目标机静态/构建原件审计](gate8_controlled_build_audit_v0_1.md)通过，仅窄受控Engineering采集静态前置就绪，等待用户授权；不自行执行GPU/Nsight。执行commit固定7f61102，不追随文档main。模型前仍须裁决dependency epoch及GetLastError支持规则，不改W(s)绕过；UNKNOWN/局部发布限制不变。
+- 当前最高优先级：[窄受控capture17原件审计](gate8_controlled_capture_audit_v0_1.md)完成，准备同一REP的bounded export+audit草案交协调窗口审查，不重新采集。执行commit固定7f61102，保持server源字节/原件及失败产物，不追随文档main。真实trace/S/A/B仍未核验；模型epoch/GetLastError限制不变。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
 - 7.29本地最小验证：新增UUID源合同回归1例先失败；修复后受控五文件30 passed（22.37s），compileall与diff-check通过。未使用本机CUDA12.9/13编译冒充目标12.4验证，未重跑全量；待服务器用已验证工具链实际编译。旧S/A/B/Q0/oracle/evidence没有改动。
 - 7.30本地直接审计：传回transcript/build_receipt/DLL/LIB/EXP五原件，7f61102/parent24f58f8、工具身份、30 passed/54.20s、contract/Canonical/oracle及native编译完成一致。305152-byte DLL实际SHA256与receipt一致；源码报告hash精确对应7f61102 Git blob的CRLF表示（本地LF不同，不改hash）。详情及完整hash见build audit；没有本轮新测试/服务器执行。7.29恢复已完成，无需再次部署或编译。
 - 7.30后续启动观察（协调回传，尚未本地原件审计）：capture草案在Get-Command nsys.exe找不到工具时停止，位于RunRoot创建/profile之前，不算采集attempt。已知工具绝对位置由协调窗口核验并安排仅当前进程PATH修正；本窗口不改已交付脚本hash、不改系统PATH，不把尚无回执的重试写成成功。
+- 7.31直接读取完整capture原件：run controlled_20260926T040859Z_48bf088f634b453fb2070eecda6c6c39；REP82711 bytes/hash与collection一致，init/warmup/cleanup COMPLETE、PID61680、2request/4token、GPU/19项argv与所有封存hash链匹配，17文件前后不变。结论仅CAPTURE_RECEIPTS_CHECKED_NOT_TRACE_ACCEPTANCE；无新本地Nsight执行。后处理固定server原checkout、新唯一diagnostics保存字节副本及派生，不改原capture。PowerShell Parser/17file只读preflight已验；尚未实际export/audit，Gate8/Q0 NOT_RUN。
 - 当前本地/服务器身份：服务器已部署并构建`7f61102e1313d298c64da44487373675e33b8fa5`（parent24f58f8，package0.3.3）；本地后继仅审计文档，不要求服务器更新。capture仍钉住7f61102与已核验DLL。机器路径及回执清单位于忽略handoff，本窗口未操作服务器。
 - 历史总体判断（2026-09-20）：Gate 6 / Q0 已正式 `PASS`。frozen run `q0-win-4090-20260920-gate6-final-04` 在 package/analyzer `0.2.2`、formal binary SHA256 `4DFF82028F4FCFB57D42ABF061AE8962C1867DCE19DF23808D223B425868FC80` 下完成：21/21 `REAL_CASE_PASS`、2 个 synthetic-only case（`Q0-TERMINAL-TIE-001`、`Q0-SUBMISSION-RACE-001`）PASS、23/23 `SYNTHETIC_PASS`，且存在唯一一份 `q0_gate_report.json`（schema `exposedpath-q0-gate/0.2.0`、`23/23`、`verdict=PASS`、`q0_status=PASS`、report count `1`）。该 PASS 只说明当前 analyzer 在本目标 observation stack 上取得 **Q0 正确性资格**；不等于 Engineering Pilot、Pilot、Protocol Freeze 或 Formal 结果，也不建立第二平台等价性。身份、哈希、provenance caveat、根因映射与实现成熟度见 `docs/v1_4_1/gate6_closeout_v0_1.md`。
 - 历史到达点（已由7.18取代）（`EP-G7-11`）：此前一次 fresh smoke 在 Pass1/Nsight 启动边界遭系统 BugCheck `0x133` 中断，根因未获证明。随后服务器报告：`799fb8d` 在目标 Windows/RTX 4090 的 static preflight `940 passed, 1 skipped`、compileall、verify、合同/Canonical/oracle 检查通过；新 Engineering smoke `smoke_20260923T134310Z` 的 Pass0、Pass1 inference/telemetry/parity 和最小 Nsight collection 完成，生成非空 REP，且未再出现 BugCheck。但即时 `nsys export` 在约 51% 停滞，被人工终止后 machine report 为 `BLOCKED_BY_NSYS`、exit 1，Analyzer 未运行；该 attempt **不是** Gate 7 acceptance evidence。相同 SHA256 的 REP 副本后续离线 export 得到 integrity PASS 的 SQLite，诊断 analyzer exit 0；仅支持“REP 可离线导出/分析”，不证明即时 export 挂起的精确根因，也不追认原 attempt。Gate 7 仍为 `NOT_RUN`，Gate 8 未启动。
@@ -591,3 +592,4 @@ compile/graph后移。以下原任务保留编号及历史。
 | 7.28 | 2026-09-26 | 窄controlled producer/native源、CLI及独立Raw/file-backed proof接通；29定向、1161/5 CPU；固定argv、精确sync集合及前窗依赖负例；服务器静态/采集分段草案 | EP-G8-01/02本地必要桥接 | native未实机编译运行；同流跨request epoch仍未决，GetLastError未分类，不改S/registry/Q0；受控诊断不授新资格、模型尚未就绪；Gate7 PASS、Gate8 NOT_RUN |
 | 7.29 | 2026-09-26 | 直接审查服务器24f58f8静态1165/1回执及native UUID API编译失败；tests-first最小CUDA12.4兼容修复；DevShell已验证模块入口同步文档；基于24f58f8恢复包 | EP-G8-01/02兼容修复 | 不改GPU映射、W(s)/A/B、Q0或旧证据；新native编译待服务器，未GPU/Nsight；epoch/API支持限制保留；Gate7 PASS、Gate8 NOT_RUN |
 | 7.30 | 2026-09-26 | 直接审计7f61102目标机30项静态/native构建五原件，DLL哈希一致、源码CRLF身份可解释；窄受控采集静态前置就绪 | EP-G8-01/02执行前审查 | 仅文档，不更新服务器部署；GPU/Nsight/新Q0未执行，不授模型资格；Gate7 PASS、Gate8 NOT_RUN |
+| 7.31 | 2026-09-26 | 直接审计窄受控capture17原件、receipt/REP/hash/argv/身份，准备固定run的bounded export+audit单段脚本 | EP-G8-01/02受控诊断 | receipt成功不是trace/S/A/B资格，后处理待执行；原件不变、无重采/模型；Gate7 PASS、Gate8 NOT_RUN |
