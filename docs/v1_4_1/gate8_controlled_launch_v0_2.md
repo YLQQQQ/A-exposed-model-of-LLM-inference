@@ -75,3 +75,36 @@ execute 入口、旧 sealed construction 在 Raw 入口均被负例覆盖。
 通过后另行限定授权一次新受控 capture。必须全新 run，重新验证实际 API 集合、
 锚点、oracle 与文件链；不保证新 profile 一定采到所需记录。
 本轮不部署服务器、不运行 GPU/Nsight；原件不修改、不上传。
+
+## 7.33 目标构建回执只读审计
+
+用户已在服务器执行；本窗口直接读取回传的 build receipt、DLL、lib、exp、
+transcript 五个文件，没有执行服务器命令、重新测试或加载 DLL。
+执行 commit `07625b72e90d5fbb5bcb581d03a6f7582b2e0dc6`，parent
+`d9eaefcaa88482bbbedad9a4b754b93dad2c931f`；这是执行身份，后继文档提交不要求部署。
+
+- transcript：37 passed / 369.32s；contract 37/37、Canonical 7模块、oracle PASS；
+  脚本抵达 `STATIC_AND_BUILD_ONLY` 终点，前后 clean/HEAD 检查均为此终点前的强制门。
+  compileall、nvcc、diff 等命令的非零会提前停止；不是本次服务器全量测试。
+  Python3.11.16，VS17.8.6、cl19.38.33135.0、MSVC14.38.33130、nvcc12.4.131。
+- DLL 304128 bytes，SHA256
+  `9fbbb5385f291bdd43e2eda3f8e9d6372893abd0fce1f462a5fe969d4fc5acf9`，
+  本地复算等于 receipt；receipt SHA256
+  `43f9cce48759f8aac209648104d1bdde9c925ccfc87e5ec00f0fc42c977c7307`。
+- transcript SHA256
+  `6b0371610f2740ddf79f007dd109f139a7638738ef8f769c90ac99584e6c1708`。
+- native Git blob LF SHA256
+  `82490f072468ca28bc432ebd4e5634467b9fe2299fd51e8b19f901ccabb28ab1`；
+  内存中转换为 CRLF 后 SHA256
+  `6eda24c9519ff0b4a066f11cbf67f89efddce7eb6bc71f4f6d84e6094bbcf309`，
+  与服务器 receipt 完全相同。源码本体未随本批传回，不能称本地复算了服务器源文件；
+  不修改 receipt/hash 或原文件，后续采集时仍执行实际 source hash 检查。
+- 两个 compatibility marker 在 transcript 中均为 0 bytes；哈希列未被其格式化输出保留，
+  不虚构此次 transcript 含完整 marker hash。本脚本没有修改 marker。
+  结束 mask 恢复3；没有受控程序/GPU/Nsight运行。
+
+静态/构建前置已满足，可交协调窗口安排**另行授权**的窄受控采集。
+现有草案仍 5140 bytes / SHA256
+`e5557cba5bb004215c00bc1c34fb0acdae39af96ce10c07696e812968fe073c4`：
+固定07625b7、新 build receipt→DLL/source hash、绝对 Nsight路径/完整版本；未修改。
+不复用旧 DLL 或旧 REP，不自动 export，不将本轮判为新Q0/Gate8 PASS。
