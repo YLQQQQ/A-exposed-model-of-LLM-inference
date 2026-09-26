@@ -20,7 +20,7 @@ from . import __version__
 from .a_accounting import calculate_a_windows, validate_a_record
 from .ab_inputs import ABInputError, load_ab_inputs
 from .b_provenance import BProvenanceError, calculate_b_syncs, validate_b_record
-from .time_representation import time_representation, LEGACY, SIGNED
+from .time_representation import time_representation, LEGACY, SIGNED, CLOSED_PRIOR
 
 
 class ABBundleError(ValueError):
@@ -48,11 +48,13 @@ def _sha256(path: Path) -> str:
 
 
 def _schema(root: Path | None = None, *, version: str = LEGACY) -> dict[str, Any]:
-    if version not in (LEGACY, SIGNED):
+    if version not in (LEGACY, SIGNED, CLOSED_PRIOR):
         raise ABBundleError("A/B schema VERSION_UNSUPPORTED")
     root = Path(__file__).resolve().parents[1] if root is None else Path(root)
     try:
         path = _SCHEMA_PATH if version == LEGACY else _SCHEMA_PATH.with_name("ab_schema_v0_3.json")
+        if version == CLOSED_PRIOR:
+            path = _SCHEMA_PATH.with_name('ab_schema_v0_4.json')
         value = json.loads((root / path).read_text(encoding="utf-8"))
         Draft202012Validator.check_schema(value)
     except (OSError, json.JSONDecodeError, ValidationError) as exc:
@@ -180,7 +182,7 @@ def _validate_external_lineage(
             raise ABBundleError("A/B Canonical manifest 无法读取") from exc
         if _mapping(canonical, "Canonical manifest").get("data_role") != manifest.get("data_role"):
             raise ABBundleError("A/B data_role 不得升级 Canonical 数据角色")
-        if manifest['schema_version'] == SIGNED and source['pass_identity_sha256'] != canonical['gate8_sources']['pass_identity']['sha256'].upper():
+        if manifest['schema_version'] in (SIGNED,CLOSED_PRIOR) and source['pass_identity_sha256'] != canonical['gate8_sources']['pass_identity']['sha256'].upper():
             raise ABBundleError('A/B pass identity SOURCE_MISMATCH')
         sqlite = _mapping(_mapping(canonical, "Canonical manifest").get("source"), "Canonical source").get("sqlite")
         if _mapping(sqlite, "Canonical source.sqlite").get("sha256") != source.get("source_sqlite_sha256"):
@@ -200,8 +202,12 @@ def _validate_external_lineage(
         if s.get("data_role") != manifest.get("data_role"):
             raise ABBundleError("A/B data_role 不得升级 S 数据角色")
         s_source = _mapping(s.get("source"), "S source")
-        if manifest['schema_version'] == SIGNED and source['scope_manifest_sha256'] != s_source.get('scope_manifest_sha256'):
+        if manifest['schema_version'] in (SIGNED,CLOSED_PRIOR) and source['scope_manifest_sha256'] != s_source.get('scope_manifest_sha256'):
             raise ABBundleError('A/B scope SOURCE_MISMATCH')
+        if s.get('schema_version') != manifest['s_schema_version']:
+            raise ABBundleError('A/B S VERSION_MISMATCH')
+        if manifest['schema_version']==CLOSED_PRIOR and source['closed_prior_manifest_sha256'] != s_source.get('closed_prior_manifest_sha256'):
+            raise ABBundleError('A/B closed-prior SOURCE_MISMATCH')
         if s_source.get("canonical_manifest_sha256") != source.get("canonical_manifest_sha256"):
             raise ABBundleError("A/B S-to-Canonical lineage 不匹配")
         if s_source.get("source_sqlite_sha256") != source.get("source_sqlite_sha256"):
@@ -267,13 +273,19 @@ def load_ab_bundle(
     }
 
 
-def analyze_ab(canonical_manifest: Path, s_manifest: Path, output_dir: Path, *, scope_manifest: Path | None = None) -> Path:
+def analyze_ab(canonical_manifest: Path, s_manifest: Path, output_dir: Path, *, scope_manifest: Path | None = None,
+               closed_prior_manifest: Path | None = None) -> Path:
     version = LEGACY if scope_manifest is None else SIGNED
+    if closed_prior_manifest is not None:
+        if scope_manifest is None:
+            raise ABBundleError('CLOSED_PRIOR_SCOPE_REQUIRED')
+        version = CLOSED_PRIOR
     with time_representation(version):
-        return _analyze_ab(canonical_manifest, s_manifest, output_dir, scope_manifest=scope_manifest, version=version)
+        return _analyze_ab(canonical_manifest, s_manifest, output_dir, scope_manifest=scope_manifest, version=version,
+                           closed_prior_manifest=closed_prior_manifest)
 
 
-def _analyze_ab(canonical_manifest, s_manifest, output_dir, *, scope_manifest, version):
+def _analyze_ab(canonical_manifest, s_manifest, output_dir, *, scope_manifest, version, closed_prior_manifest=None):
     """Project trusted Canonical+S input into an atomic, immutable A/B bundle."""
 
     canonical_manifest = Path(canonical_manifest).resolve()
@@ -289,8 +301,12 @@ def _analyze_ab(canonical_manifest, s_manifest, output_dir, *, scope_manifest, v
             from dataclasses import replace
             from .gate8_scope import build_projected_ab_inputs
             from .ab_inputs import _load_s_records, _validate_lineage, _validate_s_join
-            inputs = build_projected_ab_inputs(canonical_manifest, scope_manifest)
+            inputs = build_projected_ab_inputs(canonical_manifest, scope_manifest, closed_prior_manifest=closed_prior_manifest)
             sm, sr = _load_s_records(s_manifest)
+            if (closed_prior_manifest is not None) != (sm.get('schema_version')=='exposedpath-s-layer/0.3.0'):
+                raise ABBundleError('CLOSED_PRIOR_VERSION_MISMATCH')
+            if closed_prior_manifest is not None and sm['source'].get('closed_prior_manifest_sha256') != _sha256(Path(closed_prior_manifest)):
+                raise ABBundleError('CLOSED_PRIOR_SOURCE_MISMATCH')
             _validate_lineage(canonical_manifest, inputs.canonical, sm)
             _validate_s_join(inputs.canonical, sr)
             if (sm.get("observation_profile") != inputs.canonical.manifest.get("observation_profile")
@@ -354,11 +370,13 @@ def _analyze_ab(canonical_manifest, s_manifest, output_dir, *, scope_manifest, v
                 "scope": "A_B_LAYER_ONLY",
             },
         }
-        if version == SIGNED:
+        if version in (SIGNED,CLOSED_PRIOR):
             manifest['validation_role'] = 'LOCAL_DETERMINISTIC_ONLY'
             manifest['measurement_validity'] = 'NOT_ASSESSED'
             manifest['source']['scope_manifest_sha256'] = _sha256(Path(scope_manifest))
             manifest['source']['pass_identity_sha256'] = inputs.canonical.manifest['gate8_sources']['pass_identity']['sha256'].upper()
+        if version == CLOSED_PRIOR:
+            manifest['source']['closed_prior_manifest_sha256'] = _sha256(Path(closed_prior_manifest))
         _validate_schema(schema, "manifest", manifest, "A/B manifest")
         manifest_path = staging / "ab_manifest.json"
         with manifest_path.open("x", encoding="utf-8", newline="\n") as handle:

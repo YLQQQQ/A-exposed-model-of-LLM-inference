@@ -39,16 +39,19 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest().upper()
 
 
-def load_s_layer_schema(root: Path | None = None) -> dict[str, Any]:
+def load_s_layer_schema(root: Path | None = None, *, version='exposedpath-s-layer/0.2.0') -> dict[str, Any]:
     if root is None:
         root = Path(__file__).resolve().parents[1]
-    schema = json.loads((root / _SCHEMA_PATH).read_text(encoding="utf-8"))
+    if version not in ('exposedpath-s-layer/0.2.0','exposedpath-s-layer/0.3.0'):
+        raise SBundleError('S schema VERSION_UNSUPPORTED')
+    path = _SCHEMA_PATH if version.endswith('/0.2.0') else _SCHEMA_PATH.with_name('s_layer_schema_v0_3.json')
+    schema = json.loads((root / path).read_text(encoding="utf-8"))
     validate_s_layer_schema(schema)
     return schema
 
 
 def validate_s_layer_schema(schema: Mapping[str, Any]) -> None:
-    if schema.get("schema_version") != "exposedpath-s-layer/0.2.0":
+    if schema.get("schema_version") not in ("exposedpath-s-layer/0.2.0", "exposedpath-s-layer/0.3.0"):
         raise SBundleError("S schema 版本不匹配")
     if schema.get("input_schema_version") != "exposedpath-canonical-raw/0.2.0":
         raise SBundleError("S schema 的 Canonical Raw 输入版本不匹配")
@@ -85,14 +88,17 @@ def _write_records(path: Path, records: list[Mapping[str, Any]]) -> dict[str, An
     }
 
 
-def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path, *, scope_manifest: Path | None = None) -> Path:
+def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path, *, scope_manifest: Path | None = None,
+                           closed_prior_manifest: Path | None = None) -> Path:
     """只读分析 Canonical Raw，写入不可覆盖的 S bundle。"""
 
     canonical_manifest = Path(canonical_manifest).resolve()
     output_dir = Path(output_dir).resolve()
     if output_dir.exists():
         raise FileExistsError(f"拒绝覆盖已有输出目录: {output_dir}")
-    schema = load_s_layer_schema()
+    if closed_prior_manifest is not None and scope_manifest is None:
+        raise SBundleError('CLOSED_PRIOR_SCOPE_REQUIRED')
+    schema = load_s_layer_schema(version='exposedpath-s-layer/0.3.0' if closed_prior_manifest is not None else 'exposedpath-s-layer/0.2.0')
     repository_root = Path(__file__).resolve().parents[1]
     registry_path = (
         repository_root / "docs" / "v1_4_1" / "contracts"
@@ -102,9 +108,13 @@ def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path, *, scope_
     bundle = load_canonical_bundle(canonical_manifest)
     if scope_manifest is not None:
         from .gate8_scope import load_projected_ownership
-        ownership, _ = load_projected_ownership(canonical_manifest, bundle, scope_manifest)
+        ownership, projections = load_projected_ownership(canonical_manifest, bundle, scope_manifest)
         bundle = {**bundle, "ownership_records": ownership}
     inventory = build_semantic_inventory(bundle)
+    if closed_prior_manifest is not None:
+        from .gate8_closed_prior import load_admissions
+        inventory['closed_prior'] = load_admissions(closed_prior_manifest, canonical_manifest,
+                                                   scope_manifest, bundle, projections, inventory)
     records = [analyze_sync_semantics(inventory, sync) for sync in inventory["syncs"]]
     records.sort(
         key=lambda record: (
@@ -162,6 +172,8 @@ def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path, *, scope_
         if scope_manifest is not None:
             manifest["observation_profile"] = bundle["manifest"]["observation_profile"]
             manifest["source"]["scope_manifest_sha256"] = _sha256(Path(scope_manifest))
+        if closed_prior_manifest is not None:
+            manifest['source']['closed_prior_manifest_sha256'] = _sha256(Path(closed_prior_manifest))
         manifest_path = staging / schema["manifest_filename"]
         manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

@@ -1,7 +1,7 @@
 """Local Gate8 entry: verified identity/scopes, integrity gate, no collection.
 
-Real Nsight scientific analysis is deliberately BLOCKED until an affirmative
-provider is established. Synthetic mode is marked and never qualifies a run.
+The default path stays UNKNOWN. The source-bound controlled path is separate;
+neither synthetic calculation nor closed-prior declarations qualify a run.
 """
 import json
 import tempfile
@@ -16,12 +16,16 @@ from .sync_semantics import load_canonical_bundle
 
 def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_session_id,
                        integrity_receipts=None, synthetic_fixture=False, scope_assessment=None,
-                       controlled_evidence=None):
+                       controlled_evidence=None, closed_prior_manifest=None):
     canonical_path, scope_path, output_dir = map(Path, (canonical_path, scope_path, output_dir))
     if output_dir.exists():
         raise FileExistsError("refusing to overwrite Gate8 derived output")
     bundle = load_canonical_bundle(canonical_path)
     _, projections = load_projected_ownership(canonical_path, bundle, scope_path)
+    if closed_prior_manifest is not None:
+        from .time_representation import time_representation, SIGNED
+        with time_representation(SIGNED):
+            build_projected_ab_inputs(canonical_path,scope_path,closed_prior_manifest=closed_prior_manifest)
     if not projections:
         raise ValueError("BOUNDARY_MISSING: no complete measured request")
     manifest = bundle["manifest"]
@@ -41,7 +45,8 @@ def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_sessi
     if not requests_complete:
         reasons.append('REQUEST_ATTEMPT_NOT_COMPLETE')
     if not synthetic_fixture:
-        reasons.append("NSYS_AFFIRMATIVE_PROVIDER_NOT_IMPLEMENTED")
+        reasons.append('CLOSED_PRIOR_TARGET_SOURCE_NOT_QUALIFIED' if closed_prior_manifest is not None
+                       else "NSYS_AFFIRMATIVE_PROVIDER_NOT_IMPLEMENTED")
     if scope_assessment is not None:
         from .gate8_target_quality import validate_projection, validate_assessment
         from .time_representation import time_representation, SIGNED
@@ -49,7 +54,7 @@ def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_sessi
             raise ValueError('SYNTHETIC scoped evidence only; no mixed quality modes')
         validate_assessment(scope_assessment, synthetic_fixture)
         with time_representation(SIGNED):
-            scoped_inputs = build_projected_ab_inputs(canonical_path, scope_path)
+            scoped_inputs = build_projected_ab_inputs(canonical_path, scope_path, closed_prior_manifest=closed_prior_manifest)
         can_calculate = validate_projection(scope_assessment, projections, scoped_inputs) and requests_complete
         reasons = [*scope_assessment['reasons'], 'COLLECTOR_INTEGRITY_UNKNOWN_NOT_ZERO']
         if not requests_complete:
@@ -86,6 +91,9 @@ def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_sessi
         if not synthetic_fixture:
             result['validation_role']='CONTROLLED_ENGINEERING_DIAGNOSTIC_ONLY'
             result['status']='CONTROLLED_CALCULATION_ONLY' if can_calculate else 'BLOCKED'
+    if closed_prior_manifest is not None:
+        result['schema_version']='exposedpath-gate8-local-analysis/0.5.0'
+        result['closed_prior_manifest_sha256']=digest(closed_prior_manifest)
     destination.parent.mkdir(parents=True, exist_ok=True)
     output_dir = Path(tempfile.mkdtemp(prefix=f'.{destination.name}-partial-', dir=destination.parent))
 
@@ -104,15 +112,15 @@ def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_sessi
         from .derived import derive_exposure
         from .time_representation import time_representation, SIGNED
         from .gate8_coverage import coverage_from_inputs
-        s_path = analyze_canonical_to_s(canonical_path, output_dir/'s', scope_manifest=scope_path)
-        ab_path = analyze_ab(canonical_path, s_path, output_dir/'ab', scope_manifest=scope_path)
+        s_path = analyze_canonical_to_s(canonical_path, output_dir/'s', scope_manifest=scope_path,closed_prior_manifest=closed_prior_manifest)
+        ab_path = analyze_ab(canonical_path, s_path, output_dir/'ab', scope_manifest=scope_path,closed_prior_manifest=closed_prior_manifest)
         loaded = load_ab_bundle(ab_path, canonical_manifest=canonical_path, s_manifest=s_path)
         a, b = loaded['a_window_records'], loaded['b_sync_records']
         s_sha, ab_sha = digest(s_path), digest(ab_path)
         result['files']['s'] = {'filename':'s/s_manifest.json','sha256':s_sha}
         result['files']['ab'] = {'filename':'ab/ab_manifest.json','sha256':ab_sha}
         with time_representation(SIGNED):
-            inputs = build_projected_ab_inputs(canonical_path, scope_path)
+            inputs = build_projected_ab_inputs(canonical_path, scope_path, closed_prior_manifest=closed_prior_manifest)
         coverage = [coverage_from_inputs(inputs, window, b, lineage={
             "window_ref":{"sha256":digest(scope_path),"selector":f"$.projections[{i}]"},
             "canonical_manifest_sha256":digest(canonical_path), "s_manifest_sha256":s_sha,
@@ -135,7 +143,7 @@ def analyze_gate8_local(canonical_path, scope_path, output_dir, *, capture_sessi
             if not b_oracle_ok:
                 result['status']='BLOCKED'
                 result['reasons'].append('CONTROLLED_INDEPENDENT_ORACLE_B_MISMATCH')
-        eligible = (loaded['manifest']['quality']['status'] == 'VALID'
+        eligible = (closed_prior_manifest is None and loaded['manifest']['quality']['status'] == 'VALID'
                     and b_oracle_ok
                     and all(r['primary_reason'] is None and r['A_unattributed_ns'] == 0 for r in a)
                     and all(r['validity'] in ('B_VALID','B_NOT_APPLICABLE') for r in b)

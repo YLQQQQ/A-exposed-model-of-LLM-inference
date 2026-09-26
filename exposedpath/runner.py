@@ -245,6 +245,7 @@ def run_one_invocation(
     token_ready_identity_base: Optional[Mapping] = None,
     clock_ns: Callable[[], int] = time.perf_counter_ns,
     gate8_recorder=None,
+    drain_recorder=None,
 ) -> Dict:
     """Execute a single inference invocation with NVTX annotation.
 
@@ -261,7 +262,12 @@ def run_one_invocation(
     range_pop = (lambda: None) if gate8_pass0 else torch.cuda.nvtx.range_pop
 
     # ---- Final drain before timing ----
-    torch.cuda.synchronize()
+    if drain_recorder is None:
+        torch.cuda.synchronize()
+    else:
+        if torch.cuda.current_device() != drain_recorder.payload['logical_device']:
+            raise ValueError('DRAIN_CURRENT_DEVICE_CONFLICT')
+        drain_recorder.observe(torch.cuda.synchronize)
 
     # ==================== NVTX: invocation ====================
     range_push(nvtx_invocation_label)
@@ -383,7 +389,7 @@ def run_one_invocation(
 
 def run_gate8_requests(*, model, input_ids, attention_mask, output_len, device,
                        pass_fields, request_plan, eos_token_id=None,
-                       clock_ns=time.perf_counter_ns):
+                       clock_ns=time.perf_counter_ns, record_drains=False):
     """Explicit local Gate8 producer API over already-resident inputs.
 
     Not enabled by the legacy CLI/launcher. The caller supplies preflight-bound
@@ -398,6 +404,13 @@ def run_gate8_requests(*, model, input_ids, attention_mask, output_len, device,
 
     if pass_fields.get("pid") != os.getpid():
         raise ValueError("IDENTITY_CONFLICT: producer PID must be current process")
+    if record_drains:
+        device_text = str(device)
+        if not device_text.startswith('cuda:') or not device_text[5:].isdigit():
+            raise ValueError('DRAIN_EXPLICIT_LOGICAL_DEVICE_REQUIRED')
+        logical_device = int(device_text[5:])
+        if torch.cuda.current_device() != logical_device:
+            raise ValueError('DRAIN_CURRENT_DEVICE_CONFLICT')
     requests = []
     for plan in request_plan:
         identity_key = {**pass_fields, **plan}
@@ -410,6 +423,7 @@ def run_gate8_requests(*, model, input_ids, attention_mask, output_len, device,
                          "outcome":"FAILED", "early_eos":False, "reasons":["NOT_EXECUTED"]})
     ledger = make_gate8_pass_identity(requests=requests, **pass_fields)
     host_records = []
+    drain_records = []
     emit = ledger["pass_id"] == "pass1"
     for entry in ledger["requests"]:
         if entry["request_role"] == "warmup":
@@ -423,12 +437,20 @@ def run_gate8_requests(*, model, input_ids, attention_mask, output_len, device,
         recorder = Gate8BoundaryRecorder(entry["identity"], entry["expected_boundary_ids"],
                                          marker_sink=torch.cuda.nvtx.mark if emit else None,
                                          clock_ns=clock_ns)
+        drain_recorder = None
+        if record_drains:
+            from exposedpath.gate8_drain import DrainRecorder
+            drain_recorder = DrainRecorder(entry['identity'], entry['expected_boundary_ids'][0]+':drain',
+                logical_device, clock_ns=clock_ns,
+                push=torch.cuda.nvtx.range_push if emit else None,
+                pop=torch.cuda.nvtx.range_pop if emit else None)
         try:
             result = run_one_invocation(
                 model, input_ids, attention_mask, output_len, device,
                 "GATE8_REQUEST" if emit else "", "", "", "", eos_token_id,
                 token_ready_identity_base=entry["identity"], clock_ns=clock_ns,
                 gate8_recorder=recorder,
+                drain_recorder=drain_recorder,
             )
             excluded = result["early_eos"] or result["actual_output_tokens"] != output_len
             entry.update(actual_output_tokens=result["actual_output_tokens"],
@@ -438,10 +460,15 @@ def run_gate8_requests(*, model, input_ids, attention_mask, output_len, device,
             entry.update(actual_output_tokens=max(0,len(recorder.records)-1),
                          outcome="FAILED", reasons=[f"RUNTIME_ERROR:{type(exc).__name__}"])
         entry["observed_boundary_ids"] = [r["payload"]["boundary_id"] for r in recorder.records]
+        if drain_recorder is not None and drain_recorder.record is not None:
+            drain_records.append(drain_recorder.record)
         host_records.extend(recorder.records)
         if entry["outcome"] == "FAILED":
             break  # Do not continue model work with a failed invocation's state.
     validate_pass_identity(ledger)
+    if record_drains:
+        from exposedpath.gate8_drain import DRAIN_VERSION
+        return ledger, host_records, dict(schema_version=DRAIN_VERSION, drains=drain_records)
     return ledger, host_records
 
 
@@ -460,9 +487,13 @@ def run_gate8_requests_to_files(*, output_dir, **request_arguments):
         raise FileExistsError(output_dir)
     output_dir.parent.mkdir(parents=True, exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix=f'.{output_dir.name}-partial-',dir=output_dir.parent))
-    ledger, host_records = run_gate8_requests(**request_arguments)
+    products = run_gate8_requests(**request_arguments)
+    ledger, host_records = products[:2]
     files = {}
-    for name, value in (('pass_identity.json',ledger),('host_boundaries.json',host_records)):
+    outputs = [('pass_identity.json',ledger),('host_boundaries.json',host_records)]
+    if len(products) == 3:
+        outputs.append(('drain_ledger.json', products[2]))
+    for name, value in outputs:
         path = staging/name
         with path.open('x',encoding='utf-8',newline='\n') as handle:
             json.dump(value,handle,sort_keys=True,indent=2)
@@ -475,6 +506,8 @@ def run_gate8_requests_to_files(*, output_dir, **request_arguments):
                'run_id':ledger['run_id'],'pass_id':ledger['pass_id'],'attempt_id':ledger['attempt_id'],
                'status':'COMPLETE' if all(r['outcome']=='COMPLETE' for r in ledger['requests']) else 'INCOMPLETE',
                'files':files, 'gate8_verdict':'NOT_RUN'}
+    if len(products) == 3:
+        receipt['schema_version'] = 'exposedpath-gate8-producer-receipt/0.2.0'
     with (staging/'producer_receipt.json').open('x',encoding='utf-8') as handle:
         json.dump(receipt,handle,sort_keys=True,indent=2)
         handle.write('\n')

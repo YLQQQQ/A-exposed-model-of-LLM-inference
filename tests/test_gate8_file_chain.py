@@ -12,8 +12,8 @@ def api():
     return importlib.import_module('exposedpath_v141.gate8_files')
 
 
-def input_files(tmp_path, monkeypatch):
-    inputs, host = signed_inputs(tmp_path, monkeypatch, return_sources=True)
+def input_files(tmp_path, monkeypatch, source_factory=signed_inputs):
+    inputs, host = source_factory(tmp_path, monkeypatch, return_sources=True)
     db, pre, probe, ledger_path = inputs
     raw = tmp_path/'synthetic.rep'
     raw.write_bytes(b'SYNTHETIC fixture, not a real REP')

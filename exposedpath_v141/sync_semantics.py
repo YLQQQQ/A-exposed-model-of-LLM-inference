@@ -1181,6 +1181,7 @@ def build_semantic_inventory(bundle: Mapping[str, Any]) -> dict[str, Any]:
 def ownership_supported(
     activity: Mapping[str, Any],
     sync: Mapping[str, Any],
+    *, admissions=None,
 ) -> dict[str, Any]:
     """判断 activity 是否属于 sync 的同一次 batched invocation。"""
 
@@ -1221,6 +1222,12 @@ def ownership_supported(
             sync.get("repeat_id"),
         )
     if not same_invocation:
+        if admissions is not None and sync.get('sync_kind') == 'STREAM':
+            from .gate8_closed_prior import ClosedPriorAdmissions
+            if type(admissions) is not ClosedPriorAdmissions:
+                raise ValueError('CLOSED_PRIOR_VERIFIED_ADMISSIONS_REQUIRED')
+            if admissions.relation(activity, sync) is not None:
+                return {'supported':True, 'cross_phase_dependency':False, 'reason':None}
         return {
             "supported": False,
             "cross_phase_dependency": False,
@@ -1318,7 +1325,8 @@ def _build_same_stream_edges(
         invocation = _identity_key(identity) if isinstance(identity, Mapping) else (
             activity.get("request_id"), activity.get("repeat_id")
         )
-        groups[(activity.get("context_id"), activity.get("stream_id"), *invocation)].append(activity)
+        scope_key = ('closed-prior', activity['_closed_prior_generation']) if '_closed_prior_generation' in activity else invocation
+        groups[(activity.get("context_id"), activity.get("stream_id"), *scope_key)].append(activity)
     for group in groups.values():
         ordered = sorted(group, key=lambda item: (item["start_ns"], item["end_ns"], item["record_id"]))
         for previous, current in zip(ordered, ordered[1:]):
@@ -1643,7 +1651,7 @@ def recover_wait_set(
             # marker；边的归属由它等待的 event node 承担，而 event node 同样在
             # semantic_owners 中并被单独校验（缺失或不匹配时 fail closed）。
             continue
-        relation = ownership_supported(semantic_owner, sync)
+        relation = ownership_supported(semantic_owner, sync, admissions=inventory.get('closed_prior'))
         if not relation["supported"]:
             reasons.extend(semantic_owner.get("ownership_reasons", []))
             reasons.append(str(relation["reason"]))
@@ -1669,7 +1677,7 @@ def recover_wait_set(
             submission[str(activity["record_id"])] = proof
             if proof["status"] == "NOT_PRECEDING":
                 continue
-            relation = ownership_supported(activity, sync)
+            relation = ownership_supported(activity, sync, admissions=inventory.get('closed_prior'))
             if not relation["supported"]:
                 reasons.extend(activity.get("ownership_reasons", []))
                 reasons.append(relation["reason"])
@@ -1688,7 +1696,7 @@ def recover_wait_set(
         activity = by_id.get(activity_id)
         if activity is None:
             continue
-        relation = ownership_supported(activity, sync)
+        relation = ownership_supported(activity, sync, admissions=inventory.get('closed_prior'))
         if not relation["supported"]:
             reasons.append(str(relation["reason"]))
             continue
@@ -1957,6 +1965,8 @@ def analyze_sync_semantics(
         "cross_phase_dependency": recovery["cross_phase_dependency"],
         "invocation_bleed": "INVOCATION_BLEED" in reasons,
     }
+    if inventory.get('closed_prior') is not None:
+        result = inventory['closed_prior'].annotate(result, sync)
     return result
 
 

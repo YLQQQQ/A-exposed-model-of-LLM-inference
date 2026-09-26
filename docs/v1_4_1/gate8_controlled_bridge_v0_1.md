@@ -2,7 +2,9 @@
 
 > 历史 construction 说明。当前新执行候选为 [0.2.0](gate8_controlled_launch_v0_2.md)：
 > 直接检查 launch 返回值。旧 0.1 trace 缺 GetLastError 仍 BLOCKED，不适用新 API 集合。
-> 7.38当前动作仅为下方共享stream裁决稿0.2；0.2受控采集及f5edc64离线修复已审计。
+> 7.39覆盖：下方7.38共享stream裁决稿0.2已获批准，本地版本化实现见
+> [G8-CLOSED-PRIOR/0.1](gate8_closed_prior_amendment_v0_1.md)；不再等待相同设计确认。
+> 0.2独立stream受控采集及f5edc64离线修复已审计，不授新共享流/模型资格。
 > 本文旧“部署/采集下一步”保留为历史，不是当前服务器执行指令。
 
 2026-09-26；Engineering，实现说明与待授权服务器草案，不是新Q0资格。

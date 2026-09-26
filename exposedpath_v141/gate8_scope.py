@@ -176,7 +176,7 @@ def load_projected_ownership(canonical_path, bundle, scope_path):
     return [*other, *projected], actual["projections"]
 
 
-def build_projected_ab_inputs(canonical_path, scope_path):
+def build_projected_ab_inputs(canonical_path, scope_path, *, closed_prior_manifest=None):
     """Deterministic calculation inputs, NOT an integrity/qualification verdict.
 
     The Gate8 reporting entry point must gate these calculations on explicit
@@ -196,6 +196,10 @@ def build_projected_ab_inputs(canonical_path, scope_path):
                    for r in bundle["records"][kind] for k in ("start_ns", "end_ns"))):
         raise ValueError("GATE8_SIGNED_AB_ADAPTER_NOT_IMPLEMENTED: Raw/projection preserved; frozen A/B unchanged")
     inventory = build_semantic_inventory({**bundle, "ownership_records": ownership})
+    if closed_prior_manifest is not None:
+        from .gate8_closed_prior import load_admissions
+        inventory['closed_prior'] = load_admissions(closed_prior_manifest, canonical_path, scope_path,
+                                                   bundle, projections, inventory)
     s_records = tuple(analyze_sync_semantics(inventory, s) for s in inventory["syncs"])
     records = {k: tuple(v) for k, v in bundle["records"].items()}
     candidates = build_semantic_sync_candidates(records, ownership)

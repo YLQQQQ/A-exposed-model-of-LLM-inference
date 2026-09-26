@@ -162,6 +162,10 @@ def _project_b_record(inputs: ABInputs, s_record: Mapping[str, object]) -> dict[
         record.update(_calculate_valid_timing(inputs, s_record, terminal))
     else:
         record.update({field: None for field in _TIMING_FIELDS})
+    if 'ownership_profile' in s_record:
+        from copy import deepcopy
+        from .gate8_closed_prior import EXTRA_FIELDS
+        record.update({k:deepcopy(s_record[k]) for k in EXTRA_FIELDS})
     validate_b_record(record)
     return record
 
@@ -183,8 +187,21 @@ def calculate_b_syncs(inputs: ABInputs) -> tuple[dict[str, object], ...]:
 def validate_b_record(record: Mapping[str, object]) -> None:
     """Validate the frozen per-sync B record shape and null-only validity rules."""
 
-    if set(record) != _B_FIELDS:
+    from .gate8_closed_prior import EXTRA_FIELDS, PROFILE
+    extra = EXTRA_FIELDS if 'ownership_profile' in record else set()
+    if set(record) != _B_FIELDS | extra:
         raise BProvenanceError("B record 字段集合不匹配")
+    if extra:
+        from .gate8_closed_prior import validate_provenance
+        validate_provenance(record)
+        if record['ownership_profile'] != PROFILE:
+            raise BProvenanceError('CLOSED_PRIOR_VERSION_UNSUPPORTED')
+        provenance = record['activity_provenance']
+        if not isinstance(provenance,list) or [p['activity_id'] for p in provenance] != record['wait_set_activity_ids']:
+            raise BProvenanceError('CLOSED_PRIOR_PROVENANCE_WAIT_SET_MISMATCH')
+        cross = any(p['relation_to_sync']=='closed_prior_request' for p in provenance)
+        if type(record['cross_request_dependency']) is not bool or record['cross_request_dependency'] != cross:
+            raise BProvenanceError('CLOSED_PRIOR_CROSS_REQUEST_MISMATCH')
     sync_id = record["sync_id"]
     if not isinstance(sync_id, str) or not sync_id:
         raise BProvenanceError("sync_id 必须是非空字符串")

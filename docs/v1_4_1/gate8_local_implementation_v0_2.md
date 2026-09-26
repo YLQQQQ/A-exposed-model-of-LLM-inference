@@ -1,5 +1,11 @@
 # Gate8 本地文件链接口状态 v0.2
 
+> 7.39更新（2026-09-27）：本文件保留时间表示/旧文件入口历史。新增显式
+> [closed-prior0.1](gate8_closed_prior_amendment_v0_1.md)使用producer/input receipt0.2、
+> S0.3、A-B0.4、analysis0.5、file-chain0.4；Derived未支持新ownership版本而拒绝。
+> 不替换旧入口、不追认旧Raw；仅窄连续nondefault域本地确定性验证，非模型/新Q0资格。
+> 后续Route A已取消统一全capture认证前置，下方早期provider下一步不是当前待办。
+
 2026-09-25；基线 `ac5f02c838ed2d866b11c0b5a510aa6f74811a27`。本轮完成时间表示及本地文件链实现与确定性验证，不部署服务器、不采集或重验旧证据。Gate7历史PASS/legacy-only限制保持，Gate8 NOT_RUN。
 
 版本：package/analyzer `0.3.1`，adapter `exposedpath-gate8-adapter/0.2.0`；[时间表示amendment](gate8_time_representation_amendment_v0_1.md)，A/B及Derived `0.3.0`；D1/D2与Canonical/S原版本不变。第一批记录见[v0.1](gate8_local_implementation_v0_1.md)，其中signed/file-chain缺口由本记录取代。

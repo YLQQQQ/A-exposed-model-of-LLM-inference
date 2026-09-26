@@ -180,7 +180,7 @@ def _load_s_records(manifest_path: Path) -> tuple[dict[str, Any], tuple[dict[str
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise ABInputError(f"S manifest 无法读取: {exc}") from exc
     manifest = dict(_as_mapping(raw_manifest, "S manifest"))
-    schema = load_s_layer_schema()
+    schema = load_s_layer_schema(version=manifest.get('schema_version'))
     if manifest.get("schema_version") != schema["schema_version"]:
         raise ABInputError("S schema_version 不匹配")
     if manifest.get("measurement_contract_version") != schema["measurement_contract_version"]:
@@ -222,6 +222,9 @@ def _load_s_records(manifest_path: Path) -> tuple[dict[str, Any], tuple[dict[str
                 record = dict(_as_mapping(value, f"S sync record {line_number}"))
                 if set(record) != expected_fields:
                     raise ABInputError(f"S sync record {line_number} 字段集合不匹配")
+                if schema['schema_version'] == 'exposedpath-s-layer/0.3.0':
+                    from .gate8_closed_prior import validate_provenance
+                    validate_provenance(record)
                 records.append(record)
     except ABInputError:
         raise
@@ -303,7 +306,10 @@ def _validate_s_record_identity(canonical: CanonicalBundle, record: Mapping[str,
         if terminal.get("kind") not in {"ACTIVITY", "COMPLETION_BOUNDARY"}:
             raise ABInputError(f"S sync {sync_id} 的 valid terminal kind 非法")
         end, clock = terminal.get("end_ns"), terminal.get("clock_domain_id")
-        if not isinstance(end, int) or isinstance(end, bool) or end < 0:
+        from .time_representation import timestamp
+        try:
+            timestamp(end, 'S terminal end_ns')
+        except ValueError:
             raise ABInputError(f"S sync {sync_id} 的 terminal end_ns 非法")
         if not isinstance(clock, str) or not clock:
             raise ABInputError(f"S sync {sync_id} 的 terminal clock_domain_id 非法")

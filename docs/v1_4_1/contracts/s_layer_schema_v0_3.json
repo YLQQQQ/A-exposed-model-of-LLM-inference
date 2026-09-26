@@ -1,0 +1,266 @@
+{
+  "schema_version": "exposedpath-s-layer/0.3.0",
+  "measurement_contract_version": "exposedpath-measurement-contract-0.2.0",
+  "input_schema_version": "exposedpath-canonical-raw/0.2.0",
+  "status": "ENGINEERING_PRE_PILOT",
+  "sync_records_filename": "s_sync_records.jsonl.gz",
+  "manifest_filename": "s_manifest.json",
+  "sync_record_fields": [
+    "sync_id",
+    "registry_rule_id",
+    "sync_universe_class",
+    "sync_kind",
+    "request_id",
+    "repeat_id",
+    "sync_owner_phase",
+    "sync_origin",
+    "callsite_id",
+    "sync_ordinal",
+    "host_start_ns",
+    "host_end_ns",
+    "device_id",
+    "context_id",
+    "stream_id",
+    "event_id",
+    "completion_scope",
+    "submission_evidence",
+    "dependency_closure_status",
+    "dependency_edges",
+    "event_record_id",
+    "wait_set_status",
+    "wait_set_activity_ids",
+    "semantic_frontier_activity_ids",
+    "terminal",
+    "validity",
+    "primary_reason",
+    "secondary_reasons",
+    "activity_origin_phases",
+    "terminal_origin_phase",
+    "cross_phase_dependency",
+    "invocation_bleed",
+    "ownership_profile",
+    "cross_request_dependency",
+    "activity_provenance"
+  ],
+  "validity_states": [
+    "VALID_NONEMPTY",
+    "VALID_EMPTY",
+    "AMBIGUOUS",
+    "INVALID"
+  ],
+  "existing_output_policy": "REFUSE_OVERWRITE",
+  "research_eligibility": "SYNTHETIC_TEST_PASS_DOES_NOT_IMPLY_Q0_PASS",
+  "ownership_profile": "G8-CLOSED-PRIOR/0.1.0",
+  "closed_prior_fields": {
+    "ownership_profile": {
+      "const": "G8-CLOSED-PRIOR/0.1.0"
+    },
+    "cross_request_dependency": {
+      "type": "boolean"
+    },
+    "activity_provenance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "activity_id",
+          "origin_identity",
+          "origin_role",
+          "origin_phase",
+          "stream_generation",
+          "lifetime_ref",
+          "activity_ref",
+          "relation_to_sync",
+          "drain_ref"
+        ],
+        "properties": {
+          "activity_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "origin_identity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "experiment_id",
+              "wmpc_id",
+              "run_id",
+              "run_role",
+              "data_role",
+              "pass_id",
+              "attempt_id",
+              "request_id",
+              "repeat_id"
+            ],
+            "properties": {
+              "experiment_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "wmpc_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "run_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "run_role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "data_role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "pass_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "attempt_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "request_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "repeat_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "origin_role": {
+            "enum": [
+              "measured"
+            ]
+          },
+          "origin_phase": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stream_generation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lifetime_ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source_sqlite_sha256",
+              "record_id",
+              "source_table",
+              "source_rowid",
+              "clock_domain_id"
+            ],
+            "properties": {
+              "source_sqlite_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{64}$"
+              },
+              "record_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_table": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_rowid": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "clock_domain_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "activity_ref": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source_sqlite_sha256",
+              "record_id",
+              "source_table",
+              "source_rowid",
+              "clock_domain_id"
+            ],
+            "properties": {
+              "source_sqlite_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{64}$"
+              },
+              "record_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_table": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_rowid": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "clock_domain_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "relation_to_sync": {
+            "enum": [
+              "same_request",
+              "closed_prior_request"
+            ]
+          },
+          "drain_ref": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "source_sqlite_sha256",
+                  "record_id",
+                  "source_table",
+                  "source_rowid",
+                  "clock_domain_id"
+                ],
+                "properties": {
+                  "source_sqlite_sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{64}$"
+                  },
+                  "record_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "source_table": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "source_rowid": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "clock_domain_id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

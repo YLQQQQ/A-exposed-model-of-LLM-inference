@@ -1,5 +1,19 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.39当前覆盖（2026-09-27）
+
+用户已批准7.38 closed-prior方向；[amendment0.1](../../v1_4_1/gate8_closed_prior_amendment_v0_1.md)
+及显式S0.3/A-B0.4的本地实现正在收口。保留完整物理W、原owner、A窗口裁剪及B历史进度，
+不再等待同一语义重复审批。drain仅观察现有调用，实际scope/clock/source/失败路径严格核验。
+Derived不支持新版本而继续拒绝；服务器f5edc64不更新，新Q0/Gate8 NOT_RUN。
+
+本版本仅连续producer-owned非default窄域确定性验证，未证明真实torch默认流/初始化/
+warmup来源。因此下一项由主窗口本地完成最小source映射审查：区分目标必要前驱与
+可证无关活动，补实际owner/lifetime承载方案；不能将当前全inventory闭合限制写成
+Route A全capture门，也不换stream、补造owner或删W。完成接口/来源可行性后才准备
+新增路径的目标机两request受控资格方案。用户服务器当前无操作、无新采集授权。
+下方7.38及更早段落是历史计划，未完成的资格项继续保留稳定编号。
+
 ## 7.38当前最小推进（2026-09-26，替代下方历史待办）
 
 固定capture07625b7、分析f5edc64的受控计算原件已审计，B phase修复关闭。

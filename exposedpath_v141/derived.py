@@ -345,6 +345,8 @@ def derive_exposure(ab_manifest: Path, output_dir: Path) -> Path:
     except (ABBundleError, OSError, ValueError, json.JSONDecodeError) as exc:
         raise DerivedBundleError(f"A/B 输入不可验证: {exc}") from exc
     input_version = ab_bundle["manifest"]["schema_version"]
+    if input_version not in ('exposedpath-ab/0.2.0','exposedpath-ab/0.3.0'):
+        raise ValueError('DERIVED_INPUT_VERSION_UNSUPPORTED: ownership profile not qualified')
     schema = _schema(version={"exposedpath-ab/0.2.0":"exposedpath-derived/0.2.0",
                               "exposedpath-ab/0.3.0":"exposedpath-derived/0.3.0"}[input_version])
     a_records = sorted(ab_bundle["a_window_records"], key=lambda record: str(record["window_id"]))
