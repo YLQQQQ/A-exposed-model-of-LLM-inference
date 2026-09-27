@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 import tempfile
 
-from exposedpath.gate8_engineering_contract import PROFILE, EXECUTION_VERSION, validate_declaration
+from exposedpath.gate8_engineering_contract import PROFILE, EXECUTION_VERSION, CONTROLLED_EXECUTION_VERSION, CONSTRUCTION, validate_declaration
 from .gate8_adapter import digest
 from .gate8_files import load_input_receipt, _json, _write, _entry, _resolve
 from .gate8_diagnostic_scope import write_diagnostic_scope, load_diagnostic_scope
@@ -38,21 +38,30 @@ def _inputs(receipt_path, execution_path):
     require({'drain_ledger','stage_ledger'} <= paths.keys(), 'PRODUCER_SOURCES')
     manifest, ledger, execution = _json(paths['wmpc_manifest']), _json(paths['pass_identity']), _json(execution_path)
     declared = validate_declaration(manifest)
+    controlled=manifest.get('construction')==CONSTRUCTION
     require(set(execution)=={'schema_version','manifest_sha256','producer_receipt_sha256',
             'identity','declaration','observed_configuration','status'}
-        and execution['schema_version']==EXECUTION_VERSION
+        and execution['schema_version']==(CONTROLLED_EXECUTION_VERSION if controlled else EXECUTION_VERSION)
         and execution['manifest_sha256']==digest(paths['wmpc_manifest'])
         and execution['producer_receipt_sha256']==digest(paths['producer_receipt'])
         and execution['identity']=={k:ledger[k] for k in ('run_id','pass_id','attempt_id','pid')}
         and execution['declaration']==declared and execution['status']=='COMPLETE', 'EXECUTION_IDENTITY')
     observed=execution['observed_configuration']
+    if controlled:
+        require(observed==dict(construction=CONSTRUCTION,warmup_token=0,model_workload=False),'CONTROLLED_CONFIGURATION')
+        require(len(ledger['requests'])==2 and all(r['request_role']=='measured' for r in ledger['requests']),'CONTROLLED_PLAN')
+    else:
+        _model_configuration(observed,declared)
+    require(all(r['outcome']=='COMPLETE' and not r['early_eos'] and not r['reasons']
+                and r['actual_output_tokens']==r['expected_output_tokens']>=2 for r in ledger['requests']), 'REQUEST_PLAN')
+    return receipt, paths, declared, execution
+
+
+def _model_configuration(observed,declared):
     require(set(observed)=={'configured_attention_backend','configured_use_cache','model_type','execution_mode'}
         and observed['configured_attention_backend']==declared['attention_backend']
         and observed['execution_mode']=='eager' and observed['configured_use_cache'] is True
         and isinstance(observed['model_type'],str) and bool(observed['model_type']), 'LOADED_CONFIGURATION')
-    require(all(r['outcome']=='COMPLETE' and not r['early_eos'] and not r['reasons']
-                and r['actual_output_tokens']==r['expected_output_tokens']>=2 for r in ledger['requests']), 'REQUEST_PLAN')
-    return receipt, paths, declared, execution
 
 
 def _diagnostics(diagnostic):

@@ -1,5 +1,29 @@
 # ExposedPath 科研进度清单
 
+## 7.66 新profile受控资格连接器及独立oracle（2026-09-27）
+
+从682afcd按已批准qualification-next/0.1完成本地tests-first最小实现，说明见
+[受控资格0.1](gate8_controlled_qualification_v0_1.md)。新NULL-FIFO-D2H/0.1.0，两个顺序request各两token，
+窗外分配/暖机、真实drain、内部同步、三点completion与固定操作声明；不用旧入口改名或伪造模型backend。
+实际producer落盘→封存receipt→合成SQLite→Canonical/projection→限定Engineering A已连通。
+独立stdlib Raw oracle不调用S/A，逐项比较必要后缀集合和六窗具体五类，不以总和闭合冒充归属正确。
+
+先RED再修复的覆盖包括缺入口、manifest重哈希脱离plan、pre-native GPU冲突、工具build前缀误接受、
+缺物理drain、正确token跨身份、sync枚举编号变化、相同A但错误后缀集合；缺边界/correlation/warning拒绝，
+局部两API缺口保留unattributed。假设与观测分离，dropped UNKNOWN/NOT_ASSESSED不改零。
+全部新增trace为CPU确定性fixture，不是实际CUDA/Nsight完整性证明；没有本轮服务器/模型/native执行。
+
+验证：资格专项19 passed/17.27s；接口三文件42 passed/71.00s；扩大到request/default及旧受控链
+六文件99 passed/70.07s（后续增加的后缀集合反例由最终19项专项覆盖）。CPU全量1472 passed、
+5 skipped/374.55s，Python3.12.7、同进程mask=-1且移除nvcc PATH并断言不可见；五skip为既有
+native编译测试。全量收集后新增的枚举/集合两例单独通过，不冒称已包含在1472中。
+compileall四目录、contract37/37（仅内部）、Canonical7、oracle静态独立性、diff-check通过。
+PowerShell交付段仅Parser语法验证，无本机native/GPU/Nsight/服务器执行。
+目标机资格尚未执行。下一项仅固定本提交及单一增量bundle、
+在既有固定checkout做最小受控编译/执行并回传单一ZIP（命令已准备，不由本窗口执行）。
+任何未知作用warning、缺证据、额外stream/活动、oracle不符或超时停止，不自动重试。
+原物理S/B、旧Q0/旧Qwen/历史证据不变；D/Signature关闭；Gate7 PASS，新Q0/Gate8 NOT_RUN。
+
 ## 7.65 247f4fd目标机静态回执审计及最小资格下一步（2026-09-27）
 
 直接只读核验用户传回单ZIP：4680 bytes/SHA256 fc129db5a104ce8e052f56512a6bab292bddbd12c670a260f57d98fa2c0b41d3；CRC/路径/8文件精确集合与清单7项bytes/hash全部通过。清单SHA256 fa10caa43c662893f08e3d3af7d43db8f58246fce0e748bb562c483f90bf4ce0。原始日志95 passed/42.63s、Python3.11.16；receipt六步exit0/STATIC_PASS，contract37/37、Canonical7、oracle静态独立性通过，compileall成功来自receipt而非不存在的单独日志。部署verify/fetch/checkout控制台证据为用户提供、不在此transcript；不是本助手服务器执行。服务器部署基线现为247f4fd211007b7dfc2ef011043d7ecebdbf6f88，不再写待部署/待静态复验。
@@ -168,7 +192,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（窄受控capture/离线计算已有实际证据，非模型或新Q0/整Gate验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：7.62三sync准入清单已具体化；真实缺口为drain后必要依赖闭合，不能用同一profile重采或新增合成证书替代。保持真实source/default拒绝，停止重复索源；服务器35b5bff无需操作。Gate7 PASS、新Q0/Gate8 NOT_RUN。
+- 当前最高优先级：7.66受控资格连接器及独立oracle本地收口；服务器仍247f4fd，下一项按固定交付版本进行一次限定受控资格，不重跑旧Qwen、不重复索源。实际目标机新资格尚缺，Gate7 PASS、新Q0/Gate8 NOT_RUN。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
