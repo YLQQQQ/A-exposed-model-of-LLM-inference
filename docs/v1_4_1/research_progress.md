@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.63 限定Engineering依据批准及来源诊断入口（2026-09-27）
+
+用户已接受7.62的限定依据，版本化为[Engineering sufficiency amendment 0.1](gate8_engineering_sufficiency_amendment_v0_1.md)。不要求全capture认证；目标必要依赖风险、支持域假设与可观察事实分开，OTHER_PROCESS不能自动豁免。仅未来预声明profile的新attempt适用，旧诊断不追认。旧合成request_scope及物理S/B不改，新真实路径不以零unattributed为条件；未知影响范围仍拒绝，B/D/Signature不自动发布。
+
+第1段已实现diagnostic-scope/0.1.0来源sidecar：实际producer NVTX与pass ledger绑定完整global PID，保留原诊断row/hash/time/type；同数字PID不同namespace、负系统sentinel和缺字段不猜测。reader重新派生，不允许改写事实；非空WAL/journal输入拒绝，immutable读取且不改Raw。timestamp_raw不假定时钟/单位。全部影响保持UNASSESSED、dropped UNKNOWN、scientific_outputs_allowed=false。
+
+tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位均有失败回归后修复。当前11项新测试通过；来源/identity/stage三文件45 passed；含旧S/A及request_scope的五文件162 passed（时间字段反例加入前），最后11项复跑5.02s。compileall四目录、contract内部37/37、Canonical7模块、oracle静态独立性通过；不是目标服务器或新Q0验证，未重跑全量。独立review发现WAL hash旁路后已修复。
+
+下一项仍为第2～4段：显式profile/receipt与逐窗口真实quality gate、受限默认流A-only交集编排、两API有限对齐。尚未完成，不可把本段sidecar成功当成真实A准入。无部署/模型/GPU/Nsight，Gate7 PASS、新Q0/Gate8 NOT_RUN；Protocol Freeze/Formal资格不变。
+
 ## 7.62 默认流三sync证明义务及独立回归（2026-09-27）
 
 接续7.61，在既有S→A上补七项独立手算正反例：单FIFO条件性A相同、另一个blocking stream使同terminal不同A、漏掉该活动仍可能假闭合、mode局部unknown与不可界定整窗风险分别传播。详见同一审计文档7.62。没有新增生产算法：当前批准amendment仍明确合成basis/非默认流，真实来源必要依赖闭合不能由本包观察集合自证，不删除SOURCE_NOT_QUALIFIED或DEFAULT_STREAM_NOT_SUPPORTED。实际文件拒绝及旧S/A回归同步检查，不授新Q0资格。无服务器/采集，Gate7 PASS、新Q0/Gate8 NOT_RUN。
