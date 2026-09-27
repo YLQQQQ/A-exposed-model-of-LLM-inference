@@ -1,5 +1,13 @@
 # ExposedPath 科研进度清单
 
+## 7.62 默认流三sync证明义务及独立回归（2026-09-27）
+
+接续7.61，在既有S→A上补七项独立手算正反例：单FIFO条件性A相同、另一个blocking stream使同terminal不同A、漏掉该活动仍可能假闭合、mode局部unknown与不可界定整窗风险分别传播。详见同一审计文档7.62。没有新增生产算法：当前批准amendment仍明确合成basis/非默认流，真实来源必要依赖闭合不能由本包观察集合自证，不删除SOURCE_NOT_QUALIFIED或DEFAULT_STREAM_NOT_SUPPORTED。实际文件拒绝及旧S/A回归同步检查，不授新Q0资格。无服务器/采集，Gate7 PASS、新Q0/Gate8 NOT_RUN。
+
+本地Python3.12.7验证：新增7 passed/0.27s；四文件定向152 passed/31.26s（新测试、request_scope、旧sync_semantics和a_accounting），mask=-1；新测试compileall及diff-check通过。本轮没有生产修复，新增测试首跑即通过是既有语义回归，不声称RED→GREEN。未重跑全量或新目标机验证，不改变冻结公式/旧schema/独立oracle/历史资格。
+
+独立只读review无重要问题；补terminal identity断言后7 passed/0.26s。原ZIP内存条件性A原型已收口：完整已观察FIFO假设下full A=(81223925,81122141,21184,122380,3050445)ns，不是S准入或科学发布。精确定位两种未分类API贡献3050445ns；下一项独立工程工作是这两API的版本化分类核对，不需要服务器。集中研究待决候选是目标scope有限正证+显式残余风险的Engineering充分性依据，尚未生效，不恢复全capture认证、不追认本包。
+
 ## 7.61 真实Qwen单次诊断已回传，只读范围审计（2026-09-27）
 
 服务器已执行35b5bff单次诊断，不再是“尚未部署”。本地直接读单ZIP：27源文件/28项大小hash/CRC、producer四文件与输入副本、内存SQLite integrity通过。详见[审计v0.1](gate8_qwen_diagnostic_audit_v0_1.md)。三trace point/成功drain/三stream sync齐全，request marker窗口165540075ns；内部1-byte D2H及两token copy实际存在，不能仅凭这些事实发布A。设备physical3→logical0→inventory2有UUID/PCI链。目标外两PID警告保留，dropped UNKNOWN、native backend UNKNOWN；无合格S/A/B/D或新Q0资格。仅审计和文档更新，无新测试/服务器/GPU/Nsight执行，原件不变。下一项本地三个sync的target-scope受证条件清单，不盲重采或重复索源；Gate7 PASS、新Q0/Gate8 NOT_RUN。
@@ -20,7 +28,7 @@
 
 七文件服务器原件已直接读取；服务器静态exit0/f5前后clean，协调窗口独立核验10文件/内部8项hash。详见[限定审查与单次诊断路径](gate8_qwen_source_review_v0_1.md)。prefill SDPA fast_all的布尔求值是旧1-byte D2H/第三sync候选，不是已证实callsite；实际backend/native mode/迟发保持UNKNOWN。停止进一步静态索源。下一项仅本地窄诊断入口封装现有run_gate8_requests（legacy CLI不启用它），CPU fixture核实身份/文件产物后提出一次NOT_QUALIFIED真实Qwen Engineering诊断授权；不以科学资格未通过禁止探索，也不将探索当资格。无新GPU/Nsight、无生产代码变更、未重跑测试；Gate7 PASS，新Q0/Gate8 NOT_RUN。
 
-> 一句话状态：**Gate 0～7 = `PASS`；用户批准A优先request/drain准入，新增版本化独立A证书入口与确定性文件链测试。物理S/B不改、UNKNOWN不改零、D/Signature不放行；真实来源入口仍阻塞，非默认流合成通过不等于自然Qwen NULL-stream已合格。新Q0/Gate8=`NOT_RUN`；服务器仍f5edc64，无部署或采集。**
+> 一句话状态：**Gate 0～7 = `PASS`；服务器35b5bff已完成单次NOT_QUALIFIED Qwen诊断，本地已核原包、三D1点/三sync/null stream与身份。真实source依赖范围仍未证明；七项独立条件性正反例不授Q0资格。物理S/B不改、UNKNOWN不改零、D/Signature不放行；新Q0/Gate8=`NOT_RUN`，不再重复索源或盲重采。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -130,7 +138,7 @@
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（窄受控capture/离线计算已有实际证据，非模型或新Q0/整Gate验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：7.57准备并审查一次7文件Qwen request来源静态补证草案，逐文件限定问题及停点；不是模型采集、资格认证或全包搜索。真实source admission/default门保持，补证如仍不足则报告具体未证边并停止。服务器f5不变，Gate7 PASS、新Q0/Gate8 NOT_RUN。
+- 当前最高优先级：7.62三sync准入清单已具体化；真实缺口为drain后必要依赖闭合，不能用同一profile重采或新增合成证书替代。保持真实source/default拒绝，停止重复索源；服务器35b5bff无需操作。Gate7 PASS、新Q0/Gate8 NOT_RUN。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
