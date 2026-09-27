@@ -1,5 +1,14 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.55 当前覆盖：已批准A范围证书，本地确定性实现
+
+[amendment 0.1](../../v1_4_1/gate8_request_drain_scope_amendment_v0_1.md)允许前缀完成
+上界与合格后缀独立支撑A，物理S/B保持原状。新入口仅合成来源，真实SOURCE_NOT_QUALIFIED；
+非默认stream正例不解除自然Qwen NULL-stream路径资格。没有部署、模型或Nsight执行。
+下一项仅聚焦：证明drain后目标Q的实际参与线程/stream/依赖范围，单独审查自然默认流
+所需mode证据；不能由同TID/无其它记录直接推出闭包完整或LEGACY/PTDS等价。
+无法取得证据则停在来源门，不继续扩collector或采集试错。Gate7 PASS，新Q0/Gate8 NOT_RUN。
+
 ## 7.54 当前覆盖：collector暂停，request/drain范围设计待审
 
 [窄范围草案0.1](../../v1_4_1/gate8_request_drain_scope_draft_v0_1.md)明确纯模型request、

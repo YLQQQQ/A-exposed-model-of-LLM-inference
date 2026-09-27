@@ -1,6 +1,6 @@
 # 单主要Host提交线程的request范围与drain证书设计 0.1
 
-**DRAFT_NOT_APPROVED；仅设计，不改变现行MC/S/A-B或生产schema。**
+**历史设计稿：用户已批准A优先方向，生效边界见[amendment 0.1](gate8_request_drain_scope_amendment_v0_1.md)。以下保留原待审措辞用于追溯，不再作为当前授权状态。**
 基线main `83122233e5a8941a6d8187d27dac14f6565f173a`，进度7.54。
 依据研究设计v7.1 §1.5、实验协议v2.1 Pre-Pilot（不是Protocol Freeze）、
 [MC0.2](measurement_contract_v0_2.md) §7–10、已批准D1与Route A质量门。
