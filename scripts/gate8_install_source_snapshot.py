@@ -29,6 +29,16 @@ TARGETS = {
         "transformers/integrations/accelerate.py",
     )),
 }
+REQUEST_TARGETS = {
+    'torch': ('2.6.0+cu124', ('torch/version.py',)),
+    'transformers': ('5.17.0', (
+        'transformers/modeling_utils.py',
+        'transformers/models/qwen2/modeling_qwen2.py',
+        'transformers/models/qwen2/configuration_qwen2.py',
+        'transformers/masking_utils.py', 'transformers/cache_utils.py',
+        'transformers/integrations/sdpa_attention.py',
+    )),
+}
 TEXT_LIMIT = 2 * 1024 * 1024
 BINARY_LIMIT = 4 * 1024 * 1024 * 1024
 
@@ -76,8 +86,11 @@ def _literals(data):
     return result
 
 
-def snapshot(site, output):
+def snapshot(site, output, *, profile='installation'):
     """Read an explicit site-packages root, write a fresh independent receipt."""
+    if profile not in {'installation','qwen-request'}:
+        raise ValueError('UNKNOWN_SELECTION_PROFILE')
+    targets = REQUEST_TARGETS if profile=='qwen-request' else TARGETS
     site, output = Path(site).resolve(strict=True), Path(output).absolute()
     resolved_output = output.resolve()
     if resolved_output.is_relative_to(site) or site.is_relative_to(resolved_output):
@@ -95,12 +108,16 @@ def snapshot(site, output):
         "default_stream_mode": "UNKNOWN", "worker_trace_ownership": "UNKNOWN",
         "qualification": "NOT_ASSESSED",
     }
+    if profile=='qwen-request':
+        report.update(schema_version='gate8-install-source-snapshot/0.2.0',
+                      selection_profile='qwen-request/0.1.0',
+                      actual_attention_backend='UNKNOWN_NOT_EXECUTED')
     artifacts = {}
 
     def issue(code, relative):
         report["issues"].append({"code": code, "relative_path": relative})
 
-    for name, (expected, selected) in TARGETS.items():
+    for name, (expected, selected) in targets.items():
         infos = sorted(site.glob(f"{name}-*.dist-info"))
         if len(infos) != 1:
             issue("PACKAGE_NOT_UNIQUE", name)
@@ -199,13 +216,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument('--profile', choices=('installation','qwen-request'), default='installation')
     args = parser.parse_args()
     if not sys.flags.isolated or not sys.flags.no_site:
         parser.error("REQUIRE_ISOLATED_NO_SITE: launch Python with -I -S")
     executable = args.repo / ".venv/Scripts/python.exe"
     if sys.platform != "win32" or not executable.is_file() or not executable.samefile(sys.executable):
         parser.error("REQUIRE_REPO_VENV: use the fixed checkout .venv/Scripts/python.exe")
-    report = snapshot(args.repo / ".venv/Lib/site-packages", args.output)
+    report = snapshot(args.repo / ".venv/Lib/site-packages", args.output, profile=args.profile)
     print(report["status"])
     return 1 if report["issues"] else 0
 

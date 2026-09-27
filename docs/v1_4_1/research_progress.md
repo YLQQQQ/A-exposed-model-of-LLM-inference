@@ -58,7 +58,8 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.56`
+- 清单版本：`7.57`
+- 7.57路线收敛：[Route A执行/退出v0.2](gate8_route_a_execution_v0_2.md)把未来Gate8结论限定A_SCOPE_ENGINEERING_ONLY的五项实际证据，B/Derived后移，不冒充旧全链通过、不设真实unknown=0门。runner未固定attention backend，旧1-byte内部D2H/sync须纳入T；本地已知selector可能默认SDPA。复用快照工具新增qwen-request/0.1选择、回执0.2，限定7源文件；不读DLL/模型、不导入目标包。先RED后实现，21项工具测试（含隔离子进程禁止包导入/native/网络）及compileall/diff通过；未重跑核心全量，7.55的1379/5结果只属于当时实现。仅准备一次目标来源补证，无部署/实验；回传仍不能闭合必要依赖则停止，不扩搜索。
 - 7.56有界只读收口：[默认流后缀等价备忘录](gate8_request_suffix_equivalence_review_v0_1.md)。直接只读旧QwenSQLite：每候选request有3492K/3copy/3memset及3次stream sync，额外内部同步不能只按Token标签忽略；已记录Q同TID/context/NULL stream，不等于无遗漏。严格受证单FIFO Q条件下W_Q/唯一terminal/A可条件等价，W_full/B历史仍可能不同；独立反例显示另一blocking stream会使wait40与10不同。现有producer/资料未证明来源闭合，当前没有单个现成充分补证，不建议重复采集或再传泛化安装包。0.1实现及合同不改，服务器无动作；Gate7 PASS、新Q0/Gate8 NOT_RUN。
 - 7.55当前实现：[request/drain A范围amendment 0.1](gate8_request_drain_scope_amendment_v0_1.md)。用户批准前缀完成证书＋合格Q独立A资格；旧MC正文及S/A-B/Q0不改。新增文件入口/显式reader，保留原physical S/B，后缀证明不冒充W；源身份、真实drain scope、时序、资源重建、跨线程/迟发、后缀S失败均拒绝。仅SYNTHETIC_CONTROLLED_ORACLE来源，本地确定性验证不是新Q0资格；真实来源SOURCE_NOT_QUALIFIED，默认流尚不在首版支持域。collector暂停，无服务器动作。
 - 7.55验证：先RED复现缺独立入口，后补drain/后缀/身份/reader反例；独立review发现错context/外PID同步可误成空Q，及外PID activity借Runtime correlation，均先失败后加入实际scope检查。初始受影响定向94 passed，最终新增测试34 passed。首次全量PATH筛选未隔离nvcc，意外触发本机CUDA13旧Q0编译失败：1377 passed、1 failed、4 errors（均同一编译路径），未执行GPU程序，不改旧Q0/skip。改为同一Python进程过滤CUDA路径并先断言`shutil.which('nvcc') is None`，`CUDA_VISIBLE_DEVICES=-1`；最终CPU全量1379 passed、5 skipped（现有5项nvcc编译门，288.08s）。compileall、contract37/37、Canonical7模块、oracle independence及diff-check通过。所有新资格输入为合成fixture；未部署、未运行真实Nsight或采集。
@@ -109,7 +110,7 @@
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（窄受控capture/离线计算已有实际证据，非模型或新Q0/整Gate验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：7.56已证明条件性后缀等价不推出物理W/B等价；当前唯一缺口是固定实际forward/backend的来源闭合与同次trace/drain/D1联结。现资料未形成充分可获取的单件证据，不申请服务器重复采集，不改0.1默认流拒绝或UNKNOWN。继续时只允许聚焦该来源命题，不重开宽泛工具调查；服务器f5不变，新Q0/Gate8 NOT_RUN。
+- 当前最高优先级：7.57准备并审查一次7文件Qwen request来源静态补证草案，逐文件限定问题及停点；不是模型采集、资格认证或全包搜索。真实source admission/default门保持，补证如仍不足则报告具体未证边并停止。服务器f5不变，Gate7 PASS、新Q0/Gate8 NOT_RUN。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -401,7 +402,7 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 ### Gate 8：Engineering Pilot
 
-**Gate verdict：`NOT_RUN`（7.37：窄受控capture及f5edc64目标机离线计算已审计，尚无真实模型或新版Q0资格）。** Gate7 acceptance及controlled结果均不能代替EP-G8-02整科学链验收。当前入口为[最小执行计划7.37](../superpowers/plans/2026-09-25-gate8-minimal-execution-plan.md)。下方7.21～7.28实施和未采集描述为历史快照，不覆盖§1。
+**Gate verdict：`NOT_RUN`（尚无真实模型A资格或受影响新Q0资格）。** 7.57按用户A优先范围显式采用[Route A退出v0.2](gate8_route_a_execution_v0_2.md)：未来通过只表示A_SCOPE_ENGINEERING_ONLY，不表示原A/B/D全链通过；五项实际门不可由快照/mock/旧Gate7替代。下方7.21～7.37实施描述保留历史，不覆盖§1。
 
 **本轮实证差距：** 在根main用现有8d64f75 Gate7 SQLite只读派生到`.local/diagnostics/gate8-gap-v0_1-20260925-r3/`：observation valid（不等于dropped=0）；Canonical identity AMBIGUOUS（缺pass/repeat）、selected_device_id=3但trace device_id=0；12个NVTX range中8 legacy/4 structured sync，无结构化request/phase。S exit1、354条全invalid；A/B exit1、0窗口、FAIL_CLOSED；D未执行。354是全进程而非request分母。原REP/SQLite/manifest/report四文件hash前后不变。只证明历史输入兼容性缺口，不是Gate8 evidence、不撤销Gate7 PASS。未运行pytest、GPU、真实Nsight/export。
 
@@ -428,7 +429,7 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 新版Q0计划覆盖23case影响：旧结论/旧Raw重放只用于旧路径兼容，不能提供新D1/identity/完整性资格；新profile默认21个真实策略（含seed+fault）+2 synthetic-only，新增signed/投影/identity/完整性负例为独立确定性补充。必要provider、Q0载体/资格封套、真实pre-model/双pass编排尚未验收；先证据方案、再本地必要接口、授权Q0、独立资格审计，最后另授权Gate8 workload。见[决策备忘录](gate8_integrity_q0_decision_memo_v0_1.md)。本轮无业务代码/测试运行，只有文档与只读查询；Gate7 PASS、Gate8 NOT_RUN。
 
 - [ ] `EP-G8-01`（7.37：受控request采集/离线计算已审计，真实模型未执行）与02共享最小workload；不做扫描，不把局部证据勾成整项完成。
-- [ ] `EP-G8-02`（7.27合并组织，未验收）验证 benchmark → runner → Nsight → Canonical Raw → S → A/B → D/Signature 全链路；局部unknown仅受限诊断，机制发布不放宽。
+- [ ] `EP-G8-02`（7.57范围修订，未验收）当前验证真实benchmark→runner→Nsight→Canonical→合格S后缀/前缀证书→A；按v0.2五项实际门及受影响Q0验收。原A/B→D/Signature全链目标保留但B历史/Derived资格后移，不能把A结果写成全链通过；局部unknown受限，D/Signature不放宽。
 - [ ] `EP-G8-03`（未开始，依赖 `EP-G7-11`）记录 trace coverage、存储规模、profiler overhead、运行可靠性和失败模式。
 - [ ] `EP-G8-04`（未开始，依赖 `EP-G7-11`）形成 Engineering Pilot 报告；不得将结果用作正式科学结论。
 
@@ -683,3 +684,4 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 | 7.54 | 2026-09-27 | 纠正setup线程与request线程混淆，暂停collector转向；形成drain前缀证书/严格后缀/A与历史B分离的窄范围草案，精简重复测试与hash | EP-G8-01/02批准前合同设计 | 正式MC/S/A-B未改、草案未生效；不追认旧证据，无代码/服务器/采集；Gate7 PASS、新Q0/Gate8 NOT_RUN |
 | 7.55 | 2026-09-27 | 用户批准A优先范围；版本化前缀证书/A独立准入与tests-first文件链，原物理S/B保持，真实来源拒绝 | EP-G8-01/02本地确定性实现，不是实验完成 | MC正文/Q0/历史证据不改；非默认流合成不授予Qwen资格，D/Signature不放行；Gate7 PASS、新Q0/Gate8 NOT_RUN |
 | 7.56 | 2026-09-27 | 有界只读区分后缀条件等价与真实来源证明，补查Qwen内部sync及独立反例 | EP-G8-01/02证据必要性判断 | 只更新决策/进度，无代码或合同变化，不运行测试/采集；Gate7 PASS、新Q0/Gate8 NOT_RUN |
+| 7.57 | 2026-09-27 | 用户A优先范围下版本化Gate8 A主线退出条件、G8–14精简组织；新增一次7源文件静态选择profile及tests-first验证 | EP-G8-01/02来源补证准备，不是资格或实验 | 不改变S/W/B/MC或旧证据；默认流/真实来源仍拒绝，B/Derived后移；无服务器执行，Gate7 PASS、新Q0/Gate8 NOT_RUN |

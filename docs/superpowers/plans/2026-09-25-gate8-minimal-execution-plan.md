@@ -1,5 +1,14 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.57 当前执行范围：Route A v0.2，历史全链目标后移
+
+当前以后续[Route A执行/退出v0.2](../../v1_4_1/gate8_route_a_execution_v0_2.md)为准：
+Gate8未来只按明确标注的A_SCOPE_ENGINEERING_ONLY五项实际证据判定，不能称原完整A/B/D
+链通过；B历史/D/Signature后移，当前NOT_RUN。Gate8–11共享必要检查，Pilot/Formal角色分开，
+Gate12最小Freeze、Gate13有限N1/G1、Gate14可选，稳定编号不重排。
+下一项只准备一次7文件Qwen候选调用来源静态补证；不导入包/模型、不读DLL或权重、
+不更新服务器checkout。快照不等于真实source qualification，回传后命题仍不闭合就停止。
+
 ## 7.55 当前覆盖：已批准A范围证书，本地确定性实现
 
 [amendment 0.1](../../v1_4_1/gate8_request_drain_scope_amendment_v0_1.md)允许前缀完成

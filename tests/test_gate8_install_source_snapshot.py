@@ -142,8 +142,9 @@ def test_cli_requires_isolated_no_site_startup_and_fixed_venv(tmp_path):
         assert not (tmp_path / "out").exists()
 
 
-def test_isolated_snapshot_never_imports_target_packages_or_native_loaders(tmp_path):
-    site = make_site(tmp_path)
+@pytest.mark.parametrize('profile',['installation','qwen-request'])
+def test_isolated_snapshot_never_imports_target_packages_or_native_loaders(tmp_path,profile):
+    site = make_site(tmp_path) if profile=='installation' else request_site(tmp_path)
     # A fresh -I -S process proves no site/.pth or installed-package side effects.
     code = """
 import builtins, runpy, sys
@@ -158,11 +159,11 @@ def audit(event, args):
 builtins.__import__ = guarded
 sys.addaudithook(audit)
 api = runpy.run_path(sys.argv[1])
-report = api['snapshot'](sys.argv[2], sys.argv[3])
+report = api['snapshot'](sys.argv[2], sys.argv[3], profile=sys.argv[4])
 assert report['status'] == 'SNAPSHOT_COMPLETE_NOT_QUALIFICATION'
 """
     run = subprocess.run([sys.executable, "-I", "-S", "-c", code, str(SCRIPT),
-                          str(site), str(tmp_path / "out")], capture_output=True, text=True)
+                          str(site), str(tmp_path / "out"),profile], capture_output=True, text=True)
     assert run.returncode == 0, run.stdout + run.stderr
 
 
@@ -185,3 +186,61 @@ def test_duplicate_metadata_identity_headers_fail_closed(tmp_path, extra):
     result = tool().snapshot(site, tmp_path / "out")
     assert result["status"] == "SNAPSHOT_INCOMPLETE"
     assert any(x["code"] == "PACKAGE_METADATA_AMBIGUOUS" for x in result["issues"])
+
+
+REQUEST_FILES = (
+    'transformers/models/qwen2/modeling_qwen2.py',
+    'transformers/models/qwen2/configuration_qwen2.py',
+    'transformers/masking_utils.py', 'transformers/cache_utils.py',
+    'transformers/integrations/sdpa_attention.py',
+)
+
+
+def request_site(tmp_path):
+    site = make_site(tmp_path)
+    record = site/'transformers-5.17.0.dist-info/RECORD'
+    for relative in REQUEST_FILES:
+        path=site/relative
+        path.parent.mkdir(parents=True,exist_ok=True)
+        data=b"raise RuntimeError('MUST_NEVER_IMPORT_REQUEST_SOURCE')\n"
+        path.write_bytes(data)
+        digest=base64.urlsafe_b64encode(hashlib.sha256(data).digest()).decode().rstrip('=')
+        with record.open('a') as out:
+            out.write(f'\n{relative},sha256={digest},{len(data)}')
+    return site
+
+
+def test_request_profile_is_narrow_and_never_loads_binary(tmp_path,monkeypatch):
+    module=tool()
+    import inspect
+    assert 'profile' in inspect.signature(module.snapshot).parameters, 'Need explicit bounded request-only selection'
+    site=request_site(tmp_path)
+    # Make previously selected DLLs unavailable: the new profile must not touch them.
+    for path in (site/'torch/lib').glob('*.dll'):
+        path.unlink()
+    result=module.snapshot(site,tmp_path/'out',profile='qwen-request')
+    assert result['status']=='SNAPSHOT_COMPLETE_NOT_QUALIFICATION'
+    assert result['schema_version']=='gate8-install-source-snapshot/0.2.0'
+    assert result['selection_profile']=='qwen-request/0.1.0'
+    assert {r['relative_path'] for r in result['files']}==set(REQUEST_FILES)|{'torch/version.py','transformers/modeling_utils.py'}
+    assert result['actual_attention_backend']=='UNKNOWN_NOT_EXECUTED'
+    assert result['default_stream_mode']=='UNKNOWN'
+    assert result['qualification']=='NOT_ASSESSED'
+
+
+@pytest.mark.parametrize('damage',['missing','changed','version'])
+def test_request_profile_stops_on_missing_or_changed_source(tmp_path,damage):
+    module=tool(); site=request_site(tmp_path)
+    path=site/REQUEST_FILES[0]
+    if damage=='missing': path.unlink()
+    elif damage=='changed': path.write_bytes(b'changed')
+    else: (site/'transformers-5.17.0.dist-info/METADATA').write_text('Name: transformers\nVersion: unknown\n')
+    result=module.snapshot(site,tmp_path/'out',profile='qwen-request')
+    assert result['status']=='SNAPSHOT_INCOMPLETE'
+    assert result['issues']
+
+
+def test_unknown_selection_profile_refuses_before_writing(tmp_path):
+    with pytest.raises(ValueError,match='UNKNOWN_SELECTION_PROFILE'):
+        tool().snapshot(make_site(tmp_path),tmp_path/'out',profile='all-files')
+    assert not (tmp_path/'out').exists()
