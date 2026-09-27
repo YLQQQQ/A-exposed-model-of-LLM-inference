@@ -1,5 +1,13 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.48 当前覆盖：六sync差距表已完成，先对齐真实支持域
+
+[目标sync审查](../../v1_4_1/gate8_target_sync_gap_audit_v0_1.md)已只读完成：
+新版completion缺口阻止旧输入整窗资格；default/历史owner闭包也未资格，不能仅按
+sync短区间就宣称局部化。source profile继续暂停。下一项只做producer0.4→目标scope
+窄支持域方案，区分既有字段接线与需批准的默认流准入，复用已有oracle/Q0，不新增
+服务器操作/实现/工具。Gate7 PASS，新Q0/Gate8 NOT_RUN。7.47下述核查任务已完成。
+
 ## 7.47 当前覆盖：来源profile暂停，目标sync最小缺口审查
 
 [来源对齐§12](../../v1_4_1/gate8_eager_source_alignment_v0_1.md)取代7.46的

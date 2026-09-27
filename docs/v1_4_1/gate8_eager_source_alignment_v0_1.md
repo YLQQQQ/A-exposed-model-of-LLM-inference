@@ -3,7 +3,7 @@
 2026-09-27；基线 f022520。已批准 closed-prior 方向内的工程接线，不改 W(s)、A/B、
 completion 或研究质量门。Gate7 PASS；Gate8/新 Q0 NOT_RUN。无服务器部署/采集授权。
 
-**7.47当前覆盖：来源profile暂停，不再请求采样风险批准。** §12是当前下一步；
+**7.48当前覆盖：来源profile暂停，不再请求采样风险批准。** §13是当前下一步；
 §10/11及交付包只是未授权备用，不是Gate8必经或执行指令。既有mode/lifetime未知与
 科学拒绝门保持。§8本地加载观察已实现；只是Host诊断，科学接线仍缺必要mode/lifetime证明。
 §5的一次安装快照已在用户服务器完成，解压原件已直接审计；
@@ -627,3 +627,12 @@ sync的“已证明事实／唯一关键缺口／可行解释是否改变W、ter
 本轮仅文档/只读核查，无新测试、实现或采集；7.46测试是历史本地验证，不是本轮结果。
 冻结Measurement Contract、S/A/B/Q0及Gate6/7原件未改，Formal协议/数据不受影响。
 Gate7 PASS，新Q0/Gate8 NOT_RUN；服务器仍固定原版本，无新增用户服务器操作。
+
+## 13. 六目标sync审查完成（7.48）
+
+详见[紧凑差距表](gate8_target_sync_gap_audit_v0_1.md)。原SQLite hash不变，四token
+都有匹配Runtime/correlation/DtoH；原drain不在request范围。没有新版D1/stage/task原件，
+default/历史owner未资格；空调用栈不是唯一阻塞，采样profile仍暂停。已观测候选全部
+早于sync进入结束不是完整W或零wait证明，局部unattributed必须先证明影响范围。
+下一项仅本地producer0.4→真实模型scope窄支持域方案，明确实现限制/证据/需裁决准入；
+不加工具、不索环境、不改合同或重跑旧输入。Gate7 PASS，新Q0/Gate8 NOT_RUN。
