@@ -44,3 +44,53 @@ CPU采样栈即使有module/RVA，也未必有参数、mode与epoch；不默认�
 - 先向用户报告这个技术事实，不再请求批准尚无adapter的抽象规则。没有服务器命令。
 
 Gate7历史PASS；新Q0/Gate8 NOT_RUN。只读SQL/文档，无代码、合同、采集、部署变更。
+
+## 最后两条替代路线裁决（7.52，未生效提案）
+
+**结论：两条均未达到可执行方案条件；当前平台上的自然Qwen科学链仍阻塞。**
+不再请求批准空adapter，也不把第二条当现合同已有许可。
+
+### ① 新增最小观测adapter
+
+CUPTI callback在机制上可读API参数，resource callback可通知context/stream创建销毁。
+但这不自动覆盖implicit PTDS、Host thread epoch及所有mode选择路径；参数须在callback有效期内复制。
+且官方12.9 Callback API的`cuptiSubscribe`明确单subscriber限制并列出与Nsight工具的冲突：
+[版本化官方说明](https://docs.nvidia.com/cupti/12.9/api/group__CUPTI__CALLBACK__API.html)。
+目标安装有cupti64_129.dll不等于可以与Nsight共用subscriber；CUDA12.4.1归档接口页本轮
+不可访问，不能凭新版文档保证该Windows目标组合。未证明完整字段及共运行兼容。
+
+- 自然eager：只观察理论上可不改调用语义，但callback扰动/线程时序和错误路径必须验证；
+  不得承诺无扰动。替换Nsight或重编框架不是“最小sidecar”。
+- 必须先证明：逐调用callback ID/参数与activity correlation、线程/context/stream epoch、
+  implicit默认流对应关系、安装ABI和collector共存；任何一项缺失即停止，不能另次run补同次身份。
+- 若有上述正面依据后，最小受控验证才是两线程模式敏感构造＋资源复用反例，独立W/A预期；
+  对照无adapter与有adapter的同输入执行，记录overhead和时序变化，不预设容忍百分比。
+- 当前判定：**目标“Nsight旁挂最小adapter”技术可行性未成立，不进入实现/实验**。
+  成本至少涉及native观测、ABI、扰动与新增资格，不能伪装成普通字段接线。
+
+### ② 所有兼容世界的A等价准入（B保持invalid）
+
+这是新的研究准入/发布语义，不是删掉现有mode检查。原则上不改变自然eager，
+但只能在目标Raw与必要历史具有可证明覆盖边界、clock/completion可信时建立候选世界集合。
+所有兼容的mode、epoch、历史闭包和terminal可能性必须被穷尽或由独立证明包围；
+只跑LEGACY/PTDS两个配置或只比较最终总量，不是证明。
+
+- 所缺正面证据：候选集合完备性、遗漏/未知前缀的影响界限、各世界每个时间区间的A类别
+  相同（不是仅五类总和相同）、terminal不确定性不会改变归属的独立证明。
+  缺真实completion、无法界定Raw缺口、terminal可能导致不同分类，一律拒绝。
+- 独立正例仅可人为构造：已知全部候选工作在sync之前完成、边界/历史完备，所有合法
+  W都不产生sync内wait，可验证A一致而B的hidden不同。加入一个兼容但未排除的跨入sync
+  必要活动，若可改变A，则必须拒绝。该正例不能证明现有模型满足前提。
+- 最小成本：先独立证明和手算反例、版本化A-only有效性/输出限制，再确定性实现；
+  真实证据仍需另行资格。旧analyzer重复运行不能作为集合完备性oracle。
+- claim：若将来证明成立，最多保留可辨识A accounting；不能保留完整B机制解释、
+  Exposure Signature或未经检验的信息增益claim。D发布须另定，不能沿用全资格标记。
+- 当前判定：**历史闭包/epoch覆盖仍无界，现证据不能建立该候选集合，故不能放行自然Qwen**。
+  不建议为解除一个未解决的技术阻塞先投入这条更复杂的新方法。
+
+### 推荐停止点
+
+本轮不推荐用户在两条未成熟路线间批准实验；不启动profile、native hook或collector替换。
+研究已取得的正确性和工程结果保留，但Route A的自然模型A归属／有限信息增益尚无完成证据。
+需要新增、具体且可核验的观测能力依据，或用户明确改变研究支持域后才能推进；
+不是再写一份amendment即可解决。至此关闭这轮替代调查，不追加底层选择或服务器命令。

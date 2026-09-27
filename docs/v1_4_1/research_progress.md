@@ -58,7 +58,8 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.51`
+- 清单版本：`7.52`
+- 7.52最后替代路线裁决见[可行性文档末节](gate8_mode_feasibility_decision_v0_1.md)：CUPTI旁挂adapter缺目标共存及完整epoch正面依据；所有兼容世界A等价路线缺候选集合完备性，且属新发布语义，不能因两个模式同值就放行。两者均未达可执行条件，关闭本轮调查，不请求批准空adapter/不默认profile。Route A自然模型目标仍未完成，Gate7 PASS、新Q0/Gate8 NOT_RUN。
 - 7.51有界技术裁决：[mode/epoch可行性0.1](gate8_mode_feasibility_decision_v0_1.md)。仅比较现有Nsight字段和固定源码/二进制证明两条低风险候选，均未闭合。原SQLite有NULL stream正面类型证据但Runtime无stream参数、inventory无epoch；不得将缺口写成完全无证据或整进程mode。暂停抽象准入批准，停止同类搜索，不默认profile；真实模型支持域仍阻塞，受控正确性不能冒充自然模型claim。只读/文档，服务器不动。
 - 7.50批准前具体提案：[target-scope admission草案0.1](gate8_target_scope_admission_draft_v0_1.md)，DRAFT_NOT_APPROVED。按调用/TU/thread/context绑定mode与epoch证据；同族窄域、混合mode拒绝、setup/warmup原owner和完整历史，给拒绝矩阵和手算正反例。官方CUDA12.4.1及安装Nsight API列表不证明目标调用；可执行mode/连续性adapter仍技术阻塞。仅文档，未改变合同/代码/资格，未授权profile或服务器采集。
 - 7.49窄支持域只读设计：[真实模型scope方案0.1](gate8_model_scope_design_v0_1.md)。明确producer0.4五文件、D1、stage/task/drain的工程接线；集中待决为新版默认流及setup/warmup原owner准入，mode UNKNOWN仍拒绝，不默认A-only/模式等价旁路。旧Q0按影响复用，新接口不继承资格。来源profile仍暂停；仅文档，无新测试/服务器操作；Gate7 PASS，新Q0/Gate8 NOT_RUN。
@@ -672,3 +673,4 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 | 7.49 | 2026-09-27 | producer0.4到目标scope窄支持域只读方案；工程接线、默认流/历史owner新准入与Q0复用明确分离 | EP-G8-01/02设计收口 | 仅方案，未批准新准入；mode UNKNOWN仍拒绝，不改合同/代码/历史证据，无新测试/部署/采集；Gate7 PASS、新Q0/Gate8 NOT_RUN |
 | 7.50 | 2026-09-27 | target-scope admission具体未生效草案：逐调用mode/epoch证据、同族范围、原owner、拒绝及独立预期 | EP-G8-01/02批准前提案 | 技术来源未解决不猜测；未改生产schema/代码/公式，无采集；Gate7 PASS、新Q0/Gate8 NOT_RUN |
 | 7.51 | 2026-09-27 | 两条低风险mode/epoch证据路径有界裁决，均未闭合；暂停抽象准入审批和同类搜索 | EP-G8-01/02技术停止点 | 受控正确性不代替自然模型claim，无代码/合同/采集；Gate7 PASS、新Q0/Gate8 NOT_RUN |
+| 7.52 | 2026-09-27 | 最后比较新增adapter与所有兼容世界A等价准入；均未形成可执行方案，关闭替代调查 | EP-G8-01/02研究决策材料 | 不批准新语义/collector，不降低门槛，不再请求抽象批准；Gate7 PASS、新Q0/Gate8 NOT_RUN |
