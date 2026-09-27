@@ -1,5 +1,12 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.49 当前覆盖：窄支持域设计完成，待一项准入裁决
+
+[模型scope方案0.1](../../v1_4_1/gate8_model_scope_design_v0_1.md)区分现合同工程接线与
+新版默认流/setup-warmup原owner准入。当前仅方案，不改合同或实现；mode UNKNOWN
+仍拒绝，不启用等价/A-only旁路。旧Q0按影响复用，新增真实来源绑定资格未取得。
+下一步只裁决该准入设计方向；source profile暂停，无部署/采集。Gate8 NOT_RUN。
+
 ## 7.48 当前覆盖：六sync差距表已完成，先对齐真实支持域
 
 [目标sync审查](../../v1_4_1/gate8_target_sync_gap_audit_v0_1.md)已只读完成：

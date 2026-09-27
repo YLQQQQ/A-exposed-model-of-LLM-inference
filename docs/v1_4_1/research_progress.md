@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-> 一句话状态：**Gate 0～7 = `PASS`；六目标sync只读差距表已完成：旧输入缺新版D1、默认流/历史owner仍未资格，不是CPU采样覆盖不足。来源profile继续暂停，下一步只做真实模型窄支持域与既有接口对齐方案；UNKNOWN和科学拒绝门保持，新Q0/Gate8=`NOT_RUN`。服务器仍f5edc64，无部署或采集。**
+> 一句话状态：**Gate 0～7 = `PASS`；真实模型窄支持域方案完成，待新版默认流/setup-warmup原owner准入设计裁决；mode证据仍未落实，UNKNOWN拒绝门不变。来源profile暂停，新Q0/Gate8=`NOT_RUN`。仅文档，服务器仍f5edc64，无部署或采集。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -58,7 +58,8 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.48`
+- 清单版本：`7.49`
+- 7.49窄支持域只读设计：[真实模型scope方案0.1](gate8_model_scope_design_v0_1.md)。明确producer0.4五文件、D1、stage/task/drain的工程接线；集中待决为新版默认流及setup/warmup原owner准入，mode UNKNOWN仍拒绝，不默认A-only/模式等价旁路。旧Q0按影响复用，新接口不继承资格。来源profile仍暂停；仅文档，无新测试/服务器操作；Gate7 PASS，新Q0/Gate8 NOT_RUN。
 - 7.48六点只读实审：[目标sync差距表0.1](gate8_target_sync_gap_audit_v0_1.md)。固定历史SQLite hash前后一致，四token/two drain经Runtime/correlation逐行核对；三个新版marker均0、旧角色如实保留。四DtoH均早于显式sync进入，已观测候选提交无横跨且GPU均先结束；这不是完整W/零等待证明。区别整窗D1缺口、未资格default/历史owner、可证明局部unattributed与不可界定影响；不发布新A/B。下一项仅本地窄支持域方案，别把现nondefault/全inventory projection实现限制当普遍门。只读/文档，不新增测试/服务器操作或改合同；Gate7 PASS，新Q0/Gate8 NOT_RUN。
 - 7.47必要性重审：[来源对齐§12](gate8_eager_source_alignment_v0_1.md)。周期CPU sample与CUDA API取栈分开；module/RVA不是MC/S/closed-prior的普遍必需，也不单独解除默认流/生命周期/owner未知。暂停source profile及A/B/C交付执行，不再请求风险批准；d62c818实现/包仅未授权备用。下一项只读检查四目标token sync/两drain及必要前驱，逐项说明唯一关键缺口、对W/terminal/A/B影响与低风险路径。旧受控证据按覆盖复用，不自动新Q0，旧模型仍不授默认流资格。本轮仅文档/只读，无新测试/业务修改/服务器操作，不改变冻结语义或Formal数据；Gate7 PASS，新Q0/Gate8 NOT_RUN。
 - 7.46本地候选实现：[来源对齐§11](gate8_eager_source_alignment_v0_1.md)。source_probe静态plan/纯argv/显式run与实际文件入口已接通；复用runner/D1/stage/drain，独立整数预期四token15。新的hf-source-probe分支使用task ledger/marker0.2，旧loader0.1不变；COMPLETE只是诊断producer完成，source_binding UNKNOWN/measurement NOT_ASSESSED，不授S/Q0。版本/身份/同步重哈希/partial发布/第二request失败反例先RED后修，失败观察保留。新增22项、定向88 passed/15.39s；CPU全量1345 passed/5 skipped/247.16s（Python3.12.7，进程mask=-1、确认nvcc不可见，五skip为原Q0 CUDA source编译项，未改skip）。compileall、contract37/37内部一致性、Canonical7模块、oracle静态独立性、文档相对链接/diff/增量隐私检查通过；独立只读review无剩余重要问题。不是目标TorchBackend/服务器/Nsight验证。未部署/采集，Gate7 PASS，新Q0/Gate8 NOT_RUN。
@@ -100,7 +101,7 @@
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（窄受控capture/离线计算已有实际证据，非模型或新Q0/整Gate验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：7.48六sync审查已完成；主窗口仅本地形成producer0.4→目标scope的窄支持域方案，处理setup/warmup原owner、默认流context/thread连续性和已有Q0复用，区分字段接线与需批准的新准入。不开新工具/安装调查，不默认profile，不截历史/换流规避问题。服务器仍f5edc64，无部署/采集；UNKNOWN和Derived拒绝门保持。
+- 当前最高优先级：7.49窄支持域只读方案已完成；集中裁决新版默认流及setup/warmup原owner准入设计。现合同字段接线与新准入分开，mode证据未落实仍拒绝，不启用A-only/等价旁路。不开新工具/安装调查，不默认profile，不截历史/换流规避问题。服务器仍f5edc64，无部署/采集；UNKNOWN和Derived拒绝门保持。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -666,3 +667,4 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 | 7.46 | 2026-09-27 | 微小来源fixture plan/result0.1、task0.2与真实producer文件链；22新增/88定向/1345+5 CPU；重哈希身份/partial/失败记录反例与只读review | EP-G8-01/02本地Engineering准备 | 无Qwen/服务器/GPU/Nsight执行，不改W/A/B/Derived/Q0与历史证据；单次额外profile风险尚未授权，Gate7 PASS、新Q0/Gate8 NOT_RUN |
 | 7.47 | 2026-09-27 | 必要性重审：module/RVA非普遍前置，暂停source profile及风险审批请求；转已有目标sync的关键缺口/A影响与低风险路径判定 | EP-G8-01/02执行优先级调整 | 仅文档，已备代码/包保留未授权备用；不改合同、准入、历史资格或Formal数据，无服务器操作；Gate7 PASS、新Q0/Gate8 NOT_RUN |
 | 7.48 | 2026-09-27 | 四token sync/两drain及先行候选只读逐行核验，区分新版整窗边界缺口和default/owner闭包缺口，形成紧凑差距表及真实模型支持域下一步 | EP-G8-01/02有界实证审查 | 原SQLite hash不变；不把已观察完成当完整W/零等待，不改合同/实现/资格，无GPU/Nsight；Gate7 PASS、新Q0/Gate8 NOT_RUN |
+| 7.49 | 2026-09-27 | producer0.4到目标scope窄支持域只读方案；工程接线、默认流/历史owner新准入与Q0复用明确分离 | EP-G8-01/02设计收口 | 仅方案，未批准新准入；mode UNKNOWN仍拒绝，不改合同/代码/历史证据，无新测试/部署/采集；Gate7 PASS、新Q0/Gate8 NOT_RUN |
