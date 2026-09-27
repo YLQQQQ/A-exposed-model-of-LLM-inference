@@ -195,3 +195,48 @@ def test_full_nsight_sync_enum_names_have_same_independent_result(tmp_path,monke
     with sqlite3.connect(db) as c:
         c.execute("UPDATE ENUM_CUPTI_SYNC_TYPE SET name='CUPTI_ACTIVITY_SYNCHRONIZATION_TYPE_' || name")
     assert check_raw(db,execution.parent)['requests']==before['requests']
+
+
+@pytest.mark.parametrize('name,accepted',[
+    ('cudaDeviceSynchronize',True),('cudaDeviceSynchronize_v3020',True),
+    ('cudaDeviceSynchronize_v',False),('cudaDeviceSynchronize_v3020_extra',False),
+    ('cudaDeviceSynchronize_v3020\n',False),('cudaDeviceSynchronize_v٣',False),
+    ('cuCtxSynchronize_v3020',False),('cudaStreamSynchronize_v3020',False),
+    ('prefixcudaDeviceSynchronize_v3020',False),
+])
+def test_drain_api_name_has_only_optional_ascii_version(tmp_path,monkeypatch,name,accepted):
+    from qualification_fixture import capture
+    from exposedpath_v141.gate8_qualification_oracle import check_raw
+    import sqlite3
+    _,execution,db,*_=capture(tmp_path,monkeypatch)
+    with sqlite3.connect(db) as c:
+        c.execute("UPDATE StringIds SET value=? WHERE value='cudaDeviceSynchronize'",(name,))
+    if accepted:
+        result=check_raw(db,execution.parent)
+        assert len(result['requests'])==2 and result['tokens']==[[11,12],[21,22]]
+    else:
+        with pytest.raises(ValueError,match='QUALIFICATION_ORACLE_DRAIN_API'):
+            check_raw(db,execution.parent)
+
+
+@pytest.mark.parametrize('fault,reason',[
+    ('return','DRAIN_API'),('duplicate','DRAIN_API'),('thread','DRAIN_API'),
+    ('correlation','DRAIN_PHYSICAL_SYNC'),('sync_kind','DRAIN_PHYSICAL_SYNC'),
+    ('warning','WARNING_IMPACT_UNKNOWN'),
+])
+def test_versioned_drain_preserves_evidence_guards(tmp_path,monkeypatch,fault,reason):
+    from qualification_fixture import capture
+    from exposedpath_v141.gate8_qualification_oracle import check_raw
+    import sqlite3
+    _,execution,db,*_=capture(tmp_path,monkeypatch)
+    with sqlite3.connect(db) as c:
+        c.execute("UPDATE StringIds SET value='cudaDeviceSynchronize_v3020' WHERE value='cudaDeviceSynchronize'")
+        where="nameId=(SELECT id FROM StringIds WHERE value='cudaDeviceSynchronize_v3020')"
+        if fault=='return': c.execute('UPDATE CUPTI_ACTIVITY_KIND_RUNTIME SET returnValue=1 WHERE '+where)
+        elif fault=='duplicate': c.execute('INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME SELECT * FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE '+where)
+        elif fault=='thread': c.execute('UPDATE CUPTI_ACTIVITY_KIND_RUNTIME SET globalTid=globalTid+1 WHERE '+where)
+        elif fault=='correlation': c.execute('UPDATE CUPTI_ACTIVITY_KIND_SYNCHRONIZATION SET correlationId=99999 WHERE syncType=2')
+        elif fault=='sync_kind': c.execute('UPDATE CUPTI_ACTIVITY_KIND_SYNCHRONIZATION SET syncType=3 WHERE syncType=2')
+        else: c.execute("INSERT INTO DIAGNOSTIC_EVENT VALUES (0,3,2,'Unknown scope',999999,2)")
+    with pytest.raises(ValueError,match='QUALIFICATION_ORACLE_'+reason):
+        check_raw(db,execution.parent)

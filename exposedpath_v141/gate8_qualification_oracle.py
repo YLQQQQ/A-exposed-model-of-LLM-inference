@@ -112,7 +112,7 @@ def check_raw(sqlite_path,producer):
                 and record['error'] is None and all(record[k]==v for k,v in payload.items())
                 and drain['globalTid']==tid and interval(drain)[1]<=a,'DRAIN_IDENTITY_BOUNDARY')
             matches=[r for r in apis if r['globalTid']==tid and drain['start']<=r['start']<=r['end']<=drain['end']
-                and strings.get(r['nameId'])=='cudaDeviceSynchronize' and r['returnValue']==0]
+                and re.fullmatch(r'cudaDeviceSynchronize(?:_v[0-9]+)?',strings.get(r['nameId'],'')) and r['returnValue']==0]
             require(len(matches)==1,'DRAIN_API'); drain_api=matches[0]
             matches=[r for r in syncs if r['globalPid']==gpid and r['correlationId']==drain_api['correlationId']
                 and sync_kind(sync_types.get(r['syncType']))=='CONTEXT_SYNCHRONIZE' and drain_api['start']<=r['start']<=r['end']<=drain_api['end']]
@@ -175,6 +175,6 @@ def check_raw(sqlite_path,producer):
             results.append(dict(identity=ident,windows=windows,syncs=expected_members,local_gaps=gaps,
                 drain_api=ref(drain_api),drain_marker=ref(drain)))
         require(hashlib.sha256(path.read_bytes()).hexdigest()==original,'SOURCE_CHANGED')
-        return dict(schema_version='exposedpath-qualification-oracle/0.1.1',source_sqlite_sha256=original,
+        return dict(schema_version='exposedpath-qualification-oracle/0.1.2',source_sqlite_sha256=original,
             requests=results,tokens=[[11,12],[21,22]],dropped_records_status='UNKNOWN')
     finally: conn.close()
