@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-> 一句话状态：**Gate 0～7 = `PASS`；mode/epoch两条低风险证据路径有界裁决均未闭合，真实模型支持域技术阻塞；暂停抽象准入审批和重复检索。UNKNOWN拒绝门不变，来源profile暂停，新Q0/Gate8=`NOT_RUN`。服务器仍f5edc64，无部署或采集。**
+> 一句话状态：**Gate 0～7 = `PASS`；collector转向暂停，不能把setup worker当被测request多线程。单主要Host提交线程的request/drain窄范围设计已完成待审：A前缀完成上界与B历史资格分开，不删W、不改UNKNOWN。生产代码未动，新Q0/Gate8=`NOT_RUN`；服务器仍f5edc64，无部署或采集。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -58,7 +58,8 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.53`
+- 清单版本：`7.54`
+- 7.54当前设计：[request/drain范围草案0.1](gate8_request_drain_scope_draft_v0_1.md)，DRAFT_NOT_APPROVED。核对研究设计v7.1 §1.5/协议v2.1 Pre-Pilot，明确模型sampling/Token-ready在内、setup/文本化/I-O在外；历史线程不等于推理多线程。原有成功drain可有条件证明前缀对A交集为零，但不证明无迟发/无丢失、不删B历史；提出A独立范围资格这一集中待审amendment，后缀依赖仍严格。collector原型暂停，旧7.53建议不再是当前下一步。精简定向/收口验证及hash复用，保留合同要求；无代码/正式schema/服务器变更。
 - 7.53研究转向一页草案：[单一collector Go/No-Go](gate8_collector_pivot_decision_v0_1.md)。自然Qwen当前NO-GO；首选替换而非并挂Nsight的受控可行性原型为条件性GO、未授权。第一方API有具体参数/correlation/resource/NVTX/丢弃入口，但目标ABI/thread epoch/implicit PTDS仍需原型证伪，不保证平台可用。备选受控显式流须收缩自然行为claim。唯一下一步是用户决定是否投入该受控原型，不同时授权模型采集。无代码/合同/服务器变更。
 - 7.52最后替代路线裁决见[可行性文档末节](gate8_mode_feasibility_decision_v0_1.md)：CUPTI旁挂adapter缺目标共存及完整epoch正面依据；所有兼容世界A等价路线缺候选集合完备性，且属新发布语义，不能因两个模式同值就放行。两者均未达可执行条件，关闭本轮调查，不请求批准空adapter/不默认profile。Route A自然模型目标仍未完成，Gate7 PASS、新Q0/Gate8 NOT_RUN。
 - 7.51有界技术裁决：[mode/epoch可行性0.1](gate8_mode_feasibility_decision_v0_1.md)。仅比较现有Nsight字段和固定源码/二进制证明两条低风险候选，均未闭合。原SQLite有NULL stream正面类型证据但Runtime无stream参数、inventory无epoch；不得将缺口写成完全无证据或整进程mode。暂停抽象准入批准，停止同类搜索，不默认profile；真实模型支持域仍阻塞，受控正确性不能冒充自然模型claim。只读/文档，服务器不动。
@@ -105,7 +106,7 @@
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（窄受控capture/离线计算已有实际证据，非模型或新Q0/整Gate验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：7.53转向草案交用户决策：是否授权单一自有collector的最小受控可行性原型（替换Nsight，不并挂、不含Qwen采集）。自然模型当前NO-GO；若不承担新工程成本，受控显式流路线需明确收缩claim。停止Nsight小修/重复搜索/空准入批准。服务器f5不变，无部署/采集；UNKNOWN和Derived拒绝门保持。
+- 当前最高优先级：用户审阅7.54窄request/drain合同设计：有完成证书的初始化前缀能否不阻塞合格后缀的A，而B历史不足仍invalid；这是新准入，尚未生效。不改生产代码、不请求collector/profile；不得把旧setup worker作为必须更换collector的理由。审阅后才本地tests-first实现；服务器f5不变，无部署/采集，新Q0/Gate8 NOT_RUN。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -676,3 +677,4 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 | 7.51 | 2026-09-27 | 两条低风险mode/epoch证据路径有界裁决，均未闭合；暂停抽象准入审批和同类搜索 | EP-G8-01/02技术停止点 | 受控正确性不代替自然模型claim，无代码/合同/采集；Gate7 PASS、新Q0/Gate8 NOT_RUN |
 | 7.52 | 2026-09-27 | 最后比较新增adapter与所有兼容世界A等价准入；均未形成可执行方案，关闭替代调查 | EP-G8-01/02研究决策材料 | 不批准新语义/collector，不降低门槛，不再请求抽象批准；Gate7 PASS、新Q0/Gate8 NOT_RUN |
 | 7.53 | 2026-09-27 | 单一自有collector替换Nsight的一页转向评估；受控原型条件性GO、真实Qwen当前NO-GO，备选显式流需claim收缩 | EP-G8-01/02研究资源决策草案 | 未授权实现/collector更换/实验，原合同与证据不变；Gate7 PASS、新Q0/Gate8 NOT_RUN |
+| 7.54 | 2026-09-27 | 纠正setup线程与request线程混淆，暂停collector转向；形成drain前缀证书/严格后缀/A与历史B分离的窄范围草案，精简重复测试与hash | EP-G8-01/02批准前合同设计 | 正式MC/S/A-B未改、草案未生效；不追认旧证据，无代码/服务器/采集；Gate7 PASS、新Q0/Gate8 NOT_RUN |

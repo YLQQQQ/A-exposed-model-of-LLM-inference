@@ -1,5 +1,10 @@
 # Route A 技术转向：一页 Go／No-Go 草案
 
+> **7.54状态覆盖：本提案暂停，不请求collector原型授权。** 下面是7.53历史提案。
+> setup worker不等于被测request多线程；先按
+> [request/drain窄范围草案](gate8_request_drain_scope_draft_v0_1.md)审阅A与B证据分离。
+> 当前不能据初始化历史缺口断言自然模型A必须换collector；也未授予新版A资格。
+
 **推荐：停止当前Nsight科学链推进；仅将“单一自有collector受控可行性原型”列为下一项可授权工作。**
 原型研究为条件性GO，不代表目标Windows可运行已被证明；自然Qwen正式接链现在NO-GO。
 本提案未授权实现/采集，不改变合同。Gate7 PASS，新Q0/Gate8 NOT_RUN。

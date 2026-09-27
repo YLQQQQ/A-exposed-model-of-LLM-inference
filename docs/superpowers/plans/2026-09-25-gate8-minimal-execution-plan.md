@@ -1,5 +1,13 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.54 当前覆盖：collector暂停，request/drain范围设计待审
+
+[窄范围草案0.1](../../v1_4_1/gate8_request_drain_scope_draft_v0_1.md)明确纯模型request、
+一个主要Host提交线程、条件性前缀完成证书与严格后缀证据。唯一实质待审：A范围资格可否
+独立于缺失的历史B；不删除物理W、不改公式/UNKNOWN。只设计，生产代码等用户审阅。
+测试以定向为主、全量在部署/收口一次；Git脚本免重复逐个hash，现合同身份校验保留。
+没有服务器动作；后续仅在合同/实现/来源就绪后申请一次受控验证。Gate7 PASS，Gate8 NOT_RUN。
+
 ## 7.52 当前覆盖：替代路线调查关闭
 
 [最终比较](../../v1_4_1/gate8_mode_feasibility_decision_v0_1.md)末节：新增CUPTI adapter
