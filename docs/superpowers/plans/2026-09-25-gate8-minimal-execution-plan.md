@@ -1,5 +1,26 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.43 当前：本地load-task观察收口；不部署
+
+已将7.42接点落实到显式opt-in producer0.4/load-task0.1及独立文件读取。
+这是HOST_JOB_ONLY来源事实，不是S ownership；旧file-chain0.5拒绝新receipt，
+不能丢弃load_tasks再降级。失败fallback保留两个attempt，封存不等待未结束任务。
+本地确定性验证与限制见[来源对齐§8](../../v1_4_1/gate8_eager_source_alignment_v0_1.md)。
+下一项最小工作是把必要调用点的mode/lifetime证明义务与已有Raw关联明确对齐；
+没有证明前不扩S准入、不运行模型碰运气。安装补证已完成，不重复向服务器索取。
+服务器仍固定f5edc64；Gate7 PASS，新Q0/Gate8 NOT_RUN。
+
+## 7.42 当前：安装原件已审计，服务器等待；本地task来源接口
+
+一次来源快照已到解压原件，外14/内9/总15文件的hash与精确集合直接核验通过。
+ZIP本体未到，不宣称CRC/ZIP hash本地验证、不要求重传。目标安装的device_map、
+worker/materialize/Future和非等待shutdown已按实际源码核对，详见
+[来源对齐§7](../../v1_4_1/gate8_eager_source_alignment_v0_1.md)。
+下一项由主窗口本地实现显式attempt/task观察及实际文件链确定性反例；不加等待/同步、
+不改变异步加载/流/fallback，不凭主线程范围认领worker。default-mode/lifetime缺口
+与task观察分开，静态hash不授S准入。无需用户服务器下一操作，不重搜安装/旧controlled。
+Gate7 PASS，新Q0/Gate8 NOT_RUN；下面7.41外部补证待办已完成，不能再次执行。
+
 ## 7.41 当前停止点：一次目标安装来源补证，不部署/采集
 
 已核精确Torch2.6与Transformers5.17第一方源码；现回传没有目标包相关源码字节。

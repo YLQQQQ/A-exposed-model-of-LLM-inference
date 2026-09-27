@@ -151,7 +151,7 @@ def validate_token_ready_boundaries(
         previous_ns = boundary.completed_ns
 
 
-def load_model(model_path: str, gpu: int = 0):
+def load_model(model_path: str, gpu: int = 0, *, load_observation=None):
     """Load model (FP16) + tokenizer on specified GPU.
 
     Handles CUDA_VISIBLE_DEVICES remapping: if the user requested physical GPU *gpu*
@@ -179,17 +179,23 @@ def load_model(model_path: str, gpu: int = 0):
     print(f"[runner]   physical_gpu_id={physical_gpu_id}")
     print(f"[runner]   logical_device={device}")
     print(f"[runner]   gpu_name={gpu_name}")
+    def observed_load(branch, **kwargs):
+        operation = lambda: AutoModelForCausalLM.from_pretrained(model_path, **kwargs)
+        if load_observation is None:
+            return operation()
+        observer, module = load_observation
+        return observer.run_attempt(module, operation, branch=branch)
     try:
-        model = AutoModelForCausalLM.from_pretrained(
-            model_path,
+        model = observed_load(
+            'trust_remote_code',
             dtype=torch.float16,
             device_map=device,
             trust_remote_code=True,
         )
     except Exception:
         print("[runner] trust_remote_code=True failed, retrying without...")
-        model = AutoModelForCausalLM.from_pretrained(
-            model_path,
+        model = observed_load(
+            'fallback',
             dtype=torch.float16,
             device_map=device,
         )
@@ -390,7 +396,7 @@ def run_one_invocation(
 def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, output_len, device,
                        pass_fields, request_plan, eos_token_id=None,
                        clock_ns=time.perf_counter_ns, record_drains=False,
-                       record_stages=False, model_setup=None):
+                       record_stages=False, model_setup=None, record_load_tasks=False):
     """Explicit local Gate8 producer API over already-resident inputs.
 
     Not enabled by the legacy CLI/launcher. The caller supplies preflight-bound
@@ -405,6 +411,8 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
 
     if pass_fields.get("pid") != os.getpid():
         raise ValueError("IDENTITY_CONFLICT: producer PID must be current process")
+    if type(record_load_tasks) is not bool or (record_load_tasks and (not record_stages or model_setup is None)):
+        raise ValueError('LOAD_TASK_SETUP_REQUIRED')
     if record_stages and not record_drains:
         raise ValueError('STAGE_DRAIN_RECORDING_REQUIRED')
     if model_setup is not None and (not record_stages or any(
@@ -432,6 +440,7 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
     drain_records = []
     emit = ledger["pass_id"] == "pass1"
     stages = None
+    load_observer = None
     def products():
         validate_pass_identity(ledger)
         result = [ledger,host_records]
@@ -442,6 +451,13 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
             from exposedpath.gate8_stages import validate_stage_ledger
             validate_stage_ledger(stages.value,ledger)
             result.append(stages.value)
+        if record_load_tasks:
+            if load_observer is None:
+                raise ValueError('LOAD_TASK_SOURCE_NOT_OBSERVED')
+            from exposedpath.gate8_load_tasks import validate_load_tasks
+            observed = load_observer.seal()
+            validate_load_tasks(observed, ledger, stages.value)
+            result.append(observed)
         return tuple(result)
     if record_stages:
         from exposedpath.gate8_stages import StageRecorder
@@ -484,7 +500,20 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                 or ledger['runner_git_dirty'] is not False):
             raise ValueError('STAGE_SETUP_MANIFEST_IDENTITY')
         def initialize():
-            loaded, tokenizer, _, actual_device = load_model(model_setup['model_path'],physical)
+            nonlocal load_observer
+            options = {}
+            if record_load_tasks:
+                from exposedpath import gate8_load_tasks
+                from exposedpath.gate8_identity import PASS_FIELDS
+                module, source, hook = gate8_load_tasks.resolve_target_source()
+                load_observer = gate8_load_tasks.LoadTaskObserver(
+                    identity={k:ledger[k] for k in PASS_FIELDS}, pid=ledger['pid'],
+                    parent_stage_id=stages.value['stages'][0]['payload']['stage_id'], source=source,
+                    expected_hook=hook,
+                    push=torch.cuda.nvtx.range_push if emit else None,
+                    pop=torch.cuda.nvtx.range_pop if emit else None)
+                options['load_observation'] = (load_observer, module)
+            loaded, tokenizer, _, actual_device = load_model(model_setup['model_path'],physical,**options)
             if actual_device!=device or torch.cuda.current_device()!=logical_device:
                 raise ValueError('STAGE_SETUP_DEVICE_CONFLICT')
             ids=torch.tensor(batch['input_ids'],dtype=torch.long,device=device)
@@ -565,8 +594,10 @@ def run_gate8_requests_to_files(*, output_dir, **request_arguments):
     outputs = [('pass_identity.json',ledger),('host_boundaries.json',host_records)]
     if len(products) >= 3:
         outputs.append(('drain_ledger.json', products[2]))
-    if len(products) == 4:
+    if len(products) >= 4:
         outputs.append(('stage_ledger.json', products[3]))
+    if len(products) == 5:
+        outputs.append(('load_tasks.json', products[4]))
     for name, value in outputs:
         path = staging/name
         with path.open('x',encoding='utf-8',newline='\n') as handle:
@@ -582,8 +613,12 @@ def run_gate8_requests_to_files(*, output_dir, **request_arguments):
                'files':files, 'gate8_verdict':'NOT_RUN'}
     if len(products) >= 3:
         receipt['schema_version'] = 'exposedpath-gate8-producer-receipt/0.2.0'
-    if len(products) == 4:
+    if len(products) >= 4:
         receipt['schema_version'] = 'exposedpath-gate8-producer-receipt/0.3.0'
+    if len(products) == 5:
+        receipt['schema_version'] = 'exposedpath-gate8-producer-receipt/0.4.0'
+        if products[4]['observation_status'] != 'COMPLETE':
+            receipt['status'] = 'INCOMPLETE'
     with (staging/'producer_receipt.json').open('x',encoding='utf-8') as handle:
         json.dump(receipt,handle,sort_keys=True,indent=2)
         handle.write('\n')

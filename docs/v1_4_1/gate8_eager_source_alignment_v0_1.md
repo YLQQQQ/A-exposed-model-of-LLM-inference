@@ -3,6 +3,11 @@
 2026-09-27；基线 f022520。已批准 closed-prior 方向内的工程接线，不改 W(s)、A/B、
 completion 或研究质量门。Gate7 PASS；Gate8/新 Q0 NOT_RUN。无服务器部署/采集授权。
 
+**7.43当前覆盖：** §8本地加载观察已实现；只是Host诊断，科学接线仍缺必要mode/lifetime证明。
+§5的一次安装快照已在用户服务器完成，解压原件已直接审计；
+不要重跑该指令或要求重传ZIP。§7记录实际源码依据、尚不能赋值的字段及下一项
+本地接口工作。7.41“目标源字节尚缺”的状态仅历史；目标运行ownership/default-mode仍未证明。
+
 ## 1. 真实输入与源码核查
 
 历史 Gate7 唯一 PASS attempt `smoke_20260924T084657Z` 的 SQLite 以只读方式核查，
@@ -200,3 +205,121 @@ exposed/tail 和 A 窗口。无关流/event、缺 source/错 generation 作为�
 资格，不重采旧全矩阵。回传固定源码/构建、pass/host/drain/stage/source receipts、原 REP/
 SQLite、collector argv/log、Canonical 来源与派生报告。缺 scope、来源或无法界定缺口即停，
 不 retry 改构造求通过。以上仅准备方向，**不是可执行服务器采集授权或部署包**。
+
+## 7. 目标安装原件审计 / 7.42
+
+直接读取run `source_snapshot_20260927T024740Z_fa29319e1be040deb99c2ac9402900fb`
+解压目录。外清单SHA256 `870a2184abc0bdb00cdf972991015fdb47c1d7f7a644ee757426e7a7919b81c3`，
+14项大小/hash/精确集合匹配，总15文件；内清单9项（8份源码与receipt）同样匹配。
+内清单SHA256 `43beca90ce7cf25cf7dedfbe65abfec2c73c26797aaf7e1a7435315a5a1f7c79`；
+snapshot receipt SHA256 `09a31660436544e1d369d39f861f9107f5ad4c0f364b7eb3a2b3ab89d883cb09`。
+工具字节与7.41固定副本一致，原件保持不变。**未收到ZIP本体**，不能称ZIP SHA或CRC已
+本地验证；既有ZIP大小/hash仅用户回执，不影响上述解压文件级审计，不要求重传。
+
+operation原件记录server `f5edc64862a8d5fbe94a7bf19be68303a4874b7f` 前后clean、
+exit0、无operation error；目标Python3.11.16/isolated/no_site。snapshot为
+`SNAPSHOT_COMPLETE_NOT_QUALIFICATION`、issues为空、10项record_match=true。
+Torch为2.6.0+cu124/CUDA12.4，源码git_version声明为
+`2236df1770800ffea5697b11b0bb0d910b2e59e1`；Transformers5.17.0。
+这些是本地读取的服务器记录，不是本窗口在服务器执行；DLL未传回，不能声称本地复算DLL。
+
+以下行号指**收到的原文件**，不是网页抽取行号。可以据此固定来源身份，不能跳到运行事实：
+
+| 目标文件 / SHA256 | 本地直接读到的来源事实 | descriptor中的合法边界 |
+|---|---|---|
+| `transformers/modeling_utils.py` / `38c2bd02ed7af229f54e2f02dae65663be7af29ed2c9498bd1c460cf60fbb62d` | L4356起loader；L4393 allocator warmup；L4439～4456按平台形成CPU slice并进入core loader | 源码引用已知；实际model class、输入分支、加载attempt和fallback仍须producer记录，不能凭model_type推定 |
+| `transformers/core_model_loading.py` / `c5b6bcdb6401a3cfdf825bc979d41ac3e7e075e09459021363dce5e68c54de22` | L953～976消费Future；L1236～1274 materialize/job；L1630～1636选择pool；L1717～1738目的device/提交；L1793非等待shutdown | 可以定位观察接点；任务ID、实际native TID、异常/取消/仍在运行必须从执行取得，不是从历史时间窗推断 |
+| `transformers/integrations/accelerate.py` / `4469496da61fdc632faf9cacfc128729b12030eb03c5ef4bb70a66b6012b3a82` | L96字符串device_map规范化；L338非auto字典保持；L431/450参数目的设备 | 只证明源码中的logical device选择规则；不将logical/native/trace编号相等作为映射 |
+| `torch/cuda/__init__.py` / `92f2d2434ce713d81f58aece36fe1bbc8fd9942973dbda7ba12009de30ddd885`；`streams.py` / `d346ee0d52d7bee80e3e355d38ceaf2730da62d74a2ed512e7fc8b393056d1b3` | init L1001/1019的current/default会lazy-init；streams L31包装与L117 ExternalStream不拥有外部生命周期 | 现stage的未初始化UNKNOWN政策有实际安装依据；Python包装对象/handle不能证明trace generation |
+| `torch/include/c10/cuda/CUDAFunctions.h` / `343d0cd132554849db0825f03834912bb2d82ebd6785908662838452ad0dd84a`；`CUDAStream.h` / `214f041517a86b29bbb564655acc589ed46c3abb5039282e9c16992755a053d0` | Functions L95～96的copy+stream sync；Stream L19～49的pool/current区别及L229起default接口 | 安装header身份已知，但预处理宏/相关编译单元实际mode、二进制调用点仍未知。注释不能替代资格 |
+
+特别保留两个反证：
+
+- `shutdown(wait=False, cancel_futures=True)`不保证正在运行任务退出；提交循环还在后续
+  `try/finally`之前，提交中途异常也不能假设已执行shutdown。runner旧的异常fallback
+  不能据此抹掉前attempt。正常加载的已消费Future结果也不自动覆盖所有失败/跳过任务。
+- snapshot只含两DLL的服务器hash/RECORD一致性，没有编译命令或调用点映射。即使以后
+  得到PE imports，也只能证明导入候选；混合编译单元、动态解析或无实际调用绑定时，
+  不能把整个模块标成LEGACY/PER_THREAD，更不能只凭NULL trace flag补值。
+
+### 下一项最小动作与停止条件
+
+**服务器现在没有新增操作。** 安装资料补证完成；不再重搜安装、不重传ZIP、不部署、
+不跑旧controlled或模型。主窗口可以继续本地来源观察接口，而不等待完整性厂商认证：
+
+1. 依据上述明确函数接点，设计/实现一个显式opt-in的加载attempt/task观察适配。
+   记录pass/setup identity、实际model来源/loader源码hash、attempt_id、task_id、提交与
+   job线程native TID、原调用成功/失败/取消/IN_FLIGHT和原始非同步marker。setup没有
+   伪request；不导出权重、参数名或私有模型路径到公共测试。不增Future等待、sync、
+   event，不改pool规模、异步开关、流选择或原加载fallback。
+2. 用真实Python线程池/受控假张量在本地验证提交→job→Future及失败中断的**文件链**，
+   并测试遗漏任务、重用TID、跨attempt、失败后仍运行及source hash冲突。仅记录原有
+   操作；observer关闭时原结果不变，未终结任务不伪填COMPLETE。不得把测试里的线程
+   或合成NVTX称为目标CUDA资格。
+3. Canonical仍保留原始Raw；后续task marker只能先建立同PID/TID/trace clock的Host-call
+   来源关联，再借实际correlation引用GPU activity。它不证明default隐式依赖、resource
+   lifetime或zero loss。source的静态身份与运行观察分字段，UNKNOWN继续阻止对应S准入。
+4. 在发出任何新增采集方案前，须把目标**必要调用点**的default/lifetime证据需求列明。
+   如已有源码/实际API引用足以形成不依赖未知mode的相同closure证明，应显式说明并
+   测试反例；否则保留阻塞，集中提出一次只针对这些模块/调用点的静态构建或二进制
+   解析方案及能力边界。不要预先扩大到整栈资料，也不承诺一份imports就能解决。
+
+本轮收口的是安装来源与接口可行性核查，没有新增生产descriptor/准入代码或schema，
+也没有改变冻结合同。上述为7.42审计时点；后续本地实现见§8，不能当作目标运行证据。
+
+## 8. 加载任务观察0.1 / producer0.4（7.43）
+
+显式`record_load_tasks=True`仅允许与`model_setup`、stage及drain记录共同启用。
+默认legacy入口不启用；目标source resolver检查Transformers5.17.0及§7三个loader
+文件的精确SHA，确认原`spawn_materialize`函数来源后，只在一个加载attempt内临时
+包住该函数的pool.submit接点，finally恢复。没有site-packages文件修改或全局线程跟踪。
+检测并发观察scope冲突，其他提交线程不认领并记录issue。
+源码验证同时编译已验字节（不执行模块）比较函数代码对象；拿到scope锁后再核原hook
+对象/代码，避免读到其他观察器wrapper后错误恢复。reader固定三文件路径与hash集合。
+
+合同版本：`exposedpath-load-task-ledger/0.1.0`、
+`exposedpath-load-task-marker/0.1.0`、`hf-load-tasks/0.1.0`、
+`exposedpath-gate8-producer-receipt/0.4.0`。原receipt0.1～0.3路径不变。
+
+| 事实 | producer字段 / 来源 | 不允许的推断 |
+|---|---|---|
+| scope | pass identity、PID、父setup stage_id、source_descriptor及hash | setup不属于某个伪request |
+| 加载尝试 | attempt_id=pass/parent/ordinal摘要、branch、原异常类型、实际返回类名称 | 返回类名称不是该model实现的源码资格 |
+| job | task_id=attempt/ordinal摘要、提交native TID、执行native TID、线程实例ID | TID数值相同不证明同一生命周期；不按时间包含认领 |
+| 状态 | SUBMITTED/IN_FLIGHT/COMPLETE/FAILED/CANCELLED/SUBMIT_FAILED；没有pool时UNOBSERVED_SYNC_CALLABLE | Future已消费不等于所有worker结束，HOST_JOB不是GPU completion |
+| 封存 | AT_SEAL_NO_WAIT、原host clock、sealed_host_ns、issues | host clock不是trace clock；封存后晚结束不能回写已落盘证据 |
+
+原函数参数、提交顺序、pool大小、Future对象、调用方消费、返回值/异常均保留；
+没有额外Future.result/exception、join、shutdown、CUDA调用或stream切换。
+同步deferred callable原样返回，明确未观察其执行；不能为了记录而偷偷消费。
+旧load_model第一分支异常仍执行原fallback，但attempt身份分离；前attempt失败或任何
+任务未闭合使观察/producer标INCOMPLETE。Pass0/1均观察任务，只有Pass1发非同步NVTX；
+锁、hash、Python包装及marker有非零开销，尚无目标overhead证据，不宣称零扰动。
+
+实际文件入口写全新目录：pass_identity、host_boundaries、drain_ledger、stage_ledger、
+load_tasks及最后的receipt；逐文件bytes/hash，不循环引用、不覆盖输入。读取严格检查
+版本/文件集合/hash、pass-parent-attempt-task身份及host/drain跨run混用。失败部分目录
+无最终receipt不能作为成功；source校验失败在模型加载前停止。
+`load_producer_observations`只验证此来源诊断链，不代替boundary/drain的Canonical资格。
+既有科学file-chain0.5不接受producer0.4，因此不能静默丢掉load_tasks继续分析。
+
+### 仍未完成的科学接线及最小验证义务
+
+任务marker未来只可在同PID/native TID、可证trace clock及原record引用下关联Host API，
+再按真实correlation关联activity；仍须逐调用点mode/context/stream lifetime及必要前驱
+闭包证明，才能向S提交owner证据。当前不实现此准入，也不将安装hash、marker范围或
+COMPLETE观察状态当作证明。default-mode=UNKNOWN、ownership/measurement=NOT_ASSESSED。
+目标loader源码调用路径验证、线程marker实际落入trace、相关调用mode/lifetime及开销
+均未执行；之后只补这些受影响Q0资格，历史Gate6 PASS不自动继承或撤销。
+
+本地测试使用真实CPU线程池与受控模型/张量/marker替身，包含同线程多任务、并发多线程、
+异常/取消、失败attempt仍运行而fallback成功、冻结快照不被晚完成改写、source冲突、
+实际loader→producer→文件reader和跨run/hash/版本反例。不能称目标CUDA或Nsight验证。
+服务器此刻没有新增操作，不交付部署包；Gate7 PASS，新Q0/Gate8 NOT_RUN。
+
+只读review提出并修正封存半终态、锁前读取hook、thread_pool关键字、内存/磁盘来源及
+来源文件集合检查缺口；分别先新增确定性失败回归。marker收尾后原子提交终态，
+封存不等待、不回写，晚到错误不把先前IN_FLIGHT快照升级成功。最终定向81 passed。
+最终CPU全量1323 passed/5 skipped（246.37s，本地Python3.12.7，nvcc隔离；5项既有CUDA
+编译skip）；compileall、contract37/37内部一致性、Canonical边界及oracle静态独立性通过。
+两轮review修复前的全量主动中止、不算通过；冻结MC/旧schema/Q0/科学实现零修改。

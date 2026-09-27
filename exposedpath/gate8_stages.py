@@ -5,6 +5,7 @@ import json
 import threading
 
 from .gate8_identity import PASS_FIELDS, validate_pass_identity
+from .gate8_load_tasks import LoadTaskObserver
 
 STAGE_PREFIX = 'EXPOSEDPATH_STAGE_V1:'
 STAGE_VERSION = 'exposedpath-stage-ledger/0.1.0'
