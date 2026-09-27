@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-> 一句话状态：**Gate 0～7 = `PASS`；目标安装来源实审完成，本地加载attempt/task/native-TID观察及producer0.4文件链已接通；仅Host来源诊断，不授S ownership/default-mode/lifetime资格。完整W/原owner及Derived拒绝门保持，新Q0/Gate8=`NOT_RUN`。服务器仍f5edc64，本轮无部署或采集。**
+> 一句话状态：**Gate 0～7 = `PASS`；静态来源调查已关闭，微小来源诊断fixture本地文件链与CPU验证收口（1345 passed/5 skipped）；不是目标CUDA/Nsight验证，不授S ownership/default-mode/lifetime资格。单次backtrace/sampling风险待用户裁决，完整W/原owner及Derived拒绝门保持，新Q0/Gate8=`NOT_RUN`。服务器仍f5edc64，无部署或采集。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
 ## 0. 项目速览与交接入口（第一次接手请先读本节）
@@ -58,7 +58,10 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.44`
+- 清单版本：`7.46`
+- 7.46本地候选实现：[来源对齐§11](gate8_eager_source_alignment_v0_1.md)。source_probe静态plan/纯argv/显式run与实际文件入口已接通；复用runner/D1/stage/drain，独立整数预期四token15。新的hf-source-probe分支使用task ledger/marker0.2，旧loader0.1不变；COMPLETE只是诊断producer完成，source_binding UNKNOWN/measurement NOT_ASSESSED，不授S/Q0。版本/身份/同步重哈希/partial发布/第二request失败反例先RED后修，失败观察保留。新增22项、定向88 passed/15.39s；CPU全量1345 passed/5 skipped/247.16s（Python3.12.7，进程mask=-1、确认nvcc不可见，五skip为原Q0 CUDA source编译项，未改skip）。compileall、contract37/37内部一致性、Canonical7模块、oracle静态独立性、文档相对链接/diff/增量隐私检查通过；独立只读review无剩余重要问题。不是目标TorchBackend/服务器/Nsight验证。未部署/采集，Gate7 PASS，新Q0/Gate8 NOT_RUN。
+- 7.45PE原件实审：[来源对齐§10](gate8_eager_source_alignment_v0_1.md)，run pe_source_20260927T034417Z_826108098513436c84501b34bb4a7b77的9项/10文件大小hash/精确集合直接核验通过，清单SHA4a6e2c241a5d4496b2fdf2368dbac8f39fad62c01f3fc840897e162fc255e3e5；receipt六命令exit0/error=null/server f5edc64未变。c10导出copy/sync/current/default候选及torch导入可见，但旧运行callchain为空、headers无PDB identity；不推出整模块mode，不复算未传回DLL。静态路线正式关闭，不索PDB/反汇编/安装包；UNKNOWN/NOT_ASSESSED不变。
+- 7.45下一有限准备：一次UNKNOWN起步的Engineering来源观察，两个小task与自然流两request，独立算术固定四token=15，仅观察实际copy/sync来源，不冒充Qwen或Q0。目标安装UserGuide明确CUDA backtrace依赖CPU sampling且强制相同scope的cpuctxsw；§10.2给精确memory:0,sync:0/process-tree/200Hz提案、显著开销及历史BugCheck风险、空栈/参数不支持停止规则，已交协调只读审查。未更改profile/业务代码或执行服务器；本轮无新pytest/全量，7.43成绩不升级为目标验证。Gate7 PASS，新Q0/Gate8 NOT_RUN。
 - 7.44交付收紧：已准备忽略本地索引中的单文件静态脚本，5633 bytes、SHA256 `28ba3efee8eb63971ddcaf3fb1c40efa1ef04eac9b9fafa43ab3f9daa114f318`；固定原server HEAD/两DLL hash，仅六次imports/exports/headers、无反汇编/扫描/加载。语法AST检查通过，未执行目标工具/服务器；准确传输、执行、10文件/9项清单回件说明已获协调只读复核，最后补直接输出清单hash/项数与子进程启动策略说明。候选不是必做Gate；缺符号结束静态路线，后续Engineering来源取证允许UNKNOWN开始，不形成运行绑定前置循环。GPU/Nsight仍未授权。
 - 7.44必要调用点调查收口：[来源对齐§9](gate8_eager_source_alignment_v0_1.md)。只读旧合格SQLite白名单复核四token sync/两device drain、5线程Memcpy同trace stream7、相关callchain全部null及event-create记录，输入SHA前后一致；不读取敏感metadata、不追认资格。给出独立条件性单流等价正例及worker历史/另blocking流反例：A相同不保证B完整W相同，drain不能截断历史。源码/hash/marker/单流外观不足以关闭目标mode/lifetime来源；本轮无业务修改或新测试，不把7.43成绩当本轮实验。
 - 7.44唯一外部候选：经单次授权后只读已hash的c10_cuda/torch_cuda相关imports/exports/已有符号及可定位调用RVA，限定相关copy/sync/default/event/context入口，不扫描安装、不加载CUDA、不采集、不部署。本轮只准备，未执行；仅imports不能证明实际调用，缺可绑定调用点即终止静态路线、不再索包。详见§9.3的能/不能证明、两个终点及后续受控来源验证边界。无需新增研究claim；如后续需改变observation profile，应单项说明再批准。Gate7 PASS，新Q0/Gate8 NOT_RUN。
@@ -95,7 +98,7 @@
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（窄受控capture/离线计算已有实际证据，非模型或新Q0/整Gate验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：7.44本地必要调用点映射与正反例已收口，不能由现有材料解除目标来源阻塞；只准备一次限定两DLL相关静态调用点核查，等待外部操作授权。不要再扩诊断版本或重复安装快照；只得到imports即停止静态路线，按§9.3提出目标受控来源验证边界，不自动profile。历史未变Q0结论复用，新S0.3/A-B0.4不自动继承，Derived门不删；服务器仍f5edc64，无部署/采集/export。
+- 当前最高优先级：7.46本地诊断fixture的CPU验证和只读审查已收口；仅请用户裁决§11.1这一项backtrace/sampling/ctxsw profile风险，不再索环境包。最小profile/task marker不能补回空调用栈，新的profile仍未授权；200Hz/timeout/Ctrl+C不能保证避免历史BugCheck。服务器仍f5edc64，不自动部署。UNKNOWN可启动来源诊断但不授科学资格；历史Q0复用边界与Derived拒绝门保持。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -499,6 +502,9 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ## 7. 固定执行顺序与最近任务
 
+**7.45当前覆盖：** PE原件已实审，静态路线结束；来源对齐§10的一次Engineering
+来源观察提案已交协调审查。不能重跑7.44工具或继续索包，不能自动启用新profile。
+
 **7.44当前覆盖：** 必要调用点映射已收口，条件性mode等价不能用旧模型Raw证明。
 只准备来源对齐§9.3的一次限定静态调用点核查；未授权服务器操作，未新增准入或诊断版本。
 
@@ -654,3 +660,5 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 | 7.42 | 2026-09-27 | 安装快照解压原件14/9清单及目标源码实审；关闭一次补证，固定条件性源码引用和task/attempt本地接口最小顺序 | EP-G8-01/02来源证据审计 | ZIP/DLL本体未到，不冒称本地复算；源码hash不授default/worker/lifetime资格，无业务/schema/实验变化；Gate7 PASS，新Q0/Gate8 NOT_RUN |
 | 7.43 | 2026-09-27 | 显式加载attempt/task/native-TID观察与producer0.4真实文件接口；CPU线程/失败重试/取消/封存及跨run反例；不改变原加载等待策略 | EP-G8-01/02本地来源观察 | 仅HOST_JOB_ONLY诊断，不接S准入、不改MC/S/A/B/Derived或旧Q0证据；不部署/采集；Gate7 PASS，新Q0/Gate8 NOT_RUN |
 | 7.44 | 2026-09-27 | 必要调用点/mode/lifetime/correlation有限核查；旧Raw白名单复核、独立条件性正反例、一次两DLL静态调用来源候选与停止点 | EP-G8-01/02来源可行性收口 | 仅文档，不改生产/合同/证据；不将条件性等价授为资格；服务器操作待授权，Gate7 PASS，新Q0/Gate8 NOT_RUN |
+| 7.45 | 2026-09-27 | 限定PE原件9项/10文件实审，关闭静态路线；提出带独立token预期的Engineering来源观察和明确CPU sampling/ctxsw代价的backtrace profile供审 | EP-G8-01/02来源可行性 | 仅文档，无生产/profile/证据修改；无本轮采集/新Q0资格，Gate7 PASS，新Q0/Gate8 NOT_RUN |
+| 7.46 | 2026-09-27 | 微小来源fixture plan/result0.1、task0.2与真实producer文件链；22新增/88定向/1345+5 CPU；重哈希身份/partial/失败记录反例与只读review | EP-G8-01/02本地Engineering准备 | 无Qwen/服务器/GPU/Nsight执行，不改W/A/B/Derived/Q0与历史证据；单次额外profile风险尚未授权，Gate7 PASS、新Q0/Gate8 NOT_RUN |

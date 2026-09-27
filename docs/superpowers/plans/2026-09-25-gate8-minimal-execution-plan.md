@@ -1,5 +1,24 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.46 当前覆盖：本地来源fixture，单次profile仍未授权
+
+[来源对齐§11](../../v1_4_1/gate8_eager_source_alignment_v0_1.md)记录plan/result0.1、
+诊断task0.2与旧loader0.1的显式区分；两task/两request/four-token15仅验证来源诊断
+producer。定向88项、全量1345 passed/5 skipped（原CUDA编译项）及静态检查通过，
+只读review无剩余重要问题；不等于目标运行或Q0资格。
+唯一下一项外部决策是§11.1精确backtrace+sample+ctxsw的单次风险授权；不自动部署、
+不打开profile，不以200Hz或短程序保证无BugCheck。服务器仍f5edc64；Gate7 PASS、
+新Q0/Gate8 NOT_RUN。以下7.45及更早记录是历史，不是并行待执行任务。
+
+## 7.45 当前：静态路线结束，Engineering来源观察单项审查
+
+PE原件已直接核清单/身份，候选符号无法代替实际调用绑定，停止静态索包。
+[来源对齐§10](../../v1_4_1/gate8_eager_source_alignment_v0_1.md)固定一次小task/
+两request来源诊断及独立token预期；不是Qwen性能或Q0验收。UNKNOWN可启动诊断，
+不成为科学放行。目标文档说明CUDA backtrace要求sample与ctxsw，不能与原最小profile
+混称相同观测；精确参数、开销和历史系统风险已交协调先审，未执行/部署或改业务代码。
+Gate7 PASS，新Q0/Gate8 NOT_RUN。
+
 ## 7.44 当前停止点：必要调用点映射完成，外部候选有界
 
 [来源对齐§9](../../v1_4_1/gate8_eager_source_alignment_v0_1.md)已把影响目标W的

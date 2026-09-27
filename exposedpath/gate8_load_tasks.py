@@ -12,6 +12,10 @@ from .gate8_identity import PASS_FIELDS
 
 VERSION = 'exposedpath-load-task-ledger/0.1.0'
 PREFIX = 'EXPOSEDPATH_LOAD_TASK_V1:'
+FAMILIES = {
+    'hf-load-tasks/0.1.0': ('0.1.0', ('trust_remote_code', 'fallback')),
+    'hf-source-probe/0.1.0': ('0.2.0', ('source_probe',)),
+}
 _PATCH_LOCK = threading.Lock()
 TARGET_SOURCE_HASHES = {
     'core_model_loading.py':'c5b6bcdb6401a3cfdf825bc979d41ac3e7e075e09459021363dce5e68c54de22',
@@ -82,6 +86,9 @@ class LoadTaskObserver:
         self.lock=threading.RLock()
         self.push,self.pop=push,pop
         self.source=deepcopy(source)
+        if source.get('profile') not in FAMILIES:
+            raise ValueError('LOAD_TASK_SOURCE_PROFILE')
+        self.version,self.branches=FAMILIES[source['profile']]
         self.identity=deepcopy(identity)
         self.pid,self.parent_stage_id=pid,parent_stage_id
         self.attempts,self.tasks,self.issues=[],[],[]
@@ -107,7 +114,7 @@ class LoadTaskObserver:
             thread=threading.current_thread()
             if thread not in self.threads:
                 self.threads[thread]=_digest([self.identity,'thread',len(self.threads)])
-            payload=dict(schema_version='exposedpath-load-task-marker/0.1.0',
+            payload=dict(schema_version='exposedpath-load-task-marker/'+self.version,
                 identity=self.identity,pid=self.pid,parent_stage_id=self.parent_stage_id,
                 attempt_id=entry['attempt_id'],task_id=entry['task_id'],native_tid=native_tid,
                 thread_instance_id=self.threads[thread],source_descriptor_sha256=_digest(self.source),
@@ -142,7 +149,7 @@ class LoadTaskObserver:
             self._update(entry,status=status,error=error,host_end_ns=time.perf_counter_ns())
 
     def run_attempt(self, module, operation, *, branch):
-        if self.frozen is not None or branch not in ('trust_remote_code','fallback'):
+        if self.frozen is not None or branch not in self.branches:
             raise ValueError('LOAD_TASK_ATTEMPT_STATE')
         if not _PATCH_LOCK.acquire(blocking=False):
             raise ValueError('LOAD_TASK_SCOPE_ALREADY_ACTIVE')
@@ -215,7 +222,7 @@ class LoadTaskObserver:
                 incomplete=bool(self.issues or not self.attempts
                     or any(a['status']!='COMPLETE' for a in self.attempts)
                     or any(t['status']!='COMPLETE' for t in tasks))
-                self.frozen=dict(schema_version=VERSION,identity=self.identity,pid=self.pid,
+                self.frozen=dict(schema_version='exposedpath-load-task-ledger/'+self.version,identity=self.identity,pid=self.pid,
                     parent_stage_id=self.parent_stage_id,source_descriptor=self.source,
                     source_descriptor_sha256=_digest(self.source),attempts=deepcopy(self.attempts),tasks=tasks,
                     issues=list(self.issues),host_clock_id='PYTHON_PERF_COUNTER_NS',
@@ -242,7 +249,11 @@ def validate_load_tasks(value, ledger, stages):
         'source_descriptor_sha256','attempts','tasks','issues','host_clock_id',
         'sealed_host_ns','snapshot_semantics','observation_status','ownership_status',
         'default_stream_mode','measurement_validity'})
-    require(value['schema_version']==VERSION and value['identity']=={k:ledger[k] for k in PASS_FIELDS}
+    source=value['source_descriptor']
+    require(type(source) is dict and isinstance(source.get('profile'),str)
+        and source['profile'] in FAMILIES)
+    version,branches=FAMILIES[source['profile']]
+    require(value['schema_version']=='exposedpath-load-task-ledger/'+version and value['identity']=={k:ledger[k] for k in PASS_FIELDS}
         and type(value['pid']) is int and value['pid']==ledger['pid'])
     require(stages['setup_observed'] and stages['stages']
         and stages['stages'][0]['payload']['stage_role']=='setup'
@@ -253,7 +264,7 @@ def validate_load_tasks(value, ledger, stages):
         and value['measurement_validity']=='NOT_ASSESSED')
     source=value['source_descriptor']
     require(type(source) is dict and set(source)=={'profile','source_files','qualification'}
-        and source['profile']=='hf-load-tasks/0.1.0' and source['qualification']=='NOT_ASSESSED'
+        and source['qualification']=='NOT_ASSESSED'
         and type(source['source_files']) is list and bool(source['source_files'])
         and value['source_descriptor_sha256']==_digest(source))
     names=set()
@@ -277,7 +288,7 @@ def validate_load_tasks(value, ledger, stages):
             'error','host_start_ns','host_end_ns','return_type'})
         require(type(attempt['ordinal']) is int and attempt['ordinal']==ordinal
             and attempt['attempt_id']==_digest([value['identity'],value['parent_stage_id'],ordinal])
-            and attempt['branch'] in ('trust_remote_code','fallback')
+            and attempt['branch'] in branches
             and attempt['status'] in ('COMPLETE','FAILED')
             and timestamp(attempt['host_start_ns']) and timestamp(attempt['host_end_ns'])
             and attempt['host_start_ns']<=attempt['host_end_ns']<=value['sealed_host_ns'])
@@ -313,7 +324,7 @@ def validate_load_tasks(value, ledger, stages):
                 and all(c in '0123456789abcdef' for c in thread))
             require(thread not in threads or threads[thread]==task['native_tid'])
             threads[thread]=task['native_tid']
-            require(task['marker_payload']==dict(schema_version='exposedpath-load-task-marker/0.1.0',
+            require(task['marker_payload']==dict(schema_version='exposedpath-load-task-marker/'+version,
                 identity=value['identity'],pid=value['pid'],parent_stage_id=value['parent_stage_id'],
                 attempt_id=task['attempt_id'],task_id=task['task_id'],native_tid=task['native_tid'],
                 thread_instance_id=thread,source_descriptor_sha256=value['source_descriptor_sha256'],

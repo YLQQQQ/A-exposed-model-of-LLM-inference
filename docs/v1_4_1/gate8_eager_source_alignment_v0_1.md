@@ -421,3 +421,162 @@ generation、mixed-mode及依赖解释，并有目标scope证据。现有材料�
 是唯一准备中的外部候选；准确脚本已交协调审查，未执行。静态读取的收益只在于判断
 哪些相关入口可定位、是否应直接结束静态路线，不保证解除运行绑定未知。
 Gate7 PASS，新Q0/Gate8 NOT_RUN；没有扩大研究claim或修改生产代码。
+
+## 10. PE原件收口与一次Engineering来源观察提案（7.45）
+
+**静态路线关闭，不再索取DLL、PDB或反汇编包。** 已直接读取
+`pe_source_20260927T034417Z_826108098513436c84501b34bb4a7b77`的10文件，清单9项
+bytes/hash/精确集合均匹配，清单SHA256
+`4a6e2c241a5d4496b2fdf2368dbac8f39fad62c01f3fc840897e162fc255e3e5`。
+receipt记录六条命令exit0、error=null、server f5edc64/仓库未变、dumpbin14.38.33135.0；
+本地核的是回传报告，不是亲自运行服务器，也未取得/复算DLL本体。
+
+| 原件位置 | 已观察事实 | 不可升级的结论 |
+|---|---|---|
+| c10 exports L81/82/103/131 | current/default helper RVA 0x3C360/0x3C440，memcpy_and_sync 0x5530，stream_synchronize 0x7AD0 | 有导出候选，不表示旧token实际经过该RVA |
+| c10 imports L81～120 | cudart64_12.dll下含cudaMemcpyAsync、cudaStreamSynchronize及event入口；此表无_ptsz/_ptds命中 | 不足以判整进程/所有模块模式，不能替代实际调用链及传入stream值 |
+| torch imports L29～30/49/52 | 导入c10的current/default、stream_synchronize、memcpy_and_sync | 只建立模块候选边，不是每次运行调用边 |
+| 两headers L95起 | debug-directory只显示coffgrp，报告无CodeView/RSDS/PDB identity | 不能因此宣称系统绝无PDB，但不为本任务再扩搜索 |
+| 两imports的GetProcAddress | 存在通用动态查找入口 | 不证明实际动态查找CUDA，也不证明不存在其它路径 |
+
+静态证据已完成其决策用途：选定要观察的copy/sync/helper候选；无法补回旧Raw为空的
+callchain，也无法证明实际default/context/thread生命周期。保留UNKNOWN/NOT_ASSESSED。
+不继续仅靠读取更多静态文件寻求模型资格，旧evidence保持原状。
+
+### 10.1 下一项本地准备与独立预期
+
+拟准备**一次全新Engineering来源观察**，可从UNKNOWN启动，只输出来源诊断，
+不接S/A/B/D资格门、不要求先有运行绑定才允许取得运行绑定。不是重跑旧controlled：
+
+- 使用目标已固定Torch2.6+cu124和Transformers5.17来源；小CPU张量经实际
+  `spawn_materialize`/`.to(cuda)`形成两个可编号task，沿已实现task观察入口记录。
+  原Future按源程序需要消费；不改变真实模型loader的线程数/异步政策来强求结果。
+- 两个小request在自然默认流执行确定性张量操作并产生各两个host-readable token；
+  保留原request-start drain，不加用于调时/制造依赖的同步或stream切换。
+  该小程序是来源诊断fixture，不是Qwen workload，不冒充模型内部全部路径资格。
+- 独立源码预期先固定：2个不同task ID、同一setup父scope、一个明确attempt，2个
+  request各1 start+2 token completion点。拟用两份CPU向量x=y=[0,…,15]经各自task拷贝；
+  每次step的scores=x+y+step，独立整数算术预期argmax始终15，因此四个host token
+  均为15；不从GPU/analyzer反算标准答案。worker实际TID不强求
+  必须不同，不把调度结果当oracle。预期callchain应回答实际copy/sync来自哪个模块/RVA，
+  **不预填**它必须命中c10导出，也不预定kernel数或用analyzer产生W标准答案。
+- 接口最小工作仅为绑定已有task/stage与真实Raw行、保存callchain/module原引用；
+  缺失、截断、未知模块/版本、跨PID/TID/correlation冲突保留诊断，不转成S ownership。
+  拿到来源后再决定受影响Q0的W/terminal数值oracle；此次本身不授新版Q0资格。
+
+以上是准备方案，不是已经实现/执行的小程序。下一项由主窗口完成必要本地入口及
+确定性正反例；下述profile单项变更先交协调审查，未获采集授权前不部署或运行。
+
+### 10.2 必须显式审查的profile差异
+
+已直接读目标安装UserGuide.html：L805～817及1968～1980说明cudabacktrace类别与阈值、
+需要CPU sampling；L714～725说明sample非none时cpuctxsw硬设同scope；L1293～1335说明
+sample与Windows sampling-frequency。不是凭经验拼命令。
+
+候选精确增量（仅提案，不是服务器执行命令）：
+
+```text
+--cudabacktrace=memory:0,sync:0
+--sample=process-tree
+--cpuctxsw=process-tree
+--sampling-frequency=200
+```
+
+保留现有cuda,nvtx、process-tree CUDA范围、memory-usage=false、isr=false与collection/
+export分离；不增加GPU metrics、WDDM或system-wide，不同时启用all-APIs等其它变化。
+阈值0用于避免默认1000ns把短copy/sync调用系统性排除，不是零开销。只观察memory/sync
+调用，不承诺覆盖所有kernel调用栈；200Hz只控制CPU采样频率，不限制API backtrace成本。
+CPU context-switch tracing不能在此组合中声称仍为none。当前安装文档支持这些参数
+形式；目标CLI尚未实际验证，若拒绝则停止，不静默换选项。
+
+**风险与限制：** 额外CPU采样/调度事件/调用栈可能显著扰动时序；此前有BugCheck历史，
+根因未证明，不能因本地文档检查就称该组合安全。该attempt不用于Pass0/Pass1性能比较、
+overhead结论、A数值研究claim或历史attempt拼接；它只检查来源可观察性。是否执行这一
+限定组合须明确审查；不能以“普通工程”自动重新打开此前关闭的采集功能。
+
+### 10.3 一次观察的成功、失败与停止点
+
+成功只表示：固定身份/版本、计划task/request/point记录齐全，目标copy/sync Runtime
+可通过callchain ID→frame→模块身份/RVA关联，或以明确理由保留无法符号化的地址。
+只有足以区分候选实际入口并与task/TID/physical活动关联的项，才形成后续source依据。
+模块地址/导出名相近、imports命中或无警告不算运行绑定，更不算零丢失。
+
+若参数不支持、进程/系统异常、目标调用callchain为空/截断、模块身份无法绑定，停止
+本次，不以增加采样率、扩大类别或重跑碰运气补齐。保存失败/UNKNOWN，集中报告是
+工具可观察性还是所选源路径不支持；后续是否改变支持域或collector另作单项裁决。
+
+回传新run的固定源码/环境身份、两pass用途声明（若仅诊断Pass1须明确无性能parity
+claim）、producer/task/stage/drain/host receipts、collection argv/退出、完整REP、独立
+SQLite及export lineage、所用module/frame/callchain原表与派生引用、排除自身hash清单。
+模型本体/私有环境不进入Git；原件不可变，诊断输出新目录。所有科学validity仍可UNKNOWN。
+Gate7 PASS、新Q0/Gate8 NOT_RUN；本轮只完成PE实审与方案，不执行上述采集。
+
+## 11. 本地来源 fixture 收口候选（7.46）
+
+`exposedpath_v141.gate8_source_probe` 已实现静态prepare、纯argv构造、显式run入口及
+独立目录文件读取；仅用CPU替身验证，尚未在目标Torch/CUDA/Nsight执行。它不接入
+默认launcher、不加载Qwen、不执行profiler/export、不做自动重试或科学链放行。
+
+验证：新增22项先补反例；最终五文件定向88 passed，CPU全量1345 passed/5 skipped
+（247.16s；原Q0 CUDA编译项，nvcc明确隔离），compileall/contract37/Canonical7/oracle/
+diff与相对链接检查通过。独立review发现的重哈希身份、发布失败伪接受、失败边界丢失
+均先复现再修复并定点关闭。以上不含目标backend运行或真实调用栈证据。
+
+- plan/result 为 `exposedpath-source-probe-{plan,result}/0.1.0`；profile为
+  `gate8-source-backtrace/0.1.0`。prepare固定commit/clean、preflight原件hash、六个
+  相关源码hash、构造与独立预期；run前再次检查源码、mask与Git，再比对物理UUID/PCI
+  和唯一logical CUDA设备UUID。导入此模块/prepare本身不加载Torch或CUDA。
+- `hf-source-probe/0.1.0` 使用load-task ledger/marker **0.2.0**及`source_probe`分支，
+  不冒充`trust_remote_code`/`fallback`模型加载。旧hf-load-tasks/0.1.0和ledger/marker
+  0.1.0原路径保持；未知profile或版本/分支混用拒绝。marker前缀仍V1，payload显式分版。
+- fixture启动两个CPU向量的实际spawn_materialize任务，消费原Future后执行两个request。
+  这是fixture自己的消费等待，不更改真实模型loader的非等待shutdown政策，也不证明
+  Qwen加载全过程。复用runner统一host-readable token、D1、stage/drain；只保留已有
+  两次request-start drain，不新增CUDA同步、流切换或事件来制造依赖。
+- 保存plan/preflight/manifest/prompt/实际cuda probe、producer0.4及五sidecar、逐request
+  host token记录和source receipt。reader核固定构造、PASS_FIELDS、源码/输入hash、
+  request/repeat/边界与token记录、task来源版本；同步重哈希仍不能掩盖跨身份冲突。
+  所有来源绑定仍UNKNOWN、measurement NOT_ASSESSED、Gate8/Q0 NOT_RUN；COMPLETE只表示
+  该producer诊断构造完成，不表示已经获得调用栈、W(s)或正确A/B。
+- 先写独立partial再发布；错误保留已有task/stage/request边界/drain及failure，拒绝
+  partial/failure回执。缺文件、变更hash、错误token、错误身份和发布失败均不授通过。
+  原trace/receipt和Gate6/7不改；旧scientific file-chain继续拒绝producer0.4。
+
+### 11.1 唯一待裁决项：是否允许一次有额外风险的profile
+
+原minimal profile加task marker可回答“哪个Host task/thread调用”，但旧Raw的callchain
+为空，不能回答copy/sync实际来自哪个模块/RVA；故不能用marker时间包含冒充函数调用边。
+本候选只对需要此绑定的memory/sync请求backtrace，不要求所有来源一律取得调用栈。
+可接受有模块身份与RVA而未符号化的frame；不因此追加PDB/反汇编调查。
+
+| 固定参数 | 本次拟取得的证据/代价 |
+|---|---|
+| trace=cuda,nvtx | Runtime/activity原记录与task/request标记；不是dependency证明 |
+| cudabacktrace=memory:0,sync:0 | copy/sync调用链，0阈值避免短调用被阈值过滤；可能显著增加开销 |
+| sample=process-tree、sampling-frequency=200 | 目标Guide要求的backtrace前置；200Hz只限CPU采样频率，不限制CUDA栈采集成本 |
+| cpuctxsw=process-tree | Guide规定随非none sample生效；不是沿用原“关闭ctxsw”配置 |
+| cuda-memory-usage=false、cuda-trace-scope=process-tree、isr=false | 保留原限定；无metrics、WDDM、system-wide、stats/overwrite增量 |
+
+**尚未授权执行。** 既往BugCheck 0x133根因未证明；低频、短fixture、timeout或Ctrl+C
+都不保证操作系统不会再次异常。固定版本包和不执行的步骤可先本地准备；只有用户明确
+接受这一个组合的风险后才实施部署和单次执行，没有隐含连续重试权限。参数拒绝、空/截断栈、未知模块绑定或进程/系统
+异常即结束一次尝试，不提高采样率、不扩大类别、不自动回退或换collector。
+
+候选步骤（仅供审查，当前不执行）：
+
+1. 固定将来批准的完整执行commit、仓库clean、目标既有环境/preflight；不能自动跟随main。
+   新`diagnostics/<source-probe-run>`保存plan，新`evidence/gate8/<source-probe-run>`保存采集。
+2. 使用仓库Python运行`-m exposedpath_v141.gate8_source_probe prepare --output <new-plan-dir>
+   --preflight <verified-preflight.json> --expected-commit <approved-sha> --run-id <unique-run>`。
+3. 在固定checkout作为cwd调用纯`profile_argv(<absolute-nsys>,<repo-python>,<plan.json>,
+   <new-capture-dir>)`取得结构化argv；builder要求capture-dir尚不存在。随后以**不覆盖**
+   方式创建该新父目录，保存完整argv/来源版本后，人工按授权执行一次。不要把参数列表
+   拼成shell字符串；`-m`必须从批准checkout解析。profile输出capture，子进程输出producer。
+4. 退出后只保存事实；由协调检查回执后安排独立SQLite export及只读来源关联，不自动连跑。producer COMPLETE
+   不替代REP/SQLite/callchain审计。本轮未实现新的callchain解析器或自动科学转换。
+5. 回传整个新目录、collection退出/argv、原REP、producer所有文件、环境/源版本关联，
+   后续如export则加独立lineage与完整SQLite。清单先快照输入集合并排除所有输出清单，
+   不修改旧attempt。任何失败保留原件，不追认、不继续第二次profile。
+
+这一候选不要求先解除UNKNOWN才能诊断；也不承诺一次观察可以解除default-mode或
+lifetime未知。若仍不足，先给具体剩余证据与研究影响，再裁决支持域，停止宽泛取证。
