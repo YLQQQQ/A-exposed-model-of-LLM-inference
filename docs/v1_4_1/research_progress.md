@@ -1,5 +1,9 @@
 # ExposedPath 科研进度清单
 
+## 7.58 最新限定来源审查（2026-09-27）
+
+七文件服务器原件已直接读取；服务器静态exit0/f5前后clean，协调窗口独立核验10文件/内部8项hash。详见[限定审查与单次诊断路径](gate8_qwen_source_review_v0_1.md)。prefill SDPA fast_all的布尔求值是旧1-byte D2H/第三sync候选，不是已证实callsite；实际backend/native mode/迟发保持UNKNOWN。停止进一步静态索源。下一项仅本地窄诊断入口封装现有run_gate8_requests（legacy CLI不启用它），CPU fixture核实身份/文件产物后提出一次NOT_QUALIFIED真实Qwen Engineering诊断授权；不以科学资格未通过禁止探索，也不将探索当资格。无新GPU/Nsight、无生产代码变更、未重跑测试；Gate7 PASS，新Q0/Gate8 NOT_RUN。
+
 > 一句话状态：**Gate 0～7 = `PASS`；用户批准A优先request/drain准入，新增版本化独立A证书入口与确定性文件链测试。物理S/B不改、UNKNOWN不改零、D/Signature不放行；真实来源入口仍阻塞，非默认流合成通过不等于自然Qwen NULL-stream已合格。新Q0/Gate8=`NOT_RUN`；服务器仍f5edc64，无部署或采集。**
 > 本文件是仓库内**唯一的科研进度事实源**：记录“现在做到哪里、证据在哪里、下一步是什么”。研究设计文档说明“为什么做、应该怎样做”。
 
