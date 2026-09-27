@@ -323,3 +323,94 @@ COMPLETE观察状态当作证明。default-mode=UNKNOWN、ownership/measurement=
 最终CPU全量1323 passed/5 skipped（246.37s，本地Python3.12.7，nvcc隔离；5项既有CUDA
 编译skip）；compileall、contract37/37内部一致性、Canonical边界及oracle静态独立性通过。
 两轮review修复前的全量主动中止、不算通过；冻结MC/旧schema/Q0/科学实现零修改。
+
+## 9. 必要调用点与有限停止点（7.44；不是新准入合同）
+
+**结论：本地可闭合的是条件性规则，尚不能闭合目标模型的事实前提。** 不再添加一套
+仅诊断的中间版本，不把mode猜成LEGACY，也不重复跑旧独立stream受控程序。没有新增
+业务代码或S准入；下述唯一外部候选为一次限定静态调用来源核查，仍须另行授权执行。
+
+本轮直接以`mode=ro&immutable=1`读取Gate7合格历史SQLite的白名单表，输入SHA256前后
+均为`005cf068bff99c36585a91343d8841d12bb2cad41a94bdc9bc1478045691877c`，未读敏感metadata。
+四个physical token sync rowid348/349/352/353皆为context1/stream7、Runtime返回0；
+两个drain346/350为device sync，其stream字段4294967295不能当真实stream。
+Memcpy共349条、同trace stream7、关联5个Host TID；相关349个stream sync的callchain
+均null。inventory另有6/8/9/10/11/12等stream；18条event-create记录不能证明event依赖
+已完整观察，flag枚举也不能直接当CUDA native创建flag。没有新task marker或可验证的
+完整生命周期来源。以上仅旧输入兼容性事实，**不升级旧attempt/Q0资格**。
+
+### 9.1 只保留影响目标W的调用点
+
+| 调用点 | 必需事实与现有依据 | 最小未知 / 处置 |
+|---|---|---|
+| setup worker的tensor.to / materialize | §7精确loader源码、§8 task/attempt→native TID；将来须经同PID/TID原NVTX行→Runtime correlation→activity | 目标新observer未采集；旧worker不能补认领。失败attempt未结束时不闭合来源；不以Future或drain删除其历史 |
+| warmup / measured的model.forward、argmax | 实际stage源码与未来同线程API引用；每个launch/copy须关联实际context/stream generation | 模型/库内部提交是否全在已证明scope、是否有其它thread/event前驱尚未有肯定依据；不能凭Python当前stream推出全部库操作 |
+| token.cpu / DtoH→stream sync | 安装CUDAFunctions.h的copy+sync路径，旧Raw四个physical sync及API/correlation已知 | header不是目标二进制实际调用点。需要相关copy/sync实际入口及native→trace/lifetime映射；`_v3020`不证明legacy或PTDS |
+| 原request-start device drain | 原函数、回执设计、旧物理device sync与成功返回已知 | drain证明先前工作完成，不证明owner、stream generation或完整W；不可变成截断历史的重置点 |
+| 可能传入目标流的event/default边 | 只对目标context必要前驱递归检查；明确nonblocking且无传入event才能排除另一流 | 库event-create而无完整record/wait来源，不能以缺行证明无边；未知影响范围拒绝对应claim |
+
+default生命周期不要求虚构cudaStreamCreate：legacy须绑定context存活区间；PTDS另须
+thread实例及实际调用入口；显式nondefault须真实资源或合格source的持有区间。重用、
+context reset、mixed-module mode冲突均不得按相同编号拼接。原始activity/owner保持。
+
+### 9.2 mode无关的正例与反例（独立纸面预期，未授目标资格）
+
+依据[CUDA 12.4.1官方stream语义](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/stream-sync-behavior.html)：
+模式可按编译单元选择；legacy有blocking-stream隐式边，PTDS与thread/context关联。
+混用时不能把整个进程当单个模式。这决定以下证明义务，而非要求全capture认证。
+
+正例P：已由合格来源证明从相关context建立到s只存在同一线程的同一连续默认流，
+无其它必要流/event/外部提交或早期未知前驱。X=[0,10)、Y=[20,30)，s=[25,35)。
+所有可行LEGACY/PTDS解释均有W={X,Y}、terminal=Y；B hidden=15、exposed=5、tail=5，
+sync内A wait=5、return-tail/residual=5。mode字段仍UNKNOWN；相同closure是条件性结论，
+不是把UNKNOWN填为零或已知mode。A窗口其它类别须另据Host/API区间归属。
+
+反例N1：worker默认流的X=[0,10)，成功device drain=[12,15)，随后main默认流Y=[20,30)，
+s=[25,35)。LEGACY下W={X,Y}、hidden=15；PTDS且无传入边时W={Y}、hidden=5；两者
+exposed=5、tail=5，A可相同。X早已完成仍改变B完整历史，不能以drain或低unknown掩盖。
+这两个世界的真实physical mapping也可能不同，不能强行给二者都填相同stream ID。
+
+反例N2：另一blocking流X在目标default提交Y之前已提交。LEGACY可能要求X，PTDS无边
+时不要求；即使两者时间上不重叠也不能删X。明确nonblocking且无传入event时才能排除；
+加入event wait又必须纳入。未证明生命周期/任务来源或scope完整性时，P的前提不成立。
+
+所以，只比较两次假定mode运行得到相同数值不足以准入：还须覆盖所有可行mapping、
+generation、mixed-mode及依赖解释，并有目标scope证据。现有材料不足；旧S明确
+`DEFAULT_STREAM_MODE_UNKNOWN`与closed-prior非default门继续保留。若以后采用此
+条件性等价准入，须版本化记录source支持域/证明输入和反例，不静默改旧schema。
+
+### 9.3 一次限定补证候选与停止规则
+
+**谁做下一步：** 协调窗口审查下述范围，用户授权后才由服务器执行；本轮仅准备。
+不复制整包/模型，不导出Raw，不profile/export，不import Torch或初始化CUDA。
+
+输入只限§7已hash的`c10_cuda.dll`与`torch_cuda.dll`及**已存在**的匹配符号/构建记录。
+使用现有MSVC二进制检查工具，固定工具路径/版本/hash、两DLL原hash：
+
+1. 只读PE imports/exports及已有debug-directory/PDB身份；收集涉及copy/stream sync、
+   stream获取、event、context reset和动态入口解析的相关条目，不扫描其它安装目录。
+2. 若存在能解析的`memcpy_and_sync`/`stream_synchronize`/default-current相关函数或
+   精确调用RVA，只取其有限反汇编/重定位及IAT引用；记录模块hash+RVA+符号+目标入口。
+   不全量反汇编巨大torch_cuda，不下载PDB，不以文本API名称代替可解引用调用点。
+3. 新诊断目录保存命令、退出、字节hash和筛选结果；缺符号或动态/混合入口无法解析也
+   是最终结果，不能伪填来源。现有checkout/环境/旧证据不变，不要求部署d5ff1da。
+
+**能证明：** 被解析的具体静态调用点使用哪个入口、是否有候选mixed/dynamic路径；
+若与实际调用链可绑定，可服务该调用的source descriptor。
+**不能证明：** imports存在即实际执行、整个模型只有一种模式、无未捕获event、运行
+线程/资源生命周期或collector零丢失。旧Raw callchain为空，单有imports仍不能合格。
+
+一次回件后只允许两个终点：
+
+- 找到相关调用点的完整source依据并可与目标scope关联：主窗口补必要版本化adapter与
+  成对确定性测试，然后准备一次新路径资格验证（自然流、setup/worker/warmup/两request、
+  原drain；独立W/oracle；不重采旧全矩阵）。source门/marker/correlation/lifetime/必要
+  event任何冲突即停，不retry换构造。新结果只是受影响资格，不自动批准真实模型claim。
+- 仅得到imports/无法绑定调用点：**静态路线就此结束**，不继续索取更多环境包。
+  下一可裁决方案是一次目标调用路径的受控来源验证；若其必须额外采集callchain或修改
+  observation profile，先明确该单项amendment与开销/能力边界。不能以普通torch微程序
+  已通过代替Qwen全部内部调用已证明，也不自动改变collector或研究支持域。
+
+本轮终点：本地已有材料不足以解除目标mode/lifetime来源阻塞；服务器静态调用点核查
+是唯一准备中的外部候选，不是已授权命令。需要批准的是一次外部操作范围，不是底层
+目录组织。Gate7 PASS，新Q0/Gate8 NOT_RUN；没有扩大研究claim或修改生产代码。

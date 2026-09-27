@@ -1,5 +1,14 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.44 当前停止点：必要调用点映射完成，外部候选有界
+
+[来源对齐§9](../../v1_4_1/gate8_eager_source_alignment_v0_1.md)已把影响目标W的
+setup worker、warmup/model、token copy/sync、原drain和传入event/default边逐项列明。
+条件性单流等价不等于目标事实；worker历史反例证明即使A相同/已有drain，B完整W仍可能不同。
+本地不再增诊断版本；下一唯一候选是授权后对已hash两DLL的相关静态调用点做一次核查。
+缺符号/只有imports即结束静态路线，不追加安装搜索；如需目标callchain观察则另列单项方案。
+本轮没有执行服务器/采集或改变S准入，Gate7 PASS、新Q0/Gate8 NOT_RUN。
+
 ## 7.43 当前：本地load-task观察收口；不部署
 
 已将7.42接点落实到显式opt-in producer0.4/load-task0.1及独立文件读取。
