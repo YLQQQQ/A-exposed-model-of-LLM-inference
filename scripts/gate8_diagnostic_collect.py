@@ -58,9 +58,11 @@ def run_once(argv, output, *, timeout_seconds=300):
 
 def profile_argv(nsys,python,prepared,output,root=ROOT):
     prepared,output=Path(prepared),Path(output)
+    # Nsight's Windows CLI accepts booleans, not POSIX signal names.
+    kill='true' if sys.platform=='win32' else 'sigkill'
     return [str(nsys),'profile','--trace=cuda,nvtx','--sample=none','--cpuctxsw=none',
         '--cuda-memory-usage=false','--cuda-trace-scope=process-tree','--isr=false',
-        '--duration=120','--kill=sigkill','--output='+str(output/'capture'),
+        '--duration=120','--kill='+kill,'--output='+str(output/'capture'),
         str(python),'-m','exposedpath.gate8_diagnostic','run',
         '--manifest-path',str(prepared/'manifest.json'),'--prompt-path',str(prepared/'prompt.json'),
         '--preflight-path',str(prepared/'preflight.json'),'--project-root',str(root),

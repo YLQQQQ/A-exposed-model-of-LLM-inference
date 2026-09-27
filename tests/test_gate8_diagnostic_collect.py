@@ -27,10 +27,13 @@ def test_native_process_is_attempted_once_and_preserved(tmp_path, mode):
     assert json.loads((tmp_path/'logs/process.json').read_text())==result
 
 
-def test_profile_argv_is_minimal_fixed_and_bounded(tmp_path):
-    argv=api().profile_argv('nsys.exe','python.exe',tmp_path/'prepared',tmp_path/'new',tmp_path/'repo')
+@pytest.mark.parametrize('platform,kill', [('win32','true'),('linux','sigkill')])
+def test_profile_argv_is_minimal_fixed_and_bounded(tmp_path,monkeypatch,platform,kill):
+    module=api()
+    monkeypatch.setattr(module.sys,'platform',platform)
+    argv=module.profile_argv('nsys.exe','python.exe',tmp_path/'prepared',tmp_path/'new',tmp_path/'repo')
     assert '--trace=cuda,nvtx' in argv and '--sample=none' in argv and '--cpuctxsw=none' in argv
-    assert '--duration=120' in argv and '--kill=sigkill' in argv
+    assert '--duration=120' in argv and '--kill='+kill in argv
     assert '--stats=true' not in argv and '--force-overwrite=true' not in argv
     assert argv.count('exposedpath.gate8_diagnostic')==1
     assert 'run' in argv

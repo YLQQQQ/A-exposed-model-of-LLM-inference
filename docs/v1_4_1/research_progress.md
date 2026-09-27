@@ -1,5 +1,11 @@
 # ExposedPath 科研进度清单
 
+## 7.60 Windows Nsight kill参数修复（2026-09-27）
+
+本轮验证：Windows argv回归先FAIL后修复；collection/entry/postprocess三文件45 passed/34.98s。compileall四目录、contract37/37、Canonical7、oracle独立性、diff-check通过，独立只读review无新增重要问题。未重跑全量；7.59的1410/5只属于上一实现验证，不算本次新全量。该改动不触及runner/科学analyzer/冻结合同。新包仅以服务器已部署4d8fe10为前提，后续新目录/新run，旧BLOCKED不变。
+
+直接读取回传原件：4d8fe10单次诊断在Nsight参数解析被拒，stderr明确Windows kill只接受true/false；PID27548，exit1，0.219s，未timeout，attempt1，stdout空；collection仅4个日志/report，无REP/SQLite/producer，未进入模型target。prepare/verify成功包含最小CUDA初始化，不能说全程零GPU交互。目标安装UserGuide Windows段与此一致；7.59误采用Linux sigkill是工程平台参数错误，不是模型或科学语义问题。最小修订v0.1.1：Windows argv为kill=true，保留120s/300s、单次profile/export、不重试和NOT_QUALIFIED；Linux仅argv回归，不新增平台支持。新增Windows失败回归已复现旧值；旧attempt保持BLOCKED，服务器现4d8fe10。Gate7 PASS、新Q0/Gate8 NOT_RUN；本地不执行真实Nsight/GPU。
+
 ## 7.59 单次Qwen诊断本地实现（2026-09-27，CPU验证完成）
 
 按继续推进授权完成[诊断入口v0.1](gate8_qwen_diagnostic_v0_1.md)：新prepared manifest/prompt/preflight、固定32/2 batch1 warmup1/request1、原producer文件链与loaded config，NOT_QUALIFIED，真实A/B/D禁用。旧load fallback默认保留，新诊断单次；export默认两次保留，新诊断max_attempts=1。模型历史清单hash+当前大小/集合，不重复3GB内容哈希。minimal profile有界等待/失败保存/不重试；超时不声称后代已退出，保留BugCheck风险。定向先RED后GREEN，复审身份字段/根路径/alias及落盘失败进程监管均补反例；最终CPU全量进行中。未部署服务器、未运行模型/GPU/Nsight，服务器仍f5；Gate7 PASS、新Q0/Gate8 NOT_RUN。

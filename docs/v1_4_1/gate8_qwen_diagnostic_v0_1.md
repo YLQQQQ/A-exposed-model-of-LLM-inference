@@ -14,7 +14,7 @@
 
 `scripts/gate8_diagnostic_collect.py`必须显式`--execute-engineering-diagnostic`，参数固定checkout venv、绝对Nsight路径、prepared、新output。
 使用cuda,nvtx / sample=none / cpuctxsw=none / memory-usage=false / process-tree / isr=false，不启用CPU采样、backtrace、stats或覆盖。
-目标安装UserGuide的duration/kill条款作为120秒collection、kill=sigkill的参数依据；未声称新argv已通过目标实测。未知/不支持选项失败即停止，不fallback。
+平台修订v0.1.1（7.60）：目标安装UserGuide Windows条款规定kill=true/false；Linux信号名sigkill不适用于Windows。本入口在Windows使用kill=true，非Windows保留sigkill的argv规则但不声明Linux平台已验证。120秒collection及300秒外层上限不变。旧v0.1误引用Linux条款已造成服务器参数解析拒绝；不得将旧BLOCKED追认成功。未知/不支持选项失败即停止，不fallback。
 
 外层300秒等待只终止本次记录的Nsight PID；**不保证其后代或内核已经退出**，超时标UNKNOWN_STOP_AND_INSPECT_NO_RETRY，不export、不重采，人工检查残留。Nsight自身120秒终止策略不能保证驱动/系统挂死可恢复。历史BugCheck 0x133根因未证，短运行不构成系统安全保证。
 
