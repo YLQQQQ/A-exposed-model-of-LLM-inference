@@ -1,5 +1,12 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.51 当前覆盖：技术路径未闭合，暂停准入审批
+
+[有界裁决](../../v1_4_1/gate8_mode_feasibility_decision_v0_1.md)：已有Nsight字段与固定
+source/binary两条低风险路径均不足以落实mode/epoch adapter。停止同类搜索，不默认
+source profile，不向用户继续索取抽象准入批准。先报告真实模型支持域技术阻塞；
+不把仅受控正确性当Route A完成，不改合同/代码/服务器。新Q0/Gate8 NOT_RUN。
+
 ## 7.50 当前覆盖：具体admission草案未生效
 
 [target-scope草案0.1](../../v1_4_1/gate8_target_scope_admission_draft_v0_1.md)
