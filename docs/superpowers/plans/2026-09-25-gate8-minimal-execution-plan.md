@@ -1,5 +1,12 @@
 # Gate8 最小执行计划 v0.1
 
+## 7.50 当前覆盖：具体admission草案未生效
+
+[target-scope草案0.1](../../v1_4_1/gate8_target_scope_admission_draft_v0_1.md)
+将7.49抽象方向落实为逐调用mode/epoch证据、同族窄域、原owner和拒绝矩阵，待用户
+一次审查；mode实际adapter仍技术阻塞，不宣称已具备采集准入。仅文档，不改合同/
+生产代码、不默认source profile。服务器不动，Gate7 PASS、新Q0/Gate8 NOT_RUN。
+
 ## 7.49 当前覆盖：窄支持域设计完成，待一项准入裁决
 
 [模型scope方案0.1](../../v1_4_1/gate8_model_scope_design_v0_1.md)区分现合同工程接线与
