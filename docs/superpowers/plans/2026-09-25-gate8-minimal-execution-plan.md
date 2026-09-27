@@ -1,6 +1,17 @@
 # Gate8 最小执行计划 v0.1
 
-## 7.46 当前覆盖：本地来源fixture，单次profile仍未授权
+## 7.47 当前覆盖：来源profile暂停，目标sync最小缺口审查
+
+[来源对齐§12](../../v1_4_1/gate8_eager_source_alignment_v0_1.md)取代7.46的
+“唯一下一步风险授权”：module/RVA不是冻结合同的普遍要求，也未证明能单独解除
+当前mode/lifetime/owner门。停止发送source-probe A/B/C，不要求用户采样风险批准。
+已准备实现/包保留为未授权备用，不删除历史、不改科学拒绝门。
+
+下一项由主窗口只读检查已有四token sync、两drain及必要前驱，给出已知/缺口和
+对W/terminal/A/B的具体影响，判定已有证据可复用项及最小低风险路径；无服务器操作。
+若需新的等价准入语义，单列裁决而非隐式放行。Gate7 PASS，新Q0/Gate8 NOT_RUN。
+
+## 7.46 历史记录：本地来源fixture，单次profile未授权
 
 [来源对齐§11](../../v1_4_1/gate8_eager_source_alignment_v0_1.md)记录plan/result0.1、
 诊断task0.2与旧loader0.1的显式区分；两task/两request/four-token15仅验证来源诊断

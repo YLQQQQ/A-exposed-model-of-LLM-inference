@@ -3,7 +3,9 @@
 2026-09-27；基线 f022520。已批准 closed-prior 方向内的工程接线，不改 W(s)、A/B、
 completion 或研究质量门。Gate7 PASS；Gate8/新 Q0 NOT_RUN。无服务器部署/采集授权。
 
-**7.43当前覆盖：** §8本地加载观察已实现；只是Host诊断，科学接线仍缺必要mode/lifetime证明。
+**7.47当前覆盖：来源profile暂停，不再请求采样风险批准。** §12是当前下一步；
+§10/11及交付包只是未授权备用，不是Gate8必经或执行指令。既有mode/lifetime未知与
+科学拒绝门保持。§8本地加载观察已实现；只是Host诊断，科学接线仍缺必要mode/lifetime证明。
 §5的一次安装快照已在用户服务器完成，解压原件已直接审计；
 不要重跑该指令或要求重传ZIP。§7记录实际源码依据、尚不能赋值的字段及下一项
 本地接口工作。7.41“目标源字节尚缺”的状态仅历史；目标运行ownership/default-mode仍未证明。
@@ -542,7 +544,7 @@ diff与相对链接检查通过。独立review发现的重哈希身份、发布�
   partial/failure回执。缺文件、变更hash、错误token、错误身份和发布失败均不授通过。
   原trace/receipt和Gate6/7不改；旧scientific file-chain继续拒绝producer0.4。
 
-### 11.1 唯一待裁决项：是否允许一次有额外风险的profile
+### 11.1 历史候选：有额外风险的profile（7.47暂停，非当前待裁决项）
 
 原minimal profile加task marker可回答“哪个Host task/thread调用”，但旧Raw的callchain
 为空，不能回答copy/sync实际来自哪个模块/RVA；故不能用marker时间包含冒充函数调用边。
@@ -580,3 +582,48 @@ diff与相对链接检查通过。独立review发现的重哈希身份、发布�
 
 这一候选不要求先解除UNKNOWN才能诊断；也不承诺一次观察可以解除default-mode或
 lifetime未知。若仍不足，先给具体剩余证据与研究影响，再裁决支持域，停止宽泛取证。
+
+## 12. 必要性重审：暂停profile，回到目标推断（7.47）
+
+**调整：不再将module/RVA来源观察作为唯一下一步或科学验收普遍前置。** 保留本地
+d62c818实现/测试、固定bundle及三脚本为未授权备用；不部署、不发送A/B/C操作，不再
+要求用户作采样风险决定。此为执行优先级修正，不修改冻结语义或降低既有拒绝条件。
+
+目标安装UserGuide关于cudabacktrace的两段（L805～817、1968～1980）及
+[NVIDIA官方说明](https://docs.nvidia.com/nsight-systems/UserGuide/)区分了API调用取栈与
+周期CPU采样：前者仍要求启用CPU sampling，但不是用200Hz周期样本保证命中全部kernel。
+候选仅memory/sync，0阈值不保证完整栈；新增开销及历史BugCheck风险不能由低频消除。
+因此“所有kernel都必须有CPU调用栈”不是本研究当前必要要求。
+
+权威门与工程候选应分开：
+
+- [Measurement Contract](measurement_contract_v0_2.md)的completion集合与default-stream
+  条款（L80～93）要求submission、ownership、stream/event/default依赖及模式证据，
+  没有将module/RVA/callchain规定为每条活动必需字段。S的`_add_default_stream_edges`
+  使用活动、mode、flags与提交顺序；它不使用模块RVA来直接恢复边。
+- [closed-prior amendment](gate8_closed_prior_amendment_v0_1.md)本版只支持连续nondefault、
+  合法原owner及限定event路径。`gate8_closed_prior.load_admissions`检查lifetime引用、
+  scope/generation与反证，不消费callchain。不能因找到调用栈就把默认流纳入该窄域。
+- 当前真实模型接线仍有`STAGE_SOURCE_NOT_QUALIFIED`、
+  `CLOSED_PRIOR_TARGET_SOURCE_NOT_QUALIFIED`及default-mode/lifetime未知。栈可能辅助
+  找到实现入口，但不能单独证明传入stream、完整历史前驱、资源连续性或owner；现未
+  找到一个已被证明**只能**靠模块/RVA解除的必要门。
+- 原受控native明确流构造与独立oracle证据可按实际已证明部分复用；不重采整矩阵，
+  不自动授新版本资格。旧模型Raw的同stream外观、成功drain或空栈仍不足以定义已获
+  资格的默认流/跨worker支持域，暂停高风险方案不等于真实模型已经就绪。
+
+**下一项具体只读工作（主窗口）：** 固定已有Raw原件与hash，只检查四个目标Token-ready
+physical sync（历史row348/349/352/353）和两个原request-start drain（346/350）及其
+必要前驱。沿现有source、NVTX/task、PID/TID/correlation、context/stream/event列每个
+sync的“已证明事实／唯一关键缺口／可行解释是否改变W、terminal、A、B／最小补证”。
+旧Raw没有新task marker必须标缺失，不能回填；不读取全环境metadata，不更改输入。
+
+产物限制为一张紧凑差距表与低风险路径判定：优先复用已证明受控项，区分已有字段可
+工程映射、需未来最小cuda,nvtx+task观测、以及确实需语义裁决的项。不能以“没调用栈”
+单独判所有活动失败，也不能把边界/mode/闭包未知放行。若A在多种解释下看似相同但B
+不同，只记录这一差异；当前S/派生拒绝门不删，任何新等价准入需显式版本化裁决。
+没有具体缺口证明需要栈之前，不恢复source profile、不扩大调查或增加工具。
+
+本轮仅文档/只读核查，无新测试、实现或采集；7.46测试是历史本地验证，不是本轮结果。
+冻结Measurement Contract、S/A/B/Q0及Gate6/7原件未改，Formal协议/数据不受影响。
+Gate7 PASS，新Q0/Gate8 NOT_RUN；服务器仍固定原版本，无新增用户服务器操作。
