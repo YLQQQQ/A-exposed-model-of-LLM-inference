@@ -1,5 +1,9 @@
 # ExposedPath 科研进度清单
 
+## 7.61 真实Qwen单次诊断已回传，只读范围审计（2026-09-27）
+
+服务器已执行35b5bff单次诊断，不再是“尚未部署”。本地直接读单ZIP：27源文件/28项大小hash/CRC、producer四文件与输入副本、内存SQLite integrity通过。详见[审计v0.1](gate8_qwen_diagnostic_audit_v0_1.md)。三trace point/成功drain/三stream sync齐全，request marker窗口165540075ns；内部1-byte D2H及两token copy实际存在，不能仅凭这些事实发布A。设备physical3→logical0→inventory2有UUID/PCI链。目标外两PID警告保留，dropped UNKNOWN、native backend UNKNOWN；无合格S/A/B/D或新Q0资格。仅审计和文档更新，无新测试/服务器/GPU/Nsight执行，原件不变。下一项本地三个sync的target-scope受证条件清单，不盲重采或重复索源；Gate7 PASS、新Q0/Gate8 NOT_RUN。
+
 ## 7.60 Windows Nsight kill参数修复（2026-09-27）
 
 本轮验证：Windows argv回归先FAIL后修复；collection/entry/postprocess三文件45 passed/34.98s。compileall四目录、contract37/37、Canonical7、oracle独立性、diff-check通过，独立只读review无新增重要问题。未重跑全量；7.59的1410/5只属于上一实现验证，不算本次新全量。该改动不触及runner/科学analyzer/冻结合同。新包仅以服务器已部署4d8fe10为前提，后续新目录/新run，旧BLOCKED不变。
