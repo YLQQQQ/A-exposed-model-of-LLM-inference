@@ -68,7 +68,7 @@ print(f"stderr attempt={attempt}", file=sys.stderr)
 
 
 def _run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *behaviors: str,
-         nsys_exe: str | None = None):
+         nsys_exe: str | None = None, **options):
     rep = tmp_path / "pass1_profile.nsys-rep"
     rep.write_bytes(b"immutable rep")
     fake = tmp_path / "fake_exporter.py"
@@ -94,9 +94,18 @@ def _run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *behaviors: str,
         retry_readiness_timeout_seconds=0.15,
         poll_interval_seconds=0.01,
         stable_samples=1,
+        **options,
     )
     assert json.loads(report_path.read_text(encoding="utf-8")) == result
     return result, canonical, rep, pid_file
+
+
+def test_single_attempt_diagnostic_policy_never_retries(tmp_path, monkeypatch):
+    result, canonical, _, _ = _run(tmp_path, monkeypatch, 'nonzero', 'success', max_attempts=1)
+    assert result['status'] == 'BLOCKED_BY_NSYS'
+    assert result['attempt_count'] == 1
+    assert not canonical.exists()
+    assert not (tmp_path/'pass1_profile.export_attempt2.sqlite').exists()
 
 
 @pytest.mark.parametrize("condition", ["missing", "empty"])

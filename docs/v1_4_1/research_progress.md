@@ -1,5 +1,11 @@
 # ExposedPath 科研进度清单
 
+## 7.59 单次Qwen诊断本地实现（2026-09-27，CPU验证完成）
+
+按继续推进授权完成[诊断入口v0.1](gate8_qwen_diagnostic_v0_1.md)：新prepared manifest/prompt/preflight、固定32/2 batch1 warmup1/request1、原producer文件链与loaded config，NOT_QUALIFIED，真实A/B/D禁用。旧load fallback默认保留，新诊断单次；export默认两次保留，新诊断max_attempts=1。模型历史清单hash+当前大小/集合，不重复3GB内容哈希。minimal profile有界等待/失败保存/不重试；超时不声称后代已退出，保留BugCheck风险。定向先RED后GREEN，复审身份字段/根路径/alias及落盘失败进程监管均补反例；最终CPU全量进行中。未部署服务器、未运行模型/GPU/Nsight，服务器仍f5；Gate7 PASS、新Q0/Gate8 NOT_RUN。
+
+验证收尾（覆盖上段进行中）：Python3.12.7本地定向71 passed/23.90s；CPU全量1410 passed/5 skipped/292.84s（进程mask=-1且nvcc不可见，5项为既有CUDA source检查，未改skip）。前两次全量在review修复时中止，不计通过；初次timeout fixture启动预算不足已改隔离解释器与2秒预算，最终通过。compileall四目录、contract37/37内部一致性、Canonical7模块、oracle静态独立性、diff-check通过。复审问题均关闭；两段服务器草案仅AST解析通过：A纯CPU static，verify移到B mask3阶段，明确可能初始化CUDA；不是目标服务器成绩。没有修改Measurement Contract、S/A/B/Derived公式、Q0 oracle或历史证据。当前下一项由协调窗口审核固定包并指导用户先A静态，核原件后再B单次诊断，不再静态索源。
+
 ## 7.58 最新限定来源审查（2026-09-27）
 
 七文件服务器原件已直接读取；服务器静态exit0/f5前后clean，协调窗口独立核验10文件/内部8项hash。详见[限定审查与单次诊断路径](gate8_qwen_source_review_v0_1.md)。prefill SDPA fast_all的布尔求值是旧1-byte D2H/第三sync候选，不是已证实callsite；实际backend/native mode/迟发保持UNKNOWN。停止进一步静态索源。下一项仅本地窄诊断入口封装现有run_gate8_requests（legacy CLI不启用它），CPU fixture核实身份/文件产物后提出一次NOT_QUALIFIED真实Qwen Engineering诊断授权；不以科学资格未通过禁止探索，也不将探索当资格。无新GPU/Nsight、无生产代码变更、未重跑测试；Gate7 PASS，新Q0/Gate8 NOT_RUN。

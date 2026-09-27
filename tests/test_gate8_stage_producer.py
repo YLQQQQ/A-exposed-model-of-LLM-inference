@@ -34,7 +34,7 @@ def setup_case(monkeypatch, tmp_path, pass_id='pass1', failed=False):
     def sync():
         state['syncs'] += 1
     monkeypatch.setattr(runner.torch.cuda, 'synchronize', sync)
-    def load(path, gpu):
+    def load(path, gpu, **options):
         assert path == 'synthetic-model' and gpu == 3
         state['loads'] += 1
         if failed:

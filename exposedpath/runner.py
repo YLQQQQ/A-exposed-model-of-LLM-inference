@@ -151,7 +151,7 @@ def validate_token_ready_boundaries(
         previous_ns = boundary.completed_ns
 
 
-def load_model(model_path: str, gpu: int = 0, *, load_observation=None):
+def load_model(model_path: str, gpu: int = 0, *, load_observation=None, allow_fallback=True):
     """Load model (FP16) + tokenizer on specified GPU.
 
     Handles CUDA_VISIBLE_DEVICES remapping: if the user requested physical GPU *gpu*
@@ -193,6 +193,8 @@ def load_model(model_path: str, gpu: int = 0, *, load_observation=None):
             trust_remote_code=True,
         )
     except Exception:
+        if not allow_fallback:
+            raise
         print("[runner] trust_remote_code=True failed, retrying without...")
         model = observed_load(
             'fallback',
@@ -396,7 +398,8 @@ def run_one_invocation(
 def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, output_len, device,
                        pass_fields, request_plan, eos_token_id=None,
                        clock_ns=time.perf_counter_ns, record_drains=False,
-                       record_stages=False, model_setup=None, record_load_tasks=False):
+                       record_stages=False, model_setup=None, record_load_tasks=False,
+                       setup_observer=None, allow_load_fallback=True):
     """Explicit local Gate8 producer API over already-resident inputs.
 
     Not enabled by the legacy CLI/launcher. The caller supplies preflight-bound
@@ -502,6 +505,8 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
         def initialize():
             nonlocal load_observer
             options = {}
+            if not allow_load_fallback:
+                options['allow_fallback'] = False
             if record_load_tasks:
                 from exposedpath import gate8_load_tasks
                 from exposedpath.gate8_identity import PASS_FIELDS
@@ -516,6 +521,8 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
             loaded, tokenizer, _, actual_device = load_model(model_setup['model_path'],physical,**options)
             if actual_device!=device or torch.cuda.current_device()!=logical_device:
                 raise ValueError('STAGE_SETUP_DEVICE_CONFLICT')
+            if setup_observer is not None:
+                setup_observer(loaded)
             ids=torch.tensor(batch['input_ids'],dtype=torch.long,device=device)
             mask=torch.tensor(batch['attention_mask'],dtype=torch.long,device=device)
             return loaded,ids,mask,tokenizer.eos_token_id

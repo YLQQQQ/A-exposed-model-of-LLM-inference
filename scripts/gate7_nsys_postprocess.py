@@ -179,13 +179,16 @@ def run_postprocess(
     retry_readiness_timeout_seconds: float = 20,
     poll_interval_seconds: float = 2,
     stable_samples: int = 3,
+    max_attempts: int = 2,
 ) -> dict:
     """Export at most twice; only a validated attempt may become canonical."""
     rep_path = Path(rep_path).resolve()
     canonical_path = Path(canonical_path).resolve()
     report_path = Path(report_path).resolve()
+    if type(max_attempts) is not int or max_attempts not in (1, 2):
+        raise ValueError('max_attempts must be 1 or 2')
     attempt_paths = [canonical_path.with_name(f"{canonical_path.stem}.export_attempt{i}.sqlite")
-                     for i in (1, 2)]
+                     for i in range(1, max_attempts+1)]
     report = {
         "status": "BLOCKED_BY_NSYS", "error": None, "rep_path": str(rep_path),
         "rep_sha256": None, "readiness": None, "retry_readiness": None,
@@ -260,7 +263,7 @@ def run_postprocess(
             report["analyzer_allowed"] = True
             break
         if report["status"] != "PASS":
-            raise RuntimeError("Both bounded SQLite export attempts failed")
+            raise RuntimeError("All bounded SQLite export attempts failed")
     except (OSError, ValueError, TimeoutError, RuntimeError) as exc:
         report["error"] = str(exc)
     _persist(report_path, report)
@@ -273,10 +276,11 @@ def main() -> int:
     parser.add_argument("--rep", type=Path, required=True)
     parser.add_argument("--canonical-sqlite", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument('--max-attempts',type=int,choices=(1,2),default=2)
     args = parser.parse_args()
     report = run_postprocess(
         nsys_exe=args.nsys, rep_path=args.rep,
-        canonical_path=args.canonical_sqlite, report_path=args.report,
+        canonical_path=args.canonical_sqlite, report_path=args.report, max_attempts=args.max_attempts,
     )
     print(json.dumps({"status": report["status"], "attempt_count": report["attempt_count"],
                       "successful_attempt": report["successful_attempt"], "error": report["error"]}))
