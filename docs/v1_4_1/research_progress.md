@@ -59,6 +59,7 @@
 ## 1. 当前快照
 
 - 清单版本：`7.44`
+- 7.44交付收紧：已准备忽略本地索引中的单文件静态脚本，5633 bytes、SHA256 `28ba3efee8eb63971ddcaf3fb1c40efa1ef04eac9b9fafa43ab3f9daa114f318`；固定原server HEAD/两DLL hash，仅六次imports/exports/headers、无反汇编/扫描/加载。语法AST检查通过，未执行目标工具/服务器；准确传输、执行、10文件/9项清单回件说明已获协调只读复核，最后补直接输出清单hash/项数与子进程启动策略说明。候选不是必做Gate；缺符号结束静态路线，后续Engineering来源取证允许UNKNOWN开始，不形成运行绑定前置循环。GPU/Nsight仍未授权。
 - 7.44必要调用点调查收口：[来源对齐§9](gate8_eager_source_alignment_v0_1.md)。只读旧合格SQLite白名单复核四token sync/两device drain、5线程Memcpy同trace stream7、相关callchain全部null及event-create记录，输入SHA前后一致；不读取敏感metadata、不追认资格。给出独立条件性单流等价正例及worker历史/另blocking流反例：A相同不保证B完整W相同，drain不能截断历史。源码/hash/marker/单流外观不足以关闭目标mode/lifetime来源；本轮无业务修改或新测试，不把7.43成绩当本轮实验。
 - 7.44唯一外部候选：经单次授权后只读已hash的c10_cuda/torch_cuda相关imports/exports/已有符号及可定位调用RVA，限定相关copy/sync/default/event/context入口，不扫描安装、不加载CUDA、不采集、不部署。本轮只准备，未执行；仅imports不能证明实际调用，缺可绑定调用点即终止静态路线、不再索包。详见§9.3的能/不能证明、两个终点及后续受控来源验证边界。无需新增研究claim；如后续需改变observation profile，应单项说明再批准。Gate7 PASS，新Q0/Gate8 NOT_RUN。
 - 7.43本地加载观察：[来源对齐§8](gate8_eager_source_alignment_v0_1.md)。目标原件审计后，显式record_load_tasks将原load_model两个加载分支接到精确来源限定的临时单hook；任务、attempt、父setup、native TID与线程实例随producer0.4/load-task0.1落盘。原Future/返回/异常和非等待shutdown保留，不新增等待/CUDA同步/流切换。未结束/取消/失败任务保留INCOMPLETE，setup不伪造request；HOST_JOB_ONLY/UNKNOWN/NOT_ASSESSED不授S资格，旧file-chain0.5明确拒绝新诊断receipt。

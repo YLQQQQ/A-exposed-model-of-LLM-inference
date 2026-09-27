@@ -381,7 +381,9 @@ generation、mixed-mode及依赖解释，并有目标scope证据。现有材料�
 
 ### 9.3 一次限定补证候选与停止规则
 
-**谁做下一步：** 协调窗口审查下述范围，用户授权后才由服务器执行；本轮仅准备。
+**谁做下一步：** 主窗口已准备限域脚本/字节hash/传输与回件说明于忽略的本地交付索引，
+协调窗口审查，用户手工执行时确认具体范围；不重复泛泛请求普通只读补证授权。本轮未执行。
+这是一项有决策用途的候选，不是Gate的必经条件；无符号时不投入更多静态搜集。
 不复制整包/模型，不导出Raw，不profile/export，不import Torch或初始化CUDA。
 
 输入只限§7已hash的`c10_cuda.dll`与`torch_cuda.dll`及**已存在**的匹配符号/构建记录。
@@ -389,9 +391,11 @@ generation、mixed-mode及依赖解释，并有目标scope证据。现有材料�
 
 1. 只读PE imports/exports及已有debug-directory/PDB身份；收集涉及copy/stream sync、
    stream获取、event、context reset和动态入口解析的相关条目，不扫描其它安装目录。
-2. 若存在能解析的`memcpy_and_sync`/`stream_synchronize`/default-current相关函数或
-   精确调用RVA，只取其有限反汇编/重定位及IAT引用；记录模块hash+RVA+符号+目标入口。
-   不全量反汇编巨大torch_cuda，不下载PDB，不以文本API名称代替可解引用调用点。
+2. 本次脚本到`/imports /exports /headers`即止，不反汇编。预期候选为
+   `c10::cuda::stream_synchronize`→stream sync、`memcpy_and_sync`→copy+sync（可能内联
+   无导出）、default/current stream helper→native来源；其余launch/event/context入口
+   只提示需检查的前驱。若实际存在可解析符号/RVA，回件后才评估相关局部调用绑定是否
+   值得做；无可用符号就停止。不全量反汇编、不下载PDB、不把imports当已执行的调用。
 3. 新诊断目录保存命令、退出、字节hash和筛选结果；缺符号或动态/混合入口无法解析也
    是最终结果，不能伪填来源。现有checkout/环境/旧证据不变，不要求部署d5ff1da。
 
@@ -407,10 +411,13 @@ generation、mixed-mode及依赖解释，并有目标scope证据。现有材料�
   原drain；独立W/oracle；不重采旧全矩阵）。source门/marker/correlation/lifetime/必要
   event任何冲突即停，不retry换构造。新结果只是受影响资格，不自动批准真实模型claim。
 - 仅得到imports/无法绑定调用点：**静态路线就此结束**，不继续索取更多环境包。
-  下一可裁决方案是一次目标调用路径的受控来源验证；若其必须额外采集callchain或修改
-  observation profile，先明确该单项amendment与开销/能力边界。不能以普通torch微程序
+  下一可裁决方案是一次目标调用路径的Engineering来源观察，可以UNKNOWN起步并只产
+  诊断；不能循环要求先知道运行绑定才能采集运行绑定。若必须额外采集callchain或修改
+  observation profile，应先核对目标2026.2.1精确参数、额外开销、预定义输出和停止点，
+  单项审查后再执行，不要求完备性认证。不能以普通torch微程序
   已通过代替Qwen全部内部调用已证明，也不自动改变collector或研究支持域。
 
 本轮终点：本地已有材料不足以解除目标mode/lifetime来源阻塞；服务器静态调用点核查
-是唯一准备中的外部候选，不是已授权命令。需要批准的是一次外部操作范围，不是底层
-目录组织。Gate7 PASS，新Q0/Gate8 NOT_RUN；没有扩大研究claim或修改生产代码。
+是唯一准备中的外部候选；准确脚本已交协调审查，未执行。静态读取的收益只在于判断
+哪些相关入口可定位、是否应直接结束静态路线，不保证解除运行绑定未知。
+Gate7 PASS，新Q0/Gate8 NOT_RUN；没有扩大研究claim或修改生产代码。
