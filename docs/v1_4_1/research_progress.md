@@ -58,7 +58,8 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.52`
+- 清单版本：`7.53`
+- 7.53研究转向一页草案：[单一collector Go/No-Go](gate8_collector_pivot_decision_v0_1.md)。自然Qwen当前NO-GO；首选替换而非并挂Nsight的受控可行性原型为条件性GO、未授权。第一方API有具体参数/correlation/resource/NVTX/丢弃入口，但目标ABI/thread epoch/implicit PTDS仍需原型证伪，不保证平台可用。备选受控显式流须收缩自然行为claim。唯一下一步是用户决定是否投入该受控原型，不同时授权模型采集。无代码/合同/服务器变更。
 - 7.52最后替代路线裁决见[可行性文档末节](gate8_mode_feasibility_decision_v0_1.md)：CUPTI旁挂adapter缺目标共存及完整epoch正面依据；所有兼容世界A等价路线缺候选集合完备性，且属新发布语义，不能因两个模式同值就放行。两者均未达可执行条件，关闭本轮调查，不请求批准空adapter/不默认profile。Route A自然模型目标仍未完成，Gate7 PASS、新Q0/Gate8 NOT_RUN。
 - 7.51有界技术裁决：[mode/epoch可行性0.1](gate8_mode_feasibility_decision_v0_1.md)。仅比较现有Nsight字段和固定源码/二进制证明两条低风险候选，均未闭合。原SQLite有NULL stream正面类型证据但Runtime无stream参数、inventory无epoch；不得将缺口写成完全无证据或整进程mode。暂停抽象准入批准，停止同类搜索，不默认profile；真实模型支持域仍阻塞，受控正确性不能冒充自然模型claim。只读/文档，服务器不动。
 - 7.50批准前具体提案：[target-scope admission草案0.1](gate8_target_scope_admission_draft_v0_1.md)，DRAFT_NOT_APPROVED。按调用/TU/thread/context绑定mode与epoch证据；同族窄域、混合mode拒绝、setup/warmup原owner和完整历史，给拒绝矩阵和手算正反例。官方CUDA12.4.1及安装Nsight API列表不证明目标调用；可执行mode/连续性adapter仍技术阻塞。仅文档，未改变合同/代码/资格，未授权profile或服务器采集。
@@ -104,7 +105,7 @@
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（窄受控capture/离线计算已有实际证据，非模型或新Q0/整Gate验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：7.51有界技术裁决完成；两条现成低风险mode/epoch路径均未闭合，暂停准入审批和同类搜索。向用户报告真实模型支持域技术阻塞，不再请求抽象批准；任何具体观测改变或语义调整需另行明确，不默认profile/A-only/换流。服务器仍f5edc64，无部署/采集；UNKNOWN和Derived拒绝门保持。
+- 当前最高优先级：7.53转向草案交用户决策：是否授权单一自有collector的最小受控可行性原型（替换Nsight，不并挂、不含Qwen采集）。自然模型当前NO-GO；若不承担新工程成本，受控显式流路线需明确收缩claim。停止Nsight小修/重复搜索/空准入批准。服务器f5不变，无部署/采集；UNKNOWN和Derived拒绝门保持。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -674,3 +675,4 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 | 7.50 | 2026-09-27 | target-scope admission具体未生效草案：逐调用mode/epoch证据、同族范围、原owner、拒绝及独立预期 | EP-G8-01/02批准前提案 | 技术来源未解决不猜测；未改生产schema/代码/公式，无采集；Gate7 PASS、新Q0/Gate8 NOT_RUN |
 | 7.51 | 2026-09-27 | 两条低风险mode/epoch证据路径有界裁决，均未闭合；暂停抽象准入审批和同类搜索 | EP-G8-01/02技术停止点 | 受控正确性不代替自然模型claim，无代码/合同/采集；Gate7 PASS、新Q0/Gate8 NOT_RUN |
 | 7.52 | 2026-09-27 | 最后比较新增adapter与所有兼容世界A等价准入；均未形成可执行方案，关闭替代调查 | EP-G8-01/02研究决策材料 | 不批准新语义/collector，不降低门槛，不再请求抽象批准；Gate7 PASS、新Q0/Gate8 NOT_RUN |
+| 7.53 | 2026-09-27 | 单一自有collector替换Nsight的一页转向评估；受控原型条件性GO、真实Qwen当前NO-GO，备选显式流需claim收缩 | EP-G8-01/02研究资源决策草案 | 未授权实现/collector更换/实验，原合同与证据不变；Gate7 PASS、新Q0/Gate8 NOT_RUN |
