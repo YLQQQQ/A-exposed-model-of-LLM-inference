@@ -58,7 +58,8 @@
 
 ## 1. 当前快照
 
-- 清单版本：`7.55`
+- 清单版本：`7.56`
+- 7.56有界只读收口：[默认流后缀等价备忘录](gate8_request_suffix_equivalence_review_v0_1.md)。直接只读旧QwenSQLite：每候选request有3492K/3copy/3memset及3次stream sync，额外内部同步不能只按Token标签忽略；已记录Q同TID/context/NULL stream，不等于无遗漏。严格受证单FIFO Q条件下W_Q/唯一terminal/A可条件等价，W_full/B历史仍可能不同；独立反例显示另一blocking stream会使wait40与10不同。现有producer/资料未证明来源闭合，当前没有单个现成充分补证，不建议重复采集或再传泛化安装包。0.1实现及合同不改，服务器无动作；Gate7 PASS、新Q0/Gate8 NOT_RUN。
 - 7.55当前实现：[request/drain A范围amendment 0.1](gate8_request_drain_scope_amendment_v0_1.md)。用户批准前缀完成证书＋合格Q独立A资格；旧MC正文及S/A-B/Q0不改。新增文件入口/显式reader，保留原physical S/B，后缀证明不冒充W；源身份、真实drain scope、时序、资源重建、跨线程/迟发、后缀S失败均拒绝。仅SYNTHETIC_CONTROLLED_ORACLE来源，本地确定性验证不是新Q0资格；真实来源SOURCE_NOT_QUALIFIED，默认流尚不在首版支持域。collector暂停，无服务器动作。
 - 7.55验证：先RED复现缺独立入口，后补drain/后缀/身份/reader反例；独立review发现错context/外PID同步可误成空Q，及外PID activity借Runtime correlation，均先失败后加入实际scope检查。初始受影响定向94 passed，最终新增测试34 passed。首次全量PATH筛选未隔离nvcc，意外触发本机CUDA13旧Q0编译失败：1377 passed、1 failed、4 errors（均同一编译路径），未执行GPU程序，不改旧Q0/skip。改为同一Python进程过滤CUDA路径并先断言`shutil.which('nvcc') is None`，`CUDA_VISIBLE_DEVICES=-1`；最终CPU全量1379 passed、5 skipped（现有5项nvcc编译门，288.08s）。compileall、contract37/37、Canonical7模块、oracle independence及diff-check通过。所有新资格输入为合成fixture；未部署、未运行真实Nsight或采集。
 - 7.54当前设计：[request/drain范围草案0.1](gate8_request_drain_scope_draft_v0_1.md)，DRAFT_NOT_APPROVED。核对研究设计v7.1 §1.5/协议v2.1 Pre-Pilot，明确模型sampling/Token-ready在内、setup/文本化/I-O在外；历史线程不等于推理多线程。原有成功drain可有条件证明前缀对A交集为零，但不证明无迟发/无丢失、不删B历史；提出A独立范围资格这一集中待审amendment，后缀依赖仍严格。collector原型暂停，旧7.53建议不再是当前下一步。精简定向/收口验证及hash复用，保留合同要求；无代码/正式schema/服务器变更。
@@ -108,7 +109,7 @@
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态：Gate 0～7 = `PASS`（EP-G7-08～11完成）；Gate8 = `NOT_RUN`（窄受控capture/离线计算已有实际证据，非模型或新Q0/整Gate验收）；Gate9～11 = `BLOCKED`（Formal平台未确定/未接入）；Gate12～14 = `NOT_RUN`。
-- 当前最高优先级：7.55本地A范围实现收口后，唯一必要证据问题是自然Qwen drain后目标Q的参与线程/stream/依赖范围及NULL-stream所需mode来源。仅在独立证明相关API/依赖覆盖后才审查模式等价，不在当前实现放行UNKNOWN。真实前缀封闭与后缀资格未落实不采集试错、不扩collector；服务器f5不变，新Q0/Gate8 NOT_RUN。
+- 当前最高优先级：7.56已证明条件性后缀等价不推出物理W/B等价；当前唯一缺口是固定实际forward/backend的来源闭合与同次trace/drain/D1联结。现资料未形成充分可获取的单件证据，不申请服务器重复采集，不改0.1默认流拒绝或UNKNOWN。继续时只允许聚焦该来源命题，不重开宽泛工具调查；服务器f5不变，新Q0/Gate8 NOT_RUN。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -681,3 +682,4 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 | 7.53 | 2026-09-27 | 单一自有collector替换Nsight的一页转向评估；受控原型条件性GO、真实Qwen当前NO-GO，备选显式流需claim收缩 | EP-G8-01/02研究资源决策草案 | 未授权实现/collector更换/实验，原合同与证据不变；Gate7 PASS、新Q0/Gate8 NOT_RUN |
 | 7.54 | 2026-09-27 | 纠正setup线程与request线程混淆，暂停collector转向；形成drain前缀证书/严格后缀/A与历史B分离的窄范围草案，精简重复测试与hash | EP-G8-01/02批准前合同设计 | 正式MC/S/A-B未改、草案未生效；不追认旧证据，无代码/服务器/采集；Gate7 PASS、新Q0/Gate8 NOT_RUN |
 | 7.55 | 2026-09-27 | 用户批准A优先范围；版本化前缀证书/A独立准入与tests-first文件链，原物理S/B保持，真实来源拒绝 | EP-G8-01/02本地确定性实现，不是实验完成 | MC正文/Q0/历史证据不改；非默认流合成不授予Qwen资格，D/Signature不放行；Gate7 PASS、新Q0/Gate8 NOT_RUN |
+| 7.56 | 2026-09-27 | 有界只读区分后缀条件等价与真实来源证明，补查Qwen内部sync及独立反例 | EP-G8-01/02证据必要性判断 | 只更新决策/进度，无代码或合同变化，不运行测试/采集；Gate7 PASS、新Q0/Gate8 NOT_RUN |
