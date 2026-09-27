@@ -3,6 +3,9 @@ import json
 import os
 import sqlite3
 import threading
+import sys
+import sysconfig
+from pathlib import Path
 from types import SimpleNamespace
 from test_v141_canonical_raw import _make_source_sqlite
 from test_gate8_identity import UUID,write_json,sha
@@ -16,7 +19,11 @@ def capture(tmp_path,monkeypatch):
     lib=tmp_path/'synthetic.dll'; lib.write_bytes(b'CPU DOUBLE, NOT NATIVE BINARY')
     pre=write_json(tmp_path/'pre.json',dict(gpu_index_physical=3,gpu_uuid=UUID,pci_bus_id='0000:E1:00.0',
         cuda_device_order='PCI_BUS_ID',cuda_visible_devices='3'))
-    plan=m.prepare(tmp_path/'prepared',pre,lib,'d'*40,'qualification-test')
+    plan=m.prepare(tmp_path/'prepared',pre,lib,'d'*40,'qualification-test',
+        target_python=Path(sys._base_executable),site_root=Path(sysconfig.get_path('purelib')))
+    from exposedpath_v141 import gate8_target_python as target
+    # In-process CPU backend double; real isolated child behavior has separate subprocess tests.
+    monkeypatch.setattr(target,'current',lambda contract:dict(pid=os.getpid(),parent_pid=os.getppid(),snapshot=contract['actual']['snapshot']))
     path=tmp_path/'trace.sqlite'; _make_source_sqlite(path)
     db=sqlite3.connect(path)
     for table in ('NVTX_EVENTS','CUPTI_ACTIVITY_KIND_RUNTIME','CUPTI_ACTIVITY_KIND_SYNCHRONIZATION',
@@ -30,6 +37,7 @@ def capture(tmp_path,monkeypatch):
     db.execute('UPDATE TARGET_INFO_GPU SET uuid=?,busLocation=?',(UUID,'0000:E1:00.0'))
     db.execute('CREATE TABLE TARGET_INFO_CUDA_DEVICE(pid INTEGER,cudaId INTEGER,uuid TEXT,gpuId INTEGER)')
     pid=os.getpid(); tid=(pid<<24)|threading.get_native_id()
+    db.execute('INSERT INTO DIAGNOSTIC_EVENT VALUES (0,2,1,?, ?,1)',('Process '+str(pid)+' was launched by the profiler',pid<<24))
     db.execute('INSERT INTO TARGET_INFO_CUDA_DEVICE VALUES (?,0,?,0)',(pid,UUID))
     db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET processId=?,nullStreamId=2',(pid,))
     db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET processId=?,flag=0',(pid,))

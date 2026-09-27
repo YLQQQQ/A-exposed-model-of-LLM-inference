@@ -36,6 +36,13 @@ def compare_components(expected,actual):
     require(expected==actual,'A_CLASSIFICATION_MISMATCH')
 
 
+def sync_kind(name):
+    mapping={n:k for k in ('CONTEXT_SYNCHRONIZE','STREAM_SYNCHRONIZE')
+        for n in (k,'CUPTI_ACTIVITY_SYNCHRONIZATION_TYPE_'+k)}
+    require(name in mapping,'UNSUPPORTED_SYNC_ENUM')
+    return mapping[name]
+
+
 def check_raw(sqlite_path,producer):
     """Construction oracle independently binds original rows, not S/projection."""
     path=Path(sqlite_path).resolve(); root=Path(producer)
@@ -108,7 +115,7 @@ def check_raw(sqlite_path,producer):
                 and strings.get(r['nameId'])=='cudaDeviceSynchronize' and r['returnValue']==0]
             require(len(matches)==1,'DRAIN_API'); drain_api=matches[0]
             matches=[r for r in syncs if r['globalPid']==gpid and r['correlationId']==drain_api['correlationId']
-                and sync_types.get(r['syncType'])=='CONTEXT_SYNCHRONIZE' and drain_api['start']<=r['start']<=r['end']<=drain_api['end']]
+                and sync_kind(sync_types.get(r['syncType']))=='CONTEXT_SYNCHRONIZE' and drain_api['start']<=r['start']<=r['end']<=drain_api['end']]
             require(len(matches)==1,'DRAIN_PHYSICAL_SYNC')
             require(all(r['end']<=drain_api['end'] for r in kernels+copies
                 if r['globalPid']==gpid and r['start']<drain_api['start']),'DRAIN_PRIOR_COMPLETION')
@@ -152,7 +159,7 @@ def check_raw(sqlite_path,producer):
                         and raw.get('graphId') in (None,0) and raw.get('graphNodeId') in (None,0),'KERNEL')
                     activity.append(raw); members.append(ref(raw))
                 else:
-                    require(api['start']<=x<=y<=api['end'] and sync_types.get(raw['syncType'])=='STREAM_SYNCHRONIZE','SYNC_INTERVAL')
+                    require(api['start']<=x<=y<=api['end'] and sync_kind(sync_types.get(raw['syncType']))=='STREAM_SYNCHRONIZE','SYNC_INTERVAL')
                     require(all(r['end']<=api['end'] for r in activity),'SYNC_COMPLETION')
                     waits.append(interval(api)); expected_members.append(dict(sync=ref(raw),members=list(members)))
             require([len(s['members']) for s in expected_members]==[1,2,4],'DEPENDENCY_CONSTRUCTION')
@@ -168,6 +175,6 @@ def check_raw(sqlite_path,producer):
             results.append(dict(identity=ident,windows=windows,syncs=expected_members,local_gaps=gaps,
                 drain_api=ref(drain_api),drain_marker=ref(drain)))
         require(hashlib.sha256(path.read_bytes()).hexdigest()==original,'SOURCE_CHANGED')
-        return dict(schema_version='exposedpath-qualification-oracle/0.1.0',source_sqlite_sha256=original,
+        return dict(schema_version='exposedpath-qualification-oracle/0.1.1',source_sqlite_sha256=original,
             requests=results,tokens=[[11,12],[21,22]],dropped_records_status='UNKNOWN')
     finally: conn.close()

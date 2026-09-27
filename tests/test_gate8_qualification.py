@@ -112,8 +112,9 @@ def test_collection_timeout_stops_before_export(tmp_path,monkeypatch):
     monkeypatch.setattr(bounded,'run_once',lambda *a,**k:dict(status='BLOCKED',timed_out=True,exit_code=-1))
     def forbidden(**kwargs): raise AssertionError('export after failed collection')
     monkeypatch.setattr(exporter,'run_postprocess',forbidden)
-    out=m.collect(plan,tmp_path/'collection','fake-nsys','fake-python')
+    out=m.collect(plan,tmp_path/'collection','fake-nsys',json.loads(plan.read_text())['target_python']['requested_executable'])
     assert json.loads(out.read_text())['status']=='BLOCKED'
+    assert 'COLLECTION_FAILED_NO_RETRY' in json.loads(out.read_text())['error']
     assert not (out.parent/'qualification.json').exists()
 
 
@@ -183,3 +184,14 @@ def test_membership_mismatch_rejected_even_with_same_a(tmp_path,monkeypatch):
         return value
     monkeypatch.setattr(scope,'load_engineering_scope',corrupted)
     with pytest.raises(ValueError): m.audit(plan,execution,db,rep,export,tmp_path/'audit','2026.2.1.210')
+
+
+def test_full_nsight_sync_enum_names_have_same_independent_result(tmp_path,monkeypatch):
+    from qualification_fixture import capture
+    from exposedpath_v141.gate8_qualification_oracle import check_raw
+    import sqlite3
+    _,execution,db,*_=capture(tmp_path,monkeypatch)
+    before=check_raw(db,execution.parent)
+    with sqlite3.connect(db) as c:
+        c.execute("UPDATE ENUM_CUPTI_SYNC_TYPE SET name='CUPTI_ACTIVITY_SYNCHRONIZATION_TYPE_' || name")
+    assert check_raw(db,execution.parent)['requests']==before['requests']

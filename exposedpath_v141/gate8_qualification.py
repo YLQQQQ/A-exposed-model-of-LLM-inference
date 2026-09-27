@@ -15,7 +15,7 @@ import time
 
 ROOT=Path(__file__).resolve().parents[1]
 NATIVE=ROOT/'scripts/gate8_qualification_token.cu'
-VERSION='exposedpath-controlled-qualification/0.1.0'
+VERSION='exposedpath-controlled-qualification/0.2.0'
 
 OP_PREFIX='EXPOSEDPATH_QUALIFICATION_OP_V1:'
 
@@ -58,10 +58,12 @@ class NativeBackend(BaseBackend):
         super().close(); self.initialized=False
 
 
-def prepare(output,preflight,library,commit,run_id):
+def prepare(output,preflight,library,commit,run_id,*,target_python,site_root):
     output=Path(output).resolve(); library=Path(library).resolve()
     if output.exists(): raise FileExistsError(output)
     check_git(commit)
+    from .gate8_target_python import probe
+    target=probe(target_python,site_root)
     pre=json.loads(Path(preflight).read_text(encoding='utf-8-sig'))
     require(type(pre.get('gpu_index_physical')) is int and pre['gpu_index_physical']>=0
         and pre.get('cuda_device_order')=='PCI_BUS_ID'
@@ -78,6 +80,7 @@ def prepare(output,preflight,library,commit,run_id):
         prompt_tokens_sha256=digest(output/'prompt.json'),gpu_index_physical=pre['gpu_index_physical'],
         gpu_index_logical=0,gpu_uuid=pre['gpu_uuid'],gpu_pci_bus_id=pre['pci_bus_id']))
     _write(output/'plan.json',dict(schema_version=VERSION,construction=CONSTRUCTION,commit=commit,
+        target_python=target,
         native_source_sha256=digest(NATIVE),library=dict(path=str(library),sha256=digest(library)),
         files={n:_entry(output/n,output) for n in ('preflight.json','prompt.json','runner_source.py','manifest.json')}))
     return output/'plan.json'
@@ -86,6 +89,8 @@ def prepare(output,preflight,library,commit,run_id):
 def read_plan(path,current=False):
     path=Path(path); plan=_json(path)
     require(plan.get('schema_version')==VERSION and plan.get('construction')==CONSTRUCTION,'PLAN_VERSION')
+    from .gate8_target_python import validate_probe,environment
+    validate_probe(plan['target_python'])
     require(set(plan['files'])=={'preflight.json','prompt.json','runner_source.py','manifest.json'},'PLAN_FILES')
     paths={n:_resolve(path.parent,v) for n,v in plan['files'].items()}
     manifest=_json(paths['manifest.json'])
@@ -106,6 +111,7 @@ def read_plan(path,current=False):
             operations=[[list(x) for x in operations(i)] for i in (0,1)],tokens=[[11,12],[21,22]]),'PLAN_BINDING')
     if current:
         check_git(plan['commit'])
+        require(environment()==plan['target_python']['environment'],'TARGET_ENVIRONMENT_CHANGED')
         require(digest(Path(__file__))==digest(paths['runner_source.py'])
             and digest(NATIVE)==plan['native_source_sha256']
             and digest(Path(plan['library']['path']))==plan['library']['sha256'],'SOURCE_CHANGED')
@@ -123,6 +129,8 @@ def execute(plan_path,output,*,backend_factory=NativeBackend,clock_ns=time.perf_
     output=Path(output).resolve()
     if output.exists(): raise FileExistsError(output)
     plan,paths,manifest=read_plan(plan_path,True)
+    from .gate8_target_python import current
+    runtime=current(plan['target_python'])  # Before DLL initialization or CUDA calls.
     output.mkdir(parents=True)
     for name,path in paths.items(): shutil.copyfile(path,output/name)
     shutil.copyfile(plan_path,output/'plan.json')
@@ -191,6 +199,7 @@ def execute(plan_path,output,*,backend_factory=NativeBackend,clock_ns=time.perf_
         identity={k:fields[k] for k in ('run_id','pass_id','attempt_id','pid')},declaration=manifest['engineering_scope'],
         observed_configuration=dict(construction=CONSTRUCTION,warmup_token=0,model_workload=False),status=status))
     _write(output/'execution.json',dict(schema_version=VERSION,status=status,error=error,observed_tokens=observed,
+        target_runtime=runtime,
         plan_sha256=digest(Path(plan_path)),files={p.name:_entry(p,output) for p in output.iterdir() if p.is_file()},
         q0_status='NOT_RUN',gate8_verdict='NOT_RUN'))
     return output/'execution.json'
@@ -198,7 +207,7 @@ def execute(plan_path,output,*,backend_factory=NativeBackend,clock_ns=time.perf_
 
 def validate_execution(plan_path,execution_path):
     plan_path=Path(plan_path); execution_path=Path(execution_path); root=execution_path.parent
-    read_plan(plan_path)
+    plan,_,_=read_plan(plan_path)
     execution=_json(execution_path)
     require(execution['schema_version']==VERSION and execution['status']=='COMPLETE' and execution['error'] is None
         and execution['plan_sha256']==digest(plan_path),'EXECUTION')
@@ -208,6 +217,8 @@ def validate_execution(plan_path,execution_path):
     for name,item in execution['files'].items(): require(_resolve(root,item)==(root/name).resolve(),'EXECUTION_FILES')
     require(digest(root/'plan.json')==digest(plan_path),'EXECUTION_PLAN')
     read_plan(root/'plan.json')  # Bind copied inputs to original pre-execution hashes.
+    from .gate8_target_python import bind_producer
+    bind_producer(plan['target_python'],execution['target_runtime'],_json(root/'pass_identity.json')['pid'])
     return execution
 
 
@@ -217,7 +228,9 @@ def audit(plan_path,execution_path,sqlite,rep,export,output,collector_version):
     from .gate8_qualification_oracle import check_raw,compare_components
     plan_path=Path(plan_path); execution_path=Path(execution_path); output=Path(output).resolve()
     if output.exists(): raise FileExistsError(output)
-    validate_execution(plan_path,execution_path); root=execution_path.parent
+    execution=validate_execution(plan_path,execution_path); root=execution_path.parent
+    from .gate8_target_python import bind_trace_launch
+    launch=bind_trace_launch(sqlite,execution['target_runtime']['pid'])
     output.mkdir(parents=True)
     # Receipt must live above referenced source files; never copy or rewrite Raw.
     receipt=write_input_receipt(output.parent/(output.name+'-input.json'),collector_version=collector_version,
@@ -247,6 +260,7 @@ def audit(plan_path,execution_path,sqlite,rep,export,output,collector_version):
         require({r['phase'] for r in got['a_records']}==set(expected['windows']),'A_WINDOWS')
         for row in got['a_records']: compare_components(expected['windows'][row['phase']],[row[k] for k in keys])
     _write(output/'qualification.json',dict(schema_version=VERSION,status='CONTROLLED_SCOPE_MATCH',oracle=oracle,
+        target_launch=launch,
         execution_sha256=digest(execution_path),input_receipt_sha256=digest(receipt),analyzer_sha256=digest(result),
         q0_status='NOT_RUN',gate8_verdict='NOT_RUN',measurement_validity='NOT_ASSESSED',
         d_score_allowed=False,signature_allowed=False,qualification_scope='PENDING_INDEPENDENT_REAL_EVIDENCE_AUDIT'))
@@ -255,11 +269,14 @@ def audit(plan_path,execution_path,sqlite,rep,export,output,collector_version):
 
 def profile_argv(nsys,python,plan,output):
     import sys
+    from .gate8_target_python import argv
+    target=_json(plan)['target_python']
+    require(str(Path(python).resolve())==target['requested_executable'],'TARGET_ARGUMENT')
     return [str(nsys),'profile','--trace=cuda,nvtx','--sample=none','--cpuctxsw=none',
         '--cuda-memory-usage=false','--cuda-trace-scope=process-tree','--isr=false',
         '--duration=120','--kill='+('true' if sys.platform=='win32' else 'sigkill'),
-        '--output='+str(Path(output)/'capture'),str(python),'-m','exposedpath_v141.gate8_qualification',
-        'run','--plan',str(plan),'--output',str(Path(output)/'execution'),'--execute-controlled']
+        '--output='+str(Path(output)/'capture'),*argv(python,target['site_root'],[
+        'run','--plan',str(plan),'--output',str(Path(output)/'execution'),'--execute-controlled'])]
 
 
 def validate_tool_version(value):
@@ -302,7 +319,7 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
     subs=parser.add_subparsers(dest='command',required=True)
     prep=subs.add_parser('prepare')
-    for n in ('output','preflight','library','commit','run-id'): prep.add_argument('--'+n,required=True)
+    for n in ('output','preflight','library','commit','run-id','target-python','site-root'): prep.add_argument('--'+n,required=True)
     run=subs.add_parser('run')
     for n in ('plan','output'): run.add_argument('--'+n,required=True)
     run.add_argument('--execute-controlled',action='store_true',required=True)
@@ -311,7 +328,8 @@ def main(argv=None):
     collection.add_argument('--execute-controlled',action='store_true',required=True)
     args=parser.parse_args(argv)
     if args.command=='prepare':
-        print(prepare(args.output,args.preflight,args.library,args.commit,args.run_id)); return 0
+        print(prepare(args.output,args.preflight,args.library,args.commit,args.run_id,
+            target_python=args.target_python,site_root=args.site_root)); return 0
     if args.command=='run':
         result=execute(args.plan,args.output)
         return 0 if _json(result)['status']=='COMPLETE' else 1
@@ -319,7 +337,8 @@ def main(argv=None):
     import subprocess
     version=subprocess.run([args.nsys,'--version'],capture_output=True,text=True,check=True,timeout=15).stdout
     validate_tool_version(version)
-    result=collect(args.plan,args.output,args.nsys,sys.executable,version)
+    target=read_plan(args.plan,current=True)[0]['target_python']['requested_executable']
+    result=collect(args.plan,args.output,args.nsys,target,version)
     print(result)
     return 0 if _json(result)['status']=='CONTROLLED_SCOPE_MATCH' else 1
 
