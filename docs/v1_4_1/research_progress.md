@@ -1,5 +1,13 @@
 # ExposedPath 科研进度清单
 
+## 7.65 247f4fd目标机静态回执审计及最小资格下一步（2026-09-27）
+
+直接只读核验用户传回单ZIP：4680 bytes/SHA256 fc129db5a104ce8e052f56512a6bab292bddbd12c670a260f57d98fa2c0b41d3；CRC/路径/8文件精确集合与清单7项bytes/hash全部通过。清单SHA256 fa10caa43c662893f08e3d3af7d43db8f58246fce0e748bb562c483f90bf4ce0。原始日志95 passed/42.63s、Python3.11.16；receipt六步exit0/STATIC_PASS，contract37/37、Canonical7、oracle静态独立性通过，compileall成功来自receipt而非不存在的单独日志。部署verify/fetch/checkout控制台证据为用户提供、不在此transcript；不是本助手服务器执行。服务器部署基线现为247f4fd211007b7dfc2ef011043d7ecebdbf6f88，不再写待部署/待静态复验。
+
+[下一步备忘录0.1](gate8_engineering_qualification_next_v0_1.md)区分历史公式资格、目标机确定性接口与新profile受控资格：新编排仍缺受控资格封套，不用旧SOURCE_DIAGNOSTIC_ONLY入口伪造模型backend或补写旧receipt。下一项主窗口本地准备限定受控构造与独立oracle；本轮仅规划、不扩实现、不重复静态或模型采集，暂不需要服务器动作/新包。
+
+旧Qwen SQLite只读确认8条warning确为两个外global PID；目标producer/Runtime/Kernel一致不证明外进程无依赖。HostTimestamp不可直接裁目标trace窗；现有进程关系及诊断作用域不足，继续IMPACT_UNBOUNDED，不当作目标已丢失、不豁免、不重判。旧Raw/报告不变，D/Signature关闭；Gate7 PASS、新Q0/Gate8 NOT_RUN，Protocol Freeze/Formal资格无变化。详见备忘录逐项来源与停止点；文档收尾commit不要求服务器追随main。
+
 ## 7.64 限定Engineering质量门及真实A-only文件编排（2026-09-27）
 
 接续0ce3aec完成[限定依据0.1](gate8_engineering_sufficiency_amendment_v0_1.md)的本地实现：显式prepare声明、目标进程设备probe/runner字节、实际setup backend核对、execution receipt、封存input receipt、Canonical/D1、逐request质量门、LEGACY/PTDS条件性交集及A-only结果/重算reader。无静默启用；旧Qwen诊断无此声明不追认。支持域假设与原始事实分字段保存，dropped UNKNOWN不改零。

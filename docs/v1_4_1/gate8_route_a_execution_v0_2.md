@@ -1,6 +1,6 @@
 # Route A 最小执行与退出范围 v0.2
 
-当前实现补充见[限定Engineering依据0.1](gate8_engineering_sufficiency_amendment_v0_1.md)及research_progress 7.64：新增显式真实A-only入口，不替代下面的新Q0/目标机证据要求；旧Qwen不追认。先完成固定版本静态复验，不能为解决已有未界定warning直接重采。
+当前实现补充见[限定Engineering依据0.1](gate8_engineering_sufficiency_amendment_v0_1.md)及research_progress 7.65：247f4fd已完成目标机静态复验（95项），仍不替代新Q0/真实模型证据。下一步见[限定资格备忘录](gate8_engineering_qualification_next_v0_1.md)，先在本地准备受控资格入口；旧Qwen不追认，不为解决未界定warning直接重采。下文一次源码快照步骤属于已完成的历史计划，不重复执行。
 
 2026-09-27。依据用户已批准的A优先、单平台单模型范围修订**未来执行计划**；不是
 Protocol Freeze，不重写MC/S/W/B，不追认旧数据。当前Gate8仍NOT_RUN。
