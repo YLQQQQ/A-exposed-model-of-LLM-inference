@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.64 限定Engineering质量门及真实A-only文件编排（2026-09-27）
+
+接续0ce3aec完成[限定依据0.1](gate8_engineering_sufficiency_amendment_v0_1.md)的本地实现：显式prepare声明、目标进程设备probe/runner字节、实际setup backend核对、execution receipt、封存input receipt、Canonical/D1、逐request质量门、LEGACY/PTDS条件性交集及A-only结果/重算reader。无静默启用；旧Qwen诊断无此声明不追认。支持域假设与原始事实分字段保存，dropped UNKNOWN不改零。
+
+检查边界/drain、完整global PID、设备/context/clock、全部已观察API及physical-sync、submission correlation、stage/setup、单实际NULL FIFO、逐sync完成和唯一frontier。内部sync无独立marker时仅复用既有dependency recovery构造A交集输入，不伪造callsite，不修改原物理S/B。局部两API分类缺口保留原interval和unattributed，其余未知作用/缺物理映射/冲突/未界定diagnostics均拒绝，不转Host/residual；独立request结果可保留但run BLOCKED。D/Signature关闭。
+
+Tests first独立正反例覆盖signed时间、多request、完整producer→实际落盘→合成SQLite→Canonical→A、backend冲突前置停止、默认条件等价/其它流反例、局部分类缺口、全局/外PID警告、缺边界/drain/correlation/physical sync、跨global namespace、结果篡改、partial不发布及CLI防覆盖。手算request [400,600)的五类预期=(130,10,40,20,0)ns；[420,425)分类缺口后=(125,10,40,20,5)ns。初始缺入口/receipt、跨namespace错误准入、target零计数冲突、未知collector版本、sync已返回但必要活动未完成、CLI缺产物分别有RED→GREEN。两个API未扩展冻结registry：只界定成功原调用的分类缺口，不声称GPU永不阻塞或零丢失。
+
+最终验证：六文件定向94 passed/64.70s，最后CLI及completion反例2 passed/11.64s；CPU全量1455 passed、5 skipped/319.49s（本地Python3.12.7），五skip均为既有nvcc编译门。compileall四目录、contract内部37/37、Canonical7模块、oracle静态独立性、diff-check及修改文档链接通过。独立review发现逐sync completion漏检，补回成员end≤sync返回和唯一frontier后关闭。首次全量1455 passed、1 failed、4 errors（329.91s），五项均为未改动的旧Q0原生编译路径，本机CUDA13/MSVC出现C4819及连锁语法错误，未运行GPU程序；PowerShell PATH过滤未传入Python生效。最终按既有CPU验证方式在同一Python进程过滤nvcc并断言不可见、mask=-1后复跑；不改测试skip、不声称本机native编译或目标机通过。所有新增trace为确定性合成输入，未使用合成零丢失证明授予资格。
+
+剩余：实际Nsight目标机新版本资格未验证；旧包的外PID warning影响范围仍无肯定依据，新门会拒绝，不能因此盲重采。没有通用warning局部化或丢记录补全能力。最小服务器动作至多固定新commit的CPU静态复验；新受控Q0及模型采集仍待单独授权/明确必要证据。单一bundle交付、回执单一ZIP，不重新索源/全capture认证。Gate7 PASS、新Q0/Gate8 NOT_RUN，旧证据及Formal资格不变。
+
 ## 7.63 限定Engineering依据批准及来源诊断入口（2026-09-27）
 
 用户已接受7.62的限定依据，版本化为[Engineering sufficiency amendment 0.1](gate8_engineering_sufficiency_amendment_v0_1.md)。不要求全capture认证；目标必要依赖风险、支持域假设与可观察事实分开，OTHER_PROCESS不能自动豁免。仅未来预声明profile的新attempt适用，旧诊断不追认。旧合成request_scope及物理S/B不改，新真实路径不以零unattributed为条件；未知影响范围仍拒绝，B/D/Signature不自动发布。

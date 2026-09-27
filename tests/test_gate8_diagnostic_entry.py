@@ -149,7 +149,8 @@ def test_model_inventory_binds_content_without_path_escape(tmp_path, monkeypatch
         assert result['revision'] == 'UNKNOWN'
 
 
-def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path):
+@pytest.mark.parametrize('engineering_backend',[None,'sdpa'])
+def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path, engineering_backend):
     module = api()
     assert callable(getattr(module, 'prepare_diagnostic', None))
     from exposedpath import platform_adapter
@@ -170,10 +171,15 @@ def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path):
         samples=[dict(input_ids=[1]*32,attention_mask=[1]*32)]))
     output=module.prepare_diagnostic(output_dir=tmp_path/'prepared',model_path=model,
         inventory_path=inventory,inventory_sha256=sha(inventory),prompt_path=prompt,
-        prompt_sha256=sha(prompt),expected_commit='d'*40,physical_gpu=3)
+        prompt_sha256=sha(prompt),expected_commit='d'*40,physical_gpu=3,
+        engineering_attention_backend=engineering_backend)
     manifest=json.loads((output/'manifest.json').read_text())
     assert manifest['repeat_count']==1 and manifest['warmup_count']==1
-    assert manifest['attention_backend']=='UNKNOWN_NOT_LOADED'
+    assert manifest['attention_backend']==(engineering_backend or 'UNKNOWN_NOT_LOADED')
+    if engineering_backend:
+        assert manifest['engineering_scope']['declaration_role']=='PRE_EXECUTION'
+    else:
+        assert 'engineering_scope' not in manifest
     assert manifest['runner_git_commit']=='d'*40
     assert manifest['prompt_tokens_sha256']==sha(output/'prompt.json')
     assert manifest['runner_source_sha256']==sha(Path(module.__file__).parent/'runner.py')

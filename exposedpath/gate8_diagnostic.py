@@ -44,7 +44,8 @@ def verify_model_inventory(model_path, inventory_path, expected_sha256, *, rehas
 
 
 def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha256,
-                       prompt_path, prompt_sha256, expected_commit, physical_gpu):
+                       prompt_path, prompt_sha256, expected_commit, physical_gpu,
+                       engineering_attention_backend=None):
     """Explicit preflight: hashes and minimal CUDA identity, no model load."""
     from exposedpath import platform_adapter
     from exposedpath.manifest import create_manifest, finalize_manifest
@@ -52,6 +53,8 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     from exposedpath_v141.gate8_source_probe import TorchBackend
     root = Path(__file__).resolve().parents[1]
     output = Path(output_dir).resolve()
+    from exposedpath.gate8_engineering_contract import declaration
+    declared = None if engineering_attention_backend is None else declaration(engineering_attention_backend)
     if output.exists():
         raise FileExistsError(output)
     if (platform_adapter.git(['-C',str(root),'rev-parse','HEAD']) != expected_commit
@@ -80,6 +83,8 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     manifest.update(attention_backend='UNKNOWN_NOT_LOADED',
                     runner_source_sha256=_sha(root/'exposedpath/runner.py'),
                     model_content_snapshot=content)
+    if declared is not None:
+        manifest.update(engineering_scope=declared, attention_backend=engineering_attention_backend)
     manifest = finalize_manifest(manifest,prompt,prompt_tokens_path=output/'prompt.json')
     for name, value in (('manifest.json',manifest),('preflight.json',preflight)):
         with (output/name).open('x',encoding='utf-8') as handle:
@@ -97,6 +102,8 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         raise FileExistsError(output_dir)
     manifest_path, prompt_path = Path(manifest_path), Path(prompt_path)
     manifest = json.loads(manifest_path.read_text(encoding='utf-8-sig'))
+    from exposedpath.gate8_engineering_contract import validate_declaration, EXECUTION_VERSION
+    declared = validate_declaration(manifest) if 'engineering_scope' in manifest else None
     issues = validate_pre_model_identity(manifest_path, Path(preflight_path), Path(project_root))
     if issues:
         raise ValueError('; '.join(issues))
@@ -115,6 +122,29 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     fields.update(pid=os.getpid(), pass_id='pass1', attempt_id='diagnostic-1',
                   wmpc_manifest_sha256=_sha(manifest_path), prompt_sha256=_sha(prompt_path))
     output_dir.mkdir(parents=True, exist_ok=False)
+    if declared is not None:
+        # Probe in the target process, not the prepare process. These are device
+        # identity observations, not model work or a completeness certificate.
+        from exposedpath_v141.gate8_source_probe import TorchBackend
+        from exposedpath_v141.gate8_adapter import normalized_uuid, normalized_pci
+        observed_device=TorchBackend().identity()
+        pre=json.loads(Path(preflight_path).read_text(encoding='utf-8'))
+        if (normalized_uuid(observed_device['gpu_uuid'])!=normalized_uuid(pre['gpu_uuid'])
+                or normalized_pci(observed_device['pci_bus_id'])!=normalized_pci(pre['gpu_pci_bus_id'])
+                or os.environ.get('CUDA_DEVICE_ORDER')!='PCI_BUS_ID'
+                or os.environ.get('CUDA_VISIBLE_DEVICES')!=str(manifest['gpu_index_physical'])):
+            raise ValueError('ENGINEERING_PROBE_CONFLICT')
+        adapter_pre=dict(gpu_index_physical=pre['physical_gpu_index'],gpu_uuid=pre['gpu_uuid'],
+            pci_bus_id=pre['gpu_pci_bus_id'],cuda_device_order='PCI_BUS_ID',
+            cuda_visible_devices=os.environ['CUDA_VISIBLE_DEVICES'])
+        probe=dict(pid=os.getpid(),gpu_index_logical=manifest['gpu_index_logical'],
+            **observed_device,cuda_device_order='PCI_BUS_ID',
+            cuda_visible_devices=os.environ['CUDA_VISIBLE_DEVICES'])
+        for name,value in (('adapter_preflight.json',adapter_pre),('cuda_probe.json',probe)):
+            with (output_dir/name).open('x',encoding='utf-8') as handle:
+                json.dump(value,handle,indent=2,sort_keys=True)
+        with (output_dir/'runner_source.py').open('xb') as handle:
+            handle.write(Path(runner.__file__).read_bytes())
     # Immutable input bytes; no mutation of any supplied manifest or prompt.
     for name, source in (('manifest.json', manifest_path), ('prompt.json', prompt_path),
                          ('preflight.json', Path(preflight_path))):
@@ -130,6 +160,9 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
             native_attention_backend='UNKNOWN', qualification='NOT_ASSESSED')
         with (output_dir/'loaded_config.json').open('x', encoding='utf-8') as handle:
             json.dump(loaded_config, handle, indent=2, sort_keys=True)
+        if declared is not None and (loaded_config['configured_attention_backend']!=declared['attention_backend']
+                or loaded_config['configured_use_cache'] is not True or not loaded_config['model_type']):
+            raise ValueError('ENGINEERING_LOADED_CONFIGURATION_CONFLICT')
     path = runner.run_gate8_requests_to_files(
         output_dir=output_dir/'producer', output_len=2,
         device=f"cuda:{manifest['gpu_index_logical']}", pass_fields=fields,
@@ -141,6 +174,14 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         request_plan=[dict(request_id='warmup-0', repeat_id='warmup-0', request_role='warmup'),
                       dict(request_id='request-0', repeat_id='0', request_role='measured')])
     producer = json.loads(path.read_text(encoding='utf-8'))
+    if declared is not None:
+        execution=dict(schema_version=EXECUTION_VERSION,manifest_sha256=_sha(manifest_path),
+            producer_receipt_sha256=_sha(path),status=producer['status'],declaration=declared,
+            identity={k:fields[k] for k in ('run_id','pass_id','attempt_id','pid')},
+            observed_configuration={**{k:loaded_config.get(k) for k in (
+                'configured_attention_backend','configured_use_cache','model_type')},'execution_mode':'eager'})
+        with (output_dir/'engineering_execution.json').open('x',encoding='utf-8') as handle:
+            json.dump(execution,handle,indent=2,sort_keys=True)
     result = dict(schema_version='gate8-qwen-diagnostic/0.1.0',
                   status='DIAGNOSTIC_COMPLETE' if producer['status'] == 'COMPLETE' else 'DIAGNOSTIC_INCOMPLETE',
                   qualification='NOT_QUALIFIED', gate8_verdict='NOT_RUN',
@@ -164,6 +205,7 @@ def main():
                  'prompt-path','prompt-sha256','expected-commit'):
         prep.add_argument('--'+name,required=True)
     prep.add_argument('--physical-gpu',required=True,type=int)
+    prep.add_argument('--engineering-attention-backend',choices=('sdpa','eager'))
     run = commands.add_parser('run')
     for name in ('manifest-path', 'prompt-path', 'preflight-path', 'project-root', 'output-dir'):
         run.add_argument('--'+name, required=True, type=Path)
