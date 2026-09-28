@@ -51,7 +51,7 @@ def test_conditional_reuses_accounting_but_never_changes_formal(tmp_path,monkeyp
     assert result['dropped_records_status']=='UNKNOWN'
     assert len(result['warning_assumption']['records'])==4
     assert result['warning_assumption']['scope_proven'] is False
-    assert components(result['requests'][1]['a_records'][0])==([125,10,40,20,5] if damage else [130,10,40,20,0])
+    assert components(result['requests'][1]['a_records'][0])==([125,15,40,20,0] if damage else [130,10,40,20,0])
     assert {p:sha(p) for p in before}==before
 
 

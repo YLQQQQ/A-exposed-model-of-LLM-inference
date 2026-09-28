@@ -1,5 +1,17 @@
 # 当前公共交接
 
+## 7.87 当前入口：non-submit 分类机制修正
+
+见[有界语义/实现审查0.1](gate8_non_submit_api_review_v0_1.md)、research_progress7.87。
+版本化A分类registry与共享adapter替代永久分类缺口名单，未知不默认non-submit或Host。
+同步/ownership/区间并集优先级不改；本地143相关+3文件链冲突反例通过，不授新Q0资格。
+同封存配对输入新目录条件性复算exit0，三窗unattributed变为0，增量全部进入non-submit。
+总时长/其他类别不变，Raw独立裁窗、两模式集合、互斥守恒和Request=Prefill+Decode均通过。
+新派生SHA256 f0e81b5e3f1dba30f0e2c8b6a6d3f9542a361d4005b338b6905ae54696ec4928。
+旧7.86与正式BLOCKED报告不改，原件重新核验不变。当前分类问题无需新语义裁决。
+四warning假设仍未证明；Gate7 PASS、Gate8 NOT_RUN，Gate9/Pilot、D/Signature均不启用。
+无部署/采集任务；以下都是历史交付记录，不是另一套待执行入口。
+
 ## 7.86 当前入口：新配对证据已回传，本地条件性收尾
 
 服务器实际执行36ed952b57f20651dd290fc484d7b21fc7dbbfc4，非下文db9f028。

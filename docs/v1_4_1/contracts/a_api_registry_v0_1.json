@@ -1,0 +1,12 @@
+{
+  "registry_version": "exposedpath-a-api-registry/0.1.0",
+  "cuda_documentation_version": "12.4.1",
+  "scope": "explicit_names_not_sdk_exhaustive",
+  "unknown_policy": "UNRESOLVED_NOT_NON_SUBMIT",
+  "rules": [
+    {"id": "A-SUBMIT-KERNEL", "names": ["cudaLaunchKernel", "cuLaunchKernel"], "category": "submit", "basis": "Launches a kernel; requires unique activity correlation in A.", "source": "https://docs.nvidia.com/cuda/archive/12.4.1/cuda-driver-api/group__CUDA__EXEC.html"},
+    {"id": "A-SUBMIT-MEMORY", "names": ["cudaMemcpyAsync", "cudaMemsetAsync"], "category": "submit", "basis": "Submits memory work; actual synchronization records retain priority. Async is not a guarantee of nonblocking execution.", "source": "https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/api-sync-behavior.html"},
+    {"id": "A-NON-SUBMIT-HANDLE", "names": ["cuKernelGetFunction"], "category": "non_submit", "basis": "Returns the function handle for a kernel and current context; no documented device-work submission or completion-wait operation. Not a claim of zero host blocking or absent internal resource contention.", "source": "https://docs.nvidia.com/cuda/archive/12.4.1/cuda-driver-api/group__CUDA__LIBRARY.html"},
+    {"id": "A-NON-SUBMIT-CAPTURE-STATUS", "names": ["cudaStreamIsCapturing"], "category": "non_submit", "basis": "Reads capture status, does not begin/end capture or wait for stream completion. Capture conflict/error and contradictory activity/sync evidence are not eligible.", "source": "https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__STREAM.html"}
+  ]
+}

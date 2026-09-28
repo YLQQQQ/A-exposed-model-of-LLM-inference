@@ -19,11 +19,9 @@ from .gate8_scope import build_projected_ab_inputs, load_projected_ownership
 from .gate8_request_scope import _drain, _same_request
 from .sync_semantics import load_canonical_bundle, build_semantic_inventory, recover_wait_set, _semantic_frontier
 from .time_representation import SIGNED, time_representation
+from .a_api_classification import classify_a_api_name, VERSION as A_API_VERSION, REGISTRY_PATH as A_API_REGISTRY
 
 VERSION = 'exposedpath-engineering-a-scope/0.1.0'
-# These API intervals remain unattributed in frozen A. This list bounds the
-# classification gap, not device wait, and never treats an unknown API as Host.
-LOCAL_API_GAPS = {'cuKernelGetFunction', 'cudaStreamIsCapturing'}
 SUBMIT_APIS = {'cudaLaunchKernel', 'cuLaunchKernel', 'cudaMemcpyAsync', 'cudaMemsetAsync'}
 
 
@@ -164,11 +162,8 @@ def _request(canonical, scope, paths, bundle, ownership, projection, original, s
                 require(len(matches)==1 and matches[0]['record_id'] in {s['record_id'] for s in syncs}, 'SYNC_MAPPING')
             elif name in SUBMIT_APIS:
                 require(activities and not matches, 'SUBMIT_MAPPING')
-            elif name in LOCAL_API_GAPS:
+            elif classify_a_api_name(api['api_name'])[0]=='non_submit':
                 require(not activities and not matches, 'LOCAL_GAP_CONFLICT')
-                output['local_gaps'].append(dict(record_id=api['record_id'],source_table=api['source_table'],
-                    source_rowid=api['source_rowid'],interval_ns=[api['start_ns'],api['end_ns']],
-                    reason='BOUNDED_API_CLASSIFICATION_GAP'))
             else:
                 require(False, 'API_SEMANTICS_UNBOUNDED:'+name)
             apis.append(api['record_id'])
@@ -251,6 +246,7 @@ def _calculate(root, receipt_path, execution_path, *, warning_assumption=None):
         physical_s_records=list(original.s_records),physical_b_records=physical_b)
     if assumed is not None:
         result.update(schema_version='exposedpath-conditional-a/0.1.0',trusted_a=False,
+            api_classification_registry=dict(version=A_API_VERSION,sha256=digest(A_API_REGISTRY)),
             validation_role='WARNING_ASSUMPTION_CONDITIONAL_NOT_ACCEPTANCE',warning_assumption=assumed,
             status='CONDITIONAL_A_ONLY_NOT_ACCEPTED' if result['status']=='A_SCOPE_ENGINEERING_ONLY' else 'BLOCKED')
         for request in requests:

@@ -117,16 +117,17 @@ def test_default_equivalence_file_chain_preserves_physical_s_b(tmp_path,monkeypa
     assert not list(out.parent.rglob('derived_manifest.json'))
 
 
-def test_bounded_unclassified_api_is_unknown_not_host_or_tail(tmp_path,monkeypatch):
+@pytest.mark.parametrize('name',['cudaStreamIsCapturing_v10000','cuKernelGetFunction'])
+def test_supported_non_submit_is_not_a_classification_gap(tmp_path,monkeypatch,name):
     def gap(db,tid):
-        db.execute("INSERT INTO StringIds VALUES (25,'cudaStreamIsCapturing_v10000')")
+        db.execute('INSERT INTO StringIds VALUES (25,?)',(name,))
         db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES (420,425,0,?,333,25,0,NULL)',(tid,))
     result,_,_=run(tmp_path,monkeypatch,gap)
     r=result['requests'][1]
     assert r['status']=='A_SCOPE_ENGINEERING_ONLY'
-    assert components(r['a_records'][0])==[125,10,40,20,5]
-    assert r['local_gaps'][0]['interval_ns']==[420,425]
-    assert r['local_gaps'][0]['reason']=='BOUNDED_API_CLASSIFICATION_GAP'
+    assert components(r['a_records'][0])==[125,15,40,20,0]
+    assert r['a_records'][0]['A_cuda_api_non_submit_ns']==5
+    assert r['local_gaps']==[]
 
 
 @pytest.mark.parametrize('damage',['other_stream','correlation','worker','missing_sync','unknown_api','warning','foreign_warning','boundary','drain'])
@@ -161,6 +162,22 @@ def test_old_manifest_cannot_be_requalified_by_new_execution_receipt(tmp_path,mo
     with pytest.raises(ValueError):
         entry().process_engineering_scope(receipt,execution,tmp_path/'out')
     assert not (tmp_path/'out').exists()
+
+
+@pytest.mark.parametrize('conflict',['activity','sync','error'])
+def test_non_submit_rule_cannot_hide_file_backed_conflicting_evidence(tmp_path,monkeypatch,conflict):
+    def mutate(db,tid):
+        db.execute("INSERT INTO StringIds VALUES (25,'cudaStreamIsCapturing_v10000')")
+        if conflict=='activity':
+            db.execute('UPDATE CUPTI_ACTIVITY_KIND_RUNTIME SET nameId=25 WHERE correlationId=16')
+        elif conflict=='sync':
+            db.execute('UPDATE CUPTI_ACTIVITY_KIND_RUNTIME SET nameId=25 WHERE correlationId=17')
+        else:
+            db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES (420,425,0,?,333,25,900,NULL)',(tid,))
+    result,_,_=run(tmp_path,monkeypatch,mutate)
+    request=result['requests'][1]
+    assert request['status']=='REJECTED' and request['a_records']==[]
+    assert request['reasons']
 
 
 def test_same_numeric_pid_in_another_namespace_cannot_borrow_enqueue(tmp_path,monkeypatch):

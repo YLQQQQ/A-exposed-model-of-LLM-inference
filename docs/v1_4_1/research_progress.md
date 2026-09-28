@@ -1,5 +1,32 @@
 # ExposedPath 科研进度清单
 
+## 7.87 non-submit 类别机制修正与条件性复算（2026-09-28）
+
+按用户合并授权，仅修正既有观测中可解释的分类缺口；见
+[有界审查及结果0.1](gate8_non_submit_api_review_v0_1.md)。直接核对研究设计v7.1 §2.4、
+Pre-Pilot协议v2.1 §3.3、MC0.2 §10/15及CUDA12.4.1官方资料；non-submit不等于绝不阻塞。
+新增A专用registry0.1.0与共享adapter，保留冻结物理同步优先；不再由“有activity”替代未知API语义。
+真实request七种API逐项覆盖，两个handle/capture查询由明确语义归non-submit；窗口外其余15种
+列明支持边界，不把初始化/资源管理接口无条件放行。父类/子类不可判定时当前schema仍保守unknown，
+未增加类别或修改守恒式；未来parent-only表示须单独amendment，本次没有依赖该裁决的调用。
+
+先15项红测复现，再最小实现；相关七文件143 passed，追加文件链activity/sync/error三反例3 passed。
+本地Python3.12.7；修改模块/测试compileall、contract37/37内部一致性、diff-check通过。
+未知调用、缺依赖、ownership、同步及重叠子类冲突仍拒绝/unknown；旧S/B/schema/Q0路径保留。
+这些是本地回归，不自动授新版本Q0资格，不撤销历史Gate6或既有限定受控资格。
+
+封存执行身份仍36ed952，修正代码不是服务器新执行。实际条件入口exit0，新目录派生
+SHA256 `f0e81b5e3f1dba30f0e2c8b6a6d3f9542a361d4005b338b6905ae54696ec4928`，924663324 bytes。
+6171条分类缺口消除：Request/Prefill/Decode分别3840151/2112805/1727346ns由unattributed
+转为CUDA non-submit；三窗unattributed均0，Host、submit、wait、residual、T均不变。
+Raw独立裁窗和返回/关联/无API重叠检查通过；两默认流必要集合逐成员保持、五类/二级守恒及
+Request=Prefill+Decode通过。原ZIP、146文件、正式报告及旧条件输出重新核验未变。
+原7.86结果保留为旧分类版本，不覆写、追认或部署。只声称当前支持域和warning假设下分类缺口消除，
+不将低/零unattributed当充分质量证据；UNKNOWN、NOT_ASSESSED、trusted_a=false保持。
+warning作用域假设保持，标准Gate8 NOT_RUN，Gate7 PASS；Gate9/Pilot与D/Signature不启用。
+本地分类修正及精确差值核验已收口；最高优先级为协调审阅条件性结果和未证warning假设，
+当前实物无需额外研究语义裁决，不安排服务器操作或重复采集。本提交同时记录实现与进度。
+
 ## 7.86 配对原件审计与条件性集中收尾（2026-09-28）
 
 执行commit固定36ed952b57f20651dd290fc484d7b21fc7dbbfc4；文档收尾不是服务器新执行身份。

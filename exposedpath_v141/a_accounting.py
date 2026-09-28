@@ -12,7 +12,7 @@ from typing import Any
 
 from .ab_inputs import ABInputs, RequestPhaseWindow
 from .intervals import atomic_segments
-from .sync_semantics import classify_cuda_api
+from .a_api_classification import classify_a_api_name
 from .time_representation import timestamp, duration, signed_time
 
 
@@ -101,14 +101,16 @@ def _api_category(api: Mapping[str, object], api_by_correlation: Mapping[object,
     name = api.get("api_name")
     if not isinstance(name, str) or not name:
         return None
-    registry = classify_cuda_api(name)
-    universe = registry["universe_class"]
-    if universe == "DEVICE_DEPENDENCY_EDGE":
-        return "submit"
-    if universe == "NON_BLOCKING_QUERY":
-        return "non_submit"
-
+    category, rule = classify_a_api_name(name)
+    if category is None or (rule and rule.startswith('A-') and 'return_value' in api and api['return_value'] != 0):
+        return None
     correlation = api.get("correlation_id")
+    if category == 'non_submit':
+        # An observed device submission contradicts a non-submit rule. Do not
+        # reinterpret it as submit, or use missing activity as the rule itself.
+        return None if correlation is not None and correlation in activity_correlations else 'non_submit'
+    if rule and rule.startswith('EDGE-'):
+        return 'submit'
     if correlation is None:
         return None
     matching_apis = api_by_correlation.get(correlation, ())
