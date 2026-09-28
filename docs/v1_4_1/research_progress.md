@@ -1,5 +1,19 @@
 # ExposedPath 科研进度清单
 
+## 7.74 隔离CPU导入身份差异收口（2026-09-28）
+
+真实base Python -I/-S子进程证明：probe仅导入snapshot依赖；model入口导入
+gate7_smoke_validation时无条件重复插入repo sys.path，current精确比较因此拒绝。
+随后runner导入无新增变化，PATH摘要及其他字段不变；CUDA未初始化，无模型加载。
+先新增独立回归得到1 failed/1 passed，再仅将CLI路径bootstrap限制为直接脚本执行。
+修复后全字段一致，人为重复sys.path仍拒绝，仓库外直接CLI仍可用。
+六文件定向83 passed/35.69s，compileall四目录与diff-check通过；非服务器验证。
+本地Python3.12.7结果不证明服务器3.11环境没有其他差异，不将本地缺陷认作旧失败唯一根因。
+与7.73异常持久化合并为单一交付包，替代单独7201507部署建议；不安排部署/重采。
+本地已充分复现，不新增服务器补证或诊断功能；未来目标平台先CPU回归，另行审查授权。
+旧attempt BLOCKED/Raw不变，Gate7 PASS、限定受控资格不变、Gate8 NOT_RUN。
+详见[入口失败审计补充](gate8_qwen_entry_failure_audit_v0_1.md)。
+
 ## 7.73 Qwen入口失败有界审计与持久化异常（2026-09-28）
 
 [入口审计0.1](gate8_qwen_entry_failure_audit_v0_1.md)：直接核验32187 bytes封存包，

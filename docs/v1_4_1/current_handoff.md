@@ -1,5 +1,13 @@
 # 当前公共交接
 
+## 7.74（2026-09-28）当前优先
+
+隔离CPU复现模型入口导入gate7_smoke_validation重复插入sys.path，导致严格snapshot拒绝。
+仅限制该脚本的直接执行bootstrap，不归一化/忽略任何身份字段。83项定向回归通过。
+7.73持久化补丁与本修复统一交付，废止单独部署7201507的建议；先协调窗口审查，
+不安排部署、模型、GPU/Nsight或重采。本地3.12.7不是服务器3.11验证或历史唯一根因证明。
+旧attempt BLOCKED、限定受控资格不变、Gate7 PASS、Gate8 NOT_RUN。
+
 ## 7.73（2026-09-28）
 
 [入口失败审计](gate8_qwen_entry_failure_audit_v0_1.md)：Qwen attempt BLOCKED，REP内部有

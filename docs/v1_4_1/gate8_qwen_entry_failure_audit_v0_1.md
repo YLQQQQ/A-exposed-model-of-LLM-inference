@@ -49,6 +49,21 @@ compileall、diff-check通过。本轮不跑全量、不加载模型、不调用
 
 ## 最小下一步与停止点
 
+### 7.74 CPU复现补充（优先于下方7.73建议）
+
+本地Python3.12.7真实base解释器 -I/-S：snapshot→模型入口→runner逐阶段比较。
+入口导入scripts.gate7_smoke_validation时重复插入仓库路径，是唯一变化字段sys_path；
+runner导入无额外变化，PATH摘要及所有其余既有字段相同。修复后各阶段差异为空，
+torch.cuda._initialized=false。未调用模型构造、CUDA API、Nsight。
+该结果确定本地可复现缺陷，不证明旧服务器失败的唯一字段；服务器3.11与包版本差异仍需
+后续目标平台CPU回归验证，但无需为此安排重采或新增补证入口。
+
+回归先失败于同一runtime guard；最小修复只让直接脚本执行初始化repo路径。
+保持expected probe不变，current全字段精确比较、executable/hash/site/environment/PID等门不变。
+独立重复路径反例仍拒绝；外部cwd直接CLI --help通过。六文件83 passed，compileall和diff-check通过。
+本地前后逐字段记录位于忽略的诊断目录；不上传机器路径。单一bundle包含7.73与7.74，
+仅供协调窗口审查，不再建议单独部署日志补丁。无新的服务器操作要求，无Gate判定变化。
+
 先审查此补丁、CPU失败验证及已有REP线索；不重新运行旧REP、不export、不重采来拿错误。
 必要部署仅该入口诊断增量和定向CPU测试，不需修改runner/manifest验收或warning门。
 部署静态复验可运行target_entry/target_python测试，CUDA_VISIBLE_DEVICES=-1；本轮不执行服务器。

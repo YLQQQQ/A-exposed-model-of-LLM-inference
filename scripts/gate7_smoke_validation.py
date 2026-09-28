@@ -17,7 +17,10 @@ import sqlite3
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# Bootstrap only direct CLI execution; library imports must not mutate the
+# interpreter identity sealed by the target-Python probe.
+if __package__ in (None, ''):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from exposedpath.cross_pass_validator import (
     PASS_PARITY_OK,
