@@ -1,5 +1,12 @@
 # 当前公共交接
 
+## 7.72（2026-09-28）
+
+[单Qwen方案](gate8_qwen_a_only_execution_v0_1.md)已进入必要本地实现：
+显式目标Python、模型内容hash、实际配置检查、producer/trace身份和A-only准入衔接。
+固定32/2、batch1、warmup1/repeat1、sdpa；旧外PIDwarning无豁免。
+下一步协调窗口审查固定部署包与单次脚本；不部署或执行。Gate状态及限制同下。
+
 ## 7.71（2026-09-28）
 
 [限定资格覆盖审查](gate8_bounded_qualification_review_v0_1.md)已收口：

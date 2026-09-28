@@ -60,13 +60,54 @@ def profile_argv(nsys,python,prepared,output,root=ROOT):
     prepared,output=Path(prepared),Path(output)
     # Nsight's Windows CLI accepts booleans, not POSIX signal names.
     kill='true' if sys.platform=='win32' else 'sigkill'
+    args=['--manifest-path',str(prepared/'manifest.json'),'--prompt-path',str(prepared/'prompt.json'),
+        '--preflight-path',str(prepared/'preflight.json'),'--project-root',str(root),
+        '--output-dir',str(output/'diagnostic')]
+    manifest=prepared/'manifest.json'
+    value=json.loads(manifest.read_text(encoding='utf-8')) if manifest.exists() else {}
+    if 'target_python' in value:
+        from exposedpath_v141.gate8_target_python import argv,validate_probe
+        target=validate_probe(value['target_python'])
+        if str(Path(python).resolve())!=target['requested_executable']:
+            raise ValueError('TARGET_PYTHON_ARGUMENT')
+        command=argv(python,target['site_root'],['model-run',*args])
+    else:
+        command=[str(python),'-m','exposedpath.gate8_diagnostic','run',*args]
     return [str(nsys),'profile','--trace=cuda,nvtx','--sample=none','--cpuctxsw=none',
         '--cuda-memory-usage=false','--cuda-trace-scope=process-tree','--isr=false',
         '--duration=120','--kill='+kill,'--output='+str(output/'capture'),
-        str(python),'-m','exposedpath.gate8_diagnostic','run',
-        '--manifest-path',str(prepared/'manifest.json'),'--prompt-path',str(prepared/'prompt.json'),
-        '--preflight-path',str(prepared/'preflight.json'),'--project-root',str(root),
-        '--output-dir',str(output/'diagnostic')]
+        *command]
+
+
+def analyze_model(output,prepared,collector_version):
+    """Bind target runtime/producer/trace before entering existing A-only gate."""
+    from exposedpath_v141.gate8_target_python import bind_producer,bind_trace_launch
+    from exposedpath_v141.gate8_files import write_input_receipt
+    from exposedpath_v141.gate8_engineering_scope import process_engineering_scope,load_engineering_scope
+    from exposedpath.gate8_diagnostic import _sha
+    output=Path(output); root=output/'diagnostic'; prepared=Path(prepared)
+    read=lambda p:json.loads(p.read_text(encoding='utf-8'))
+    if _sha(root/'manifest.json')!=_sha(prepared/'manifest.json') or _sha(root/'prompt.json')!=_sha(prepared/'prompt.json'):
+        raise ValueError('MODEL_PREPARED_IDENTITY')
+    manifest=read(root/'manifest.json'); ledger=read(root/'producer/pass_identity.json')
+    bind_producer(manifest['target_python'],read(root/'target_runtime.json'),ledger['pid'])
+    launch=bind_trace_launch(output/'capture.sqlite',ledger['pid'])
+    with (output/'target_launch.json').open('x',encoding='utf-8') as handle:
+        json.dump(launch,handle,indent=2)
+    names={'preflight':'adapter_preflight.json','cuda_probe':'cuda_probe.json',
+        'wmpc_manifest':'manifest.json','prompt':'prompt.json','runner_source':'runner_source.py',
+        'producer_receipt':'producer/producer_receipt.json','pass_identity':'producer/pass_identity.json',
+        'host_ledger':'producer/host_boundaries.json','drain_ledger':'producer/drain_ledger.json',
+        'stage_ledger':'producer/stage_ledger.json'}
+    receipt=write_input_receipt(output/'input_receipt.json',collector_version=collector_version,
+        capture_session_id=manifest['run_id'],artifacts=dict(raw=output/'capture.nsys-rep',
+        sqlite=output/'capture.sqlite',export_report=output/'postprocess_report.json',
+        **{k:root/v for k,v in names.items()}))
+    result=process_engineering_scope(receipt,root/'engineering_execution.json',output/'analyzed')
+    value=load_engineering_scope(result,receipt,root/'engineering_execution.json')
+    if value['status']!='A_SCOPE_ENGINEERING_ONLY' or len(value['requests'])!=1:
+        raise ValueError('MODEL_A_SCOPE_BLOCKED')
+    return result
 
 
 def main():
@@ -74,13 +115,25 @@ def main():
     for name in ('nsys','python','prepared','output'):
         parser.add_argument('--'+name,required=True,type=Path)
     parser.add_argument('--execute-engineering-diagnostic',action='store_true',required=True)
+    parser.add_argument('--engineering-a-only',action='store_true')
     args=parser.parse_args()
     output=args.output.resolve()
     if output.exists(): raise FileExistsError(output)
-    if args.python.resolve()!=(ROOT/'.venv/Scripts/python.exe').resolve():
+    if not args.engineering_a_only and args.python.resolve()!=(ROOT/'.venv/Scripts/python.exe').resolve():
         raise ValueError('Explicit fixed checkout venv required')
     if not args.nsys.is_absolute() or not args.nsys.is_file():
         raise ValueError('Explicit Nsight executable required')
+    if args.engineering_a_only:
+        from exposedpath.gate8_engineering_contract import validate_declaration
+        from exposedpath_v141.gate8_target_python import validate_probe,environment
+        from exposedpath_v141.gate8_qualification import validate_tool_version
+        manifest=json.loads((args.prepared/'manifest.json').read_text(encoding='utf-8'))
+        validate_declaration(manifest)
+        target=validate_probe(manifest['target_python'])
+        if target['environment']!=environment() or str(args.python.resolve())!=target['requested_executable']:
+            raise ValueError('TARGET_PYTHON_COLLECT_ENVIRONMENT')
+        version=subprocess.run([str(args.nsys),'--version'],capture_output=True,text=True,timeout=20,check=True).stdout
+        validate_tool_version(version)
     output.mkdir(parents=True,exist_ok=False)
     process=run_once(profile_argv(args.nsys.resolve(),args.python.resolve(),args.prepared.resolve(),output,ROOT),output/'collection_log')
     report=dict(status='BLOCKED',qualification='NOT_QUALIFIED',gate8_verdict='NOT_RUN',
@@ -97,11 +150,20 @@ def main():
         report['export_status']=export['status']
         if export['status']!='PASS': raise ValueError('Single export failed; no retry')
         report['status']='DIAGNOSTIC_COLLECTED_NOT_QUALIFIED'
+        if args.engineering_a_only:
+            from exposedpath.gate8_diagnostic import _sha
+            result=analyze_model(output,args.prepared,'2026.2.1.210')
+            report.update(status='A_SCOPE_ENGINEERING_ONLY',result_sha256=_sha(result),
+                schema_version='gate8-qwen-engineering-collection/0.1.0',
+                manifest_sha256=_sha(output/'diagnostic/manifest.json'),
+                target_runtime_sha256=_sha(output/'diagnostic/target_runtime.json'),
+                target_launch_sha256=_sha(output/'target_launch.json'),
+                q0_status='NOT_RUN',dropped_records_status='UNKNOWN',measurement_validity='NOT_ASSESSED')
     except (ValueError,OSError,KeyError) as exc:
         report['error']=str(exc)
     (output/'collection_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(report['status'])
-    return 0 if report['status']=='DIAGNOSTIC_COLLECTED_NOT_QUALIFIED' else 1
+    return 0 if report['status'] in ('DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY') else 1
 
 
 if __name__=='__main__': raise SystemExit(main())

@@ -45,7 +45,7 @@ def verify_model_inventory(model_path, inventory_path, expected_sha256, *, rehas
 
 def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha256,
                        prompt_path, prompt_sha256, expected_commit, physical_gpu,
-                       engineering_attention_backend=None):
+                       engineering_attention_backend=None, target_python=None, site_root=None):
     """Explicit preflight: hashes and minimal CUDA identity, no model load."""
     from exposedpath import platform_adapter
     from exposedpath.manifest import create_manifest, finalize_manifest
@@ -63,7 +63,11 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     if (os.environ.get('CUDA_DEVICE_ORDER') != 'PCI_BUS_ID'
             or os.environ.get('CUDA_VISIBLE_DEVICES') != str(physical_gpu)):
         raise ValueError('DIAGNOSTIC_MASK')
-    content = verify_model_inventory(model_path, inventory_path, inventory_sha256, rehash=False)
+    if bool(target_python) != bool(site_root) or (target_python and declared is None):
+        raise ValueError('DIAGNOSTIC_TARGET_ARGUMENTS')
+    from exposedpath_v141.gate8_target_python import probe
+    target = probe(target_python,site_root) if target_python else None
+    content = verify_model_inventory(model_path, inventory_path, inventory_sha256, rehash=True)
     prompt = load_prompt_tokens(Path(prompt_path))
     if prompt['fixed_input_tokens'] != 32 or _sha(prompt_path) != prompt_sha256.lower():
         raise ValueError('DIAGNOSTIC_PROMPT_IDENTITY')
@@ -85,6 +89,8 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
                     model_content_snapshot=content)
     if declared is not None:
         manifest.update(engineering_scope=declared, attention_backend=engineering_attention_backend)
+    if target is not None:
+        manifest['target_python']=target
     manifest = finalize_manifest(manifest,prompt,prompt_tokens_path=output/'prompt.json')
     for name, value in (('manifest.json',manifest),('preflight.json',preflight)):
         with (output/name).open('x',encoding='utf-8') as handle:
@@ -104,6 +110,14 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     manifest = json.loads(manifest_path.read_text(encoding='utf-8-sig'))
     from exposedpath.gate8_engineering_contract import validate_declaration, EXECUTION_VERSION
     declared = validate_declaration(manifest) if 'engineering_scope' in manifest else None
+    runtime=None
+    if 'target_python' in manifest:
+        from exposedpath_v141.gate8_target_python import current
+        runtime=current(manifest['target_python'])
+        if declared is None:
+            raise ValueError('DIAGNOSTIC_TARGET_PROFILE_MISSING')
+        verify_model_inventory(manifest['model_id'],manifest_path.parent/'model_inventory.csv',
+            manifest['model_content_snapshot']['inventory_sha256'],rehash=True)
     issues = validate_pre_model_identity(manifest_path, Path(preflight_path), Path(project_root))
     if issues:
         raise ValueError('; '.join(issues))
@@ -122,6 +136,9 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     fields.update(pid=os.getpid(), pass_id='pass1', attempt_id='diagnostic-1',
                   wmpc_manifest_sha256=_sha(manifest_path), prompt_sha256=_sha(prompt_path))
     output_dir.mkdir(parents=True, exist_ok=False)
+    if runtime is not None:
+        with (output_dir/'target_runtime.json').open('x',encoding='utf-8') as handle:
+            json.dump(runtime,handle,indent=2,sort_keys=True)
     if declared is not None:
         # Probe in the target process, not the prepare process. These are device
         # identity observations, not model work or a completeness certificate.
@@ -161,7 +178,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         with (output_dir/'loaded_config.json').open('x', encoding='utf-8') as handle:
             json.dump(loaded_config, handle, indent=2, sort_keys=True)
         if declared is not None and (loaded_config['configured_attention_backend']!=declared['attention_backend']
-                or loaded_config['configured_use_cache'] is not True or not loaded_config['model_type']):
+                or loaded_config['configured_use_cache'] is not True or loaded_config['model_type']!='qwen2'):
             raise ValueError('ENGINEERING_LOADED_CONFIGURATION_CONFLICT')
     path = runner.run_gate8_requests_to_files(
         output_dir=output_dir/'producer', output_len=2,
@@ -206,6 +223,8 @@ def main():
         prep.add_argument('--'+name,required=True)
     prep.add_argument('--physical-gpu',required=True,type=int)
     prep.add_argument('--engineering-attention-backend',choices=('sdpa','eager'))
+    prep.add_argument('--target-python')
+    prep.add_argument('--site-root')
     run = commands.add_parser('run')
     for name in ('manifest-path', 'prompt-path', 'preflight-path', 'project-root', 'output-dir'):
         run.add_argument('--'+name, required=True, type=Path)

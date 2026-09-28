@@ -85,3 +85,30 @@ def test_receipt_write_failure_after_spawn_still_stops_recorded_process(monkeypa
     finally:
         for child in children:
             if child.poll() is None: child.kill(); child.wait(timeout=5)
+
+
+def test_model_profile_uses_sealed_direct_interpreter(tmp_path):
+    import sysconfig
+    from exposedpath_v141 import gate8_target_python as target
+    prepared=tmp_path/'prepared'; prepared.mkdir()
+    contract=target.probe(sys._base_executable,sysconfig.get_path('purelib'))
+    (prepared/'manifest.json').write_text(json.dumps({'target_python':contract}))
+    argv=api().profile_argv('nsys',sys._base_executable,prepared,tmp_path/'out')
+    assert str(Path(sys._base_executable).resolve()) in argv
+    assert '-I' in argv and '-S' in argv and 'model-run' in argv
+    with pytest.raises(ValueError,match='TARGET'):
+        api().profile_argv('nsys','unsealed-python',prepared,tmp_path/'out')
+
+
+def test_new_a_only_entry_rejects_unsealed_manifest_before_launch(tmp_path,monkeypatch):
+    from exposedpath.gate8_engineering_contract import declaration
+    module=api(); prepared=tmp_path/'prepared'; prepared.mkdir()
+    (prepared/'manifest.json').write_text(json.dumps(dict(engineering_scope=declaration('sdpa'),
+        attention_backend='sdpa',batch_size=1,execution_mode='eager',run_role='ENGINEERING',data_role='Engineering')))
+    nsys=tmp_path/'nsys.exe'; nsys.touch()
+    monkeypatch.setattr(sys,'argv',['collect','--nsys',str(nsys),'--python',sys._base_executable,
+        '--prepared',str(prepared),'--output',str(tmp_path/'out'),'--execute-engineering-diagnostic','--engineering-a-only'])
+    def forbidden(*a,**kw): raise AssertionError('launched before identity validation')
+    monkeypatch.setattr(module,'run_once',forbidden)
+    with pytest.raises(KeyError,match='target_python'): module.main()
+    assert not (tmp_path/'out').exists()

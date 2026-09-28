@@ -1,4 +1,4 @@
-"""Controlled-only explicit interpreter adapter. Probes are CPU-only.
+"""Explicit interpreter adapter for controlled and Engineering model entries. Probes are CPU-only.
 
 No PATH interpreter selection, site auto-discovery, .pth execution or CUDA probe.
 """
@@ -111,6 +111,10 @@ def bind_trace_launch(path,pid):
 
 
 def main():
+    if sys.argv[1:2]==['model-run']:
+        from exposedpath.gate8_diagnostic import main as model
+        sys.argv[1:2]=['run']
+        return model()
     if sys.argv[1:2]==['probe']:
         import argparse
         p=argparse.ArgumentParser(); p.add_argument('command'); p.add_argument('--nonce',required=True); p.add_argument('--site-root',required=True)

@@ -169,18 +169,35 @@ def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path, engi
     prompt=write_json(tmp_path/'prompt.json',dict(schema_version='exposedpath-prompt-tokens/1',
         tokenizer_id='synthetic-tokenizer',fixed_input_tokens=32,
         samples=[dict(input_ids=[1]*32,attention_mask=[1]*32)]))
+    import sys,sysconfig
     output=module.prepare_diagnostic(output_dir=tmp_path/'prepared',model_path=model,
         inventory_path=inventory,inventory_sha256=sha(inventory),prompt_path=prompt,
         prompt_sha256=sha(prompt),expected_commit='d'*40,physical_gpu=3,
-        engineering_attention_backend=engineering_backend)
+        engineering_attention_backend=engineering_backend,
+        target_python=sys._base_executable if engineering_backend else None,
+        site_root=sysconfig.get_path('purelib') if engineering_backend else None)
     manifest=json.loads((output/'manifest.json').read_text())
     assert manifest['repeat_count']==1 and manifest['warmup_count']==1
     assert manifest['attention_backend']==(engineering_backend or 'UNKNOWN_NOT_LOADED')
     if engineering_backend:
         assert manifest['engineering_scope']['declaration_role']=='PRE_EXECUTION'
+        assert manifest['target_python']['actual']['pid']==manifest['target_python']['launch_pid']
     else:
         assert 'engineering_scope' not in manifest
     assert manifest['runner_git_commit']=='d'*40
     assert manifest['prompt_tokens_sha256']==sha(output/'prompt.json')
     assert manifest['runner_source_sha256']==sha(Path(module.__file__).parent/'runner.py')
-    assert manifest['model_content_snapshot']['content_verification']=='HISTORICAL_HASH_REFERENCE_CURRENT_SIZE_SET_ONLY'
+    assert manifest['model_content_snapshot']['content_verification']=='CURRENT_CONTENT_HASHES'
+
+
+def test_target_identity_conflict_stops_before_model_load(monkeypatch,tmp_path):
+    module=api(); args,state=case(monkeypatch,tmp_path)
+    from exposedpath_v141 import gate8_target_python as target
+    value=json.loads(args['manifest_path'].read_text()); value['target_python']={'conflicting':True}
+    write_json(args['manifest_path'],value)
+    monkeypatch.setattr(module,'validate_pre_model_identity',lambda *a:[])
+    def reject(_): raise ValueError('TARGET_PYTHON_RUNTIME_ENVIRONMENT')
+    monkeypatch.setattr(target,'current',reject)
+    with pytest.raises(ValueError,match='TARGET_PYTHON'):
+        module.run_diagnostic(**args)
+    assert state['loads']==0
