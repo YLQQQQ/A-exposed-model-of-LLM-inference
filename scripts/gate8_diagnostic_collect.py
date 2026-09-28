@@ -65,6 +65,16 @@ def profile_argv(nsys,python,prepared,output,root=ROOT):
         '--output-dir',str(output/'diagnostic')]
     manifest=prepared/'manifest.json'
     value=json.loads(manifest.read_text(encoding='utf-8')) if manifest.exists() else {}
+    if 'isolated_preflight_version' in value:
+        from exposedpath import gate8_isolated_preflight as isolated
+        receipt=output/'auxiliary_preflight.json'
+        if value['isolated_preflight_version']!=isolated.VERSION or not receipt.is_file():
+            raise ValueError('ISOLATED_PREFLIGHT_REQUIRED_BEFORE_PROFILE')
+        sealed=isolated.read(receipt)
+        if sealed['run_id']!=value['run_id'] or sealed['output_root']!=str(output.resolve()):
+            raise ValueError('ISOLATED_PREFLIGHT_LAUNCH_CONFLICT')
+        args+=['--auxiliary-receipt',str(receipt.resolve()),'--auxiliary-sha256',isolated.sha(receipt),
+               '--launch-nonce',sealed['nonce']]
     if 'target_python' in value:
         from exposedpath_v141.gate8_target_python import argv,validate_probe
         target=validate_probe(value['target_python'])
@@ -90,6 +100,18 @@ def analyze_model(output,prepared,collector_version):
     if _sha(root/'manifest.json')!=_sha(prepared/'manifest.json') or _sha(root/'prompt.json')!=_sha(prepared/'prompt.json'):
         raise ValueError('MODEL_PREPARED_IDENTITY')
     manifest=read(root/'manifest.json'); ledger=read(root/'producer/pass_identity.json')
+    if 'isolated_preflight_version' in manifest:
+        from exposedpath import gate8_isolated_preflight as isolated
+        receipt=output/'auxiliary_preflight.json'
+        sealed=read(receipt); claim=read(root/'isolated_preflight_target.json')
+        final=read(output/'auxiliary_preflight.final.json')
+        if (sealed['schema_version']!=isolated.VERSION or sealed['run_id']!=manifest['run_id']
+                or claim!=read(output/'auxiliary_preflight.claim.json')
+                or claim['target_pid']!=ledger['pid'] or claim['nonce']!=sealed['nonce']
+                or claim['preflight_sha256']!=isolated.sha(receipt)
+                or final!=dict(status='PASS',preflight_sha256=isolated.sha(receipt),
+                    target_claim_sha256=isolated.sha(output/'auxiliary_preflight.claim.json'))):
+            raise ValueError('ISOLATED_PREFLIGHT_TARGET_BINDING')
     bind_producer(manifest['target_python'],read(root/'target_runtime.json'),ledger['pid'])
     launch=bind_trace_launch(output/'capture.sqlite',ledger['pid'])
     with (output/'target_launch.json').open('x',encoding='utf-8') as handle:
@@ -134,12 +156,25 @@ def main():
             raise ValueError('TARGET_PYTHON_COLLECT_ENVIRONMENT')
         version=subprocess.run([str(args.nsys),'--version'],capture_output=True,text=True,timeout=20,check=True).stdout
         validate_tool_version(version)
+        if 'isolated_preflight_version' in manifest:
+            from exposedpath import gate8_isolated_preflight as isolated
+            isolated.write_new(args.prepared/'collection_intent.json',dict(
+                run_id=manifest['run_id'],output_root=str(output),collector_pid=os.getpid()))
     output.mkdir(parents=True,exist_ok=False)
+    isolated_receipt=None
+    if args.engineering_a_only and 'isolated_preflight_version' in manifest:
+        from exposedpath import gate8_isolated_preflight as isolated
+        isolated_receipt=isolated.seal(args.prepared,output,ROOT)
     process=run_once(profile_argv(args.nsys.resolve(),args.python.resolve(),args.prepared.resolve(),output,ROOT),output/'collection_log')
     report=dict(status='BLOCKED',qualification='NOT_QUALIFIED',gate8_verdict='NOT_RUN',
                 scientific_outputs_allowed=False,collection=process)
     try:
         if process['status']!='COMPLETE': raise ValueError('Collection failed/timeout; no export or retry')
+        if isolated_receipt is not None:
+            isolated.finalize(isolated_receipt,args.prepared,ROOT)
+            isolated.write_new(output/'auxiliary_preflight.final.json',dict(status='PASS',
+                preflight_sha256=isolated.sha(isolated_receipt),
+                target_claim_sha256=isolated.sha(output/'auxiliary_preflight.claim.json')))
         diagnostic=json.loads((output/'diagnostic/diagnostic_report.json').read_text(encoding='utf-8'))
         if (diagnostic['status']!='DIAGNOSTIC_COMPLETE' or diagnostic['qualification']!='NOT_QUALIFIED'
                 or diagnostic['scientific_outputs_allowed'] is not False):

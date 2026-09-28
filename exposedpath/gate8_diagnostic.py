@@ -91,6 +91,8 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
         manifest.update(engineering_scope=declared, attention_backend=engineering_attention_backend)
     if target is not None:
         manifest['target_python']=target
+        from exposedpath.gate8_isolated_preflight import VERSION
+        manifest['isolated_preflight_version']=VERSION
     manifest = finalize_manifest(manifest,prompt,prompt_tokens_path=output/'prompt.json')
     for name, value in (('manifest.json',manifest),('preflight.json',preflight)):
         with (output/name).open('x',encoding='utf-8') as handle:
@@ -98,7 +100,8 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     return output
 
 
-def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, output_dir):
+def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, output_dir,
+                   auxiliary_receipt=None,auxiliary_sha256=None,launch_nonce=None):
     from exposedpath import runner
 
     if Path(project_root).resolve() != Path(__file__).resolve().parents[1]:
@@ -110,6 +113,19 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     manifest = json.loads(manifest_path.read_text(encoding='utf-8-sig'))
     from exposedpath.gate8_engineering_contract import validate_declaration, EXECUTION_VERSION
     declared = validate_declaration(manifest) if 'engineering_scope' in manifest else None
+    isolated='isolated_preflight_version' in manifest
+    claim=None
+    if isolated:
+        from exposedpath import gate8_isolated_preflight as isolated_gate
+        if (manifest['isolated_preflight_version']!=isolated_gate.VERSION or declared is None
+                or 'target_python' not in manifest or not all((auxiliary_receipt,auxiliary_sha256,launch_nonce))):
+            raise ValueError('ISOLATED_PREFLIGHT_REQUIRED')
+        if Path(prompt_path).resolve()!=manifest_path.resolve().parent/'prompt.json' or Path(preflight_path).resolve()!=manifest_path.resolve().parent/'preflight.json':
+            raise ValueError('ISOLATED_PREFLIGHT_INPUT_PATH')
+        claim=isolated_gate.consume(receipt=auxiliary_receipt,expected_sha=auxiliary_sha256,
+            nonce=launch_nonce,prepared=manifest_path.parent,output=output_dir.parent,root=project_root)
+    elif any(x is not None for x in (auxiliary_receipt,auxiliary_sha256,launch_nonce)):
+        raise ValueError('ISOLATED_PREFLIGHT_UNDECLARED')
     runtime=None
     if 'target_python' in manifest:
         from exposedpath_v141.gate8_target_python import current
@@ -118,7 +134,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
             raise ValueError('DIAGNOSTIC_TARGET_PROFILE_MISSING')
         verify_model_inventory(manifest['model_id'],manifest_path.parent/'model_inventory.csv',
             manifest['model_content_snapshot']['inventory_sha256'],rehash=True)
-    issues = validate_pre_model_identity(manifest_path, Path(preflight_path), Path(project_root))
+    issues = [] if isolated else validate_pre_model_identity(manifest_path, Path(preflight_path), Path(project_root))
     if issues:
         raise ValueError('; '.join(issues))
     expected = dict(fixed_input_tokens=32, fixed_output_tokens=2, batch_size=1,
@@ -136,6 +152,8 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     fields.update(pid=os.getpid(), pass_id='pass1', attempt_id='diagnostic-1',
                   wmpc_manifest_sha256=_sha(manifest_path), prompt_sha256=_sha(prompt_path))
     output_dir.mkdir(parents=True, exist_ok=False)
+    if claim is not None:
+        isolated_gate.write_new(output_dir/'isolated_preflight_target.json',claim)
     if runtime is not None:
         with (output_dir/'target_runtime.json').open('x',encoding='utf-8') as handle:
             json.dump(runtime,handle,indent=2,sort_keys=True)
@@ -144,7 +162,12 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         # identity observations, not model work or a completeness certificate.
         from exposedpath_v141.gate8_source_probe import TorchBackend
         from exposedpath_v141.gate8_adapter import normalized_uuid, normalized_pci
-        observed_device=TorchBackend().identity()
+        backend=TorchBackend()
+        if isolated:
+            from exposedpath.platform_adapter import cuda_identity_native
+            observed_device=cuda_identity_native(backend.cuda)
+        else:
+            observed_device=backend.identity()
         pre=json.loads(Path(preflight_path).read_text(encoding='utf-8'))
         if (normalized_uuid(observed_device['gpu_uuid'])!=normalized_uuid(pre['gpu_uuid'])
                 or normalized_pci(observed_device['pci_bus_id'])!=normalized_pci(pre['gpu_pci_bus_id'])
@@ -191,6 +214,8 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         request_plan=[dict(request_id='warmup-0', repeat_id='warmup-0', request_role='warmup'),
                       dict(request_id='request-0', repeat_id='0', request_role='measured')])
     producer = json.loads(path.read_text(encoding='utf-8'))
+    if isolated:
+        isolated_gate.verify_snapshot(isolated_gate.read(auxiliary_receipt),manifest_path.parent,project_root)
     if declared is not None:
         execution=dict(schema_version=EXECUTION_VERSION,manifest_sha256=_sha(manifest_path),
             producer_receipt_sha256=_sha(path),status=producer['status'],declaration=declared,
@@ -228,6 +253,9 @@ def main():
     run = commands.add_parser('run')
     for name in ('manifest-path', 'prompt-path', 'preflight-path', 'project-root', 'output-dir'):
         run.add_argument('--'+name, required=True, type=Path)
+    run.add_argument('--auxiliary-receipt',type=Path)
+    run.add_argument('--auxiliary-sha256')
+    run.add_argument('--launch-nonce')
     arguments = vars(parser.parse_args())
     command = arguments.pop('command')
     if command == 'prepare':

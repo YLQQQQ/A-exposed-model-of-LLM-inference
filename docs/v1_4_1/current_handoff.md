@@ -1,5 +1,14 @@
 # 当前公共交接
 
+## 7.80（2026-09-28）当前优先
+
+用户选择辅助预检外移；[执行合同/最小新方案](gate8_isolated_preflight_v0_1.md)及本地接线完成。
+新prepare预声明版本，collector真实Git/GPU预检并封存一次性回执；目标重核代码/输入/解释器、
+PID和原生CUDA设备，不复制期望值。前后内容变化/过期/复用/设备冲突拒绝，warning门不改。
+本轮仅本地CPU替身/文件链，不授服务器或native ABI通过。先审查固定交付commit及新run方案，
+不默认部署或采集；暂停厂商询证与旧warning调查。Gate状态和历史证据边界保持。
+相关9文件128 passed，compileall/diff-check通过；未跑全量或任何模型/驱动调用。
+
 ## 7.79（2026-09-28）当前优先
 
 [最后可行性审查](gate8_process_origin_feasibility_v0_1.md)结论B：adapter来源记录不能单独解决

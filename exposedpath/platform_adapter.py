@@ -256,6 +256,45 @@ def _recorded_tool(recorder,name,args,*,timeout,text,stderr,env,cwd,extra_candid
         return subprocess.CompletedProcess(argv,process.returncode,stdout,child_stderr)
 
 
+def _load_cuda_driver():
+    import ctypes
+    if sys.platform=='win32':
+        # System32 only; never resolve a DLL from the checkout/current directory.
+        return ctypes.WinDLL('nvcuda.dll',winmode=0x00000800)
+    if sys.platform.startswith('linux'): return ctypes.CDLL('libcuda.so.1')
+    raise ValueError('NATIVE_CUDA_PLATFORM_UNSUPPORTED')
+
+
+def _cuda_driver_identity(logical):
+    import ctypes as c
+    import uuid
+    driver=_load_cuda_driver()
+    def call(name,types,*args):
+        function=getattr(driver,name)
+        function.argtypes=types; function.restype=c.c_int
+        result=function(*args)
+        if result!=0: raise ValueError(f'NATIVE_CUDA_{name}_ERROR:{result}')
+    device=c.c_int(); identifier=(c.c_ubyte*16)(); pci=c.create_string_buffer(32)
+    call('cuInit',[c.c_uint],0)
+    call('cuDeviceGet',[c.POINTER(c.c_int),c.c_int],c.byref(device),logical)
+    call('cuDeviceGetUuid_v2',[c.c_void_p,c.c_int],c.byref(identifier),device.value)
+    call('cuDeviceGetPCIBusId',[c.c_void_p,c.c_int,c.c_int],pci,len(pci),device.value)
+    return dict(gpu_uuid='GPU-'+str(uuid.UUID(bytes=bytes(identifier))),pci_bus_id=pci.value.decode('ascii'))
+
+
+def cuda_identity_native(cuda):
+    """Target observation: no nvidia-smi, no inferred physical/logical equality."""
+    from exposedpath_v141.gate8_adapter import normalized_uuid,normalized_pci
+    if cuda.device_count()!=1 or cuda.current_device()!=0:
+        raise ValueError('NATIVE_CUDA_LOGICAL_DEVICE')
+    torch_uuid=normalized_uuid(str(cuda.get_device_properties(0).uuid))
+    observed=_cuda_driver_identity(0)
+    if normalized_uuid(observed['gpu_uuid'])!=torch_uuid:
+        raise ValueError('NATIVE_CUDA_UUID_CONFLICT')
+    normalized_pci(observed['pci_bus_id'])  # Validate an actual driver observation.
+    return observed
+
+
 def query_tool(
     name: str,
     args: Sequence[str] = (),

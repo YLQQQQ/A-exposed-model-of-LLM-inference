@@ -1,5 +1,22 @@
 # ExposedPath 科研进度清单
 
+## 7.80 保全身份的辅助预检外移（2026-09-28）
+
+用户选择7.79备选2；[版本化执行合同0.1](gate8_isolated_preflight_v0_1.md)及最小本地实现完成。
+原Git/mask/GPU身份检查在profile前真实执行；目标不运行Git/nvidia-smi，改核验一次性run/output/nonce
+回执、当前文件/Git元数据、原解释器snapshot/模型清单/固定输入及进程内CUDA UUID/PCI。
+目标设备数据来自Torch+CUDA Driver，不复制预期PCI；错误或冲突在模型前拒绝。
+120秒双时钟新鲜度、排他claim、同prepared禁重试、目标与collector后检查防止已观察变化被接受；
+Git观察角色明确为preflight，不伪称目标又查询过Git。保留无并发修改条件，不宣称抗恶意改后恢复。
+tests-first覆盖真实文件入口/collector顺序、隔离CPU子进程、过期/错run/内容/设备等反例；
+本地Python3.12.7相关9文件128 passed/48.40s（新增文件25项），改动代码compileall与diff-check通过。
+未跑全量或服务器/GPU/Nsight/模型。native ABI仅CPU替身验证；本地临时Git仓库与隔离子进程是真实CPU执行。
+自审确认新producer字段经argv/claim/target receipt/collector final向分析入口绑定，未删除warning门或改runner。
+warning、三窗口、drain、模型必要行为、物理S/B及旧证据不改；6171局部gap不改分类。
+一次新执行仅准备方案：固定交付commit/原Qwen32/2配置、新run、完整单ZIP，先协调审查；
+不开展厂商询证或旧warning调查，不部署/重采。新adapter仍需真实目标身份核验，不自动继承资格。
+Gate7 PASS、限定受控资格及旧attempt BLOCKED保持，UNKNOWN不改零，完整新Q0/Gate8 NOT_RUN。
+
 ## 7.79 来源记录方案可行性最后收口（2026-09-28）
 
 [审查0.1](gate8_process_origin_feasibility_v0_1.md)明确结论B：不再追加来源设施、部署或重采。
