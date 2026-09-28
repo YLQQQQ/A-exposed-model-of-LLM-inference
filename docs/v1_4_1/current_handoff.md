@@ -1,5 +1,16 @@
 # 当前公共交接
 
+## 7.81 当前优先：固定交付待协调审查
+
+执行commit固定`db9f028b1a7ceac40b9a110bfaacf6d613319638`，服务器前置`097f68a`。
+单一增量bundle已verify；本机忽略目录存固定部署/native检查脚本与独立后续模型脚本。
+先部署+必要CPU回归，再一次生产native CUDA身份查询（会初始化CUDA，无模型/Nsight）。
+目标机回执经协调审查后，才能另行授权模型脚本；不自动串行采集、不追随文档HEAD。
+交付QA4 passed、PowerShell5.1解析通过；未执行服务器或驱动。详见research_progress 7.81。
+设备检查不是profile环境/模型验收；Gate7 PASS、限定资格保持、旧BLOCKED不改，Gate8 NOT_RUN。
+以下为历史快照，7.80“未生成包”状态已被本节取代。
+
+
 ## 7.80（2026-09-28）当前优先
 
 用户选择辅助预检外移；[执行合同/最小新方案](gate8_isolated_preflight_v0_1.md)及本地接线完成。

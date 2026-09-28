@@ -1,5 +1,22 @@
 # ExposedPath 科研进度清单
 
+## 7.81 固定部署与原生设备adapter小检查交付（2026-09-28）
+
+执行commit固定db9f028b1a7ceac40b9a110bfaacf6d613319638，服务器前置097f68a21eb9c75dbf390b7529a19c4316dda98e。
+单一增量bundle已本地verify，44598 bytes，SHA256
+`F9C467E34E640CB6B80AF87DDCD73799C1EEF92B744D949FED00A85A20473B30`。
+机器路径与两个固定脚本仅在忽略的本地交付/交接中；不改变生产代码或执行commit。
+第一脚本校验部署身份、9文件必要CPU定向回归后，以显式解释器/site及mask3直接调用一次
+生产`cuda_identity_native(torch.cuda)`，记录实际UUID/PCI、版本、异常和退出码，冲突拒绝。
+该步骤初始化CUDA，不是CPU-only；不加载模型、不推理、不运行Nsight。
+第二脚本独立授权，必须先协调审查目标机回执；仍为单次原Qwen32/2、batch1、warmup1/repeat1、sdpa，
+新manifest/预检/目录，不复用旧attempt；第一脚本不自动调用它。两者均单ZIP回传、失败不重试。
+本地交付QA先RED后GREEN，4项CPU测试通过（成功/身份冲突/原异常及脚本接线检查），
+两脚本PowerShell5.1语法检查通过；未重复全量或执行真实驱动/服务器/Nsight/模型。
+CPU替身不证明native ABI或profile环境；小检查即使通过也不证明warning消失。
+Gate7历史PASS、限定受控资格及旧BLOCKED保持；完整新Q0/Gate8 NOT_RUN，UNKNOWN保留。
+
+
 ## 7.80 保全身份的辅助预检外移（2026-09-28）
 
 用户选择7.79备选2；[版本化执行合同0.1](gate8_isolated_preflight_v0_1.md)及最小本地实现完成。
