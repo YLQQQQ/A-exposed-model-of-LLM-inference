@@ -1,5 +1,20 @@
 # ExposedPath 科研进度清单
 
+## 7.79 来源记录方案可行性最后收口（2026-09-28）
+
+[审查0.1](gate8_process_origin_feasibility_v0_1.md)明确结论B：不再追加来源设施、部署或重采。
+成功路径可记录目标中两次Git及一次nvidia-smi直接子进程；prepare/probe、collector、
+第三方/native/后代不覆盖，不能以三次调用指认旧两个PID。四类warning原行/字段与安装
+UserGuide/ReleaseNotes/AnalysisGuide/schema notes逐项核对，没有足够的进程排他影响依据。
+零事件消息可能与非CUDA/NVTX辅助用途相容，但不能抵消同PID的不完整/启动警告；
+身份已知不等于安全，也不重启全capture零丢失认证要求。
+有限备选为：经协调决定的消息范围窄询证（不发送）；重新设计将已知辅助预检置于profile外并
+保全目标身份新鲜度（未批准/实现）；或暂停模型链claim。当前不能交付有把握补齐缺口的一次执行。
+6171局部gap约4.99ms/2.78%保持反事实unattributed；低比例不支持warning豁免。
+本轮仅源码/原SQLite/已传回资料只读审查及文档更新；不重跑CPU回归、不改生产或旧证据。
+整理并正常推送ebdf4eb及本次文档提交；执行服务器仍097f68a，不跟随文档HEAD。
+Gate7 PASS、限定受控资格及旧BLOCKED不变，UNKNOWN不改零，完整新Q0/Gate8 NOT_RUN。
+
 ## 7.78 有界进程来源实现与双模式反事实收口（2026-09-28）
 
 用户批准的本地Engineering工作完成；[来源合同0.1](gate8_process_origin_contract_v0_1.md)

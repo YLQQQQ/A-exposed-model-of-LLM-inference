@@ -58,6 +58,9 @@ timeout维持原run语义和Windows异常输出；仅清理本次已记录child�
 
 ## 下一步约束
 
+7.79最终审查已收口为[结论B](gate8_process_origin_feasibility_v0_1.md)：记录器不足以关闭
+warning范围缺口，停止追加实现与执行安排。下述CPU提案仅为能力边界说明，不是当前服务器任务。
+
 本地记录/反例及反事实A检查先完成并审查。旧Qwen缺少来源记录，不能由新实现补造。
 如后续协调需目标平台补证，最小提案是独立CPU入口仅导入及Git身份检查后退出，
 保留该来源记录；不调用model-run、不执行TorchBackend.identity/CUDA/Nsight。
