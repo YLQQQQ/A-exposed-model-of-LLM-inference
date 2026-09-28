@@ -1,5 +1,7 @@
 # Gate8 条件性集中收尾 0.1
 
+> 历史证据审计，正文按原版本保留。当前工程退出以[G8-ENGINEERING-EXIT/0.1](gate8_engineering_exit_amendment_v0_1.md)为准；当前进度只见[research_progress](research_progress.md)。本版NOT_RUN/BLOCKED与旧数值不回写，non-submit修正见[7.87报告](gate8_non_submit_api_review_v0_1.md)。
+
 2026-09-28，Engineering，research_progress 7.86。执行/分析代码均固定为
 `36ed952b57f20651dd290fc484d7b21fc7dbbfc4`；本报告的提交是文档收尾身份，不是执行身份。
 依据[条件配对合同0.1](gate8_conditional_pair_v0_1.md)及[路线A退出范围0.2](gate8_route_a_execution_v0_2.md)。

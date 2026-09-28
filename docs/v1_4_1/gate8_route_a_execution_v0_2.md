@@ -1,5 +1,7 @@
 # Route A 最小执行与退出范围 v0.2
 
+> 历史计划及科学证据义务保留；当前工程退出采用[G8-ENGINEERING-EXIT/0.1](gate8_engineering_exit_amendment_v0_1.md)，后续任务仅从[Gate9入口](gate9_platform_assessment_v0_1.md)读取。下文旧补证命令与未完成状态不再作为现行执行指令。
+
 当前实现补充见[限定Engineering依据0.1](gate8_engineering_sufficiency_amendment_v0_1.md)及research_progress 7.65：247f4fd已完成目标机静态复验（95项），仍不替代新Q0/真实模型证据。下一步见[限定资格备忘录](gate8_engineering_qualification_next_v0_1.md)，先在本地准备受控资格入口；旧Qwen不追认，不为解决未界定warning直接重采。下文一次源码快照步骤属于已完成的历史计划，不重复执行。
 
 2026-09-27。依据用户已批准的A优先、单平台单模型范围修订**未来执行计划**；不是

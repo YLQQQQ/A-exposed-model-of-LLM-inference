@@ -4,7 +4,7 @@
 方法链：Raw → Canonical → S → A/B → D / Exposure Signature。
 Activity cost 不等于请求可见延迟贡献。
 
-**Gate0–7 PASS；Gate8 NOT_RUN、待独立规划与授权。** Gate7 仅通过 Windows/RTX4090 Engineering integration；legacy-only、A结构验证、coverage unknown 与 measurement validity NOT_ASSESSED 限制保留。
+**Gate0–7历史PASS；Gate8按[G8-ENGINEERING-EXIT/0.1](docs/v1_4_1/gate8_engineering_exit_amendment_v0_1.md)限定工程范围PASS；[Gate9评估](docs/v1_4_1/gate9_platform_assessment_v0_1.md)已启动、科学资格初评BLOCKED。** 四warning无目标影响仍是未证假设，Qwen A仍条件性；不授完整新版Q0、模型科学有效性或Formal资格，旧attempt不改判。Gate7原legacy-only等限制保留。
 
 ## 唯一入口
 

@@ -1,5 +1,7 @@
 # Gate8 non-submit CUDA API 分类修正与条件性复算 0.1
 
+> 本文保留1733ff3时的审计与证据等级。后续工程退出政策见[G8-ENGINEERING-EXIT/0.1](gate8_engineering_exit_amendment_v0_1.md)；Gate9已可开展评估。下文原Gate8 NOT_RUN/Gate9不启动是历史状态，原条件性数据及其限制不改变。
+
 状态：本地 Engineering 分类修正；不是新采集、Q0 资格或可信模型 A 验收。标准 Gate8 `NOT_RUN`，Gate7 历史 PASS 保持。四条 warning 无目标影响仍只是用户批准的假设；正式门、原 BLOCKED 报告、Raw、UNKNOWN/NOT_ASSESSED 均不改。Gate9/Pilot、D/Signature 不启用。
 
 ## 1. 语义依据与实现缺陷
