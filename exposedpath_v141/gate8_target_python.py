@@ -76,7 +76,12 @@ def probe(python,site_root):
 def current(contract):
     validate_probe(contract)
     actual=dict(pid=os.getpid(),parent_pid=os.getppid(),snapshot=snapshot(contract['site_root']))
-    require(actual['snapshot']==contract['actual']['snapshot'],'RUNTIME_ENVIRONMENT')
+    expected=contract['actual']['snapshot']; observed=actual['snapshot']
+    if observed!=expected:
+        error=ValueError('TARGET_PYTHON_RUNTIME_ENVIRONMENT')
+        error.snapshot_difference={k:dict(expected=expected.get(k),observed=observed.get(k))
+            for k in expected.keys() | observed.keys() if expected.get(k)!=observed.get(k)}
+        raise error
     return actual
 
 
@@ -110,11 +115,60 @@ def bind_trace_launch(path,pid):
     return dict(**matches[0],sqlite_sha256=before)
 
 
+def model_entry():
+    """Persist target-side evidence before model-module import; never bypass a gate.
+
+    STARTED without exit.json is explicitly unfinished, not a successful exit.
+    Native fd writes/aborts before Python dispatch are not guaranteed captured.
+    """
+    import argparse
+    import contextlib
+    import traceback
+    p=argparse.ArgumentParser(add_help=False,allow_abbrev=False)
+    p.add_argument('--output-dir',required=True)
+    args,_=p.parse_known_args(sys.argv[2:])
+    output=Path(args.output_dir).resolve()
+    entry=output.with_name(output.name+'-entry')
+    entry.mkdir(parents=True,exist_ok=False)
+    report=dict(schema_version='exposedpath-target-entry/0.1.0',status='STARTED',
+        pid=os.getpid(),parent_pid=os.getppid(),executable=str(Path(sys.executable).resolve()),
+        argv=list(sys.argv),environment=environment(),exit_code=None)
+    def persist(name,value):
+        with (entry/name).open('x',encoding='utf-8') as handle:
+            json.dump(value,handle,indent=2,sort_keys=True); handle.flush(); os.fsync(handle.fileno())
+    persist('started.json',report)
+    with (entry/'stdout.txt').open('x',encoding='utf-8',buffering=1) as stdout, \
+            (entry/'stderr.txt').open('x',encoding='utf-8',buffering=1) as stderr:
+        with contextlib.redirect_stdout(stdout),contextlib.redirect_stderr(stderr):
+            try:
+                from exposedpath.gate8_diagnostic import main as model
+                sys.argv[1:2]=['run']
+                code=model()
+                report.update(status='EXITED',exit_code=0 if code is None else int(code))
+                return code
+            except BaseException as exc:
+                code=(exc.code if isinstance(exc.code,int) else (0 if exc.code is None else 1)) if isinstance(exc,SystemExit) else (130 if isinstance(exc,KeyboardInterrupt) else 1)
+                report.update(status='EXITED',exit_code=code,exception_type=type(exc).__name__,
+                    exception_message=str(exc),traceback=traceback.format_exc())
+                if hasattr(exc,'snapshot_difference'):
+                    report['snapshot_difference']=exc.snapshot_difference
+                traceback.print_exc(file=stderr)
+                raise
+            finally:
+                report['runner_imported']='exposedpath.runner' in sys.modules
+                # On persistence failure do not mask an already active original exception.
+                original_exception=sys.exc_info()[0] is not None
+                try:
+                    stdout.flush(); stderr.flush(); os.fsync(stdout.fileno()); os.fsync(stderr.fileno())
+                    persist('exit.json',report)
+                except OSError as write_error:
+                    print('TARGET_ENTRY_PERSIST_FAILED: '+str(write_error),file=sys.__stderr__)
+                    if not original_exception: raise
+
+
 def main():
     if sys.argv[1:2]==['model-run']:
-        from exposedpath.gate8_diagnostic import main as model
-        sys.argv[1:2]=['run']
-        return model()
+        return model_entry()
     if sys.argv[1:2]==['probe']:
         import argparse
         p=argparse.ArgumentParser(); p.add_argument('command'); p.add_argument('--nonce',required=True); p.add_argument('--site-root',required=True)

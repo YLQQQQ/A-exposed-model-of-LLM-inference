@@ -1,5 +1,11 @@
 # 当前公共交接
 
+## 7.73（2026-09-28）
+
+[入口失败审计](gate8_qwen_entry_failure_audit_v0_1.md)：Qwen attempt BLOCKED，REP内部有
+snapshot比较失败的压缩输出线索，但具体字段未证明。新增target入口持久化记录，不放宽门。
+只交协调窗口审查/CPU复验；暂停下文7.72完整采集命令，不安排重采。旧证据不改。
+
 ## 7.72（2026-09-28）
 
 [单Qwen方案](gate8_qwen_a_only_execution_v0_1.md)已进入必要本地实现：
