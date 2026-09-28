@@ -9,6 +9,18 @@ from pathlib import Path
 from scripts.gate7_smoke_validation import validate_pre_model_identity
 
 
+def measurement_pass(manifest):
+    if 'engineering_pair' not in manifest:
+        return 'pass1'
+    pair=manifest['engineering_pair']
+    if (not isinstance(pair,dict) or set(pair)!={'schema_version','pair_id','pass_id'}
+            or pair['schema_version']!='gate8-engineering-pair/0.1'
+            or not isinstance(pair['pair_id'],str) or not pair['pair_id'].strip()
+            or pair['pass_id'] not in ('pass0','pass1')):
+        raise ValueError('ENGINEERING_PAIR_DECLARATION')
+    return pair['pass_id']
+
+
 def _sha(path):
     digest = hashlib.sha256()
     with Path(path).open('rb') as handle:
@@ -45,7 +57,8 @@ def verify_model_inventory(model_path, inventory_path, expected_sha256, *, rehas
 
 def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha256,
                        prompt_path, prompt_sha256, expected_commit, physical_gpu,
-                       engineering_attention_backend=None, target_python=None, site_root=None):
+                       engineering_attention_backend=None, target_python=None, site_root=None,
+                       pair_id=None, pair_pass=None):
     """Explicit preflight: hashes and minimal CUDA identity, no model load."""
     from exposedpath import platform_adapter
     from exposedpath.manifest import create_manifest, finalize_manifest
@@ -87,6 +100,11 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     manifest.update(attention_backend='UNKNOWN_NOT_LOADED',
                     runner_source_sha256=_sha(root/'exposedpath/runner.py'),
                     model_content_snapshot=content)
+    if pair_id is not None or pair_pass is not None:
+        if target is None or declared is None:
+            raise ValueError('ENGINEERING_PAIR_TARGET_REQUIRED')
+        manifest['engineering_pair']=dict(schema_version='gate8-engineering-pair/0.1',pair_id=pair_id,pass_id=pair_pass)
+        measurement_pass(manifest)
     if declared is not None:
         manifest.update(engineering_scope=declared, attention_backend=engineering_attention_backend)
     if target is not None:
@@ -111,6 +129,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         raise FileExistsError(output_dir)
     manifest_path, prompt_path = Path(manifest_path), Path(prompt_path)
     manifest = json.loads(manifest_path.read_text(encoding='utf-8-sig'))
+    pass_id=measurement_pass(manifest)
     from exposedpath.gate8_engineering_contract import validate_declaration, EXECUTION_VERSION
     declared = validate_declaration(manifest) if 'engineering_scope' in manifest else None
     isolated='isolated_preflight_version' in manifest
@@ -149,7 +168,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         raise ValueError('DIAGNOSTIC_INPUT_HASH_CONFLICT')
     fields = {k: manifest[k] for k in ('experiment_id', 'wmpc_id', 'run_id',
               'runner_git_commit', 'runner_git_dirty', 'runner_source_sha256')}
-    fields.update(pid=os.getpid(), pass_id='pass1', attempt_id='diagnostic-1',
+    fields.update(pid=os.getpid(), pass_id=pass_id, attempt_id='diagnostic-1',
                   wmpc_manifest_sha256=_sha(manifest_path), prompt_sha256=_sha(prompt_path))
     output_dir.mkdir(parents=True, exist_ok=False)
     if claim is not None:
@@ -250,6 +269,8 @@ def main():
     prep.add_argument('--engineering-attention-backend',choices=('sdpa','eager'))
     prep.add_argument('--target-python')
     prep.add_argument('--site-root')
+    prep.add_argument('--pair-id')
+    prep.add_argument('--pair-pass',choices=('pass0','pass1'))
     run = commands.add_parser('run')
     for name in ('manifest-path', 'prompt-path', 'preflight-path', 'project-root', 'output-dir'):
         run.add_argument('--'+name, required=True, type=Path)

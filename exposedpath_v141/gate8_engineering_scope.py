@@ -1,7 +1,8 @@
 """Explicit Engineering A intersection; physical S/B and old entry unchanged.
 
-No collector calls, zero-loss assertion, learned whitelist, or warning bypass.
-Only new predeclared executions are eligible. Signed times stay in trace clock.
+No collector calls or zero-loss assertion. The formal gate has no warning bypass;
+an explicitly requested hypothesis uses a separate, non-acceptance derivative.
+Only predeclared executions are eligible. Signed times stay in trace clock.
 """
 from copy import deepcopy
 from dataclasses import replace
@@ -213,7 +214,7 @@ def _request(canonical, scope, paths, bundle, ownership, projection, original, s
     return output
 
 
-def _calculate(root, receipt_path, execution_path):
+def _calculate(root, receipt_path, execution_path, *, warning_assumption=None):
     receipt,paths,declared,execution=_inputs(receipt_path,execution_path)
     canonical=root/'canonical/canonical_manifest.json'
     scope=root/'projection/scope.json'
@@ -228,11 +229,18 @@ def _calculate(root, receipt_path, execution_path):
     with time_representation(SIGNED):
         original=build_projected_ab_inputs(canonical,scope)
         diagnostics=_diagnostics(diagnostic)
-        requests=[_request(canonical,scope,paths,bundle,ownership,p,original,stage,declared,diagnostics)
+        effective=diagnostics
+        assumed=None
+        if warning_assumption is not None:
+            from .gate8_warning_assumption import select_assumed_warnings
+            assumed=select_assumed_warnings(diagnostic,diagnostics,warning_assumption)
+            excluded={r['source_rowid'] for r in assumed['records']}
+            effective=[r for r in diagnostics if r['source_rowid'] not in excluded]
+        requests=[_request(canonical,scope,paths,bundle,ownership,p,original,stage,declared,effective)
                   for p in projections if p['phase']=='full_request']
         physical_b=list(calculate_b_syncs(original))
     require(requests, 'NO_REQUEST')
-    return dict(schema_version=VERSION,observation_profile=PROFILE,
+    result=dict(schema_version=VERSION,observation_profile=PROFILE,
         input_receipt_sha256=digest(Path(receipt_path)),execution_receipt_sha256=digest(Path(execution_path)),
         status='A_SCOPE_ENGINEERING_ONLY' if all(r['status']=='A_SCOPE_ENGINEERING_ONLY' for r in requests) else 'BLOCKED',
         validation_role='ENGINEERING_CONDITIONAL_ACCOUNTING',identity=receipt['identity'],
@@ -241,6 +249,45 @@ def _calculate(root, receipt_path, execution_path):
         gate8_verdict='NOT_RUN',q0_status='NOT_RUN',d_score_allowed=False,signature_allowed=False,
         requests=requests,diagnostic_dispositions=diagnostics,
         physical_s_records=list(original.s_records),physical_b_records=physical_b)
+    if assumed is not None:
+        result.update(schema_version='exposedpath-conditional-a/0.1.0',trusted_a=False,
+            validation_role='WARNING_ASSUMPTION_CONDITIONAL_NOT_ACCEPTANCE',warning_assumption=assumed,
+            status='CONDITIONAL_A_ONLY_NOT_ACCEPTED' if result['status']=='A_SCOPE_ENGINEERING_ONLY' else 'BLOCKED')
+        for request in requests:
+            if request['status']=='A_SCOPE_ENGINEERING_ONLY':
+                request['status']='CONDITIONAL_A_ONLY_NOT_ACCEPTED'
+            request['trusted_a']=False
+    return result
+
+
+def process_conditional_scope(formal_path, receipt_path, execution_path, output_dir, *, assumption):
+    """Separate derivative; formal gate and sealed source bytes remain unchanged."""
+    import shutil
+    formal_path=Path(formal_path).resolve()
+    formal=load_engineering_scope(formal_path,receipt_path,execution_path)
+    require(formal['status']=='BLOCKED' and all(r['reasons']==[
+        'ENGINEERING_SCOPE_DIAGNOSTIC_IMPACT_UNBOUNDED'] for r in formal['requests']), 'CONDITIONAL_FORMAL_REASON')
+    output=Path(output_dir).resolve()
+    require(not output.exists() and not output.is_relative_to(formal_path.parent)
+            and not formal_path.is_relative_to(output),'CONDITIONAL_OUTPUT')
+    _,paths,_,_=_inputs(receipt_path,execution_path)
+    source_paths=[formal_path,Path(receipt_path),Path(execution_path),*paths.values()]
+    hashes={Path(p):digest(Path(p)) for p in source_paths}
+    require(not any(p.resolve().is_relative_to(output) for p in hashes),'OUTPUT_CONTAINS_INPUT')
+    output.parent.mkdir(parents=True,exist_ok=True)
+    root=Path(tempfile.mkdtemp(prefix='.'+output.name+'-partial-',dir=output.parent))
+    for item in formal['files']:
+        source=_resolve(formal_path.parent,item)
+        target=root/source.relative_to(formal_path.parent)
+        target.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(source,target)
+    result=_calculate(root,receipt_path,execution_path,warning_assumption=assumption)
+    require(all(digest(p)==sha for p,sha in hashes.items()),'SOURCE_CHANGED')
+    result['formal_result_sha256']=hashes[formal_path]
+    result['files']=[_entry(p,root) for p in sorted(root.rglob('*')) if p.is_file()]
+    _write(root/'conditional_a.json',result)
+    root.rename(output)
+    return output/'conditional_a.json'
 
 
 def process_engineering_scope(receipt_path, execution_path, output_dir):

@@ -56,10 +56,8 @@ def run_once(argv, output, *, timeout_seconds=300):
     return report
 
 
-def profile_argv(nsys,python,prepared,output,root=ROOT):
+def target_argv(python,prepared,output,root=ROOT):
     prepared,output=Path(prepared),Path(output)
-    # Nsight's Windows CLI accepts booleans, not POSIX signal names.
-    kill='true' if sys.platform=='win32' else 'sigkill'
     args=['--manifest-path',str(prepared/'manifest.json'),'--prompt-path',str(prepared/'prompt.json'),
         '--preflight-path',str(prepared/'preflight.json'),'--project-root',str(root),
         '--output-dir',str(output/'diagnostic')]
@@ -83,10 +81,19 @@ def profile_argv(nsys,python,prepared,output,root=ROOT):
         command=argv(python,target['site_root'],['model-run',*args])
     else:
         command=[str(python),'-m','exposedpath.gate8_diagnostic','run',*args]
+    return command
+
+
+def profile_argv(nsys,python,prepared,output,root=ROOT):
+    from exposedpath.gate8_diagnostic import measurement_pass
+    manifest=Path(prepared)/'manifest.json'
+    if manifest.exists() and measurement_pass(json.loads(manifest.read_text(encoding='utf-8')))!='pass1':
+        raise ValueError('ENGINEERING_PAIR_PROFILE_PASS')
+    kill='true' if sys.platform=='win32' else 'sigkill'
     return [str(nsys),'profile','--trace=cuda,nvtx','--sample=none','--cpuctxsw=none',
         '--cuda-memory-usage=false','--cuda-trace-scope=process-tree','--isr=false',
         '--duration=120','--kill='+kill,'--output='+str(output/'capture'),
-        *command]
+        *target_argv(python,prepared,output,root)]
 
 
 def analyze_model(output,prepared,collector_version):

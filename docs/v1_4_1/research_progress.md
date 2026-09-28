@@ -1,5 +1,32 @@
 # ExposedPath 科研进度清单
 
+## 7.85 四warning假设隔离派生与最小配对交付（2026-09-28）
+
+用户已批准暂按“四条外进程warning不影响目标request”推进条件性分析；不是范围证明或标准Gate8 PASS。
+[条件配对合同0.1](gate8_conditional_pair_v0_1.md)记录精确适用消息、假设/输出版本、计时及停止规则。
+正式warning门及旧报告不变；新入口先验证正式来源，只有四条精确OTHER_PROCESS消息才允许假设派生，
+其余身份/边界/drain/同步/配置/诊断检查全部复用。输出单列scope_proven=false、trusted_a=false、
+UNKNOWN/NOT_ASSESSED、CONDITIONAL_A_ONLY_NOT_ACCEPTED；D/Signature禁用，不改S/A/B公式。
+
+实际接通manifest pair_id/pass_id到现有runner；pass0/pass1均显式解释器和相同输入/配置/host-readable边界，
+新run/nonce独立，加载warmup/drain在窗外。host三个窗口按进程内相减，观察一次顺序配对delta/relative_delta，
+零分母null、负差保留；不比较跨时钟时间戳，不声称纯因果开销或统计稳定。
+producer输出token值序列未记录，parity仅固定输入/合同/实际输出数量和EOS，不伪称输出字节一致。
+
+tests-first已见新入口缺失、pass0误标pass1、非法声明未拒绝、零分母/等边界及实际设备仅跨pass比对等失败，
+最小修复后实际CPU producer文件链、独立手算A/开销预期及负例验证：9个相关文件141 passed/108.57s；
+最后补充baseline warmup不得入窗检查后，pair/delivery两文件25 passed/21.28s。
+改动Python compileall、diff-check及PowerShell5.1 AST解析通过；无全量、GPU或目标机验证。
+审查确认默认正式路径不变、参数缺失/CPU失败阻止模型阶段、实际设备须匹配manifest而非仅跨pass相等。
+现有封存四条消息与精确选择器兼容，仅做消息形状检查，旧formal仍BLOCKED，没有重分析或改写Raw。
+本次使用新派生复用原计算，不另建分析器。稳定受控资格继续按影响复用，不重跑完整Q0/全量。
+
+交付按服务器db9f028增量；先固定部署＋Git binary/配对/条件路径CPU定向复验，失败停止，
+回执审查后才另启一次pass0→pass1。各审查时点一个ZIP，最终pair ZIP含两阶段全证据；无覆盖/自动重试。
+服务器只核条件适用性并回传；本地回传审查后才生成独立条件性A。新型/其他冲突仍停止。
+本轮不操作服务器、不执行GPU/Nsight/模型。Gate7 PASS、限定受控资格保持、旧BLOCKED不变、Gate8 NOT_RUN。
+warning为已批准待决假设，不作为其余工作的前置；其余退出条件尚待本次目标平台证据，不能提前写已完成。
+
 ## 7.84 Gate8实际退出证据与warning门对应审查（2026-09-28）
 
 一次窄询证记录为“用户回传已发送，待回复”；链接及核验边界见

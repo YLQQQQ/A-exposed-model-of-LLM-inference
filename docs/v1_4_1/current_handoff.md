@@ -1,5 +1,14 @@
 # 当前公共交接
 
+## 7.85 当前入口：条件性A与两阶段固定配对交付
+
+用户已明确授权四warning无目标影响假设，仅用于条件推进；正式门及旧BLOCKED保持。
+见[合同与交付0.1](gate8_conditional_pair_v0_1.md)、research_progress7.85。
+新入口复用原S/A与其他全部检查，独立输出trusted_a=false/scope_proven=false，不授标准Gate8 PASS。
+先db9f028增量部署与相关CPU检查，协调审查回执后才执行固定32/2、batch1、warmup1/repeat1配对。
+一次pass0→pass1仅开销观察；回传后集中审查条件性A、unattributed、身份/同步及开销。完整固定交付身份见本机索引。
+不等待厂商一定回复，不再追加询证/监控/Q0重采。Gate7 PASS、Gate8 NOT_RUN。下文为历史状态。
+
 ## 7.84 当前入口：退出证据审查已收口，作用域裁决待决
 
 见[退出证据审查0.1](gate8_exit_evidence_review_v0_1.md)与research_progress 7.84。
