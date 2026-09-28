@@ -1,5 +1,36 @@
 # ExposedPath 科研进度清单
 
+## 7.86 配对原件审计与条件性集中收尾（2026-09-28）
+
+执行commit固定36ed952b57f20651dd290fc484d7b21fc7dbbfc4；文档收尾不是服务器新执行身份。
+本地直接审计pair原ZIP：26583909 bytes，SHA256
+`3c90764357547cfb28de3c16bc624664e36d58565dfa4dcb02f1063e0294940f`；CRC、146文件、
+顶层145项及嵌套清单全部大小/hash匹配，原static ZIP逐字节未变。详见
+[条件性收尾0.1](gate8_conditional_closeout_v0_1.md)，其退出表取代此前“尚待目标机配对”的状态。
+服务器原日志94 passed/42.51s及静态回执通过；本轮未重跑测试、完整Q0、模型、GPU或Nsight。
+
+已关闭Git二进制修复的实际运行验证：每pass保留23833 bytes NUL输出，496个tracked路径与
+固定commit树完全一致，seal恰好覆盖496项。输入、独立run/nonce、目标claim、final hash及runner字节
+匹配；不是将旧486项事后核对追认为新预检。两pass入口exit0，producer COMPLETE、final PASS。
+本地重新调用配对检查，结果与服务器pair_observation完全一致；模型/输入/配置/设备身份一致。
+
+原SQLite直接核三trace点、窗外成功drain和3次内部/边界同步；后缀3498项，必要集合8/1906/3498。
+独立区间核算得到request T=164259912ns、局部unattributed=3840151ns（2.33785%），
+6171条有界API分类缺口保留，不填Host/residual；结果仅用于声明假设下的条件性分析。
+Host配对request为117197100/164476100ns，差47279000ns（40.3414%）；
+一次观察包含插桩及运行波动，不称稳定开销或据此冻结Pilot阈值。D1 marker延迟非零，A/host两种窗口分开。
+
+正式A仍因row3/4/6/7四warning（PID64488）BLOCKED，原报告a_records为空且不改；
+UNKNOWN、NOT_ASSESSED不改零或有效。复用既有限定受控资格，不授完整新版Q0或真实模型资格。
+固定生产条件入口已exit0，CONDITIONAL_A_ONLY_NOT_ACCEPTED；三窗分量与独立区间核算一致，
+两模式必要集合逐成员相等，顶层/子类守恒、互斥、uncovered、越窗检查均0。原146文件逐字节不变。
+派生SHA256 `bf17787e6647d36b0fc15ccb87deb9519b384ebab0c4fd2dfa691f793a6f2e4a`，
+926646005 bytes（含物理S/B记录），只本地保存；未因存储成本扩展本轮开发。
+最终审计首次误用守恒字段名，修正本地审计脚本后通过；生产结果及原件未改。
+已批准限定范围内，其余退出条件已完成，仅warning作用域假设待决，未发现其他必要阻塞。
+Gate7历史PASS保持、标准Gate8 NOT_RUN。最高优先级为协调审阅条件性收尾报告及未证假设，
+无需服务器操作或同配置重采。此文档提交不是执行commit；无冻结语义或Formal资格变化。
+
 ## 7.85 四warning假设隔离派生与最小配对交付（2026-09-28）
 
 用户已批准暂按“四条外进程warning不影响目标request”推进条件性分析；不是范围证明或标准Gate8 PASS。
