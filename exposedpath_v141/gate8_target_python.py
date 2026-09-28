@@ -162,7 +162,12 @@ def model_entry():
                     stdout.flush(); stderr.flush(); os.fsync(stdout.fileno()); os.fsync(stderr.fileno())
                     persist('exit.json',report)
                 except OSError as write_error:
-                    print('TARGET_ENTRY_PERSIST_FAILED: '+str(write_error),file=sys.__stderr__)
+                    # Last-resort diagnostics cannot replace either primary error.
+                    try:
+                        if sys.__stderr__ is not None:
+                            print('TARGET_ENTRY_PERSIST_FAILED: '+str(write_error),file=sys.__stderr__)
+                    except Exception:
+                        pass
                     if not original_exception: raise
 
 

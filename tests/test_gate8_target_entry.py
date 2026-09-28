@@ -67,3 +67,34 @@ def test_receipt_io_failure_cannot_succeed_or_mask_original(tmp_path,monkeypatch
         return original(path,*a,**kw)
     monkeypatch.setattr(Path,'open',opened)
     with pytest.raises(RuntimeError if original_failure else OSError): target.main()
+
+
+@pytest.mark.parametrize('sink_kind',['invalid_handle','closed','unavailable'])
+@pytest.mark.parametrize('original_failure',[False,True])
+def test_fallback_stderr_failure_preserves_primary_error(tmp_path,monkeypatch,sink_kind,original_failure):
+    import io
+    from exposedpath import gate8_diagnostic
+    original_error=RuntimeError('original execution error')
+    persistence_error=OSError('exit receipt failure')
+    class InvalidHandle:
+        def write(self,text):
+            raise OSError(6,'invalid handle sentinel')
+    closed=io.StringIO()
+    closed.close()
+    sink={'invalid_handle':InvalidHandle(),'closed':closed,'unavailable':None}[sink_kind]
+    monkeypatch.setattr(sys,'__stderr__',sink)
+    monkeypatch.setattr(sys,'argv',['entry','model-run','--output-dir',str(tmp_path/'diagnostic')])
+    def model():
+        if original_failure: raise original_error
+        return 0
+    monkeypatch.setattr(gate8_diagnostic,'main',model)
+    opened=Path.open
+    def fail_receipt(path,*args,**kwargs):
+        if path.name=='exit.json': raise persistence_error
+        return opened(path,*args,**kwargs)
+    monkeypatch.setattr(Path,'open',fail_receipt)
+    expected=original_error if original_failure else persistence_error
+    with pytest.raises(type(expected)) as caught:
+        target.main()
+    assert caught.value is expected
+    assert not (tmp_path/'diagnostic-entry/exit.json').exists()

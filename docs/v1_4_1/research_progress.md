@@ -1,5 +1,18 @@
 # ExposedPath 科研进度清单
 
+## 7.75 备用错误输出不得覆盖主异常（2026-09-28）
+
+直接读取服务器150b24a静态回传：ZIP 4127 bytes，SHA256
+1478a706ebf9a389de478a4282f672b640b977c732989e7fbb7eb3e16934e193，CRC及3项清单复核通过。
+服务器22 passed/1 failed，receipt BLOCKED；原RuntimeError→exit.json模拟OSError→
+sys.__stderr__打印WinError6覆盖原异常。服务器尚未完成本轮静态复验。
+tests-first增加无效句柄/关闭/None替身，覆盖原执行成功与失败，修复前4 failed/2 passed。
+仅保护最后备用诊断输出，原执行失败保留同一异常对象；原执行成功则仍抛持久化OSError，
+不得静默成功。保留原反例，不改snapshot门、采集或研究合同。
+本地相关三文件29 passed/20.46s，改动文件compileall及diff-check通过；未跑全量或模型/GPU/Nsight。
+单一增量包以前置150b24a交付审查，下一步仅目标CPU静态复验，不安排重采。
+旧attempt BLOCKED、Gate7 PASS、既有限定受控资格不变、Gate8 NOT_RUN。
+
 ## 7.74 隔离CPU导入身份差异收口（2026-09-28）
 
 真实base Python -I/-S子进程证明：probe仅导入snapshot依赖；model入口导入

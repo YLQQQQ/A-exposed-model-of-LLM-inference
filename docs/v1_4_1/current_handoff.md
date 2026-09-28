@@ -1,5 +1,11 @@
 # 当前公共交接
 
+## 7.75（2026-09-28）当前优先
+
+服务器150b24a静态22 passed/1 failed，尚未完成复验。备用stderr句柄错误覆盖原异常，
+本地已tests-first最小修复，29项CPU回归通过；身份门/原反例不变。
+交付以前置150b24a的单一增量包，仅静态复验，不重采；旧attempt BLOCKED，Gate8 NOT_RUN。
+
 ## 7.74（2026-09-28）当前优先
 
 隔离CPU复现模型入口导入gate7_smoke_validation重复插入sys.path，导致严格snapshot拒绝。
