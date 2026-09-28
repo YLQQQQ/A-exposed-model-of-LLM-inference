@@ -2,7 +2,7 @@
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import time
 import uuid
 
@@ -31,6 +31,53 @@ def write_new(path,value):
     with Path(path).open('x',encoding='utf-8') as handle:
         json.dump(value,handle,sort_keys=True,indent=2)
         handle.flush(); os.fsync(handle.fileno())
+
+
+def _git_paths(root, output, *, tracked):
+    """Preserve Git's NUL stream before strict parsing, never via locale text pipes."""
+    from exposedpath import platform_adapter as adapter
+    kind='tracked' if tracked else 'ignored'
+    args=['-C',str(root),'ls-files']+(['--cached'] if tracked else
+        ['--others','--ignored','--exclude-standard','--directory'])+['-z']
+    prefix=Path(output)/('git_'+kind+'_paths')
+    report=dict(status='BLOCKED',query=kind,args=args,exit_code=None,
+                parser='strict-utf8-nul/1',stdout=None,stderr=None)
+    try:
+        result=adapter.run_tool(adapter.TOOL_GIT,args,text=False,timeout=5)
+        report['exit_code']=result.returncode
+        for stream in ('stdout','stderr'):
+            raw=getattr(result,stream)
+            if isinstance(raw,bytes):
+                path=prefix.with_suffix('.'+stream+'.bin')
+                with path.open('xb') as handle: handle.write(raw)
+                report[stream]=dict(file=path.name,bytes=len(raw),sha256=sha(path))
+        require(type(result.returncode) is int and result.returncode==0,'GIT_PATH_EXIT')
+        require(isinstance(result.stdout,bytes) and isinstance(result.stderr,bytes),'GIT_PATH_READ')
+        raw=result.stdout
+        require(bool(raw) or not tracked,'GIT_PATH_EMPTY_TRACKED')
+        require(not raw or raw.endswith(b'\0'),'GIT_PATH_TERMINATOR')
+        try: names=raw[:-1].decode('utf-8',errors='strict').split('\0') if raw else []
+        except UnicodeDecodeError as exc:
+            raise ValueError('ISOLATED_PREFLIGHT_GIT_PATH_UTF8') from exc
+        paths=set(); identities=set()
+        for name in names:
+            # Git emits forward slashes; reject aliases, traversal, drives and UNC.
+            directory=name.endswith('/')
+            plain=name[:-1] if directory else name
+            require(bool(plain) and (not directory or not tracked) and '\\' not in name
+                and not PureWindowsPath(name).drive and ':' not in name
+                and all(part not in ('','.','..') for part in plain.split('/')),'GIT_PATH_SCOPE')
+            key=os.path.normcase(plain)
+            require(key not in identities,'GIT_PATH_DUPLICATE')
+            identities.add(key); paths.add(name)
+    except Exception as exc:
+        report.update(error_type=type(exc).__name__,error=str(exc))
+        try: write_new(prefix.with_suffix('.json'),report)
+        except OSError as write_error: exc.add_note('Git query receipt write failed: '+str(write_error))
+        raise
+    report.update(status='PASS',path_count=len(paths))
+    write_new(prefix.with_suffix('.json'),report)
+    return paths
 
 
 def tree(root,excluded):
@@ -83,10 +130,9 @@ def seal(prepared,output,root):
     git=lambda args:adapter.git(['-C',str(root),*args])
     before=(git(['rev-parse','HEAD']),git(['status','--porcelain']))
     require(before==(manifest['runner_git_commit'],''),'GIT_IDENTITY')
-    excluded=set(filter(None,git(['ls-files','--others','--ignored','--exclude-standard','--directory','-z']).split('\0')))
-    require(all(not Path(p).is_absolute() and '..' not in Path(p).parts for p in excluded),'EXCLUSION_PATH')
+    excluded=_git_paths(root,output,tracked=False)
     inventory=tree(root,excluded)
-    tracked=set(filter(None,git(['ls-files','--cached','-z']).split('\0')))
+    tracked=_git_paths(root,output,tracked=True)
     require(tracked<=inventory.keys(),'TRACKED_CONTENT_NOT_SEALED')
     physical=manifest['gpu_index_physical']
     rows=adapter.nvidia_smi(['--id='+str(physical),'--query-gpu=index,uuid,pci.bus_id',

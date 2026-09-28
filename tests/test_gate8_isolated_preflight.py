@@ -32,6 +32,11 @@ def case(tmp_path, monkeypatch):
         if 'status' in args or 'ls-files' in args: return ''
         raise AssertionError(args)
     monkeypatch.setattr(platform_adapter,'git',git)
+    import subprocess
+    def binary_git(name,args,**kw):
+        assert name==platform_adapter.TOOL_GIT and 'ls-files' in args and kw['text'] is False
+        return subprocess.CompletedProcess([name,*args],0,b'code.py\0' if '--cached' in args else b'',b'')
+    monkeypatch.setattr(platform_adapter,'run_tool',binary_git)
     monkeypatch.setattr(platform_adapter,'nvidia_smi',lambda *a,**kw:
         '3, GPU-12345678-1234-1234-1234-123456789abc, 00000000:01:00.0')
     monkeypatch.setattr(m,'validate_pre_model_identity',lambda *a:[])
@@ -213,20 +218,23 @@ def test_profile_command_carries_exact_receipt_hash_nonce_and_refuses_missing(tm
 def test_real_git_preflight_then_isolated_cpu_child_consumes_without_tools(tmp_path,monkeypatch):
     from exposedpath import platform_adapter as adapter
     real_git=adapter.git
+    real_run=adapter.run_tool
     m,args=case(tmp_path,monkeypatch)
     monkeypatch.setattr(adapter,'git',real_git)
+    monkeypatch.setattr(adapter,'run_tool',real_run)
     root=args['root']
     git=lambda *a:real_git(['-C',str(root),*a])
     git('init'); git('config','user.name','CPU Fixture'); git('config','user.email','fixture@example.invalid')
     (root/'.gitignore').write_text('.local/\n__pycache__/\n')
-    git('add','code.py','.gitignore'); git('commit','-m','deterministic fixture')
+    (root/'实验协议.py').write_text('pass\n',encoding='utf-8')
+    git('add','code.py','.gitignore','实验协议.py'); git('commit','-m','deterministic fixture')
     manifest=json.loads((args['prepared']/'manifest.json').read_text())
     manifest['runner_git_commit']=git('rev-parse','HEAD')
     (args['prepared']/'manifest.json').write_text(json.dumps(manifest))
     (root/'.local').mkdir(); (root/'.local/private.txt').write_text('never copied')
     output=tmp_path/'real-run'; output.mkdir()
     receipt=m.seal(args['prepared'],output,root); sealed=json.loads(receipt.read_text())
-    assert set(sealed['tree_hashes'])=={'.gitignore','code.py'}
+    assert set(sealed['tree_hashes'])=={'.gitignore','code.py','实验协议.py'}
     import sys,subprocess
     command=("import sys,json;sys.path.insert(0,sys.argv[1]);"
         "from exposedpath import gate8_isolated_preflight as m,platform_adapter as a;"

@@ -1,5 +1,36 @@
 # ExposedPath 科研进度清单
 
+## 7.83 Git NUL预检fail-open最小修复与Gate8停点（2026-09-28）
+
+用户裁决：询证继续暂停、不发送、不重采、不追索未知PID；7.82建议已结束，不再作为下一指令。
+7.82[审计](gate8_isolated_attempt_audit_v0_1.md)及本修复同一提交。
+仅isolated preflight两条Git NUL清单经现有adapter二进制读取并原样保存stdout/stderr，
+主线程严格UTF-8/NUL解析；读取失败/None、非法编码、缺终止NUL、重复/越界、空tracked均拒绝。
+ignored可合法为空；缺任一tracked文件仍拒绝，不通过空集合绕过。原始stderr不强制解码。
+新增26项先RED；修复后相关5文件100 passed/22.65s，本地Windows/Python3.12.7；
+含真实seal、临时Git仓库中文名、真实CPU二进制子进程及读取错误替身，compileall/diff-check通过。
+未跑全量或任何服务器/GPU/Nsight/模型，无部署包。无MC/S/A/B/Q0/旧证据或warning门变化。
+封存tree_hashes含486个tracked路径是事后核对，不追认缺陷运行时预检；warning阻塞独立存在。
+现有证据只支持Engineering执行链/已观察边界身份/导出及候选计算验证；无法取得可信Qwen A、
+模型资格或信息增益结论。停止资格工程扩张：复用受影响范围证据，不加监控、重复采集或资格层。
+Gate7历史PASS及限定受控资格保持；Qwen attempt BLOCKED，Gate8 NOT_RUN，反事实不作为研究结果。
+
+
+## 7.82 隔离预检attempt审计与证据路线停止（2026-09-28）
+
+[有界审计0.1](gate8_isolated_attempt_audit_v0_1.md)：本地独立核验新ZIP/CRC/70清单及71解压文件不变，
+执行db9f028；target53792/producer/采集/export成功，新preflight/claim/final绑定成立。
+四条OTHER_PROCESS警告仍关联52740；现有SQLite及安装资料不提供宿主实例/排他影响范围，
+停止同配置重采、重复来源记录/GUI；不从8→4条警告推断根因，也不豁免。
+独立新目录反事实双默认流集合8/1906/3498及三窗口A一致；6171局部gap4730533ns约2.40%，
+不发布可信A，不改分类、原BLOCKED/UNKNOWN或封存报告。
+另以真实CPU子进程复现Git NUL文件名GBK位置4195错误；adapter stdout=None→空串存在
+tracked集合检查fail-open风险，不把final PASS当成全部预检闭合。本包486个tracked路径均在tree_hashes，
+仅补证集合覆盖，不追认运行时门。字节保全修复设计已记录，未实施/部署生产补丁。
+唯一下一建议为协调审查是否解除一次四类消息范围窄询证的暂停；未批准不发送，
+无明确答复维持停止，不安排新采集。Gate7 PASS、限定资格不变、Gate8 NOT_RUN；D关闭。
+
+
 ## 7.81 固定部署与原生设备adapter小检查交付（2026-09-28）
 
 执行commit固定db9f028b1a7ceac40b9a110bfaacf6d613319638，服务器前置097f68a21eb9c75dbf390b7529a19c4316dda98e。

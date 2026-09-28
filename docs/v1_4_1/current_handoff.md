@@ -1,5 +1,25 @@
 # 当前公共交接
 
+## 7.83 当前停点：本地Git读取修复收口，模型资格链暂停
+
+7.82审计与最小修复同一提交；详见research_progress 7.83及[审计第4–5节](gate8_isolated_attempt_audit_v0_1.md)。
+两条Git清单binary保全/严格解析，26新增先RED、相关100 passed；无服务器/全量/部署包。
+486路径覆盖仅事后核对，不追认旧运行时门。warning独立阻塞，反事实不升级。
+询证继续暂停、不发送、不再追索PID、不做同配置重采；不追加监控或资格设施。
+已有Engineering链路与限定受控资格可保留/按影响复用，可信Qwen A与模型资格暂时无法取得。
+Gate7 PASS、旧attempt BLOCKED、Gate8 NOT_RUN。以下7.82询证建议已被本节裁决取代。
+
+
+## 7.82 当前优先：停止同配置重采
+
+db9f028已在目标机完成新隔离预检attempt，但正式A仍因四条未知影响warning而BLOCKED。
+见[审计0.1](gate8_isolated_attempt_audit_v0_1.md)：身份链绑定成立，PID52740角色/影响仍未证明；
+反事实三窗及双默认流检查通过不等于可信A。另发现Git清单GBK reader失败可空集通过，
+已有CPU复现及字节保全修复设计，尚未改生产/交付部署。旧7.81模型脚本不是下一步重采指令。
+停止本包来源调查/GUI/同配置执行；下一步仅协调裁决一次窄消息语义询证，暂停未自动解除。
+Gate7 PASS、限定资格不变、旧attempt BLOCKED/UNKNOWN、Gate8 NOT_RUN。
+
+
 ## 7.81 当前优先：固定交付待协调审查
 
 执行commit固定`db9f028b1a7ceac40b9a110bfaacf6d613319638`，服务器前置`097f68a`。
