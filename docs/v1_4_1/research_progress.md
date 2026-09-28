@@ -1,5 +1,18 @@
 # ExposedPath 科研进度清单
 
+## 7.76 目标CPU复验通过与新Qwen草案（2026-09-28）
+
+直接读取服务器097f68a静态原件ZIP：1986 bytes，SHA256
+e7ed49ca34638acd607f1aee4672dfcc73ae624bda0ce94286a24fb698305a0b；CRC及2项清单哈希通过。
+Python3.11.16，29 passed/95.77s，compileall/show-check通过；receipt STATIC_PASS、最终clean。
+两条deliberate receipt IO error是预期注入，不是新失败；不是Nsight环境或模型验收。
+固定执行commit097f68a21eb9c75dbf390b7529a19c4316dda98e，沿用7.72模型/输入/GPU/backend及
+32/2、batch1、warmup1/repeat1。只更新忽略的单次脚本：不部署、不重跑CPU测试，
+新manifest与全新run；diagnostic-entry启动/异常/退出及stdout/stderr随完整目录单ZIP回传。
+脚本仅PowerShell语法审查，无执行；协调窗口审查并取得单次采集授权后才可使用。
+本次文档commit不是执行commit，不需服务器跟随或新代码bundle。旧attempt BLOCKED，
+限定受控资格不变，Gate7历史PASS、Gate8 NOT_RUN。
+
 ## 7.75 备用错误输出不得覆盖主异常（2026-09-28）
 
 直接读取服务器150b24a静态回传：ZIP 4127 bytes，SHA256

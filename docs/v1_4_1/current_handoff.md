@@ -1,5 +1,12 @@
 # 当前公共交接
 
+## 7.76（2026-09-28）当前优先
+
+已直接核验服务器097f68a CPU静态原件：29 passed，compileall/show-check通过，clean。
+不是模型/Nsight验收。新Qwen脚本固定097f68a，不部署或重复CPU测试；沿用7.72配置，
+新manifest/新run，diagnostic-entry全记录单ZIP回传。交协调窗口审查，不执行。
+文档HEAD与执行commit分开，无新代码包。旧BLOCKED、限定资格及Gate8 NOT_RUN不变。
+
 ## 7.75（2026-09-28）当前优先
 
 服务器150b24a静态22 passed/1 failed，尚未完成复验。备用stderr句柄错误覆盖原异常，

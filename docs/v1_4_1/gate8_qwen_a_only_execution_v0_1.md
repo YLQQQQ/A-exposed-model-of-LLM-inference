@@ -60,6 +60,13 @@ LEGACY/PER_THREAD后缀必要集合与各A分量相同时才允许条件A。不�
 
 ## 一次执行及回传边界
 
+7.76更新：目标CPU静态复验已通过，下一次执行固定
+`097f68a21eb9c75dbf390b7529a19c4316dda98e`。不再执行下述旧部署/定向静态步骤；
+保留commit/clean、环境、输入hash、模型清单和新manifest检查，不复用旧manifest。
+本机脚本默认拒绝采集，仅显式CollectionAuthorized开关可开启；此为待审查草案，不是授权。
+新collection的diagnostic-entry（started/exit/stdout/stderr）递归纳入单ZIP；失败也保留
+已生成记录，缺exit不能当成功。此次仅脚本/文档更新，无需新代码bundle或服务器跟随main。
+
 协调窗口先审查忽略的`.local/gate8_qwen_engineering_once.ps1`完整块和bundle身份。
 脚本默认CollectionAuthorized=false；人工授权后才改为true。固定checkout正常detach部署，
 定向静态检查和verify通过后只运行一次采集/导出；无resume、无覆盖、无自动retry。
