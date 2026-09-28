@@ -199,6 +199,11 @@ def run_tool(
     Only resolution failures raise; the completed process (including a
     non-zero exit code) is returned unchanged so the caller can record it.
     """
+    from .process_origin import active
+    recorder=active()
+    if recorder is not None:
+        return _recorded_tool(recorder,name,args,timeout=timeout,text=text,stderr=stderr,
+                              env=env,cwd=cwd,extra_candidates=extra_candidates)
     argv = tool_argv(name, args, extra_candidates=extra_candidates, env=env)
     return subprocess.run(
         argv,
@@ -211,6 +216,44 @@ def run_tool(
         shell=False,
         check=False,
     )
+
+
+def _recorded_tool(recorder,name,args,*,timeout,text,stderr,env,cwd,extra_candidates):
+    """Same subprocess result/timeout contract, without storing argv or environment."""
+    import uuid
+    call_id=uuid.uuid4().hex
+    purpose=('GIT_COMMIT_QUERY' if name==TOOL_GIT and list(args)[-2:]==['rev-parse','HEAD'] else
+             'GIT_DIRTY_QUERY' if name==TOOL_GIT and list(args)[-2:]==['status','--porcelain'] else
+             'NVIDIA_SMI_QUERY' if name==TOOL_NVIDIA_SMI else 'UNCLASSIFIED_ADAPTER_COMMAND')
+    recorder.emit('STARTING',call_id=call_id,purpose=purpose)
+    try:
+        argv=tool_argv(name,args,extra_candidates=extra_candidates,env=env)
+        process=subprocess.Popen(argv,stdout=subprocess.PIPE,text=text,
+            stderr=subprocess.PIPE if stderr is None else stderr,
+            env=dict(env) if env is not None else None,cwd=str(cwd) if cwd is not None else None,shell=False)
+    except (OSError,ToolUnavailableError) as error:
+        try: recorder.emit('START_FAILED',call_id=call_id,pid=None,returncode=None,error_type=type(error).__name__)
+        except OSError: pass
+        raise
+    with process:
+        try:
+            recorder.emit('STARTED',call_id=call_id,pid=process.pid,executable=str(Path(argv[0]).resolve()),
+                image_evidence='RESOLVED_LAUNCH_IMAGE_NOT_OS_ATTESTED')
+            stdout,child_stderr=process.communicate(timeout=timeout)
+        except BaseException as error:
+            # Match run() cleanup: only this recorded child; never tree/name kill.
+            try:
+                process.kill()
+                stdout,child_stderr=process.communicate()
+                if isinstance(error,subprocess.TimeoutExpired) and sys.platform=='win32':
+                    error.output,error.stderr=stdout,child_stderr
+                recorder.emit('EXITED',call_id=call_id,pid=process.pid,returncode=process.returncode)
+            except Exception:
+                # Missing closure stays unusable, rather than masking the cause.
+                pass
+            raise
+        recorder.emit('EXITED',call_id=call_id,pid=process.pid,returncode=process.returncode)
+        return subprocess.CompletedProcess(argv,process.returncode,stdout,child_stderr)
 
 
 def query_tool(

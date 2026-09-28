@@ -1,5 +1,44 @@
 # ExposedPath 科研进度清单
 
+## 7.78 有界进程来源实现与双模式反事实收口（2026-09-28）
+
+用户批准的本地Engineering工作完成；[来源合同0.1](gate8_process_origin_contract_v0_1.md)
+仅覆盖记录会话内platform_adapter主动启动的直接子进程，不覆盖第三方直接Popen、native或后代。
+逐调用ID/父会话ID、实际Popen PID、父PID、解析启动文件、白名单用途、观察起止/退出码；
+不记录argv/环境/输出内容。顺序PID复用可区分，重叠复用拒绝；不是OS出生时间或最终映像认证。
+model-entry在成功退出前验证完整来源记录；记录失败不得成功，也不得覆盖原执行异常。
+未记录来源仍UNKNOWN_NOT_ABSENCE，身份已知不自动豁免warning；无新增同步/模型操作。
+tests-first覆盖成功、启动/子进程失败、缺失/损坏、IO失败、timeout、PID复用和入口集成；
+本地Python3.12.7相关7文件98 passed，另有3个诊断算法等价检查通过。
+compileall、contract 37/37、Canonical 7模块、oracle independence、diff-check通过；未跑全量或服务器实验。
+
+[作用域审计补充](gate8_qwen_diagnostic_scope_audit_v0_1.md)在独立v0.2诊断目录完成：
+LEGACY/PER_THREAD三sync必要后缀8/1906/3498项逐集合相等，三窗口A逐字段相等。
+仅反事实省略diagnostic门，其余request门通过；full_request候选unattributed=4988324ns，
+精确对应6171条既有局部API语义缺口，不转Host/residual、不新增API豁免。
+原始未剪裁A第一模式与诊断优化结果逐字段相等；第二模式使用经独立等价检查的本地优化，
+未改生产算法。原ZIP/SQLite hash不变，trusted_a=false、diagnostics_still_block=true。
+仍缺PID10988/54228的可核验进程实例/角色及八条警告影响边界，旧attempt继续BLOCKED。
+新记录不能补造旧事实，也不覆盖native；不默认部署/重采。下一项仅向协调窗口交付
+来源合同及警告证据准入条件，先判断其能否补足实例关联和影响范围，未满足不安排采集。
+不改冻结测量、物理S/B、Q0或历史证据；Gate7 PASS、限定受控资格不变，完整新Q0/Gate8 NOT_RUN。
+
+## 7.77 新Qwen已有证据的诊断作用域审计（2026-09-28）
+
+[有界审计0.1](gate8_qwen_diagnostic_scope_audit_v0_1.md)：直接核验26453554 bytes ZIP，
+SHA256 7cc443d3b43882c1eb1160746bb5b81c91b979ab1afb2416c3bd679b87ded2fb，CRC/61项hash通过。
+097f68a目标65784 exit0、producer/采集/export完成；collection仍MODEL_A_SCOPE_BLOCKED。
+8 warning绑定10988/54228，库中仅注入线程/overhead，无宿主exe/parent/lifetime；
+HostTimestamp警告不可直接与request trace时钟比较。代码子进程候选没有PID回执，不能指认角色。
+未发现OTHER_PROCESS错配，影响范围仍无肯定证据，不修adapter/豁免warning，不改UNKNOWN。
+原始request三锚点、成功窗前drain、窗内三次同步、3498个stream7活动及API返回已集中检查；
+不把350条physical S INVALID直接当成request失败。完整physical S重算因耗时主动停止，
+不冒称通过；原ZIP及封存副本逐字节hash复查不变。
+复用封存physical S后的诊断门后续计算亦有界停止，未发布新A；默认流两模式完整计算
+未复核完成，不能把原始必要条件检查写成条件A通过。离线summary显式记录该限制。
+下一项仅审查本地CPU可验证的子进程来源receipt最小方案，不实施、不安排服务器/GUI/重采。
+旧attempt继续BLOCKED，限定受控资格保持，Gate7历史PASS、Gate8 NOT_RUN。
+
 ## 7.76 目标CPU复验通过与新Qwen草案（2026-09-28）
 
 直接读取服务器097f68a静态原件ZIP：1986 bytes，SHA256

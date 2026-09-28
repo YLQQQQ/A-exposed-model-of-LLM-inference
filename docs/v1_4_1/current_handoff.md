@@ -1,5 +1,22 @@
 # 当前公共交接
 
+## 7.78（2026-09-28）当前优先（下文为历史快照）
+
+adapter-only子进程来源记录已本地实现，98项相关CPU测试通过；覆盖/未知/隐私约束见
+[来源合同](gate8_process_origin_contract_v0_1.md)。不覆盖所有Python/native子进程，不自动豁免warning。
+双默认流模式必要集合及三窗口A候选计算已完成且一致，仅为明确省略warning门的反事实。
+6171条局部API缺口保留unattributed；8条警告影响范围仍未知，正式attempt BLOCKED。
+详见[审计补充](gate8_qwen_diagnostic_scope_audit_v0_1.md)及research_progress 7.78。
+下一项只交协调窗口审查来源与影响证据条件，不默认服务器部署/重采；旧Raw不改。
+Gate7 PASS、限定受控资格不变、完整新Q0/Gate8 NOT_RUN，D/Signature关闭。
+
+## 7.77（2026-09-28）当前优先
+
+新Qwen运行/导出完成，但8条外PIDwarning影响未界定，仍BLOCKED。
+[作用域审计](gate8_qwen_diagnostic_scope_audit_v0_1.md)已核验原ZIP/61项hash及request必要事实。
+不得把NSys注入线程名当宿主身份，不按PID不同或无事件豁免。
+不重采/GUI/服务器；下一项仅审查子进程来源receipt方案。Gate8 NOT_RUN、限定资格不变。
+
 ## 7.76（2026-09-28）当前优先
 
 已直接核验服务器097f68a CPU静态原件：29 passed，compileall/show-check通过，clean。

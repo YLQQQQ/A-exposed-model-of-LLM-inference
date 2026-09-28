@@ -139,11 +139,13 @@ def model_entry():
     persist('started.json',report)
     with (entry/'stdout.txt').open('x',encoding='utf-8',buffering=1) as stdout, \
             (entry/'stderr.txt').open('x',encoding='utf-8',buffering=1) as stderr:
+        from exposedpath.process_origin import recording
         with contextlib.redirect_stdout(stdout),contextlib.redirect_stderr(stderr):
             try:
-                from exposedpath.gate8_diagnostic import main as model
-                sys.argv[1:2]=['run']
-                code=model()
+                with recording(entry/'subprocess_origin.jsonl'):
+                    from exposedpath.gate8_diagnostic import main as model
+                    sys.argv[1:2]=['run']
+                    code=model()
                 report.update(status='EXITED',exit_code=0 if code is None else int(code))
                 return code
             except BaseException as exc:
