@@ -1,5 +1,28 @@
 # ExposedPath 科研进度清单
 
+## 7.97 Gate9分域本地接线与受控桥接准备（2026-09-29）
+
+从98a85e5继续，按[合同0.1](gate9_domain_qualification_contract_v0_1.md)落实[最小增量](gate9_domain_increment_v0_1.md)。
+N1实际current handle/线程/device/lifetime观察，经NVTX→原API→correlation→物理stream/context连接；保留完整已完成measured前缀，复用S/A/B。
+G1新增必要成员与依赖边双模式检查，不以同数值/守恒代替归属证据；版本封套/文件链保留UNKNOWN、NOT_ASSESSED及非Formal状态。
+独立手算三窗、长度变体、局部5ns故障注入和拒绝反例，以及实际新producer的CPU替身Raw全链已纳入测试。
+局部缺口测试只暂时撤去已知non-submit的A子类证据，不授权未知依赖局部化。新request继续逐窗质量门，长度不自动重Q0。
+
+范围审查发现旧closed-prior schema仅容纳measured来源；未扩展或改写schema。目标微程序采用新建显式流、两个measured request、warmup_count=0，初始化/drain窗外。
+未来模型采用合同首选“warmup/drain之后新建专用流”；复用含warmup历史的流仍拒绝，不能把warmup改标measured。
+独立Raw oracle核对预定六个物理集合（1/2/4/5/6/8成员）、terminal、A和逐sync B，不调用被测S/A函数。
+
+验证记录：扩展相关回归133 passed、1 failed；失败为旧`test_bounded_gap_file_chain_retains_two_ns_unknown`，
+旧oracle仍把已在1733ff3支持的cuKernelGetFunction按unknown计。本轮两个被改旧模块换成98a85e5源码在内存执行，独立复现相同失败；没有修改旧oracle/测试或历史资格。
+最终核心定向回归101 passed（131.80s）；追加G1可见N1 marker拒绝及相关文件/启动链17 passed（40.98s，与前组重叠），真实隔离解释器导入前后snapshot一致且未导入torch。
+compileall、contract内部一致性37/37、Canonical边界（7模块）、旧oracle静态独立性检查与PowerShell语法解析通过，git diff --check通过。
+没有运行全量、CUDA编译/执行、Nsight、模型或真实Q0；CPU替身不是目标机证据。
+
+交付为固定增量bundle＋一次脚本/配置，前置目标机bee6a25；脚本CPU失败停止，显式授权后只作一次受控CUDA/Nsight桥接、单次export，结果统一单ZIP。
+MATCH仅进入增量审查；缺字段/未知诊断为证据不可判别并保持BLOCKED；矛盾/失败/超时停止，禁止自动重试。
+**Gate8限定Engineering PASS保持；Gate9仍BLOCKED待目标显式流桥接及增量证据审查。**完整N1、Pilot、Freeze和Formal不并入本轮。旧probe/Raw/报告不变。
+当前优先级：先由协调窗口审查固定交付，不自动操作服务器，不重采Qwen。此前未推送合同一并正常补推，具体远端结果见交付回执，不强推。
+
 ## 7.96 N1/G1分域合同批准与独立预期（2026-09-29）
 
 用户接受7.95两域及claim限制，授权合同设计。[G9-DOMAIN-QUALIFICATION/0.1.0](gate9_domain_qualification_contract_v0_1.md)

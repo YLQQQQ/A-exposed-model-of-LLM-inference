@@ -11,7 +11,7 @@ from test_v141_canonical_raw import _make_source_sqlite
 from test_gate8_identity import UUID,write_json,sha
 
 
-def capture(tmp_path,monkeypatch):
+def capture(tmp_path,monkeypatch,executor=None):
     from exposedpath_v141 import gate8_qualification as m
     assert hasattr(m,'prepare') and hasattr(m,'execute'), 'real qualification producer missing'
     monkeypatch.setattr(m,'check_git',lambda _:None)
@@ -92,7 +92,8 @@ def capture(tmp_path,monkeypatch):
             db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES (?,?,0,1,NULL,2,?,?,NULL,3,4294967295,NULL)',(a+1,b-1,c,pid<<24))
         def read(self): return self.token
         def close(self): self.initialized=False
-    receipt=m.execute(plan,tmp_path/'execution',backend_factory=Backend,clock_ns=clock)
+    receipt=(m.execute(plan,tmp_path/'execution',backend_factory=Backend,clock_ns=clock)
+             if executor is None else executor(Backend,clock,db,plan))
     db.commit(); db.close()
     rep=tmp_path/'synthetic.rep'; rep.write_bytes(b'SYNTHETIC NOT NSIGHT')
     export=write_json(tmp_path/'export.json',dict(status='PASS',error=None,analyzer_allowed=True,

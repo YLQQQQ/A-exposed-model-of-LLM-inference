@@ -85,7 +85,7 @@ def _diagnostics(diagnostic):
                     else 'IMPACT_UNBOUNDED') for r in diagnostic['records']]
 
 
-def _request(canonical, scope, paths, bundle, ownership, projection, original, stage, declared, diagnostics):
+def _request(canonical, scope, paths, bundle, ownership, projection, original, stage, declared, diagnostics, *, domain_proof=False):
     identity=projection['identity']
     output=dict(identity=identity, status='REJECTED', reasons=[], a_records=[],
                 assumptions=declared['assumptions'], local_gaps=[], facts={},
@@ -177,10 +177,12 @@ def _request(canonical, scope, paths, bundle, ownership, projection, original, s
             # qualification. Internal syncs may have no kind=sync NVTX label.
             # Use the existing dependency recovery, never synthesize a label.
             semantics=[]
+            dependencies={}
             for s in syncs:
                 recovery=recover_wait_set(restricted,s)
                 require(recovery['dependency_closure_status']=='COMPLETE' and not recovery['reasons'], 'SUFFIX_SEMANTICS')
                 ids=recovery['wait_set_activity_ids']
+                dependencies[s['record_id']]=recovery['dependency_edges']
                 members=[a for a in suffix if a['record_id'] in ids]
                 require(len(members)==len(ids) and all(a['end_ns']<=s['host_end_ns'] for a in members),
                         'ACTIVITY_AFTER_SYNC_RETURN')
@@ -194,7 +196,10 @@ def _request(canonical, scope, paths, bundle, ownership, projection, original, s
                 windows=tuple(w for w in original.windows if w.request_id==identity['request_id']))))
             proofs.append(dict(mode=mode,syncs=[dict(sync_id=s['sync_id'],
                 suffix_activity_ids=s['wait_set_activity_ids'],
+                **({'dependency_edges':dependencies[s['sync_id']]} if domain_proof else {}),
                 scope='A_INTERSECTION_ONLY_NOT_PHYSICAL_W') for s in semantics]))
+        if domain_proof:
+            require(proofs[0]['syncs']==proofs[1]['syncs'], 'DEFAULT_MEMBERSHIP_NOT_EQUIVALENT')
         require(len(calculations[0])==3 and calculations[0]==calculations[1], 'DEFAULT_NOT_EQUIVALENT')
         require(all(r['primary_reason'] in (None,'CUDA_API_SEMANTICS_UNRESOLVED')
                     and not r['secondary_reasons'] for r in calculations[0]), 'UNBOUNDED_ACCOUNTING_REASON')

@@ -1,6 +1,11 @@
 # Gate9 单平台资格评估 0.1
 
-## 当前7.96：分域合同已批准，资格增量待验证
+## 当前7.97：本地增量接线完成，目标桥接待审查
+
+现行实现/独立预期/交付范围集中见[增量说明](gate9_domain_increment_v0_1.md)和[科研进度7.97](research_progress.md)。
+不重开Gate8；Gate9仍BLOCKED，不把CPU文件链或微程序方案算作目标资格。下述7.96实现前状态仅为历史。
+
+## 7.96：分域合同已批准，资格增量待验证
 
 现行依据：[G9-DOMAIN-QUALIFICATION/0.1.0](gate9_domain_qualification_contract_v0_1.md)。
 用户已接受N1同显式流V0/Vmarker/Vsync的A/单sync B，以及G1自然投影A、无默认流物理B claim。
