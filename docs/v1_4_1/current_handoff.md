@@ -1,15 +1,21 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.97](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.98](research_progress.md)。
+
+15b24ec目标桥接回传已直接审查：[7.98新审查](gate9_bridge_return_review_v0_1.md)。
+四条同类warning按已接受官方解释接入版本化处置；另修正runtime flags与CUPTI stream type编码混用。
+封存副本离线domain及独立oracle匹配，六W/六窗A/逐sync B均通过，本包没有新采集缺口。
+原BLOCKED报告与Raw不改，UNKNOWN/NOT_ASSESSED保留；Gate9仍待最终N1/G1分域资格汇总，不自动PASS。
+下一步仅本地汇总7.98 N1实物与7.97 G1资格复用；服务器无需部署、export或采集。
 
 用户已批准[G9-DOMAIN-QUALIFICATION/0.1.0](gate9_domain_qualification_contract_v0_1.md)：
 N1统一显式流V0/Vmarker/Vsync，A与单sync B；G1自然执行、逐request投影A，不发布默认流物理B/hidden。
-本轮本地接线、独立预期及文件链验证见[增量说明](gate9_domain_increment_v0_1.md)。未执行目标机CUDA/Nsight；Engineering产物不自动升级科学证据。
-Gate8限定Engineering PASS保持；Gate9 BLOCKED仅待显式流调用/ownership桥接与G1投影资格增量。
+本地接线、独立预期及文件链验证见[增量说明](gate9_domain_increment_v0_1.md)。7.97的目标执行已由用户完成，7.98只作本地离线审查；Engineering产物不自动升级科学证据。
+Gate8限定Engineering PASS保持；Gate9总状态暂保留BLOCKED至最终分域汇总，不再因本包四warning等待厂商或进程身份补证。
 
-下一步仅审查固定交付：两个request受控显式流桥接，不是完整N1或Qwen采集。CPU和实际文件链已有本地结果，目标调用/观测仍需实物。
+两个request受控显式流桥接已有实物且离线匹配，不是完整N1或Qwen采集；不重新执行7.97交付。
 长度变化本身不触发重Q0，实际语义变化才需要资格增量。完整N1 runner、Pilot及Freeze不塞入Gate9。
-服务器当前无需操作；目标桥接另交协调审查。旧probe为INCONCLUSIVE且已关闭，不再部署或延长kernel。
+服务器当前无需操作。旧probe为INCONCLUSIVE且已关闭，不再部署或延长kernel。
 [Gate9入口](gate9_platform_assessment_v0_1.md)保留历史方案，旧待裁决/执行指令不再生效。
 
 - [Gate8工程退出amendment](gate8_engineering_exit_amendment_v0_1.md)：PASS仅适用

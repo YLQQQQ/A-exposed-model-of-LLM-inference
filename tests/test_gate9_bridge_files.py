@@ -20,7 +20,7 @@ def source(tmp_path,monkeypatch):
     from exposedpath_v141.gate9_domain import declaration,N1
     def execute(Backend,clock,db,old_plan):
         db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=1')
-        db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=1')
+        db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=2')
         class Native(Backend):
             def __init__(self,lib):
                 super().__init__(lib)

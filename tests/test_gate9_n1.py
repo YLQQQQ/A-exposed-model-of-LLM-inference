@@ -19,7 +19,7 @@ def source_n1(tmp_path,monkeypatch,damage=None,warmup=False):
     from exposedpath.gate9_stream_bridge import StreamBridge
     with sqlite3.connect(paths['sqlite']) as db:
         db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=1')
-        db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=1')
+        db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=2')
         for rowid,text in db.execute("SELECT rowid,text FROM NVTX_EVENTS WHERE text LIKE 'EXPOSEDPATH_STREAM_LIFETIME_V1:%'").fetchall():
             payload=json.loads(text.split(':',1)[1]); payload['producer_source_sha256']=ledger['runner_source_sha256']
             payload['generation']='live-0'
@@ -85,6 +85,28 @@ def test_unmapped_warmup_cannot_be_relabelled_as_measured(tmp_path,monkeypatch):
     import exposedpath_v141.gate9_domain as domain
     with pytest.raises(ValueError,match='BRIDGE_REQUEST_SET'):
         domain.process_domain(paths[0],paths[1],tmp_path/'out',bridge_path=paths[2])
+
+
+@pytest.mark.parametrize('cupti_flag,accepted',[(2,True),(1,False),(0,False),(3,False),(99,False)])
+def test_cupti_stream_type_is_not_runtime_creation_flags(tmp_path,monkeypatch,cupti_flag,accepted):
+    receipt,execution,bridge=source_n1(tmp_path,monkeypatch)
+    from exposedpath_v141.gate8_files import load_input_receipt,write_input_receipt
+    from exposedpath_v141.gate9_domain import process_domain
+    _,paths=load_input_receipt(receipt)
+    with sqlite3.connect(paths['sqlite']) as db:
+        db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=?',(cupti_flag,))
+    export=json.loads(paths['export_report'].read_text(encoding='utf-8'))
+    export['canonical_sqlite_sha256']=sha(paths['sqlite'])
+    export['attempts'][0].update(sqlite_sha256=sha(paths['sqlite']),sqlite_size=paths['sqlite'].stat().st_size)
+    write_json(paths['export_report'],export)
+    receipt=write_input_receipt(tmp_path/'flag-input.json',artifacts=paths,collector_version='2026.2.1.210',capture_session_id='synthetic')
+    value=json.loads(execution.read_text(encoding='utf-8'));value['input_receipt_sha256']=sha(receipt)
+    execution=write_json(tmp_path/'flag-execution.json',value)
+    if accepted:
+        assert process_domain(receipt,execution,tmp_path/'out',bridge_path=bridge).is_file()
+    else:
+        with pytest.raises(ValueError,match='BRIDGE_EXPLICIT_NONBLOCKING'):
+            process_domain(receipt,execution,tmp_path/'out',bridge_path=bridge)
 
 
 def test_physical_members_include_completed_prior_not_only_overlap(tmp_path,monkeypatch):

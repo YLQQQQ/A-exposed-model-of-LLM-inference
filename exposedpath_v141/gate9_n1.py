@@ -77,7 +77,10 @@ def bridge_bindings(bundle, projections, bridge, ledger):
             generations[scope]=generation
             streams=[s for s in rows['stream'] if s['process_id']==ledger['pid'] and s['context_id']==scope[1] and s['stream_id']==scope[2]]
             contexts=[c for c in rows['context'] if c['process_id']==ledger['pid'] and c['context_id']==scope[1] and c['device_id']==scope[0]]
-            require(len(streams)==len(contexts)==1 and streams[0]['flag']==1
+            # TARGET_INFO_CUDA_STREAM.flag is the CUPTI stream-type enum:
+            # 1 DEFAULT, 2 NON_BLOCKING, 3 NULL. It is NOT cudaStream flags
+            # (where cudaStreamNonBlocking == 1). Preserve the raw encoding.
+            require(len(streams)==len(contexts)==1 and streams[0]['flag']==2
                     and contexts[0]['null_stream_id']!=scope[2], 'BRIDGE_EXPLICIT_NONBLOCKING')
             result.append(dict(identity=projection['identity'],generation=request['generation'],native_handle=handle,
                 actual_trace_stream_id=scope[2],context_id=scope[1],device_id=scope[0],operation=op,
@@ -107,8 +110,10 @@ def calculate_n1(root,receipt_path,execution_path,bridge_path):
     ownership,projections=load_projected_ownership(canonical,bundle,scope)
     from .gate8_engineering_scope import _diagnostics
     from .gate8_diagnostic_scope import load_diagnostic_scope
-    diagnostics=_diagnostics(load_diagnostic_scope(root/'diagnostics.json',paths['sqlite'],paths['pass_identity']))
-    require(all(r['disposition']=='INFORMATION_ONLY' for r in diagnostics), 'DIAGNOSTIC_IMPACT_UNBOUNDED')
+    diagnostic=load_diagnostic_scope(root/'diagnostics.json',paths['sqlite'],paths['pass_identity'])
+    diagnostics=_diagnostics(diagnostic)
+    from .gate9_diagnostic_review import review
+    diagnostic_review=review(diagnostic,bundle)
     bindings=bridge_bindings(bundle,projections,bridge,ledger)
     from .gate8_closed_prior import LIFETIME_PREFIX
     import shutil
@@ -147,4 +152,5 @@ def calculate_n1(root,receipt_path,execution_path,bridge_path):
         physical_s_records=list(inputs.s_records),input_receipt_sha256=digest(Path(receipt_path)),
         execution_receipt_sha256=digest(Path(execution_path)),bridge_sha256=digest(Path(bridge_path)),
         diagnostic_dispositions=diagnostics,dropped_records_status='UNKNOWN',measurement_validity='NOT_ASSESSED',
-        formal_eligible=False,gate9_verdict='NOT_RUN',d_score_allowed=False,signature_allowed=False)
+        formal_eligible=False,gate9_verdict='NOT_RUN',d_score_allowed=False,signature_allowed=False,
+        **({'diagnostic_review':diagnostic_review} if diagnostic_review is not None else {}))

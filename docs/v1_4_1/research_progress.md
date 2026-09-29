@@ -1,5 +1,21 @@
 # ExposedPath 科研进度清单
 
+## 7.98 Gate9桥接回传审查、诊断接线与离线oracle（2026-09-29）
+
+已直接读取15b24ec执行回传原件；ZIP/CRC/路径安全及71项清单、72文件字节一致性通过。[完整有界审查](gate9_bridge_return_review_v0_1.md)。
+服务器原日志CPU102 passed，profile/producer COMPLETE、export一次PASS；本地未运行服务器/CUDA/Nsight。
+四条warning为同组已接受消息，row3/4/6/7属PID60888；目标27224有实际31 NVTX及CUDA活动和完整身份链。
+复用用户回传官方解释，不重启PID追索/询证：新增版本化独立诊断review，保留原始diagnostics及UNKNOWN，不把warning改成不存在；旧Gate8门不变。
+先复现失败再补正反例与最小接线。随后发现并独立修正N1桥接把runtime flags=1误当CUPTI stream type的问题：实物ENUM表明确2=NON_BLOCKING；只改桥接比较及两个错误合成fixture，不改Raw或S/A/B公式。
+
+新目录离线domain文件链通过，独立Raw oracle MATCH_REVIEW_REQUIRED：14调用、两个request、6边界/6 sync、W数1/2/4/5/6/8、terminal/B和六窗A全部相符；unattributed=0，互斥守恒、phase分量可加。
+runtime/launch/关键源码/DLL身份复核通过；复用CUDA源码的CRLF checkout与Git LF blob差异已明确记录，未伪称字节相同。
+本地CPU36 passed，另G1/旧诊断回归24 passed；修改文件compileall及diff-check通过。未重跑全量或旧Q0，既有7.97旧oracle失败不被掩盖/改写。
+
+**本包N1桥接技术阻塞已关闭；Gate8 PASS保持，Gate9总判定本轮不自动改PASS（原BLOCKED状态保留至最终分域汇总）。**
+当前优先级仅为将本增量与7.97 G1投影资格及已有实物复用完成最终退出审查；本包没有需要新采集的缺口，不要求服务器操作。
+原attempt/Raw/报告不变，派生结果仍Engineering、UNKNOWN/NOT_ASSESSED、非Formal，不授完整新Q0、模型或信息增益资格。
+
 ## 7.97 Gate9分域本地接线与受控桥接准备（2026-09-29）
 
 从98a85e5继续，按[合同0.1](gate9_domain_qualification_contract_v0_1.md)落实[最小增量](gate9_domain_increment_v0_1.md)。
