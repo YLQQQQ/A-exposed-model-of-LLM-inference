@@ -1,6 +1,12 @@
 # Gate9 单平台资格评估 0.1
 
-## 当前7.98：目标桥接回传离线匹配，待最终分域汇总
+## 当前7.99：Gate9限定分域资格PASS
+
+最终结论及逐项证据集中到[Gate9 closeout](gate9_closeout_v0_1.md)：当前固定栈N1显式流A/合格单sync B、G1自然投影A。
+不授自然默认流完整B、Pilot/Freeze/Formal或信息增益。下一步仅Gate10选定workload的最小本地候选/停止规则；无需服务器动作。
+以下7.98及更早为历史，旧BLOCKED/INCONCLUSIVE/Raw不改，不再执行其“等待汇总/补证”指令。
+
+## 历史7.98：目标桥接回传离线匹配，待最终分域汇总
 
 [桥接审查](gate9_bridge_return_review_v0_1.md)已关闭本包诊断接线与stream编码阻塞，独立Raw oracle匹配；不改原BLOCKED报告。
 下一项仅将N1实物增量与7.97 G1文件链/既有实物复用完成最终退出审查；无需服务器动作，不自动授予Gate9 PASS。

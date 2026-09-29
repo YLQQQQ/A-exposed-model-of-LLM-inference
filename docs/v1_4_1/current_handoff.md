@@ -1,17 +1,18 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.98](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.99](research_progress.md)。
 
 15b24ec目标桥接回传已直接审查：[7.98新审查](gate9_bridge_return_review_v0_1.md)。
 四条同类warning按已接受官方解释接入版本化处置；另修正runtime flags与CUPTI stream type编码混用。
 封存副本离线domain及独立oracle匹配，六W/六窗A/逐sync B均通过，本包没有新采集缺口。
-原BLOCKED报告与Raw不改，UNKNOWN/NOT_ASSESSED保留；Gate9仍待最终N1/G1分域资格汇总，不自动PASS。
-下一步仅本地汇总7.98 N1实物与7.97 G1资格复用；服务器无需部署、export或采集。
+原BLOCKED报告与Raw不改，UNKNOWN/NOT_ASSESSED保留；[最终分域裁决](gate9_closeout_v0_1.md)已完成，**Gate9 PASS**。
+资格仅适用当前固定Windows/4090栈、N1显式流A/合格单sync B及G1自然投影A；不授自然默认流完整B、完整新Q0、Pilot、Freeze、Formal或信息增益结论。
+下一步仅Gate10选定workload最小候选/停止规则的本地准备；复用G1 32/2 batch1，不作广域扫描或Pilot统计。服务器无需操作。
 
 用户已批准[G9-DOMAIN-QUALIFICATION/0.1.0](gate9_domain_qualification_contract_v0_1.md)：
 N1统一显式流V0/Vmarker/Vsync，A与单sync B；G1自然执行、逐request投影A，不发布默认流物理B/hidden。
 本地接线、独立预期及文件链验证见[增量说明](gate9_domain_increment_v0_1.md)。7.97的目标执行已由用户完成，7.98只作本地离线审查；Engineering产物不自动升级科学证据。
-Gate8限定Engineering PASS保持；Gate9总状态暂保留BLOCKED至最终分域汇总，不再因本包四warning等待厂商或进程身份补证。
+Gate8限定Engineering PASS保持；Gate9依据合同和目标实物/CPU独立验证共同通过，不再等待资格汇总或warning补证。
 
 两个request受控显式流桥接已有实物且离线匹配，不是完整N1或Qwen采集；不重新执行7.97交付。
 长度变化本身不触发重Q0，实际语义变化才需要资格增量。完整N1 runner、Pilot及Freeze不塞入Gate9。
@@ -23,8 +24,8 @@ Gate8限定Engineering PASS保持；Gate9总状态暂保留BLOCKED至最终分�
 - [warning新证据裁决](gate8_warning_evidence_review_v0_1.md)根据用户回传官方解释与既有实物关闭本包工程阻塞；作者/日期/楼层尚未网页核实，不再仅按纯假设推进。Qwen A产物仍条件性，UNKNOWN/NOT_ASSESSED保持，
   不授完整新版Q0、模型科学有效性或Formal资格；原标准NOT_RUN、旧attempt BLOCKED不改。
 - [Gate9最小适用表](gate9_minimal_mode_qualification_v0_1.md)候选保留，7.90接线优先指令已撤回；身份/eager自然基线复用。Gate8已收尾，官方答复不再网页核验或追加询证。
-- 本地固定交付供协调审查；未经后续授权不执行服务器步骤，不自动进入Pilot、Formal或D/Signature。
-- 执行36ed952、离线分类1733ff3、本轮文档政策提交严格区分，服务器不自动追随main。
+- 旧固定交付不重复执行；未经后续授权不执行服务器步骤，不自动进入Pilot、Formal或D/Signature。
+- G1执行36ed952/分类1733ff3、N1执行15b24ec/离线fe25d5b、本次文档裁决提交严格区分，服务器不自动追随main。
 
 ## 历史材料（不是待执行指令）
 

@@ -1,5 +1,7 @@
 # Gate9 桥接回传及离线续算审查 0.1
 
+> 本文保留7.98当时的审查与待汇总结论；后续[7.99最终分域裁决](gate9_closeout_v0_1.md)已判限定Gate9 PASS。原报告与Raw不变。
+
 2026-09-29；`G9-BRIDGE-RETURN-REVIEW/0.1`；Engineering 增量审查，不是 Formal 数据。
 执行版本 `15b24ec744616754f6fdd437bd333aa8a2059bf1`；修复/离线审查版本为包含本文件的提交。
 

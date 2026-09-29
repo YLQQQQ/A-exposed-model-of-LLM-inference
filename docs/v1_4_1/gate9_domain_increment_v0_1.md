@@ -1,11 +1,11 @@
 # Gate9 分域增量实现与单次桥接审查 0.1
 
 当前补充：15b24ec桥接已执行并回传，[7.98离线审查](gate9_bridge_return_review_v0_1.md)已完成。
-本文下述交付/执行步骤保留为7.97历史方案，不重新执行；本包oracle匹配，Gate9总资格待最终分域汇总。
+本文下述交付/执行步骤保留为7.97历史方案，不重新执行；[7.99最终裁决](gate9_closeout_v0_1.md)已给出限定Gate9 PASS。
 
 依据：[G9-DOMAIN-QUALIFICATION/0.1.0](gate9_domain_qualification_contract_v0_1.md)。
 本文件是 Engineering 实现/交付说明，不是新测量合同、Pilot或资格通过记录。
-Gate8 PASS不变；Gate9须审查增量实物，当前BLOCKED。旧probe关闭，旧Raw和判定不改。
+原7.97 Gate9 BLOCKED为历史状态；Gate8 PASS不变。旧probe关闭，旧Raw和判定不改。
 
 ## 本地实现与证据范围
 
