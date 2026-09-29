@@ -125,7 +125,13 @@ def seal(prepared,output,root):
     prepared,output,root=map(lambda p:Path(p).resolve(),(prepared,output,root))
     manifest=read(prepared/'manifest.json')
     require(manifest.get('isolated_preflight_version')==VERSION,'VERSION')
-    issues=validate_pre_model_identity(prepared/'manifest.json',prepared/'preflight.json',root)
+    # Recognize N1 intent even when one required declaration is missing. It must
+    # fail the N1 contract, not silently fall back to the historical G1 gate.
+    n1_intent=(any(key in manifest for key in ('n1_model','n1_model_execution'))
+        or manifest.get('study_mode')=='N1_INTERVENTION'
+        or manifest.get('domain_qualification',{}).get('profile')=='N1_EXPLICIT_STREAM_AB/0.1.0')
+    contract={'execution_contract':'N1-VERIFIED-MODEL/0.1'} if n1_intent else {}
+    issues=validate_pre_model_identity(prepared/'manifest.json',prepared/'preflight.json',root,**contract)
     require(not issues,'IDENTITY:'+ '; '.join(issues))
     git=lambda args:adapter.git(['-C',str(root),*args])
     before=(git(['rev-parse','HEAD']),git(['status','--porcelain']))

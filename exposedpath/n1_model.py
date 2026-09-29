@@ -56,6 +56,27 @@ def validate_manifest(manifest):
     return policy
 
 
+def validate_prepared(manifest, prepared, root):
+    """Before profile: reuse N1 declarations and the verified entry's fixed inputs.
+
+    This does not claim the model has loaded or performed an intervention.
+    Target runtime/device/model-content observations are still checked in entry.
+    """
+    from .gate8_engineering_contract import validate_declaration
+    from .workload import load_prompt_tokens
+    validate_manifest(manifest)
+    validate_declaration(manifest)
+    expected=dict(fixed_input_tokens=32,fixed_output_tokens=2,batch_size=1,
+        warmup_count=1,repeat_count=1,execution_mode='eager',run_role='ENGINEERING',
+        data_role='Engineering',dtype_and_quantization='fp16',sampling_config={'do_sample':False})
+    require(all(type(manifest.get(k)) is type(v) and manifest[k]==v for k,v in expected.items()),
+            'FIXED_WORKLOAD_CONFLICT')
+    prompt=Path(prepared)/'prompt.json'
+    for path,key in ((prompt,'prompt_tokens_sha256'),(Path(root)/'exposedpath/runner.py','runner_source_sha256')):
+        require(hashlib.sha256(path.read_bytes()).hexdigest()==manifest.get(key),'INPUT_HASH_CONFLICT')
+    require(load_prompt_tokens(prompt)['fixed_input_tokens']==32,'INPUT_LENGTH')
+
+
 class Execution:
     """Attach to the existing loader/runner, never a replacement entry.
 

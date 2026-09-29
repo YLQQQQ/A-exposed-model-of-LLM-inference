@@ -92,8 +92,13 @@ def validate_sqlite(path: Path) -> list[str]:
     return []
 
 
-def validate_pre_model_identity(manifest_path: Path, preflight_path: Path, project_root: Path) -> list[str]:
-    """Gate7 provenance precondition, before either model process is launched."""
+def validate_pre_model_identity(manifest_path: Path, preflight_path: Path, project_root: Path,
+                                *, execution_contract: str = 'GATE7_G1') -> list[str]:
+    """Shared provenance, with an explicit closed execution-contract dispatch.
+
+    Historical Gate7 callers remain G1-only; the isolated N1 entry opts into
+    its versioned model contract, never a generic permission to accept N1.
+    """
     from exposedpath import platform_adapter
     from exposedpath.manifest import resolve_logical_cuda_index
     issues = []
@@ -128,9 +133,15 @@ def validate_pre_model_identity(manifest_path: Path, preflight_path: Path, proje
         for key, value in (("physical_gpu_index", physical), ("logical_gpu_index", logical)):
             if type(preflight.get(key)) is not int or preflight[key] != value:
                 issues.append(f"Preflight {key} missing or conflicting")
-        if (manifest.get("data_role") != "Engineering" or manifest.get("study_mode") != "G1_NATURAL"
-                or manifest.get("n1_intervention") is not None):
-            issues.append("Gate7 Engineering/G1 identity conflicts")
+        if execution_contract == 'GATE7_G1':
+            if (manifest.get("data_role") != "Engineering" or manifest.get("study_mode") != "G1_NATURAL"
+                    or manifest.get("n1_intervention") is not None):
+                issues.append("Gate7 Engineering/G1 identity conflicts")
+        elif execution_contract == 'N1-VERIFIED-MODEL/0.1':
+            from exposedpath.n1_model import validate_prepared
+            validate_prepared(manifest, manifest_path.parent, project_root)
+        else:
+            raise ValueError('Unknown pre-model execution contract')
     except Exception as exc:
         # Keep missing identity unknown and expose the precise adapter/IO error.
         issues.append(f"Pre-model identity unavailable: {type(exc).__name__}: {exc}")

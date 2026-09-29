@@ -1,6 +1,7 @@
 # N1 verified模型接线与最小可行性 0.2
 
 状态：两处本地接线已完成，**目标机N1模型可行性仍NOT_RUN**。Gate10限定G1 PASS保持；不启动Pilot。
+7.105补正：首次c6cdb36服务器尝试在profile前被共享G1-only validator拒绝，未执行模型。该分派遗漏已用真实prepared及prepare→seal/collector边界CPU回归修复；旧attempt仍BLOCKED，详见[进度7.105](research_progress.md)。
 依据：Pre-Pilot协议v2.1 §4.2 V16及[Gate9分域合同0.1](gate9_domain_qualification_contract_v0_1.md)。
 本版接替[0.1的部分实现状态](n1_model_wiring_v0_1.md)，不是新测量语义、完整N1矩阵或新Q0资格。
 
@@ -36,7 +37,7 @@ tests-first曾复现verified入口拒绝N1、旧单API消费者拒绝模型sidec
 
 ## 最小目标机批次：先交协调窗口审查
 
-固定提交、单一增量包，前置为服务器700f671；只运行相关CPU回归。mask=3、显式目标解释器/site、已有模型及32token内容清单保持。经审查授权后才运行V0→Vmarker→V16各一个warmup/一个measured request，每组独立新目录与manifest。
+固定提交、单一增量包，当前修复前置为服务器c6cdb36（原700f671包为历史）；只运行相关CPU回归。mask=3、显式目标解释器/site、已有模型及32token内容清单保持。经审查授权后才运行V0→Vmarker→V16各一个warmup/一个measured request，每组独立新目录与manifest。
 
 - V0：验证真实模型在统一专用流政策下的完成、实际提交/同步/ownership和A/单sync B支持域；不是自然G1。
 - Vmarker：验证已批准layer16包装/标记位置次数、没有新增实际同步、与V0 token及公共执行身份相同。

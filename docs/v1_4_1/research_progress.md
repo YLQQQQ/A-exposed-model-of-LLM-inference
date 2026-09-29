@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.105 N1采集前身份分派修复（2026-09-29）
+
+直接核验`n1_model_c6cdb36_once.zip`：21345 bytes，SHA256 `3f41335dfc69a65bdc3e8e6c53f276280120070edde98d44e1fa0bc603f2d76b`，CRC/安全路径/29项清单及完整覆盖通过。服务器CPU141 passed属回传记录，不是新修复的验证。V0 driver 5.89秒exit1、未超时；collection为空，Vmarker/V16 NOT_RUN。traceback明确停在profile之前的`isolated.seal → validate_pre_model_identity`，不是模型执行失败；原`EXECUTION_FAILURE_UNRESOLVED`报告及封存ZIP保持原样。
+
+根因是共享验证器仍只接受Gate7 Engineering/G1，**不是N1 producer声明错误**。真实prepared V0通过既有N1声明校验，却触发G1专属拒绝；此前CPU测试在seal之前结束或替换了validator，未覆盖此接口。修复保留默认Gate7 G1-only，isolated入口对N1意图显式分派至既有`N1-VERIFIED-MODEL/0.1`，复用通用commit/clean/physical-logical/UUID/PCI/mask核对，严格验证N1域、variant/public V16、callsite、流/执行声明、Engineering配置及prompt/runner源哈希。未知版本、矛盾/缺字段不能fallback成G1。没有新增研究语义或放宽身份门。
+
+tests-first三个variant在真实collector→seal链先同因失败，修复后通过；真实prepare→seal也纳入回归。CPU profile边界替身继续调用真实target receipt consume、验证nonce/hash/run，故意停止，不运行Nsight/模型。18类错域/variant/配置/输入/源/commit/dirty/GPU/mask负例及未知dispatch版本拒绝。封存prepared原字节在新本地诊断目录、以明确CPU外部身份替身复查seal成功，不改原件或追认旧attempt。后续model-run/runner已有N1 opt-in；target/current、模型内容、native CUDA身份、固定配置、实际次数和多API消费检查仍在。
+
+本机Python3.12.7，七文件相关回归 **142 passed**（104.18秒）；包括新回归、prepare、collector、isolated、Gate7兼容、N1 verified入口与多API domain。修改文件compileall及diff检查通过；无全量/Q0重跑，无服务器/模型/GPU/Nsight操作。物理S/A/B、runner、warning门、冻结测量合同及旧证据零改动。
+
+下一项仅把以服务器`c6cdb369f683ffcdb28fe3b462d11c0280284392`为前置的固定修复单包、新commit专属输出目录和单ZIP方案交协调窗口审查；旧c6输出不恢复、不覆盖。审查后另行授权才运行相关CPU复验及原V0→Vmarker→V16有限批次，任何失败停止，不重试。N1真实模型支持域仍未验证、可行性NOT_RUN；Gate7～9限定PASS及Gate10限定G1 PASS保持，Pilot不启动。
+
 ## 7.104 N1 verified模型入口与多API文件链收口（2026-09-29）
 
 按用户授权从31cd84e完成两处剩余接线；见[接线/最小可行性0.2](n1_model_wiring_v0_2.md)。沿用v2.1 §4.2 V16，不新增位置/次数选择：V0/Vmarker/V16只差预定decode层16干预；输入32/输出2、batch1、fp16/eager/SDPA、warmup1/repeat1一致。

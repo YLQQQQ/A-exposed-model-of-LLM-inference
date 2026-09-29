@@ -1,6 +1,12 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.104](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.105](research_progress.md)。
+
+**7.105当前工作：N1采集前身份分派已本地修复，待协调窗口审查交付。** c6cdb36回传原件已核验；CPU141 passed，但V0在profile之前被共享Gate7 G1-only校验拒绝，未执行模型/未采集。Vmarker/V16 NOT_RUN，旧报告不改。
+保留默认Gate7语义；isolated N1只按`N1-VERIFIED-MODEL/0.1`严格分派，通用Git/GPU/mask与输入检查不删。实际prepared/真实prepare→seal及collector→profile调用边界/consume回归纳入，相关CPU142 passed；没有目标机验证或新研究资格。
+新修复包前置固定c6cdb36，新commit独立输出、单ZIP，先交协调窗口审查，不执行旧包或恢复旧输出。N1模型可行性NOT_RUN；Gate10限定G1及Gate7～9 PASS保持，Pilot不启动。后续模型入口、ownership、内部sync身份及warning拒绝条件全部保留。
+
+以下7.104是历史接线记录；其采集前覆盖不足已由7.105纠正，700f671不再是当前部署前置：
 
 **7.104当前工作：N1本地verified入口与多API消费已接通**，见[0.2执行/消费说明](n1_model_wiring_v0_2.md)。V0/Vmarker/V16沿用层16定义；真实文件链CPU验证不是目标机模型资格。相关192项及最终定向回归见进度，不重复全量/Q0。
 新manifest显式声明N1专用流策略，复用原身份/内容/设备/preflight；多API归属依实际correlation/原始记录，不从with-stream猜测。原内部sync缺物理S身份仍拒绝，未知/额外流/依赖/新诊断不豁免。

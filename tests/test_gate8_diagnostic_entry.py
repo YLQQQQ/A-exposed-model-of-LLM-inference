@@ -195,6 +195,24 @@ def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path, engi
     assert manifest['prompt_tokens_sha256']==sha(output/'prompt.json')
     assert manifest['runner_source_sha256']==sha(Path(module.__file__).parent/'runner.py')
     assert manifest['model_content_snapshot']['content_verification']=='CURRENT_CONTENT_HASHES'
+    if n1:
+        # Production prepare -> production seal: the old tests stopped before
+        # this shared G1-only validator and missed the real server failure.
+        import subprocess
+        from exposedpath import gate8_isolated_preflight as isolated
+        root=tmp_path/'repo'; (root/'.git').mkdir(parents=True)
+        (root/'.git/HEAD').write_text('d'*40)
+        (root/'exposedpath').mkdir()
+        (root/'exposedpath/runner.py').write_bytes((Path(module.__file__).parent/'runner.py').read_bytes())
+        def paths(tool,args,**kw):
+            assert tool==platform_adapter.TOOL_GIT and 'ls-files' in args and kw['text'] is False
+            return subprocess.CompletedProcess(args,0,b'exposedpath/runner.py\0' if '--cached' in args else b'',b'')
+        monkeypatch.setattr(platform_adapter,'run_tool',paths)
+        monkeypatch.setattr(platform_adapter,'nvidia_smi',lambda *a,**kw:
+            '3, GPU-12345678-1234-1234-1234-123456789abc, 00000000:01:00.0')
+        collection=tmp_path/'collection'; collection.mkdir()
+        receipt=isolated.seal(output,collection,root)
+        assert isolated.read(receipt)['input_hashes']['manifest.json']==sha(output/'manifest.json')
 
 
 def test_target_identity_conflict_stops_before_model_load(monkeypatch,tmp_path):
