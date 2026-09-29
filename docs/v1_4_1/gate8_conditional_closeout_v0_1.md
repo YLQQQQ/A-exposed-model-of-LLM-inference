@@ -1,5 +1,7 @@
 # Gate8 条件性集中收尾 0.1
 
+> 最新证据裁决：[7.89 warning审查](gate8_warning_evidence_review_v0_1.md)；原BLOCKED和本报告历史条件状态不回写。
+
 > 历史证据审计，正文按原版本保留。当前工程退出以[G8-ENGINEERING-EXIT/0.1](gate8_engineering_exit_amendment_v0_1.md)为准；当前进度只见[research_progress](research_progress.md)。本版NOT_RUN/BLOCKED与旧数值不回写，non-submit修正见[7.87报告](gate8_non_submit_api_review_v0_1.md)。
 
 2026-09-28，Engineering，research_progress 7.86。执行/分析代码均固定为

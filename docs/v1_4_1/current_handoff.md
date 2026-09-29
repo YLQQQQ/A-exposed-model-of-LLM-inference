@@ -1,13 +1,12 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.88](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.89](research_progress.md)。
 
 - [Gate8工程退出amendment](gate8_engineering_exit_amendment_v0_1.md)：PASS仅适用
   G8-ENGINEERING-EXIT/0.1工程可行性，属于观察结果后的显式政策修订。
-- 四warning无目标影响仍是假设；Qwen A仍条件性，UNKNOWN/NOT_ASSESSED保持，
+- [warning新证据裁决](gate8_warning_evidence_review_v0_1.md)根据用户回传官方解释与既有实物关闭本包工程阻塞；作者/日期/楼层尚未网页核实，不再仅按纯假设推进。Qwen A产物仍条件性，UNKNOWN/NOT_ASSESSED保持，
   不授完整新版Q0、模型科学有效性或Formal资格；原标准NOT_RUN、旧attempt BLOCKED不改。
-- [Gate9入口与首轮评估](gate9_platform_assessment_v0_1.md)：已正式开展，身份/eager复用完成；
-  科学资格初评BLOCKED，下一项是科学claim/证据接受边界集中裁决，不是再做工程补测。
+- [Gate9入口与更新评估](gate9_platform_assessment_v0_1.md)：身份/eager复用完成；最终资格仍BLOCKED于后续科学执行范围尚未绑定签发，不再把四warning作为工程否决。下一项本地形成最小N1/G1执行模式—资格适用表，只补真实变化，不全重跑Q0。
 - 当前无服务器操作/部署包，不自动进入Pilot、Formal或D/Signature。
 - 执行36ed952、离线分类1733ff3、本轮文档政策提交严格区分，服务器不自动追随main。
 

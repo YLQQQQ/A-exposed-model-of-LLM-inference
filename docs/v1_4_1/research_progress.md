@@ -1,5 +1,26 @@
 # ExposedPath 科研进度清单
 
+## 7.89 官方答复回传后的warning证据裁决（2026-09-29）
+
+新增[G8-WARNING-EVIDENCE/0.1](gate8_warning_evidence_review_v0_1.md)，逐字保存用户回传官方答复。
+网页工具不可访问；直接公开JSON读取限速、按提示重试一次仍失败，已停止。本轮未直接核验作者身份、
+发布日期或回复楼层，来源明确USER_RELAYED_OFFICIAL_RESPONSE，不捏造回复链接/日期。
+答复说明进程树无事件/短命进程warning与目标CUDA/NVTX采集的关系；与既有目标PID60060、三点、
+成功drain及sync/activity实物相符，无已记录具体矛盾。不再要求证明每个外PID用途，关闭本包warning
+的Engineering作用域阻塞。不能把“could be read”转换为dropped=0或绝对完整性认证。
+
+Gate8 PASS仍限定G8-ENGINEERING-EXIT/0.1；现在由回传官方解释及实物支撑，而非只有未证假设。
+7.88事后政策及原标准NOT_RUN保留历史；旧attempt BLOCKED和1733ff3派生条件性字段、UNKNOWN/
+NOT_ASSESSED全部不改，不授完整新版Q0、模型科学有效性、Formal或信息增益。精确证据hash见新裁决。
+本轮只引用已完成退出清单，未重新执行测试、离线分析或hash扫描，没有服务器/GPU/Nsight操作。
+
+[Gate9评估更新](gate9_platform_assessment_v0_1.md)：身份及eager项继续复用，观测项加入新解释，
+不再因同四warning维持工程否决；最终资格仍BLOCKED于后续科学执行范围的版本绑定结论未签发。
+下一项具体本地工作：首个最小N1/G1对照的执行模式—资格适用表，只比较completion/sync/backend/
+stream/ownership变化，已有覆盖直接引用，不全重跑Q0。不把答复来源补齐设成所有工作的前置。
+当前无已确认必要服务器补证，不生成重采方案；Gate7 PASS，Pilot/Formal、D/Signature不启动。
+本次只改当前入口与审查文档；生产warning规则、Raw、旧报告和历史资格均未改。
+
 ## 7.88 工程退出政策修订与Gate9首轮资格评估（2026-09-28）
 
 用户在观察现有结果后明确批准[G8-ENGINEERING-EXIT/0.1](gate8_engineering_exit_amendment_v0_1.md)。
@@ -592,8 +613,8 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前研究阶段：`Engineering`
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前 Gate 状态（7.88）：Gate0～7 PASS；Gate8 PASS仅限G8-ENGINEERING-EXIT/0.1工程可行性，四warning未证假设及条件性A限制保持；原标准NOT_RUN保留历史。Gate9评估已启动、初评BLOCKED于科学证据资格；Gate10/11 BLOCKED未启动，Gate12～14 NOT_RUN。
-- 当前最高优先级：按Gate9入口集中界定科学claim/证据接受边界，无服务器操作；旧attempt BLOCKED、UNKNOWN/NOT_ASSESSED不变。后续各日期条目仅记录历史，不是现行任务。
+- 当前 Gate 状态（7.89）：Gate0～7 PASS；Gate8 PASS仅限G8-ENGINEERING-EXIT/0.1工程可行性。用户回传官方解释结合目标实物已关闭四warning工程作用域阻塞，来源尚未网页核实；条件性A及历史原标准结论保留。Gate9评估继续，最终资格BLOCKED于后续执行范围/版本尚未绑定；Gate10/11 BLOCKED未启动，Gate12～14 NOT_RUN。
+- 当前最高优先级：按Gate9入口完成最小对照执行模式与既有资格的适用表，无服务器操作；不是继续等待warning或重跑Q0。旧attempt BLOCKED、UNKNOWN/NOT_ASSESSED不变。后续各日期条目仅记录历史，不是现行任务。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -885,7 +906,7 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 
 ### Gate 8：Engineering Pilot
 
-**Gate verdict（7.88）：PASS，仅限[G8-ENGINEERING-EXIT/0.1](gate8_engineering_exit_amendment_v0_1.md)的工程执行链、可观测性接口及条件性accounting可行性。** 四warning无目标影响是假设，Qwen A仍条件性，不授完整新版Q0/模型科学有效性/Formal资格。原Route A0.2标准下NOT_RUN及旧attempt BLOCKED不改；下方7.21～7.37差距/步骤均为历史，已由7.88入口取代，不能重新生成待办。
+**Gate verdict（7.89）：PASS，仅限[G8-ENGINEERING-EXIT/0.1](gate8_engineering_exit_amendment_v0_1.md)的工程执行链、可观测性接口及条件性accounting可行性。** [新证据裁决](gate8_warning_evidence_review_v0_1.md)以用户回传官方解释和目标实物关闭四warning工程阻塞，不声称已网页核实或零丢失。Qwen派生仍条件性，不授完整新版Q0/模型科学有效性/Formal资格。原Route A0.2标准下NOT_RUN及旧attempt BLOCKED不改；下方7.21～7.37差距/步骤均为历史，不得重新生成待办。
 
 **本轮实证差距：** 在根main用现有8d64f75 Gate7 SQLite只读派生到`.local/diagnostics/gate8-gap-v0_1-20260925-r3/`：observation valid（不等于dropped=0）；Canonical identity AMBIGUOUS（缺pass/repeat）、selected_device_id=3但trace device_id=0；12个NVTX range中8 legacy/4 structured sync，无结构化request/phase。S exit1、354条全invalid；A/B exit1、0窗口、FAIL_CLOSED；D未执行。354是全进程而非request分母。原REP/SQLite/manifest/report四文件hash前后不变。只证明历史输入兼容性缺口，不是Gate8 evidence、不撤销Gate7 PASS。未运行pytest、GPU、真实Nsight/export。
 
@@ -922,12 +943,12 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 不得用其Engineering verdict替代Formal资格。第二平台后移；EP-G9-03仅保留eager，
 compile/graph后移。以下原任务保留编号及历史。
 
-**Gate verdict：BLOCKED；评估已启动并完成首轮复用（7.88）。** 当前平台已明确为既有Windows/RTX4090，不再因“未接入”阻塞。科学证据准入尚未闭合，见[唯一Gate9入口](gate9_platform_assessment_v0_1.md)；无需等待厂商才开展其余评估。
+**Gate verdict：BLOCKED；评估继续并更新复用结论（7.89）。** 当前平台已明确为既有Windows/RTX4090，四warning不再是当前工程观测的阻塞。剩余为后续对照执行范围/版本与资格的绑定结论，见[唯一Gate9入口](gate9_platform_assessment_v0_1.md)；当前没有已确认必须进行的服务器验证。
 
 - [x] `EP-G9-01` 已复用核定封存运行的GPU/driver/CUDA/framework/Nsight/OS/launcher及身份联结；不推断当前服务器状态。
-- [ ] `EP-G9-02` 分层复用历史Q0、限定受控资格与分类回归；真实模型科学观测资格仍受未证影响范围限制，未授完整新版Q0。
+- [ ] `EP-G9-02` 已分层复用历史Q0、限定受控资格、分类回归与7.89解释；待绑定后续最小对照的执行范围/版本，不默认授完整新版Q0或要求全重采。
 - [x] `EP-G9-03` 既有最小eager实际配置/执行完成已核；compile/graph与G2按路线A后移，不作为当前前置。
-- [x] `EP-G9-04` 首轮资格结论已给出BLOCKED，非PASS；科学证据/claim边界后续裁决，不重复已有工程检查。
+- [x] `EP-G9-04` 首轮资格结论及7.89更新已给出BLOCKED，非PASS；剩余范围绑定见入口，不重复已有工程检查或继续追索旧PID。
 
 ### Gate 10：可行域与 OOM 边界
 

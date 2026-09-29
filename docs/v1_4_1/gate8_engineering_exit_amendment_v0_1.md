@@ -1,5 +1,7 @@
 # Gate8 限定 Engineering 退出 amendment 0.1
 
+> 2026-09-29证据更新：[G8-WARNING-EVIDENCE/0.1](gate8_warning_evidence_review_v0_1.md)依据用户回传官方解释和既有实物关闭本包warning工程阻塞。下文记录7.88当时的未证假设及事后政策事实，不改写历史；当前不再只有纯假设依据。网页作者/日期仍未直接核实，数据资格限制保持。
+
 2026-09-28；版本 `G8-ENGINEERING-EXIT/0.1`；用户本轮明确批准。
 
 **修订后 Gate8 = PASS，仅限 Engineering 执行链、可观测性接口和条件性 accounting 的工程可行性。**

@@ -4,7 +4,7 @@
 方法链：Raw → Canonical → S → A/B → D / Exposure Signature。
 Activity cost 不等于请求可见延迟贡献。
 
-**Gate0–7历史PASS；Gate8按[G8-ENGINEERING-EXIT/0.1](docs/v1_4_1/gate8_engineering_exit_amendment_v0_1.md)限定工程范围PASS；[Gate9评估](docs/v1_4_1/gate9_platform_assessment_v0_1.md)已启动、科学资格初评BLOCKED。** 四warning无目标影响仍是未证假设，Qwen A仍条件性；不授完整新版Q0、模型科学有效性或Formal资格，旧attempt不改判。Gate7原legacy-only等限制保留。
+**Gate0–7历史PASS；Gate8按[G8-ENGINEERING-EXIT/0.1](docs/v1_4_1/gate8_engineering_exit_amendment_v0_1.md)限定工程范围PASS；[Gate9评估](docs/v1_4_1/gate9_platform_assessment_v0_1.md)已启动、最终资格仍BLOCKED于后续科学执行范围尚未绑定签发。** [新warning裁决](docs/v1_4_1/gate8_warning_evidence_review_v0_1.md)依据用户回传官方解释及实物关闭本包工程阻塞（网页来源身份未直接核实）；Qwen A原产物仍条件性，不授完整新版Q0、模型科学有效性或Formal资格，旧attempt不改判。Gate7原限制保留。
 
 ## 唯一入口
 

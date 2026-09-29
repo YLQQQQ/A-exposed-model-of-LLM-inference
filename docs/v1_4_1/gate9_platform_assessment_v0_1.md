@@ -1,40 +1,35 @@
 # Gate9 单平台资格评估 0.1
 
-2026-09-28。工作已启动，首轮证据复用评估已完成；**资格 verdict = BLOCKED，不是未开展工作**。
-前置是[限定工程退出 G8-ENGINEERING-EXIT/0.1](gate8_engineering_exit_amendment_v0_1.md)的 PASS，
-不是原标准科学准入已通过。只评当前 Windows/RTX4090、Qwen2.5-1.5B、eager/SDPA、单GPU请求内部范围。
-第二平台、compile/graph、G2后移；不重采完整Q0，不自动进入Pilot/Formal。
+更新2026-09-29（7.89）。工作继续，**最终资格 verdict = BLOCKED：拟用于后续科学对照的版本/执行范围尚未形成绑定的资格结论**。
+这不是继续因四warning拒绝当前工程结果；[新证据裁决](gate8_warning_evidence_review_v0_1.md)已关闭该工程阻塞。
+历史首评见[12f61df版本](https://github.com/YLQQQQ/A-exposed-model-of-LLM-inference/blob/12f61df41b1666fbcc4d11128dffb6a4886896e8/docs/v1_4_1/gate9_platform_assessment_v0_1.md)，不继续沿用其中“只有无影响假设”的结论。
 
-## 已完成的复用评估
+## 已完成且直接复用
 
-| 原编号 | 可复用事实与来源 | 当前结论/限制 |
+| 原编号 | 现有证据 | 结论 |
 |---|---|---|
-| EP-G9-01 平台身份 | [Gate7 closeout](gate7_closeout_v0_1.md)、[7.86实际配对身份链](gate8_conditional_closeout_v0_1.md)：OS/GPU/driver/CUDA/framework/Nsight/launcher、UUID/PCI联结physical/logical/trace/inventory；Git/输入/解释器与实际进程绑定 | 身份记录完成，仅对封存执行版本；不冒称当前服务器未发生变化，也不重查已有快照 |
-| EP-G9-02 观测/Q0 | [Gate6旧Q0](gate6_closeout_v0_1.md)只证明原版本；[限定受控资格](gate8_bounded_qualification_review_v0_1.md)补D1/身份/drain/NULL-FIFO后缀/六窗A和拒绝负例；[7.87](gate8_non_submit_api_review_v0_1.md)补分类规则及独立反例 | 限定工程资格可复用；不是完整新版Q0或Formal观测资格。真实Qwen的诊断作用域仍只是假设，科学准入未满足 |
-| EP-G9-03 eager | 7.86实际backend/config、驻留/warmup/三窗口、内部同步与执行完成；7.87既有Raw独立裁窗及union核查 | 当前最小点eager行为已核；不扩到参数矩阵、不同backend/graph或并发 |
-| EP-G9-04 资格结论 | 本文将已证事实、假设与欠缺科学证据分开 | 初评已出：BLOCKED于科学证据资格，而非平台未接入；不授Formal |
+| EP-G9-01 平台身份 | [7.86配对](gate8_conditional_closeout_v0_1.md)实际Windows/RTX4090、CUDA12.4/Nsight2026.2.1、解释器/代码/模型/输入/设备关联 | 完成封存运行身份评估；不冒称当前服务器无变化 |
+| EP-G9-02 观测及资格 | [Gate6原Q0](gate6_closeout_v0_1.md)、[限定受控资格](gate8_bounded_qualification_review_v0_1.md)、[1733ff3分类回归与实物复算](gate8_non_submit_api_review_v0_1.md)、7.89用户回传答复 | 当前最小eager工程观测已有支持，四warning不再作为其否决理由；尚不能把限定资格改成所有后续科学执行方式均合格 |
+| EP-G9-03 eager | 实际Qwen/eager/SDPA、32/2、batch1、warmup1/repeat1、三窗/drain/内部同步、必要集合与A | 当前最小点完成；不要求第二平台、compile/graph或G2 |
+| EP-G9-04 结论 | 本次更新划清已取得资格的版本/构造与未来科学用途 | 初评继续有效但阻塞理由更新；不自动授Formal或完整新版Q0 |
 
-科学层仍在假设下的部分：四warning无目标影响、无未记录incoming依赖、限定后缀两默认流条件等价。
-前两项未被独立证明不存在；条件等价不是全进程mode认证。单次+40.3414%只供未来Pilot设计，
-不是本阶段新增重复测量的理由。模型内容清单有据，revision未知保持；输出token值parity未记录，
-不伪称一致。这些已披露限制不自动变成新增服务器待办；后续claim确实依赖时才需针对性补证。
+既有支持域假设（无未记录incoming依赖等）和两默认流条件等价保留；不新增“不可能有任何共享故障”的认证任务。
+UNKNOWN/NOT_ASSESSED、单次开销40.3414%及输出token值parity未记录等仍是解释限制，不自动成为新服务器待办。
+厂商答复目前是用户回传，作者/日期/回复楼层未直接核实；补齐引用元信息有价值，但不是平台身份或本地工作的重新开工条件。
 
-## 最小剩余问题与停止条件
+## 真正剩余的一项本地工作
 
-1. **科学证据准入（EP-G9-02）**：现有warning假设能支持工程可行性，尚不能支持无条件模型机制解释。
-   要改变此判定，需目标范围影响的可核验依据，或另行批准明确条件化的科学claim/证据政策。
-   后者必须正面承认缺失记录可能造成错误A而仍守恒，不能把本次工程政策复制成科学豁免。
-   必要反例已经存在：目标/未知PID、新/额外warning、缺boundary/correlation、零目标事件冲突均拒绝。
-   **停止点**：只有“PID不同、目标有事件、A清零/闭合、exit0”则不改变科学判定；不追索旧PID、不搜索循环。
-2. **版本适用（触发才做）**：后续拟执行版本/profile/backend或必要API改变时，只比较相对1733ff3及既有
-   执行36ed952的实际差异，复用未受影响资格；发现新同步/身份/支持域变化即停止继承并列具体受影响命题。
-   当前无这种新执行，故不部署1733ff3、不补一次“为了同步版本”的采集或全量测试。
+为首个拟采用的最小N1/G1对照形成**版本/执行模式—资格适用表**：
+从已验证36ed952执行、1733ff3分析及NULL-FIFO-D2H限定资格出发，明确自然token-ready与拟用intervention
+是否改变completion/sync集合、backend、stream或ownership。已有边界/身份/分类负例直接引用，不重跑完整Q0。
+这不是扩大参数扫描或要求先做Pilot；是把“这个受控构造/最小点已验证”对应到“下一科学对照究竟使用什么”。
 
-没有已证明能回答第1项的新增服务器步骤；同配置再跑一次不能证明warning作用域。
-本轮因此不交付无信息增益的服务器脚本。若以后有具体可区分“仅外进程失败”和“共享故障影响目标”的
-证据路径，才提出一次明确输入/观察量/停止条件的最小验证；不以厂商答复为唯一来源。
+- 若只复用相同执行/观测范围，签发窄域适用结论，不为了换文档commit采集。
+- 若存在实际改变，只列受影响的一个必要命题及独立预期；没有明确区别性观察量就不提出服务器执行。
+- 停止条件：跨出单GPU/主要请求线程/既定eager支持域，或出现新的未恢复同步/依赖；不能用本次官方解释豁免。
+- 不提前冻结repeat/overhead/解释度阈值；不将现Engineering数据变成Formal。
+  后续Formal仍需其版本化协议、数据用途和资格签发，不因本次文档审查直接授权。
 
-**下一项必要工作是科学claim/证据接受边界的集中裁决，而不是工程补测。** 当前已可明确提交两种不同含义：
-保留现科学门则平台Formal资格继续BLOCKED；若以后选择假设条件下的机制claim，须独立版本化其风险和
-适用数据，仍不能称已排除遗漏或把旧工程数据追认为Formal。本轮仅批准工程退出，不替用户批准后一变化。
-无需选择文件布局、重复数或监控方案。Gate9评估已实质开展并形成结论，Gate8工程PASS不会被回退为“等厂商才可工作”。
+当前没有已确认必须进行的新服务器验证，故不提供重采脚本。下一步由主窗口在本地完成上述一页适用表，
+然后按实际差异决定是否有最小补证；不是等待厂商、追索旧PID或再次修改warning门。
+Gate8限定Engineering PASS保持；Pilot、Formal、D/Signature本轮均不启动。
