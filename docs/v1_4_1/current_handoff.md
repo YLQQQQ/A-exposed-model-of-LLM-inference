@@ -1,26 +1,16 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.95](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.96](research_progress.md)。
 
-当前待裁决方案在Gate9入口7.95：N1统一显式流受控合同，G1自然执行/逐request A投影资格、
-不发布默认流物理B；现Engineering A不能自动变科学资格。只完成方案，无实现采集授权。
-Gate8 PASS；Gate9 BLOCKED。当前服务器无需操作；下方7.94为历史停点依据。
+用户已批准[G9-DOMAIN-QUALIFICATION/0.1.0](gate9_domain_qualification_contract_v0_1.md)：
+N1统一显式流V0/Vmarker/Vsync，A与单sync B；G1自然执行、逐request投影A，不发布默认流物理B/hidden。
+本轮完成合同及独立手算正反例设计，没有实现或采集。Engineering产物不自动升级科学证据。
+Gate8限定Engineering PASS保持；Gate9 BLOCKED仅待显式流调用/ownership桥接与G1投影资格增量。
 
-probe原件核验为预定义INCONCLUSIVE，本次尝试关闭，不重跑/延长K。Gate9仅剩自然默认流完整物理B资格受阻，
-不是整个平台能力失败。当前待用户裁决[Gate9入口](gate9_platform_assessment_v0_1.md)的N1显式流/G1自然A claim分域建议，
-尚未实施；不要继续旧probe交付或部署。Gate8不重开，无服务器任务。以下7.93为历史。
-
-已完成[probe本地实现与独立预期](gate9_stream_probe_v0_1.md)，交付待协调审查。
-本地CPU不证明CUDA：pending-after-return可供窄域资格审查，完成只为INCONCLUSIVE；不自动判全局模式。
-Gate9仍BLOCKED待目标证据，无自动重试、无模型/Nsight。以下7.92为来源。
-
-当前结论C：目标资料无法定实际模式；已发现窗前worker338活动的W/B范围歧义，
-不能把A等价推广到B。静态搜索停止；Gate9入口顶部给出一次同调用路径的区别性方案，
-允许INCONCLUSIVE，不自动重试。下一步仅准备该probe供协调审查，尚无服务器授权/命令。
-
-当前任务以[Gate9入口顶部](gate9_platform_assessment_v0_1.md)为准：N1接线缺失不是平台阻塞。
-唯一剩余为实际current-stream默认流语义对物理S/B的适用绑定；先核对精确调用/构建证据，
-不启动N1实现或完整Q0。本地Canonical模式为null，已证后缀A等价不能直接授物理B。当前无需服务器操作。
+下一步最小本地接线与验证见合同§5：版本封套/准入、流身份桥接反例、投影必要集合与三窗独立预期文件链。
+长度变化本身不触发重Q0，实际语义变化才需要资格增量。完整N1 runner、Pilot及Freeze不塞入Gate9。
+服务器当前无需操作；目标桥接另交协调审查。旧probe为INCONCLUSIVE且已关闭，不再部署或延长kernel。
+[Gate9入口](gate9_platform_assessment_v0_1.md)保留历史方案，旧待裁决/执行指令不再生效。
 
 - [Gate8工程退出amendment](gate8_engineering_exit_amendment_v0_1.md)：PASS仅适用
   G8-ENGINEERING-EXIT/0.1工程可行性，属于观察结果后的显式政策修订。

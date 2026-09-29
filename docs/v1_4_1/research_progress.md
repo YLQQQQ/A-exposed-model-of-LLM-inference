@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.96 N1/G1分域合同批准与独立预期（2026-09-29）
+
+用户接受7.95两域及claim限制，授权合同设计。[G9-DOMAIN-QUALIFICATION/0.1.0](gate9_domain_qualification_contract_v0_1.md)
+固定N1显式非默认非阻塞流V0/Vmarker/Vsync、G1自然投影A；不主张自然完整物理B/hidden，不跨域外推。
+合同明确G1边界/身份/成功drain/必要后缀与依赖闭包/唯一frontier/局部缺口义务，区分事实与无未记录incoming依赖的支持假设。
+已给独立手算三窗正例、同数值错成员、缺映射、drain/跨线程冲突、局部缺口和长度变化预期；没有运行被测实现生成答案或测试/采集。
+输入长度本身不触发重Q0；新request逐窗自动准入，实际语义变化才申请受影响增量。封套字段/版本仅设计，旧schema及历史判定不变。
+Gate9仍BLOCKED，当前剩余改为N1显式流调用/ownership桥接与G1投影资格增量，不再要求确定自然默认流全局模式。
+Gate6/7历史PASS、Gate8限定Engineering PASS保持；完整N1 runner、Pilot、Freeze不并入Gate9。无Formal数据变化。
+下一步本地最小实现与独立预期接线见合同§5；目标平台桥接需另交协调审查，本轮无服务器操作。
+本轮验证仅文档引用/差异检查，不声称新增Q0或平台资格。7.95以下保留为历史。
+
 ## 7.95 N1/G1最小分域方案（2026-09-29，待裁决）
 
 用户原则上考虑接受，未批准立即实现/采集。本轮在[Gate9现有入口](gate9_platform_assessment_v0_1.md)
@@ -690,7 +702,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态（7.89）：Gate0～7 PASS；Gate8 PASS仅限G8-ENGINEERING-EXIT/0.1工程可行性。用户回传官方解释结合目标实物已关闭四warning工程作用域阻塞，来源尚未网页核实；条件性A及历史原标准结论保留。Gate9评估继续，最终资格BLOCKED于后续执行范围/版本尚未绑定；Gate10/11 BLOCKED未启动，Gate12～14 NOT_RUN。
-- 当前最高优先级（7.94）：probe已INCONCLUSIVE关闭；待用户裁决N1显式流受控/G1自然A且不作默认流B claim的分域建议，不追加默认流概率性实验或服务器操作。旧attempt BLOCKED、UNKNOWN/NOT_ASSESSED不变。后续各日期条目仅记录历史，不是现行任务。
+- 当前最高优先级（7.96）：分域合同已批准，按合同完成显式流调用/ownership桥接与G1投影资格的最小本地接线及独立预期验证；目标桥接另交协调审查。不恢复旧probe，不扩大N1实现。旧attempt BLOCKED、UNKNOWN/NOT_ASSESSED不变。后续各日期条目仅记录历史，不是现行任务。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -1019,7 +1031,7 @@ Gate 6 的失败簇收敛为四类工程／科学问题，逐类的完整映射�
 不得用其Engineering verdict替代Formal资格。第二平台后移；EP-G9-03仅保留eager，
 compile/graph后移。以下原任务保留编号及历史。
 
-**Gate verdict：BLOCKED（7.94，仅自然默认流完整物理W/B适用性）。** 一般平台能力复用，不因N1尚未实现阻塞。probe为预定义INCONCLUSIVE并关闭，不重试；研究范围分域建议待用户裁决，见[唯一Gate9入口](gate9_platform_assessment_v0_1.md)。当前不要求服务器操作。
+**Gate verdict：BLOCKED（7.96，分域资格增量尚未完成）。** 用户已批准N1显式流A/单sync B与G1自然投影A合同；当前只剩显式流调用/ownership桥接及投影资格验证，不以完整N1 runner缺失阻塞。一般平台能力复用，旧probe INCONCLUSIVE关闭，不再判自然默认流模式。见[唯一Gate9入口](gate9_platform_assessment_v0_1.md)。当前不要求服务器操作。
 
 - [x] `EP-G9-01` 已复用核定封存运行的GPU/driver/CUDA/framework/Nsight/OS/launcher及身份联结；不推断当前服务器状态。
 - [ ] `EP-G9-02` 已分层复用历史Q0、限定受控资格、分类回归与7.89解释；待绑定后续最小对照的执行范围/版本，不默认授完整新版Q0或要求全重采。

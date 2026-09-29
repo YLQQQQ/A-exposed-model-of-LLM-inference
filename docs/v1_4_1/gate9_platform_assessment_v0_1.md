@@ -1,5 +1,13 @@
 # Gate9 单平台资格评估 0.1
 
+## 当前7.96：分域合同已批准，资格增量待验证
+
+现行依据：[G9-DOMAIN-QUALIFICATION/0.1.0](gate9_domain_qualification_contract_v0_1.md)。
+用户已接受N1同显式流V0/Vmarker/Vsync的A/单sync B，以及G1自然投影A、无默认流物理B claim。
+合同含独立手算预期与逐request门，长度变化不自动触发Q0；没有实现或采集。
+Gate9仍BLOCKED，仅待显式流调用/ownership桥接及G1投影资格增量；Gate8 PASS不变。
+下一步是合同§5的最小本地接线，不是完整N1、Pilot或Freeze。下方7.95“待裁决”及7.94停点仅为历史。
+
 ## 7.95 最小分域方案与claim影响（待最终裁决，不是生效amendment）
 
 2026-09-29。用户原则上考虑接受；本版只固定可裁决方案，无实现/采集。
