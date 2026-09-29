@@ -1,5 +1,56 @@
 # Gate9 单平台资格评估 0.1
 
+## 当前结论7.91（2026-09-29，取代下方7.90/7.89待办）
+
+Gate9 **BLOCKED仅限计划中默认流current-stream调用的物理S/B适用性**。
+不是N1 runner尚未实现导致平台不合格；接线属于后续实验准备，不作为单独Gate9门槛。
+本轮只读已有派生字段及合同/源码，没有重新分析、测试或采集。
+
+### 有限核对的事实与复用
+
+- Gate6 final-04在Windows/4090/CUDA12.4/Nsight2026.2.1验证23/23，包括
+  Q0-STREAM-001的W={K_S1_A,K_S1_B}、排除K_OTHER、B_VALID；COMPLETED、EMPTY、
+  DEFAULT-LEGACY/PTDS及缺correlation等证明原物理S/A/B与拒绝语义。无需重新证明一般stream-sync能力。
+- 36ed952配对、1733ff3派生：目标PID60060/context1/null_stream_id7；窗内sync347/348/349，
+  corr61655/90867/116232、stream7/device0。逐request同TID/identity、唯一runtime mapping及ownership有效
+  已由既有审计核对。current/default native handle均0；这些证明流关联，**不证明LEGACY或PTDS**。
+- 本轮直接读取既有`canonical_manifest.json`：schema0.2.0/analyzer0.3.3，
+  `execution_context.default_stream_mode=null`；`context.jsonl.gz`的原始context行确认null_stream_id7。
+  stream行flag=3原样保留，不将该数值猜作CUDA默认流模式。原文件不改、未重算或重扫哈希。
+- 限定受控资格和Qwen A已证明两模式下drain后后缀必要集合/三窗A等价；
+  `gate8_engineering_scope.py`明确只发布A交集，物理S/B保留原状态。
+  受控小程序的`--default-stream legacy`只约束该编译单元，不能证明PyTorch调用路径。
+
+### 唯一缺口及最小补证
+
+**缺的是实际PyTorch current-stream sync调用路径的默认流语义证据，或经批准可用于物理S/B的等价证明；
+不是缺stream编号、一般CUDA能力或完整N1实现。** 当前合同仅批准后缀A等价，不能擅自扩展到物理B。
+既有证据足够直接复用Gate6的恢复规则和oracle，但不足以选择本调用适用的默认流规则。
+
+下一项先做一次有界的**精确调用路径/构建身份核对**：确认拟用`current_stream().synchronize()`实际绑定的
+CUDA入口及默认流选择证据；必须对应已安装torch2.6.0+cu124二进制/构建，不能拿另一程序的nvcc选项代替。
+若现有材料可证，直接复用对应Gate6资格，不采集。若没有，停止文件追索，只需一个不加载模型的
+目标栈区别性受控probe：通过相同PyTorch调用路径，在另一已知blocking stream与目标默认流之间
+安排可区分LEGACY/PTDS的完成关系，独立oracle预声明两种预期；普通单流kernel→sync不能区分，故不重采它。
+只有明确观察可区分结果、无额外同步污染、身份与correlation完整才接受；不明确即停止、不调参盲试。
+具体固定程序/命令需该调用核对后才能定稿，本轮不实施、不要求用户现在操作服务器。
+不以A相等或B时长相似取代模式证据，不更改UNKNOWN，不以进度需要扩大支持域。
+
+### 当前路线的Gate用途（保留编号，不机械复做）
+
+| Gate | 必须回答的问题 | 复用 / 真正剩余 / 后移 |
+|---|---|---|
+| 0–6 | 方法、oracle及观测/分析是否正确 | 历史PASS与受影响增量资格复用；只处理实际新差异，不全重跑 |
+| 7–8 | 执行身份/边界及工程链是否可行 | 已收尾，限制保持；不重开 |
+| 9 | 选定平台能否承载计划同步与归属 | 身份/eager/一般stream-sync能力复用；仅上项默认流物理S/B适用证据待补 |
+| 10 | 选定workload是否可执行 | 已有32/2点复用；只检查最终选定新点，不做广域OOM/参数扫描 |
+| 11 | 重复数、开销/质量政策是否有依据 | 单次配对仅先验观察；最小代表点Pilot仍必要，不能当稳定统计 |
+| 12 | 正式执行与判断规则是否预先固定 | 冻结实际版本、输入、平台、质量/排除/统计与claim；当前Pre-Pilot不能冒称已冻结 |
+| 13 | N1/G1是否提供有限信息增益或等价边界 | N1接线/控制与G1单轴点归实验准备；资格、Pilot、Freeze后才采正式数据 |
+| 14/G2 | 是否还有决策增益 | 当前路线非必需，后移；第二平台、compile/graph同样不作先决条件 |
+
+Gate9即使后续PASS也不授Formal即时采集资格。Gate8 PASS保持；官方回复按用户提供内容采信，不再核验。
+
 > 当前7.90：[最小执行方式—资格适用表](gate9_minimal_mode_qualification_v0_1.md)已完成。
 > Gate9 BLOCKED具体原因：runner尚不执行N1，需本地接线及新增stream-sync资格桥接；
 > 不是继续等待warning。用户当前无需服务器操作。以下7.89为前次评估依据，原“完成适用表”任务已结案。

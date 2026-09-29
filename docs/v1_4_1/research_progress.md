@@ -1,5 +1,18 @@
 # ExposedPath 科研进度清单
 
+## 7.91 Gate9边界纠正及默认流适用性核对（2026-09-29）
+
+[Gate9当前入口](gate9_platform_assessment_v0_1.md)已集中记录有限核对和Gate0–14精简处置。
+撤回7.90以N1 runner缺失作为平台阻塞的理由。一般stream-sync观测/物理S/A/B资格直接复用Gate6；
+当前真实Qwen的stream/context/ownership与后缀A等价证据已具备，不重验。
+本轮只读现有Canonical明确default_stream_mode=null、null_stream_id7，native handle0不区分模式。
+已批准两模式后缀等价只覆盖A，不能自动授物理B。Gate9 BLOCKED仅剩实际current-stream调用
+默认流语义与既有物理S/B资格的适用绑定；不是重跑Q0或实现完整N1。
+下一项精确PyTorch调用/构建身份的有界核对；能证即复用，否则仅设计同调用路径的区别性受控probe。
+当前无服务器命令或采集，用户无需操作。Gate10仅选定点可行性；11 Pilot、12 Freeze、13信息增益
+保留必要目的；14/G2、第二平台、compile/graph后移。Gate8不重开，旧证据和UNKNOWN不改。
+本轮无实现、无测试、无离线重算；文档更新不授新Q0或Formal资格。
+
 ## 7.90 Gate9最小执行方式与资格对应（2026-09-29）
 
 用户确认Gate8限定Engineering PASS收尾；官方答复按用户内容采信，不再网页核验或询证。
@@ -630,7 +643,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态（7.89）：Gate0～7 PASS；Gate8 PASS仅限G8-ENGINEERING-EXIT/0.1工程可行性。用户回传官方解释结合目标实物已关闭四warning工程作用域阻塞，来源尚未网页核实；条件性A及历史原标准结论保留。Gate9评估继续，最终资格BLOCKED于后续执行范围/版本尚未绑定；Gate10/11 BLOCKED未启动，Gate12～14 NOT_RUN。
-- 当前最高优先级（7.90）：最小适用表已完成；本地补N1接线及新stream-sync资格桥接，当前无需服务器操作。不是等待warning或重跑Q0。旧attempt BLOCKED、UNKNOWN/NOT_ASSESSED不变。后续各日期条目仅记录历史，不是现行任务。
+- 当前最高优先级（7.91）：核对实际current-stream调用的默认流语义与Gate6物理S/B资格绑定；暂不N1接线、完整Q0或服务器操作。旧attempt BLOCKED、UNKNOWN/NOT_ASSESSED不变。后续各日期条目仅记录历史，不是现行任务。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
