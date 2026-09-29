@@ -60,16 +60,20 @@ print(json.dumps(dict(python=sys.version,executable=sys.executable,torch=torch._
     $G=@($Gpu[0].Split(',') | ForEach-Object {$_.Trim()})
     if ($G[0] -ne '3' -or $G[1] -ne $C.gpu_uuid -or $G[2] -ine $C.gpu_pci_bus_id -or $G[4] -ne '555.99') { throw 'GPU/driver conflict' }
     $InputRoot=Join-Path $PSScriptRoot 'inputs'
-    foreach ($N in @('128','512')) {
+    $Lengths=@('128','512')
+    if ($C.remaining_512_only -eq $true) { $Lengths=@('512') }
+    foreach ($N in $Lengths) {
         if ((Get-FileHash -LiteralPath (Join-Path $InputRoot ('input_'+$N+'.json'))).Hash -ne $C.input_hashes.$N) { throw 'Input hash conflict' }
     }
     # Run config only binds locations; the package has already fixed all contents.
     $C | Add-Member -NotePropertyName input_root -NotePropertyValue $InputRoot -Force
     $Config=Join-Path $Out 'run_config.json'
     $C | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $Config -Encoding utf8
-    Run $Python @('scripts/gate10_feasibility.py','--config',$Config,'--output',(Join-Path $Out 'batch'),'--execute-reviewed-feasibility') '07_batch'
+    $BatchArgs=@('scripts/gate10_feasibility.py','--config',$Config,'--output',(Join-Path $Out 'batch'),'--execute-reviewed-feasibility')
+    if ($C.remaining_512_only -eq $true) { $BatchArgs+= '--remaining-512-only' }
+    Run $Python $BatchArgs '07_batch'
     $R=Get-Content -LiteralPath (Join-Path $Out 'batch\batch_report.json') -Raw | ConvertFrom-Json
-    if ($R.status -ne 'BATCH_COMPLETE_PENDING_REVIEW' -or $R.points.Count -ne 2) { throw 'Machine batch report not complete' }
+    if ($R.status -ne 'BATCH_COMPLETE_PENDING_REVIEW' -or $R.points.Count -ne $Lengths.Count -or (@($R.points | ForEach-Object {[string]$_.input_tokens}) -join ',') -ne ($Lengths -join ',')) { throw 'Machine batch report not complete' }
     Tree $Target
     $Status='COLLECTED_PENDING_LOCAL_FEASIBILITY_REVIEW'
 } catch { $Failure=$_.ToString(); Write-Host ('STOP: '+$Failure) }

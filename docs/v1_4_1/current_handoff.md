@@ -1,6 +1,11 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.100](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.101](research_progress.md)。
+
+**7.101优先于下述历史准备记录**：[128/2超时审查0.1](gate10_timeout_review_v0_1.md)已完成。服务器76ef717采集/导出成功、driver900秒超时；本地最小性能修复后，不变Raw副本新目录完整分析及复读186.206秒，128/2一次Engineering可行性通过，原失败报告不变。
+下一步仅交协调窗口审查512-only固定增量包（前置76ef717），不执行旧两点批次、不重复128。新目录/失败即停/单ZIP；本轮没有服务器操作。Gate10 NOT_RUN、Gate7～9限定PASS、UNKNOWN/NOT_ASSESSED保持。N1模型功能/Pilot/Freeze/Formal仍另行。
+
+以下为7.100准备阶段历史，当前服务器/执行动作以7.101为准：
 
 当前工作：Gate10最小G1可行性已完成本地准备，见[候选/停止/交付计划0.1](gate10_workload_plan_v0_1.md)。复用32/2，新128/2与512/2保持batch1/eager/SDPA、warmup1/repeat1；两点各一次profile，不另做开销配对、不重复基线。Gate10 NOT_RUN。
 固定单包先交协调窗口审查，尚未操作服务器/GPU/Nsight。输入文件digest固定，目标manifest预声明G1资格域；官方warning review复用但其他边界/依赖质量门全部保留。任一点失败停止，不自动重试/换参；单ZIP回传后才作可行性审查。

@@ -9,10 +9,10 @@ from exposedpath.gate8_isolated_preflight import read,sha,write_new
 from exposedpath.gate10_workload import LENGTHS,VERSION,require
 
 
-def run_candidates(output,run_point):
+def run_candidates(output,run_point,*,remaining_512_only=False):
     output=Path(output); output.mkdir(parents=True,exist_ok=False)
     result=dict(version=VERSION,status='BLOCKED',gate10_verdict='NOT_RUN',role='Engineering',
-        automatic_retry=False,points=[dict(input_tokens=n,status='NOT_RUN') for n in LENGTHS])
+        automatic_retry=False,points=[dict(input_tokens=n,status='NOT_RUN') for n in ((512,) if remaining_512_only else LENGTHS)])
     for row in result['points']:
         try:
             value=run_point(row['input_tokens'],output/f"input_{row['input_tokens']}")
@@ -91,8 +91,9 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--config',required=True,type=Path); p.add_argument('--output',required=True,type=Path)
     p.add_argument('--execute-reviewed-feasibility',required=True,action='store_true')
+    p.add_argument('--remaining-512-only',action='store_true',help='New attempt for the unrun point only; requires prior 128 review, never resumes old output')
     a=p.parse_args(); c=read(a.config)
-    return 0 if run_candidates(a.output,lambda n,path:collect_point(n,path,c))['status']=='BATCH_COMPLETE_PENDING_REVIEW' else 1
+    return 0 if run_candidates(a.output,lambda n,path:collect_point(n,path,c),remaining_512_only=a.remaining_512_only)['status']=='BATCH_COMPLETE_PENDING_REVIEW' else 1
 
 
 if __name__=='__main__': raise SystemExit(main())

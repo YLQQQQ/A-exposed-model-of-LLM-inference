@@ -1052,6 +1052,7 @@ def build_semantic_sync_candidates(
     """
 
     nvtx = list(nvtx_records)
+    registry = load_sync_registry()
     physical_rows = list(records.get("cuda_sync", ()))
     mapped_api_ids: set[str] = set()
     for sync in physical_rows:
@@ -1060,7 +1061,7 @@ def build_semantic_sync_candidates(
             mapped_api_ids.add(runtime_record_id)
     candidates: list[SemanticSyncCandidate] = []
     for sync in physical_rows:
-        classification = classify_cuda_api(str(sync.get("runtime_api_name", "")))
+        classification = classify_cuda_api(str(sync.get("runtime_api_name", "")), registry)
         if not is_semantic_sync_role(classification["role"]):
             continue
         sync_id = sync.get("record_id")
@@ -1082,7 +1083,7 @@ def build_semantic_sync_candidates(
             )
         )
     for api in records.get("cuda_api", ()):
-        classification = classify_cuda_api(str(api.get("api_name", "")))
+        classification = classify_cuda_api(str(api.get("api_name", "")), registry)
         if classification["role"] != "UNSUPPORTED":
             continue
         record_id = api.get("record_id")
@@ -1476,15 +1477,17 @@ def _add_default_stream_edges(
     if mode != "LEGACY":
         return []
     flags = _stream_flags(inventory)
+    # Same-stream activities cannot contribute default-stream cross-stream
+    # edges. Filter once per context, retaining original activity order.
+    others_by_context: dict[Any, list[Mapping[str, Any]]] = defaultdict(list)
+    for other in activities:
+        context = other.get("context_id")
+        stream = other.get("stream_id")
+        if stream != null_streams.get(context) and flags.get((context, stream)) != 1:
+            others_by_context[context].append(other)
     issues: list[str] = []
     for default in default_activities:
-        for other in activities:
-            if (
-                other.get("context_id") != default.get("context_id")
-                or other.get("stream_id") == default.get("stream_id")
-                or flags.get((other.get("context_id"), other.get("stream_id"))) == 1
-            ):
-                continue
+        for other in others_by_context.get(default.get("context_id"), ()):
             ordering_values = (
                 other.get("enqueue_start_ns"), other.get("enqueue_end_ns"),
                 default.get("enqueue_start_ns"), default.get("enqueue_end_ns"),

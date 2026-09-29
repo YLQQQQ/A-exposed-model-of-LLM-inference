@@ -241,6 +241,31 @@ def _finalize(window: RequestPhaseWindow, totals: Mapping[str, int], reasons: tu
     return record
 
 
+def _covering_by_segment(records, segments):
+    """Sweep ordered atomic segments; retain input order and half-open coverage.
+
+    Callers include every clipped interval endpoint in their atomic partition.
+    Empty/outside intervals cannot cover a positive-length segment.
+    """
+    events = []
+    for i, row in enumerate(records):
+        start, end = row[1]
+        if start < end:
+            events.extend(((start, 1, i), (end, 0, i)))
+    events.sort()
+    active = set()
+    cursor = 0
+    for start, end in segments:
+        while cursor < len(events) and events[cursor][0] <= start:
+            _, added, i = events[cursor]
+            if added:
+                active.add(i)
+            else:
+                active.discard(i)
+            cursor += 1
+        yield [records[i] for i in sorted(active) if records[i][1][1] >= end]
+
+
 def _window_record(inputs: ABInputs, window: RequestPhaseWindow) -> dict[str, object]:
     window_interval = (window.start_ns, window.end_ns)
     totals = _empty_totals()
@@ -304,9 +329,12 @@ def _window_record(inputs: ABInputs, window: RequestPhaseWindow) -> dict[str, ob
     for _, interval in activities.values():
         add_window_boundaries(interval)
 
-    for segment in atomic_segments(window_interval, boundaries):
+    segments = tuple(atomic_segments(window_interval, boundaries))
+    for segment, active_syncs, active_apis in zip(
+        segments, _covering_by_segment(syncs, segments), _covering_by_segment(apis, segments)
+    ):
         duration = segment[1] - segment[0]
-        covering_syncs = [(sync, status) for sync, interval, status in syncs if _covers(interval, segment)]
+        covering_syncs = [(sync, status) for sync, interval, status in active_syncs]
         invalid_syncs = [(sync, status) for sync, status in covering_syncs if status in _INVALID_SYNC or status not in _VALID_SYNC]
         if invalid_syncs:
             totals["A_unattributed_ns"] += duration
@@ -351,12 +379,11 @@ def _window_record(inputs: ABInputs, window: RequestPhaseWindow) -> dict[str, ob
             totals["A_sync_residual_ns"] += duration
             continue
 
-        covering_apis = [api for api, interval in apis if _covers(interval, segment)]
+        covering_apis = [api for api, interval in active_apis]
         if covering_apis:
             ownership_reasons = [
                 _api_ownership_reason(api, interval, window, nvtx_records)
-                for api, interval in apis
-                if _covers(interval, segment)
+                for api, interval in active_apis
             ]
             if any(reason is not None for reason in ownership_reasons):
                 totals["A_unattributed_ns"] += duration

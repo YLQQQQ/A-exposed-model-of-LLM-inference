@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.101 Gate10 128/2离线超时定位、性能修复与不变Raw续算（2026-09-29）
+
+直接核验76ef717回传ZIP/hash/CRC/86项路径及副本；原采集36.406秒exit0、driver900.016秒超时、UNKNOWN后代记录不改，512 NOT_RUN。原服务器CPU121 passed仅是原日志。本地限时profiling与独立工作量反例定位重复registry读取、A逐原子片全扫API/sync、LEGACY同流两两无效扫描。见[审查0.1](gate10_timeout_review_v0_1.md)。
+
+tests-first最小修复批内registry复用、default跨流候选过滤、A活动区间sweep；保留必要集合/边顺序、半开区间、同步优先级、未知/冲突、物理S/B与复读校验，冻结合同/schema/拒绝条件不变。补flush阶段进度，不提高timeout或跳检查。512-only入口仅执行未运行点、新目录，不恢复旧attempt。
+
+新派生完整文件链及复读186.206秒，本机Python3.12 CPU，非服务器加速比；128/2质量通过、实际token2/non-EOS，三窗守恒/分量相加、unattributed0。目标PID/环境/Git536路径/preflight绑定、窗前drain与后缀证明通过；159路径Git blob字节相等，377仅LF→CRLF，不伪称全字节一致。原ZIP/86项副本不变，原失败report不补写。仅一次Engineering可行性，UNKNOWN/NOT_ASSESSED保留。
+
+最终9文件相关CPU回归221 passed（107.90秒）；修改Python compileall、PowerShell解析及diff-check通过。新增8项中含真实A入口旧版30100次覆盖扫描的红例和新实现绿例。未重跑全量、旧Q0、服务器/GPU/Nsight/export/模型。EP-G10-02的128/2实物及离线分析已审查；512/2尚未运行，EP-G10-03总审查未完成。**Gate10 NOT_RUN；Gate7～9限定PASS保持。** 下一步只交协调窗口审查以76ef717为前置的增量包及512-only命令，不重复128或整个批次。domain约937MB是已知证据存储成本，本轮不扩展schema优化；没有新增研究语义裁决或Formal数据变更。
+
 ## 7.100 Gate10最小G1输入轴准备与本地接线（2026-09-29）
 
 用户确认Gate9限定分域PASS后，固定[G10-WORKLOAD-FEASIBILITY/0.1](gate10_workload_plan_v0_1.md)：复用32/2 batch1封存可行性，仅新增128/2和512/2，按协议输入轴且不依据A比例选点。均单平台Qwen1.5B、fp16/eager/SDPA、自然G1、warmup1/repeat1；只作Engineering可行性，不作Pilot统计或Formal性能比较。

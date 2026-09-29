@@ -102,7 +102,9 @@ def analyze_receipt(manifest,receipt,execution,output):
         if manifest['domain_qualification']!=declaration(G1):
             raise ValueError('MODEL_DOMAIN_DECLARATION')
         result=process_domain(receipt,execution,output)
-        value=load_domain(result,receipt,execution)
+        from exposedpath_v141.gate9_domain import analysis_stage
+        with analysis_stage('result_reload_validation'):
+            value=load_domain(result,receipt,execution)
     else:
         from exposedpath_v141.gate8_engineering_scope import process_engineering_scope,load_engineering_scope
         result=process_engineering_scope(receipt,execution,output)
@@ -185,7 +187,9 @@ def main():
     if args.engineering_a_only and 'isolated_preflight_version' in manifest:
         from exposedpath import gate8_isolated_preflight as isolated
         isolated_receipt=isolated.seal(args.prepared,output,ROOT)
-    process=run_once(profile_argv(args.nsys.resolve(),args.python.resolve(),args.prepared.resolve(),output,ROOT),output/'collection_log')
+    from exposedpath_v141.gate9_domain import analysis_stage
+    with analysis_stage('collection'):
+        process=run_once(profile_argv(args.nsys.resolve(),args.python.resolve(),args.prepared.resolve(),output,ROOT),output/'collection_log')
     report=dict(status='BLOCKED',qualification='NOT_QUALIFIED',gate8_verdict='NOT_RUN',
                 scientific_outputs_allowed=False,collection=process)
     try:
@@ -200,8 +204,9 @@ def main():
                 or diagnostic['scientific_outputs_allowed'] is not False):
             raise ValueError('Incomplete or inconsistent producer diagnostic')
         from scripts.gate7_nsys_postprocess import run_postprocess
-        export=run_postprocess(nsys_exe=str(args.nsys),rep_path=output/'capture.nsys-rep',
-            canonical_path=output/'capture.sqlite',report_path=output/'postprocess_report.json',max_attempts=1)
+        with analysis_stage('sqlite_export_validation'):
+            export=run_postprocess(nsys_exe=str(args.nsys),rep_path=output/'capture.nsys-rep',
+                canonical_path=output/'capture.sqlite',report_path=output/'postprocess_report.json',max_attempts=1)
         report['export_status']=export['status']
         if export['status']!='PASS': raise ValueError('Single export failed; no retry')
         report['status']='DIAGNOSTIC_COLLECTED_NOT_QUALIFIED'

@@ -2,6 +2,8 @@
 from pathlib import Path
 import json
 import tempfile
+import time
+from contextlib import contextmanager
 
 from .gate8_adapter import digest
 from .gate8_files import load_input_receipt, _json, _write, _entry, _resolve
@@ -10,6 +12,20 @@ VERSION = 'exposedpath-domain-qualification/0.1.0'
 CONTRACT = 'G9-DOMAIN-QUALIFICATION/0.1.0'
 G1 = 'G1_NATURAL_PROJECTED_A/0.1.0'
 N1 = 'N1_EXPLICIT_STREAM_AB/0.1.0'
+
+
+@contextmanager
+def analysis_stage(name):
+    """Flushed bounded-stage progress; never a validity or acceptance result."""
+    started=time.perf_counter()
+    print(f'[stage] {name} START',flush=True)
+    try:
+        yield
+    except BaseException:
+        print(f'[stage] {name} FAILED elapsed_seconds={time.perf_counter()-started:.3f}',flush=True)
+        raise
+    else:
+        print(f'[stage] {name} COMPLETE elapsed_seconds={time.perf_counter()-started:.3f}',flush=True)
 
 
 def require(ok, reason):
@@ -58,10 +74,13 @@ def _calculate(root, receipt_path, execution_path, bridge_path=None):
     accepted=set(diagnostic_review['accepted_rowids']) if diagnostic_review else set()
     effective=[d for d in diagnostics if d['source_rowid'] not in accepted]
     with time_representation(SIGNED):
-        original=build_projected_ab_inputs(canonical,scope)
-        requests=[old._request(canonical,scope,paths,bundle,ownership,p,original,stage,support,effective,
-                              domain_proof=True) for p in projections if p['phase']=='full_request']
-        physical_b=list(calculate_b_syncs(original))
+        with analysis_stage('physical_s_inputs'):
+            original=build_projected_ab_inputs(canonical,scope)
+        with analysis_stage('request_admission_and_a'):
+            requests=[old._request(canonical,scope,paths,bundle,ownership,p,original,stage,support,effective,
+                                  domain_proof=True) for p in projections if p['phase']=='full_request']
+        with analysis_stage('physical_b'):
+            physical_b=list(calculate_b_syncs(original))
     require(requests, 'NO_REQUESTS')
     for r in requests:
         if r['status']=='A_SCOPE_ENGINEERING_ONLY':
@@ -94,11 +113,13 @@ def process_domain(receipt_path, execution_path, output_dir, *, bridge_path=None
     from .canonical_raw import convert_sqlite_to_canonical
     from .gate8_scope import project_completion_scopes
     from .gate8_diagnostic_scope import write_diagnostic_scope
-    canonical=convert_sqlite_to_canonical(paths['sqlite'],root/'canonical','Engineering',
-        raw_sha256=digest(paths['raw']),collector_version=receipt['collector_version'],
-        gate8_sources={k:paths[k] for k in ('pass_identity','preflight','cuda_probe')})
-    project_completion_scopes(canonical,paths['host_ledger'],root/'projection/scope.json')
-    write_diagnostic_scope(paths['sqlite'],paths['pass_identity'],root/'diagnostics.json')
+    with analysis_stage('canonical'):
+        canonical=convert_sqlite_to_canonical(paths['sqlite'],root/'canonical','Engineering',
+            raw_sha256=digest(paths['raw']),collector_version=receipt['collector_version'],
+            gate8_sources={k:paths[k] for k in ('pass_identity','preflight','cuda_probe')})
+    with analysis_stage('projection_and_diagnostics'):
+        project_completion_scopes(canonical,paths['host_ledger'],root/'projection/scope.json')
+        write_diagnostic_scope(paths['sqlite'],paths['pass_identity'],root/'diagnostics.json')
     result=_calculate(root,receipt_path,execution_path,bridge_path)
     require(all(digest(p)==h for p,h in hashes.items()), 'SOURCE_CHANGED')
     result['files']=[_entry(p,root) for p in sorted(root.rglob('*')) if p.is_file()]
