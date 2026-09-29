@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.103 N1模型最小调用层接线与CPU文件回归（2026-09-29）
+
+用户确认Gate10限定G1 PASS并授权本地N1接线。直接沿用Pre-Pilot协议v2.1 §4.2 V16：每次decode第16层后一次current-stream sync；Vmarker同callsite/branch/marker但不同步，V0无layer干预包装。没有新增选点、位置扫描或研究语义裁决。详见[接线0.1](n1_model_wiring_v0_1.md)。
+
+tests-first新增独立opt-in `n1_model`：临时decode layer-forward包装、异常恢复，复用未修改runner completion/EOS/drain和Gate9实际current-stream记录。resident子入口封存plan/prompt与hash、实际配置/调用/边界/drain/失败回执；同held流warmup在窗外，保留完整物理前缀。Vmarker/Vsync标记结构相同，V0不装层包装。相关五文件CPU **62 passed**，Python compileall和diff检查通过；CPU替身不冒充目标机模型/CUDA验证，无全量/Q0重跑或服务器操作。
+
+**本地端到端N1模型接线尚未全部完成**：现Gate9消费者是“一标记一API”的受控桥接，不能直接接受模型forward中的多API；仍须接既有verified model loader/preflight到新子入口，并完成模型Raw→Canonical实际ownership文件消费者及反例。不删除旧unbound检查，不把with-stream/host成功当物理归属。当前子receipt明确COMPLETE_PENDING_TRACE_OWNERSHIP、NOT_ASSESSED及N1模型可行性NOT_RUN，不是WMPC/域资格报告。
+
+Gate10限定G1 PASS和Gate7～9限定PASS保持；N1模型可行性单独未运行，Gate11/Pilot不启动。下一项是上述两处必要本地接线，不再整理选点待办；无语义待决，不要求用户重复授权。尚未达到交付采集包条件，本轮不生成部署/采集脚本，不要求服务器操作。冻结合同/旧证据/G1路径未改，历史编号及判定保留。
+
 ## 7.102 Gate10选定G1候选退出审查：限定PASS（2026-09-29）
 
 已直接核验700f671的512-only回传：27081774-byte ZIP/hash/CRC、89文件、88项清单完整覆盖及大小/hash通过；只读input/producer/entry/preflight身份、实际512输入/2输出非EOS、阶段/drain、domain文件集合/hash和report一致。原服务器CPU221 passed，本轮未重跑测试或完整分析；只读SQLite quick_check通过。完整证据及版本表见[Gate10收尾0.1](gate10_closeout_v0_1.md)。
@@ -783,8 +793,8 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前研究阶段：`Engineering`
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前 Gate 状态（7.102）：Gate0～7历史PASS；Gate8限定Engineering PASS、Gate9限定分域PASS保持；[Gate10 PASS仅限选定G1一次可行性](gate10_closeout_v0_1.md)，不授N1模型可行性或共同稳定域。Gate11 NOT_RUN（仅本地准备，N1 Pilot前置仍待模型验证），Gate12～14 NOT_RUN。UNKNOWN/NOT_ASSESSED与旧BLOCKED不变，不授权Formal。
-- 当前最高优先级（7.102）：选定G1三点已收口，不再执行历史两点或512-only包。下一项仅本地N1模型最小接线依赖整理，不重跑平台资格/Q0、不自动Pilot采集；当前无服务器操作。较早日期条目是历史，不是现行待办。
+- 当前 Gate 状态（7.103）：Gate0～7历史PASS；Gate8限定Engineering PASS、Gate9限定分域PASS保持；[Gate10 PASS仅限选定G1一次可行性](gate10_closeout_v0_1.md)，不授N1模型可行性或共同稳定域。Gate11 NOT_RUN（仅本地准备，N1 Pilot前置仍待模型验证），Gate12～14 NOT_RUN。UNKNOWN/NOT_ASSESSED与旧BLOCKED不变，不授权Formal。
+- 当前最高优先级（7.103）：N1第16层decode干预和resident子文件入口已本地实现；完成verified模型入口接入、模型多API的Canonical/ownership消费者和反例后再交付单包。不是重选干预位置、不重跑平台资格/Q0、不自动Pilot采集；当前无服务器操作。较早条目是历史，不是现行待办。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -1227,6 +1237,8 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 **Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
 ## 8. 计划调整记录
+
+7.103（2026-09-29）：N1模型准备从依赖核对进入最小调用层实现，沿用协议V16及分域合同；Gate10限定G1范围不变，N1模型可行性另记NOT_RUN。旧Gate编号不重排，未修改冻结语义/旧证据，无Formal数据影响；剩余仅为模型端到端生产/消费接线，不以CPU结果授资格。
 
 （按时间顺序。行内出现的 `Gate 6 = FAIL`、`Q0 = NOT_RUN`、`Gate 7 = BLOCKED` 等字样均为该行日期当时的状态，已由 7.0 行改判；各行只保留结论摘要，详细过程见对应 amendment、runbook 与 `docs/v1_4_1/gate6_closeout_v0_1.md`。）
 

@@ -1,9 +1,14 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.102](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.103](research_progress.md)。
+
+**7.103当前工作：N1模型调用层已实现，端到端尚未就绪。** [接线说明](n1_model_wiring_v0_1.md)：沿用协议V16（decode第16层后一次），新增V0/Vmarker/Vsync临时layer包装、实际current-stream调用记录和resident文件入口；相关CPU62 passed，不是模型CUDA资格。G1/旧runner/物理S/B未改。
+下一项仅为把子入口接到已有verified model/preflight，以及模型多API的Canonical ownership消费/拒绝验证；不能把Gate9单API桥接直接改名使用。无选点语义待决，不需重复授权；尚未生成可采集包，用户无需服务器操作。Gate10限定G1 PASS保持，N1模型可行性NOT_RUN，不启动Pilot。
+
+以下7.102为已收尾G1的证据摘要：
 
 **当前结论：[Gate10限定G1 PASS](gate10_closeout_v0_1.md)**。512-only原件清单/身份/实际512输入2输出/G1准入及派生hash已审查；与既有32/2、修复后128/2组成预定候选集。不授N1模型V0/Vmarker/Vsync可行性、共同稳定域、Pilot/Freeze/Formal或信息增益结论。
-服务器执行/分析700f671，文档收尾身份另记。原128超时/UNKNOWN后代、32条件性产物及历史BLOCKED不改，UNKNOWN/NOT_ASSESSED保持。下一步仅本地整理N1最小模型接线准备依赖，不重开平台资格，不自动采集。当前无需用户服务器操作；不要重复执行历史512-only或两点包。
+服务器执行/分析700f671，文档收尾身份另记。原128超时/UNKNOWN后代、32条件性产物及历史BLOCKED不改，UNKNOWN/NOT_ASSESSED保持。下一步由上方7.103替代，不重开平台资格，不自动采集。不要重复执行历史512-only或两点包。
 
 以下7.101及更早内容为历史交接，不是当前执行指令：
 
