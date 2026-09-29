@@ -51,10 +51,15 @@ def _calculate(root, receipt_path, execution_path, bridge_path=None):
     require(bundle['manifest']['source']['sqlite']['sha256'].lower()==digest(paths['sqlite']), 'SOURCE')
     ownership, projections=load_projected_ownership(canonical,bundle,scope)
     stage=derive_stage_diagnostics(canonical,paths['stage_ledger'])
-    diagnostics=old._diagnostics(load_diagnostic_scope(root/'diagnostics.json',paths['sqlite'],paths['pass_identity']))
+    diagnostic=load_diagnostic_scope(root/'diagnostics.json',paths['sqlite'],paths['pass_identity'])
+    diagnostics=old._diagnostics(diagnostic)
+    from .gate9_diagnostic_review import review
+    diagnostic_review=review(diagnostic,bundle)
+    accepted=set(diagnostic_review['accepted_rowids']) if diagnostic_review else set()
+    effective=[d for d in diagnostics if d['source_rowid'] not in accepted]
     with time_representation(SIGNED):
         original=build_projected_ab_inputs(canonical,scope)
-        requests=[old._request(canonical,scope,paths,bundle,ownership,p,original,stage,support,diagnostics,
+        requests=[old._request(canonical,scope,paths,bundle,ownership,p,original,stage,support,effective,
                               domain_proof=True) for p in projections if p['phase']=='full_request']
         physical_b=list(calculate_b_syncs(original))
     require(requests, 'NO_REQUESTS')
@@ -70,7 +75,8 @@ def _calculate(root, receipt_path, execution_path, bridge_path=None):
         input_receipt_sha256=digest(Path(receipt_path)), execution_receipt_sha256=digest(Path(execution_path)),
         requests=requests, physical_s_records=list(original.s_records), physical_b_records=physical_b,
         diagnostic_dispositions=diagnostics, dropped_records_status='UNKNOWN', measurement_validity='NOT_ASSESSED',
-        formal_eligible=False, gate9_verdict='NOT_RUN', d_score_allowed=False, signature_allowed=False)
+        formal_eligible=False, gate9_verdict='NOT_RUN', d_score_allowed=False, signature_allowed=False,
+        **({'diagnostic_review':diagnostic_review} if diagnostic_review is not None else {}))
 
 
 def process_domain(receipt_path, execution_path, output_dir, *, bridge_path=None):

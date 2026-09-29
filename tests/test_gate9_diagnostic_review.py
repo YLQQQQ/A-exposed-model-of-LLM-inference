@@ -103,3 +103,40 @@ def test_actual_producer_file_chain_warning_wiring(tmp_path,monkeypatch,target_w
     assert len(value['diagnostic_review']['accepted_rowids'])==4
     assert value['dropped_records_status']=='UNKNOWN'
     assert check(sqlite,producer,value)['status']=='MATCH_REVIEW_REQUIRED'
+
+
+@pytest.mark.parametrize('target_warning,damage',[(False,None),(True,None),(False,'correlation')])
+def test_g1_official_review_preserves_original_rows_and_other_gates(tmp_path,monkeypatch,target_warning,damage):
+    from test_gate9_domain import source
+    from exposedpath_v141.gate8_files import write_input_receipt
+    from exposedpath_v141.gate9_domain import process_domain,load_domain
+    receipt,execution,paths=source(tmp_path,monkeypatch,damage=damage)
+    with sqlite3.connect(paths['sqlite']) as db:
+        db.execute("UPDATE META_DATA_EXPORT SET value='2026.2.1.210' WHERE name='EXPORT_PRODUCT_VERSION'")
+        db.execute("UPDATE META_DATA_EXPORT SET value='3.25.0' WHERE name='EXPORT_SCHEMA_VERSION'")
+        db.execute("INSERT INTO META_DATA_EXPORT VALUES ('EXPORT_PLATFORM','windows-desktop')")
+        tid=db.execute('select globalTid from NVTX_EVENTS limit 1').fetchone()[0]
+        pid=tid-tid%2**24
+        for text in MESSAGES:
+            db.execute('insert into DIAGNOSTIC_EVENT(timestamp,source,severity,text,globalPid,timestampType) values(0,3,2,?,?,2)',
+                (text,pid if target_warning else pid+(1<<24)))
+    report=json.loads(paths['export_report'].read_text())
+    report['canonical_sqlite_sha256']=sha(paths['sqlite'])
+    report['attempts'][0].update(sqlite_sha256=sha(paths['sqlite']),sqlite_size=paths['sqlite'].stat().st_size)
+    write_json(paths['export_report'],report)
+    receipt=write_input_receipt(tmp_path/'warning-input.json',artifacts=paths,collector_version='2026.2.1.210',capture_session_id='CPU-SYNTHETIC')
+    if target_warning:
+        try: out=process_domain(receipt,execution,tmp_path/'result')
+        except ValueError: return
+        assert json.loads(out.read_text())['status']=='BLOCKED'
+    else:
+        out=process_domain(receipt,execution,tmp_path/'result')
+        value=load_domain(out,receipt,execution)
+        if damage:
+            assert value['status']=='BLOCKED'
+            assert not value['requests'][1]['a_records']
+            return
+        assert value['status']=='QUALITY_CHECK_PASSED_NOT_QUALIFICATION'
+        assert len(value['diagnostic_review']['accepted_rowids'])==4
+        assert sum(r['disposition']=='IMPACT_UNBOUNDED' for r in value['diagnostic_dispositions'])==4
+        assert value['dropped_records_status']=='UNKNOWN'

@@ -96,11 +96,24 @@ def profile_argv(nsys,python,prepared,output,root=ROOT):
         *target_argv(python,prepared,output,root)]
 
 
+def analyze_receipt(manifest,receipt,execution,output):
+    if 'domain_qualification' in manifest:
+        from exposedpath_v141.gate9_domain import process_domain,load_domain,declaration,G1
+        if manifest['domain_qualification']!=declaration(G1):
+            raise ValueError('MODEL_DOMAIN_DECLARATION')
+        result=process_domain(receipt,execution,output)
+        value=load_domain(result,receipt,execution)
+    else:
+        from exposedpath_v141.gate8_engineering_scope import process_engineering_scope,load_engineering_scope
+        result=process_engineering_scope(receipt,execution,output)
+        value=load_engineering_scope(result,receipt,execution)
+    return result,value
+
+
 def analyze_model(output,prepared,collector_version):
     """Bind target runtime/producer/trace before entering existing A-only gate."""
     from exposedpath_v141.gate8_target_python import bind_producer,bind_trace_launch
     from exposedpath_v141.gate8_files import write_input_receipt
-    from exposedpath_v141.gate8_engineering_scope import process_engineering_scope,load_engineering_scope
     from exposedpath.gate8_diagnostic import _sha
     output=Path(output); root=output/'diagnostic'; prepared=Path(prepared)
     read=lambda p:json.loads(p.read_text(encoding='utf-8'))
@@ -132,9 +145,9 @@ def analyze_model(output,prepared,collector_version):
         capture_session_id=manifest['run_id'],artifacts=dict(raw=output/'capture.nsys-rep',
         sqlite=output/'capture.sqlite',export_report=output/'postprocess_report.json',
         **{k:root/v for k,v in names.items()}))
-    result=process_engineering_scope(receipt,root/'engineering_execution.json',output/'analyzed')
-    value=load_engineering_scope(result,receipt,root/'engineering_execution.json')
-    if value['status']!='A_SCOPE_ENGINEERING_ONLY' or len(value['requests'])!=1:
+    result,value=analyze_receipt(manifest,receipt,root/'engineering_execution.json',output/'analyzed')
+    wanted='QUALITY_CHECK_PASSED_NOT_QUALIFICATION' if 'domain_qualification' in manifest else 'A_SCOPE_ENGINEERING_ONLY'
+    if value['status']!=wanted or len(value['requests'])!=1:
         raise ValueError('MODEL_A_SCOPE_BLOCKED')
     return result
 
@@ -196,6 +209,7 @@ def main():
             from exposedpath.gate8_diagnostic import _sha
             result=analyze_model(output,args.prepared,'2026.2.1.210')
             report.update(status='A_SCOPE_ENGINEERING_ONLY',result_sha256=_sha(result),
+                result_filename=result.name,
                 schema_version='gate8-qwen-engineering-collection/0.1.0',
                 manifest_sha256=_sha(output/'diagnostic/manifest.json'),
                 target_runtime_sha256=_sha(output/'diagnostic/target_runtime.json'),

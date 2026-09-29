@@ -1,13 +1,17 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.99](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.100](research_progress.md)。
+
+当前工作：Gate10最小G1可行性已完成本地准备，见[候选/停止/交付计划0.1](gate10_workload_plan_v0_1.md)。复用32/2，新128/2与512/2保持batch1/eager/SDPA、warmup1/repeat1；两点各一次profile，不另做开销配对、不重复基线。Gate10 NOT_RUN。
+固定单包先交协调窗口审查，尚未操作服务器/GPU/Nsight。输入文件digest固定，目标manifest预声明G1资格域；官方warning review复用但其他边界/依赖质量门全部保留。任一点失败停止，不自动重试/换参；单ZIP回传后才作可行性审查。
+本地119相关CPU回归及最后22项收口（有重叠）、语法/diff检查通过；不是目标平台验证。N1完整模型干预功能仍是后续实验准备依赖，不阻塞本批G1，也不被本批替代。Pilot/Freeze/Formal不启动。
 
 15b24ec目标桥接回传已直接审查：[7.98新审查](gate9_bridge_return_review_v0_1.md)。
 四条同类warning按已接受官方解释接入版本化处置；另修正runtime flags与CUPTI stream type编码混用。
 封存副本离线domain及独立oracle匹配，六W/六窗A/逐sync B均通过，本包没有新采集缺口。
 原BLOCKED报告与Raw不改，UNKNOWN/NOT_ASSESSED保留；[最终分域裁决](gate9_closeout_v0_1.md)已完成，**Gate9 PASS**。
 资格仅适用当前固定Windows/4090栈、N1显式流A/合格单sync B及G1自然投影A；不授自然默认流完整B、完整新Q0、Pilot、Freeze、Formal或信息增益结论。
-下一步仅Gate10选定workload最小候选/停止规则的本地准备；复用G1 32/2 batch1，不作广域扫描或Pilot统计。服务器无需操作。
+Gate9资格不重开；后续操作以本页7.100及Gate10计划为准，不执行历史桥接包。
 
 用户已批准[G9-DOMAIN-QUALIFICATION/0.1.0](gate9_domain_qualification_contract_v0_1.md)：
 N1统一显式流V0/Vmarker/Vsync，A与单sync B；G1自然执行、逐request投影A，不发布默认流物理B/hidden。

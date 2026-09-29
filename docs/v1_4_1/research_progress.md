@@ -1,5 +1,16 @@
 # ExposedPath 科研进度清单
 
+## 7.100 Gate10最小G1输入轴准备与本地接线（2026-09-29）
+
+用户确认Gate9限定分域PASS后，固定[G10-WORKLOAD-FEASIBILITY/0.1](gate10_workload_plan_v0_1.md)：复用32/2 batch1封存可行性，仅新增128/2和512/2，按协议输入轴且不依据A比例选点。均单平台Qwen1.5B、fp16/eager/SDPA、自然G1、warmup1/repeat1；只作Engineering可行性，不作Pilot统计或Formal性能比较。
+首样本32token循环扩展，文件digest固定；执行前校验vocab/special token/全1 mask/max position和内容快照，前置manifest声明G1资格域。N1完整模型V0/Vmarker/Vsync功能单列后续依赖，本批不替代N1模型可行性。
+
+tests-first完成显式非32入口、G1接入已有官方诊断review及collector domain接线、既有实际shape/count窗后持久化、两点有限编排及失败停止。旧32入口/封闭identity schema/物理S/B/冻结公式不变；原warning及UNKNOWN保留，同类warning不豁免correlation等其他缺口，旧attempt不改。机器report与实际token/entry/preflight/domain一起校验，exit0不能替代分析准入。
+本地相关7文件119 passed；最终收口22 passed（重叠不合计），compileall/PowerShell解析/diff-check通过。无全量重跑、旧Q0/模型/GPU/Nsight/服务器执行。仅CPU模型/设备替身与实际文件链，不冒充目标机验证。
+
+EP-G10-01候选/规则已完成，EP-G10-02/03待新点实物；**Gate10 NOT_RUN，Gate7/8/9限定PASS保持**。首批单包以服务器15b24ec为前置，经协调窗口审查后才执行相关CPU检查及128→512各一次profile；任何失败停止、不自动重试/恢复/换参/扩搜，单ZIP回传。当前不要求用户立即执行。
+计划调整仅缩减工作负载组织，不修改冻结研究语义或已有Formal数据（未启动）；无新平台/模型/compile/G2、D/Signature或Pilot任务。
+
 ## 7.99 Gate9最终分域退出裁决：PASS（2026-09-29）
 
 依据用户已批准的G9-DOMAIN-QUALIFICATION/0.1.0 §2–5和fe25d5b完成[最终资格裁决](gate9_closeout_v0_1.md)。
@@ -753,7 +764,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
 - 当前 Gate 状态（7.99）：Gate0～7历史PASS；Gate8 PASS仅限G8-ENGINEERING-EXIT/0.1；Gate9 PASS仅限G9-DOMAIN-QUALIFICATION/0.1.0与[7.99裁决](gate9_closeout_v0_1.md)的N1显式流A/单sync B及G1自然投影A。UNKNOWN/NOT_ASSESSED、旧条件性产物及原BLOCKED不变。Gate10 NOT_RUN（平台前置已满足），Gate11 BLOCKED待选定可行workload/Pilot准备，Gate12～14 NOT_RUN；不授权Formal。
-- 当前最高优先级（7.99）：Gate9分域资格已PASS；下一步仅本地固定Gate10选定workload的最小候选/比较目的与停止规则，复用G1 32/2 batch1可行性，不自动采集、不广域扫描或混入Pilot统计。旧attempt BLOCKED、UNKNOWN/NOT_ASSESSED不变；较早日期条目是历史，不是现行待办。
+- 当前最高优先级（7.100）：Gate10本地候选/接线已准备，协调窗口审查固定单包后再由用户执行G1 128/2→512/2有界可行性批次；复用32/2，不重跑完整Q0/全量或广域扫描，不混入Pilot统计。N1模型功能依赖单列，不阻塞本批G1。旧attempt BLOCKED、UNKNOWN/NOT_ASSESSED不变；较早日期条目是历史，不是现行待办。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -1091,9 +1102,9 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ### Gate 10：可行域与 OOM 边界
 
-**Gate verdict：`NOT_RUN`（7.99）。** 当前分域平台前置已满足；下一步仅在本地确定选定workload的最小候选及停止规则，不自动采集。
+**Gate verdict：`NOT_RUN`（7.100）。** 分域平台前置及本地首批候选准备完成；新128/2与512/2实物尚未执行，固定单包先交协调审查，不自动采集。
 
-- [ ] `EP-G10-01`（7.27缩减、7.99明确）仅预定义有限信息增益对照所需候选点和停止规则；复用自然G1 32/2 batch1。广域扫描后移，可共享执行组织但不混同G11统计/Pilot资格。
+- [x] `EP-G10-01`（7.27缩减、7.100本地完成）[最小候选与停止规则0.1](gate10_workload_plan_v0_1.md)：复用自然G1 32/2，新增128/2及512/2 batch1；本项只完成设计/接线，不表示实验验收。广域扫描后移，不混同G11统计/Pilot资格。
 - [ ] `EP-G10-02`（待选定点计划）记录 OOM、early EOS、不稳定和 retry，不把 OOM 当科学重要性指标。
 - [ ] `EP-G10-03`（待选定点证据）确定跨配置比较所需的共同稳定范围和平台特定排除项。
 

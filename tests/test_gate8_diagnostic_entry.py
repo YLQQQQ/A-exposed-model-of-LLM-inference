@@ -149,8 +149,8 @@ def test_model_inventory_binds_content_without_path_escape(tmp_path, monkeypatch
         assert result['revision'] == 'UNKNOWN'
 
 
-@pytest.mark.parametrize('engineering_backend',[None,'sdpa'])
-def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path, engineering_backend):
+@pytest.mark.parametrize('engineering_backend,length',[(None,None),('sdpa',None),('sdpa',128),('sdpa',512)])
+def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path, engineering_backend,length):
     module = api()
     assert callable(getattr(module, 'prepare_diagnostic', None))
     from exposedpath import platform_adapter
@@ -161,21 +161,21 @@ def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path, engi
     monkeypatch.setattr(platform_adapter,'nvidia_smi',lambda *a,**kw:'555.99')
     monkeypatch.setattr(gate8_source_probe,'TorchBackend',lambda:SimpleNamespace(identity=lambda:dict(
         gpu_uuid='GPU-12345678-1234-1234-1234-123456789abc',pci_bus_id='00000000:01:00.0')))
-    model=tmp_path/'model'; model.mkdir(); (model/'config.json').write_text('{"model_type":"qwen2"}')
+    model=tmp_path/'model'; model.mkdir(); (model/'config.json').write_text('{"model_type":"qwen2","vocab_size":100,"max_position_embeddings":32768}')
     inventory=tmp_path/'model.csv'
     with inventory.open('w',newline='') as handle:
         writer=csv.DictWriter(handle,fieldnames=['RelativePath','Bytes','SHA256']); writer.writeheader()
         writer.writerow(dict(RelativePath='config.json',Bytes=(model/'config.json').stat().st_size,SHA256=sha(model/'config.json')))
     prompt=write_json(tmp_path/'prompt.json',dict(schema_version='exposedpath-prompt-tokens/1',
-        tokenizer_id='synthetic-tokenizer',fixed_input_tokens=32,
-        samples=[dict(input_ids=[1]*32,attention_mask=[1]*32)]))
+        tokenizer_id='synthetic-tokenizer',fixed_input_tokens=length or 32,
+        samples=[dict(input_ids=[1]*(length or 32),attention_mask=[1]*(length or 32))]))
     import sys,sysconfig
     output=module.prepare_diagnostic(output_dir=tmp_path/'prepared',model_path=model,
         inventory_path=inventory,inventory_sha256=sha(inventory),prompt_path=prompt,
         prompt_sha256=sha(prompt),expected_commit='d'*40,physical_gpu=3,
         engineering_attention_backend=engineering_backend,
         target_python=sys._base_executable if engineering_backend else None,
-        site_root=sysconfig.get_path('purelib') if engineering_backend else None)
+        site_root=sysconfig.get_path('purelib') if engineering_backend else None,gate10_input_tokens=length)
     manifest=json.loads((output/'manifest.json').read_text())
     assert manifest['repeat_count']==1 and manifest['warmup_count']==1
     assert manifest['attention_backend']==(engineering_backend or 'UNKNOWN_NOT_LOADED')
@@ -184,6 +184,9 @@ def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path, engi
         assert manifest['target_python']['actual']['pid']==manifest['target_python']['launch_pid']
     else:
         assert 'engineering_scope' not in manifest
+    if length:
+        assert manifest['fixed_input_tokens']==length
+        assert manifest['domain_qualification']['profile']=='G1_NATURAL_PROJECTED_A/0.1.0'
     assert manifest['runner_git_commit']=='d'*40
     assert manifest['prompt_tokens_sha256']==sha(output/'prompt.json')
     assert manifest['runner_source_sha256']==sha(Path(module.__file__).parent/'runner.py')

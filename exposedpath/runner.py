@@ -399,7 +399,7 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                        pass_fields, request_plan, eos_token_id=None,
                        clock_ns=time.perf_counter_ns, record_drains=False,
                        record_stages=False, model_setup=None, record_load_tasks=False,
-                       setup_observer=None, allow_load_fallback=True):
+                       setup_observer=None, allow_load_fallback=True, invocation_observer=None):
     """Explicit local Gate8 producer API over already-resident inputs.
 
     Not enabled by the legacy CLI/launcher. The caller supplies preflight-bound
@@ -564,6 +564,9 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                 drain_recorder=drain_recorder,
             )
             result = invocation() if stages is None else stages.observe('measured',entry['identity'],invocation)
+            if invocation_observer is not None:
+                # Existing Host shape/count facts, after the completion window.
+                invocation_observer(entry['identity'], result)
             excluded = result["early_eos"] or result["actual_output_tokens"] != output_len
             entry.update(actual_output_tokens=result["actual_output_tokens"],
                          early_eos=result["early_eos"], outcome="EXCLUDED" if excluded else "COMPLETE",

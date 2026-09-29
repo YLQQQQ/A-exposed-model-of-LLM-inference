@@ -58,7 +58,7 @@ def verify_model_inventory(model_path, inventory_path, expected_sha256, *, rehas
 def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha256,
                        prompt_path, prompt_sha256, expected_commit, physical_gpu,
                        engineering_attention_backend=None, target_python=None, site_root=None,
-                       pair_id=None, pair_pass=None):
+                       pair_id=None, pair_pass=None, gate10_input_tokens=None):
     """Explicit preflight: hashes and minimal CUDA identity, no model load."""
     from exposedpath import platform_adapter
     from exposedpath.manifest import create_manifest, finalize_manifest
@@ -82,8 +82,14 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     target = probe(target_python,site_root) if target_python else None
     content = verify_model_inventory(model_path, inventory_path, inventory_sha256, rehash=True)
     prompt = load_prompt_tokens(Path(prompt_path))
-    if prompt['fixed_input_tokens'] != 32 or _sha(prompt_path) != prompt_sha256.lower():
+    length=32 if gate10_input_tokens is None else gate10_input_tokens
+    if prompt['fixed_input_tokens'] != length or _sha(prompt_path) != prompt_sha256.lower():
         raise ValueError('DIAGNOSTIC_PROMPT_IDENTITY')
+    if gate10_input_tokens is not None:
+        from exposedpath.gate10_workload import validate_input
+        if engineering_attention_backend!='sdpa' or target is None or pair_id is not None or pair_pass is not None:
+            raise ValueError('GATE10_EXECUTION_PROFILE')
+        validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')),length)
     observed = TorchBackend().identity()
     preflight = dict(physical_gpu_index=physical_gpu, logical_gpu_index=0,
                      gpu_uuid=observed['gpu_uuid'], gpu_pci_bus_id=observed['pci_bus_id'])
@@ -111,6 +117,10 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
         manifest['target_python']=target
         from exposedpath.gate8_isolated_preflight import VERSION
         manifest['isolated_preflight_version']=VERSION
+    if gate10_input_tokens is not None:
+        from exposedpath.gate10_workload import declaration as workload
+        from exposedpath_v141.gate9_domain import declaration as domain, G1
+        manifest.update(gate10_workload=workload(length),domain_qualification=domain(G1))
     manifest = finalize_manifest(manifest,prompt,prompt_tokens_path=output/'prompt.json')
     for name, value in (('manifest.json',manifest),('preflight.json',preflight)):
         with (output/name).open('x',encoding='utf-8') as handle:
@@ -156,7 +166,12 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     issues = [] if isolated else validate_pre_model_identity(manifest_path, Path(preflight_path), Path(project_root))
     if issues:
         raise ValueError('; '.join(issues))
-    expected = dict(fixed_input_tokens=32, fixed_output_tokens=2, batch_size=1,
+    from exposedpath.gate10_workload import input_length,validate_input
+    length=input_length(manifest)
+    if 'gate10_workload' in manifest:
+        validate_input(json.loads(prompt_path.read_text(encoding='utf-8')),
+            json.loads((Path(manifest['model_id'])/'config.json').read_text(encoding='utf-8')),length)
+    expected = dict(fixed_input_tokens=length, fixed_output_tokens=2, batch_size=1,
                     warmup_count=1, repeat_count=1, execution_mode='eager',
                     run_role='ENGINEERING', data_role='Engineering',
                     dtype_and_quantization='fp16', sampling_config={'do_sample':False},
@@ -222,17 +237,27 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         if declared is not None and (loaded_config['configured_attention_backend']!=declared['attention_backend']
                 or loaded_config['configured_use_cache'] is not True or loaded_config['model_type']!='qwen2'):
             raise ValueError('ENGINEERING_LOADED_CONFIGURATION_CONFLICT')
+    observed_workload=[]
+    def observe_invocation(identity,result):
+        observed_workload.append(dict(identity=identity,**{k:result[k] for k in (
+            'actual_input_tokens','actual_output_tokens','early_eos')}))
     path = runner.run_gate8_requests_to_files(
         output_dir=output_dir/'producer', output_len=2,
         device=f"cuda:{manifest['gpu_index_logical']}", pass_fields=fields,
         record_drains=True, record_stages=True, setup_observer=observe_setup,
         allow_load_fallback=False,
+        invocation_observer=observe_invocation if 'gate10_workload' in manifest else None,
         model_setup=dict(model_path=manifest['model_id'], prompt_path=output_dir/'prompt.json',
                          physical_gpu_index=manifest['gpu_index_physical'], batch_size=1,
                          manifest_path=output_dir/'manifest.json'),
         request_plan=[dict(request_id='warmup-0', repeat_id='warmup-0', request_role='warmup'),
                       dict(request_id='request-0', repeat_id='0', request_role='measured')])
     producer = json.loads(path.read_text(encoding='utf-8'))
+    if 'gate10_workload' in manifest:
+        with (output_dir/'workload_observed.json').open('x',encoding='utf-8') as handle:
+            json.dump(dict(schema_version='gate10-workload-observed/0.1',
+                manifest_sha256=_sha(manifest_path),producer_receipt_sha256=_sha(path),
+                observations=observed_workload),handle,indent=2,sort_keys=True)
     if isolated:
         isolated_gate.verify_snapshot(isolated_gate.read(auxiliary_receipt),manifest_path.parent,project_root)
     if declared is not None:
@@ -271,6 +296,7 @@ def main():
     prep.add_argument('--site-root')
     prep.add_argument('--pair-id')
     prep.add_argument('--pair-pass',choices=('pass0','pass1'))
+    prep.add_argument('--gate10-input-tokens',choices=(128,512),type=int)
     run = commands.add_parser('run')
     for name in ('manifest-path', 'prompt-path', 'preflight-path', 'project-root', 'output-dir'):
         run.add_argument('--'+name, required=True, type=Path)
