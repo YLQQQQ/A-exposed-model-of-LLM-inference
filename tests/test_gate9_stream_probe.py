@@ -96,7 +96,7 @@ def test_timeout_stops_without_target_sync():
 
 
 def test_native_adapter_uses_real_pci_field_and_normalizes():
-    uuid = 'GPU-0d8fafe6-a1e9-33cc-25fb-632316736455'
+    uuid = 'GPU-00000000-0000-0000-0000-000000000001'
     module().check_device({'gpu_uuid': uuid, 'pci_bus_id': '0000:E1:00.0'},
                           uuid, '00000000:E1:00.0')
     with pytest.raises(ValueError, match='DEVICE'):
@@ -120,7 +120,7 @@ def test_supervisor_preserves_bytes_and_actual_pid(tmp_path):
     code = ('import os,sys; p=int(sys.stdin.readline());'
             'assert p==os.getpid();sys.stdout.buffer.write(bytes([255,0,129]));'
             'sys.stderr.buffer.write(b"original error");sys.exit(7)')
-    r = supervise([sys.executable, '-c', code], tmp_path, 5,
+    r = supervise([sys._base_executable, '-c', code], tmp_path, 5,
                   tmp_path/'out', tmp_path/'err')
     assert r['exit_code'] == 7 and r['timed_out'] is False
     assert (tmp_path/'out').read_bytes() == b'\xff\x00\x81'
@@ -130,7 +130,7 @@ def test_supervisor_preserves_bytes_and_actual_pid(tmp_path):
 def test_supervisor_timeout_is_non_success(tmp_path):
     import sys
     from scripts.gate9_stream_probe_run import supervise
-    r = supervise([sys.executable, '-c', 'import time;time.sleep(30)'], tmp_path, .05,
+    r = supervise([sys._base_executable, '-c', 'import time;time.sleep(30)'], tmp_path, .05,
                   tmp_path/'out', tmp_path/'err')
     assert r['timed_out'] is True and r['exit_code'] != 0
 

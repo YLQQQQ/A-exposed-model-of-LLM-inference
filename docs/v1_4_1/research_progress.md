@@ -8,6 +8,8 @@
 新增probe、直接解释器/身份/45秒超时监督、CPU正反例；设备查询复用生产native adapter。
 先13例缺实现失败，再最小实现；PCI域宽度回归失败后采用既有normalizer，不用编号相等猜身份。
 相关CPU测试34 passed（本地Python3.12）；新文件compileall/diff-check通过，没有目标CUDA验证。
+交付复查将新PID敏感CPU子进程测试统一为sys._base_executable，避免重复既有Windows venv launcher
+PID分离问题；生产supervisor原本已经采用显式direct interpreter，不改变CUDA判定或支持域。
 Gate9仍BLOCKED待固定probe目标证据/审查；Gate8已收尾；不授Q0总资格、Pilot或Formal。
 单一增量包以前置服务器36ed952为基线，配套固定版本单段步骤与单ZIP回传；本轮不操作服务器。
 
