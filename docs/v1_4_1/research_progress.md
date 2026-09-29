@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.92 默认流有界核对结论C（2026-09-29）
+
+[Gate9入口](gate9_platform_assessment_v0_1.md)保存目标机源码/header/PE依据及一次区别性方案。
+静态资料能支持同步包装路径，不能确定实际默认流语义；停止该搜索。
+只读既有Canonical发现3838窗前活动中338由四worker提交但显示同NULL trace stream7，
+其是否进入主线程物理W会影响B hidden/ownership；成功drain不消除此语义差异。
+未证物理B双模式等价，因此选择C，不新增模式猜测或扩大A-only资格。
+Gate9 BLOCKED仅限此具体范围歧义，N1未实现仍仅为后续准备；Gate8已完成、不重开。
+下一步只准备同PyTorch调用路径、跨线程默认流的有限probe，预写可判别/不确定结果及停止规则；
+一次观察不证明全局模式，不自动重试。当前没有服务器执行命令，不要求用户操作。
+本轮无实现、无测试、无analyzer重算或采集；已有字段枚举与correlation连接只用于适用性核对。
+
 ## 7.91 Gate9边界纠正及默认流适用性核对（2026-09-29）
 
 [Gate9当前入口](gate9_platform_assessment_v0_1.md)已集中记录有限核对和Gate0–14精简处置。

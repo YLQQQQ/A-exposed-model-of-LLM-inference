@@ -1,6 +1,10 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.91](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.92](research_progress.md)。
+
+当前结论C：目标资料无法定实际模式；已发现窗前worker338活动的W/B范围歧义，
+不能把A等价推广到B。静态搜索停止；Gate9入口顶部给出一次同调用路径的区别性方案，
+允许INCONCLUSIVE，不自动重试。下一步仅准备该probe供协调审查，尚无服务器授权/命令。
 
 当前任务以[Gate9入口顶部](gate9_platform_assessment_v0_1.md)为准：N1接线缺失不是平台阻塞。
 唯一剩余为实际current-stream默认流语义对物理S/B的适用绑定；先核对精确调用/构建证据，

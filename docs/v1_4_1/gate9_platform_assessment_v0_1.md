@@ -1,5 +1,58 @@
 # Gate9 单平台资格评估 0.1
 
+## 当前结论7.92：C，静态核对到此停止
+
+2026-09-29。本轮读取目标机已保存的source_snapshot及PE回执，不读取本机torch替代它，
+不追加网页、源码或二进制搜集。Gate9仍BLOCKED于下述**会影响物理B的具体范围歧义**，不因N1未实现阻塞。
+
+目标torch2.6.0+cu124的`torch/cuda/streams.py:93–99`调用`super().synchronize()`；
+安装`CUDAStream.h:131–133`走`c10::cuda::stream_synchronize(stream())`，
+`CUDAFunctions.h:100–110`调用cudaStreamSynchronize(stream)。PE回执中c10导出该helper、
+导入无后缀cudaStreamSynchronize；torch模块导入c10 helper。回执DLL身份为
+c10 `ff798a3e18a09291e993e9bba452152447c7507b605d683c8289bf5112efe024`、
+torch_cuda `37fcaf926c486739e4cb505acb167a55d8f2ffd021c78f8822365478935c4630`。
+这些是目标安装资料，不是完整编译调用点证明；无_ptsz导入不能证明整进程模式。
+框架current stream是线程/设备的选择状态，native handle是传入CUDA的值，trace ID是collector映射；
+三者不能与LEGACY/PTDS等同。来源审计及限制见[eager源码审查§10](gate8_eager_source_alignment_v0_1.md)。
+
+本轮只读1733ff3既有Canonical作字段枚举/唯一correlation连接，未运行analyzer或改写证据：
+Trequest=24082591723之前3838活动都在trace stream7；3500由主TID282482616358736提交，
+其余四TID分别82/86/82/88项，共338项。例：MEMCPY:1对应RUNTIME:20740，
+TID282482616369696，区间[16903169991,16903171495)。全部对应唯一API。
+这比“所有活动同一个trace stream”更弱：不能排除collector对NULL表示与线程语义的差异。
+完整global TID保留，不把数字stream相同当作物理FIFO已经证明。
+
+两模式下若这些是共享legacy NULL前缀，则可能属于后续同步的语义W；若是worker的PTDS前缀，
+则不因显示同一个NULL trace编号就属于主线程W。drain只能证明完成，不能删掉B所需hidden成员。
+338项均在窗口外，不能据此否定已有A；也不能据A等价宣称B等价。
+terminal可能仍是相同主线程后缀终点，但W、hidden union及ownership/validity未证相同。
+此为具体歧义，不推断338项必定实际属于W或实际发生丢失。
+
+### 一次最小区别性补证方案（协调窗口审查用，尚未执行）
+
+只回答固定torch二进制、主线程native0、`torch.cuda.current_stream().synchronize()`这条调用
+如何对待另一个Host线程的默认流；不证明所有库/线程/运行的全局模式。
+
+整段操作顺序：
+1. 核对固定解释器/torch与DLL身份、目标GPU及mask；新diagnostics目录。预先固定脚本/操作和oracle身份。
+2. 主线程与一个worker分别记录current/default native handle；必须均为预期0，不临时切到新流改变研究对象。
+3. worker在其实际默认流提交一个有界、可观察的CUDA工作K并在其后record completion event E，
+   用CPU握手仅报告提交完成；主线程随后走上述生产同步调用S。不得用device synchronize代替S。
+4. S返回后只query E，随后窗外清理等待。若需要trace，只采既有cuda,nvtx最小范围并保留enqueue/thread/
+   event/sync关联；不加载模型、无N1插入、无CPU采样。整个probe有硬超时，不自动重试或调时循环。
+5. 独立预期：共享legacy NULL下，S不得在先提交K完成前返回，E应完成；独立PTDS下W(S)不含worker K，
+   若观测S结束早于K结束且E未完成，则能排除共享legacy行为。E已完成或K先于S开始已完成，
+   在两种模式都可能出现，只能记INCONCLUSIVE，不能据“等了很久”判legacy。
+6. 若实际记录明确使用可解释的每线程CUDA入口/流实例，结合调用证据可判相应作用域；否则只有前项
+   有区别性的结果才支持有限结论。缺correlation、额外同步污染、身份变化、未知影响或超时立即停止。
+7. 单ZIP回传脚本/oracle、身份、producer线程/handle/操作记录、stdout/stderr/退出码、REP/SQLite（如采集）、
+   原始结论与hash清单。原封存包不改；无结果不得自动升级Gate9或启动模型。
+
+该单次probe可能不具判别力，明确允许INCONCLUSIVE；不得承诺一次一定关闭缺口。
+这是可审查的操作合同，不是可直接粘贴运行的占位脚本：尚未实现probe，不要求用户现在执行。
+下一项仅准备该有界probe及CPU操作顺序/超时验证，交协调窗口审查后才申请目标机执行；
+不恢复静态无限搜索、不完整Q0、不完整N1。若不接受该单向可证伪方案，保留BLOCKED，不臆造模式。
+
 ## 当前结论7.91（2026-09-29，取代下方7.90/7.89待办）
 
 Gate9 **BLOCKED仅限计划中默认流current-stream调用的物理S/B适用性**。
