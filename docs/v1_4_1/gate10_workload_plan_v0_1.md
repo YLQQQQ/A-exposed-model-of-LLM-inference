@@ -1,6 +1,6 @@
 # Gate10 最小 workload 可行性准备 0.1
 
-版本：G10-WORKLOAD-FEASIBILITY/0.1。Engineering；Gate10 NOT_RUN。
+版本：G10-WORKLOAD-FEASIBILITY/0.1。Engineering；[7.102退出裁决：Gate10限定G1 PASS](gate10_closeout_v0_1.md)。下述准备/待执行语句保留为计划历史，两个新点均已完成，不再执行旧交付。
 依据：当前研究设计v7.1 §2.1、Pre-Pilot实验协议v2.1 §2.1候选池、用户批准的单平台路线及[Gate9分域资格](gate9_closeout_v0_1.md)。不修改冻结S/A/B公式，不是Pilot或Freeze。
 
 ## 候选与执行边界
