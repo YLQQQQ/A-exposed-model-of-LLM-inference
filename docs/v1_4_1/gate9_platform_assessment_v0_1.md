@@ -1,5 +1,9 @@
 # Gate9 单平台资格评估 0.1
 
+> 当前7.90：[最小执行方式—资格适用表](gate9_minimal_mode_qualification_v0_1.md)已完成。
+> Gate9 BLOCKED具体原因：runner尚不执行N1，需本地接线及新增stream-sync资格桥接；
+> 不是继续等待warning。用户当前无需服务器操作。以下7.89为前次评估依据，原“完成适用表”任务已结案。
+
 更新2026-09-29（7.89）。工作继续，**最终资格 verdict = BLOCKED：拟用于后续科学对照的版本/执行范围尚未形成绑定的资格结论**。
 这不是继续因四warning拒绝当前工程结果；[新证据裁决](gate8_warning_evidence_review_v0_1.md)已关闭该工程阻塞。
 历史首评见[12f61df版本](https://github.com/YLQQQQ/A-exposed-model-of-LLM-inference/blob/12f61df41b1666fbcc4d11128dffb6a4886896e8/docs/v1_4_1/gate9_platform_assessment_v0_1.md)，不继续沿用其中“只有无影响假设”的结论。
