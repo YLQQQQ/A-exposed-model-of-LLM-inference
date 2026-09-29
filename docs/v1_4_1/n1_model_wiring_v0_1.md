@@ -1,5 +1,7 @@
 # N1 模型最小接线 0.1（本地调用层）
 
+历史部分实现记录：当前接线与交付状态以[0.2](n1_model_wiring_v0_2.md)及research_progress 7.104为准；下文“剩余/尚未交付”是31cd84e时点，不是当前待办。
+
 状态：部分实现，**不是可部署采集入口**；N1模型可行性仍NOT_RUN。Gate10限定G1 PASS不变。
 依据：当前研究设计v7.1、Pre-Pilot实验协议v2.1 §4.2、[Gate9分域合同0.1](gate9_domain_qualification_contract_v0_1.md)。不修改冻结S/A/B、历史资格或G1自然执行，不是Pilot/Freeze。
 

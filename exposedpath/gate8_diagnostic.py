@@ -58,7 +58,7 @@ def verify_model_inventory(model_path, inventory_path, expected_sha256, *, rehas
 def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha256,
                        prompt_path, prompt_sha256, expected_commit, physical_gpu,
                        engineering_attention_backend=None, target_python=None, site_root=None,
-                       pair_id=None, pair_pass=None, gate10_input_tokens=None):
+                       pair_id=None, pair_pass=None, gate10_input_tokens=None, n1_variant=None):
     """Explicit preflight: hashes and minimal CUDA identity, no model load."""
     from exposedpath import platform_adapter
     from exposedpath.manifest import create_manifest, finalize_manifest
@@ -80,6 +80,9 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
         raise ValueError('DIAGNOSTIC_TARGET_ARGUMENTS')
     from exposedpath_v141.gate8_target_python import probe
     target = probe(target_python,site_root) if target_python else None
+    if n1_variant is not None and (target is None or engineering_attention_backend!='sdpa'
+            or pair_id is not None or pair_pass is not None or gate10_input_tokens is not None):
+        raise ValueError('N1_PREPARE_PROFILE')
     content = verify_model_inventory(model_path, inventory_path, inventory_sha256, rehash=True)
     prompt = load_prompt_tokens(Path(prompt_path))
     length=32 if gate10_input_tokens is None else gate10_input_tokens
@@ -121,6 +124,13 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
         from exposedpath.gate10_workload import declaration as workload
         from exposedpath_v141.gate9_domain import declaration as domain, G1
         manifest.update(gate10_workload=workload(length),domain_qualification=domain(G1))
+    if n1_variant is not None:
+        from exposedpath.n1_model import declaration as policy, CALLSITE, validate_manifest, execution_declaration
+        from exposedpath_v141.gate9_domain import declaration as domain, N1
+        variant='Vsync' if n1_variant=='V16' else n1_variant
+        manifest.update(n1_model=policy(variant),n1_model_execution=execution_declaration(),domain_qualification=domain(N1),study_mode='N1_INTERVENTION',
+            n1_intervention=dict(sync_origin='n1_intervention',callsite_id=CALLSITE,intervention_variant_id=variant))
+        validate_manifest(manifest)
     manifest = finalize_manifest(manifest,prompt,prompt_tokens_path=output/'prompt.json')
     for name, value in (('manifest.json',manifest),('preflight.json',preflight)):
         with (output/name).open('x',encoding='utf-8') as handle:
@@ -142,6 +152,12 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     pass_id=measurement_pass(manifest)
     from exposedpath.gate8_engineering_contract import validate_declaration, EXECUTION_VERSION
     declared = validate_declaration(manifest) if 'engineering_scope' in manifest else None
+    n1 = None
+    if 'n1_model' in manifest:
+        from exposedpath.n1_model import Execution, validate_manifest
+        n1 = Execution(validate_manifest(manifest), runner.torch.cuda)
+    elif manifest.get('study_mode') != 'G1_NATURAL' or manifest.get('n1_intervention') is not None:
+        raise ValueError('DIAGNOSTIC_MODE_CONFLICT')
     isolated='isolated_preflight_version' in manifest
     claim=None
     if isolated:
@@ -226,6 +242,8 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
             handle.write(source.read_bytes())
     loaded_config = {}
     def observe_setup(model):
+        if n1 is not None and (str(model.dtype)!='torch.float16' or model.training is not False):
+            raise ValueError('N1_ACTUAL_DTYPE_OR_TRAINING')
         config = getattr(model, 'config', None)
         loaded_config.update(
             configured_attention_backend=getattr(config, '_attn_implementation', None),
@@ -246,6 +264,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         device=f"cuda:{manifest['gpu_index_logical']}", pass_fields=fields,
         record_drains=True, record_stages=True, setup_observer=observe_setup,
         allow_load_fallback=False,
+        n1_controller=n1,
         invocation_observer=observe_invocation if 'gate10_workload' in manifest else None,
         model_setup=dict(model_path=manifest['model_id'], prompt_path=output_dir/'prompt.json',
                          physical_gpu_index=manifest['gpu_index_physical'], batch_size=1,
@@ -253,6 +272,11 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         request_plan=[dict(request_id='warmup-0', repeat_id='warmup-0', request_role='warmup'),
                       dict(request_id='request-0', repeat_id='0', request_role='measured')])
     producer = json.loads(path.read_text(encoding='utf-8'))
+    if n1 is not None:
+        from exposedpath.n1_model import VERSION
+        with (output_dir/'n1_model_calls.json').open('x',encoding='utf-8') as handle:
+            json.dump(dict(schema_version=VERSION, manifest_sha256=_sha(manifest_path),
+                producer_receipt_sha256=_sha(path),pid=os.getpid(),requests=n1.requests),handle,indent=2,sort_keys=True)
     if 'gate10_workload' in manifest:
         with (output_dir/'workload_observed.json').open('x',encoding='utf-8') as handle:
             json.dump(dict(schema_version='gate10-workload-observed/0.1',
@@ -266,6 +290,8 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
             identity={k:fields[k] for k in ('run_id','pass_id','attempt_id','pid')},
             observed_configuration={**{k:loaded_config.get(k) for k in (
                 'configured_attention_backend','configured_use_cache','model_type')},'execution_mode':'eager'})
+        if n1 is not None:
+            execution['n1_model_calls_sha256']=_sha(output_dir/'n1_model_calls.json')
         with (output_dir/'engineering_execution.json').open('x',encoding='utf-8') as handle:
             json.dump(execution,handle,indent=2,sort_keys=True)
     result = dict(schema_version='gate8-qwen-diagnostic/0.1.0',
@@ -297,6 +323,7 @@ def main():
     prep.add_argument('--pair-id')
     prep.add_argument('--pair-pass',choices=('pass0','pass1'))
     prep.add_argument('--gate10-input-tokens',choices=(128,512),type=int)
+    prep.add_argument('--n1-variant',choices=('V0','Vmarker','V16'))
     run = commands.add_parser('run')
     for name in ('manifest-path', 'prompt-path', 'preflight-path', 'project-root', 'output-dir'):
         run.add_argument('--'+name, required=True, type=Path)

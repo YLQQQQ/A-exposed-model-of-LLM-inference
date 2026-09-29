@@ -43,6 +43,9 @@ def _calculate(root, receipt_path, execution_path, bridge_path=None):
     require(isinstance(declared, dict) and declared == declaration(declared.get('profile')), 'DECLARATION')
     require(receipt['identity']['run_role']=='ENGINEERING', 'ROLE_NOT_QUALIFIED')
     if declared['profile']==N1:
+        if 'n1_model' in _json(paths['wmpc_manifest']):
+            from .n1_model_scope import calculate_n1_model
+            return calculate_n1_model(root, receipt_path, execution_path, bridge_path)
         from .gate9_n1 import calculate_n1
         return calculate_n1(root, receipt_path, execution_path, bridge_path)
     require(bridge_path is None, 'G1_BRIDGE_FORBIDDEN')

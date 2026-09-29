@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.104 N1 verified模型入口与多API文件链收口（2026-09-29）
+
+按用户授权从31cd84e完成两处剩余接线；见[接线/最小可行性0.2](n1_model_wiring_v0_2.md)。沿用v2.1 §4.2 V16，不新增位置/次数选择：V0/Vmarker/V16只差预定decode层16干预；输入32/输出2、batch1、fp16/eager/SDPA、warmup1/repeat1一致。
+
+原verified model-run入口显式opt-in N1，复用解释器/PID、内容、设备、Git seal、manifest及执行检查。`N1-VERIFIED-MODEL/0.1`声明warmup独立held流、成功drain后不同measured流及窗外共同sync锚点；满足Gate9优先fresh-stream策略，不截短物理W。0.1 resident helper不作为部署入口。实际调用、位置/次数、shape/token与sidecar hash接入原producer/execution链。
+
+新增`exposedpath-n1-model-ownership/0.1.0`连接多API Canonical/ownership，不沿用旧一标记一API假设。锚点→correlation/context/trace stream与drain核对，逐API/活动/同步验证request/phase/实际流并复用原S/A/B；未知、歧义、其他流/依赖/graph保持拒绝。non-submit伴随查询只按原注册表支持，原内部同步也检查：没有冻结S必需sync身份时仍INVALID，不能补造callsite或转Host。物理S/B、G1自然路径、Q0、冻结公式和旧证据均未修改。
+
+tests-first实际verified producer→合成SQLite→Canonical→projection→S/A/B及复读已接通；独立预期W为[3,6]/[3,5,6]并检查具体A分量，不仅守恒。相关14文件CPU **192 passed**（163.83秒），收口后三文件定向 **36 passed**（70.39秒，与192重叠，不累加）；本机Python3.12.7，修改Python compileall、PowerShell语法解析、diff检查通过。不是目标机CUDA/模型验证，无全量/Q0重跑、服务器/模型/GPU/Nsight操作。
+
+本地接线完成；**N1模型可行性NOT_RUN**，仍需目标机证明实际模型提交/内部同步满足支持域，CPU不能代替。准备以700f671为前置的固定单包与V0→Vmarker→V16各一次有限方案，先交协调窗口审查；任何失败停止后续组、不重试、单ZIP回传。首批仅执行/支持域，不评价干预效果或选Pilot阈值。Gate7～9限定PASS及Gate10限定G1 PASS保持，Gate11/Pilot不启动。没有新的研究语义裁决项；没有变更Protocol Freeze或Formal数据（均未启动）。
+
 ## 7.103 N1模型最小调用层接线与CPU文件回归（2026-09-29）
 
 用户确认Gate10限定G1 PASS并授权本地N1接线。直接沿用Pre-Pilot协议v2.1 §4.2 V16：每次decode第16层后一次current-stream sync；Vmarker同callsite/branch/marker但不同步，V0无layer干预包装。没有新增选点、位置扫描或研究语义裁决。详见[接线0.1](n1_model_wiring_v0_1.md)。

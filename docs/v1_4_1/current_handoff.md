@@ -1,6 +1,12 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.103](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.104](research_progress.md)。
+
+**7.104当前工作：N1本地verified入口与多API消费已接通**，见[0.2执行/消费说明](n1_model_wiring_v0_2.md)。V0/Vmarker/V16沿用层16定义；真实文件链CPU验证不是目标机模型资格。相关192项及最终定向回归见进度，不重复全量/Q0。
+新manifest显式声明N1专用流策略，复用原身份/内容/设备/preflight；多API归属依实际correlation/原始记录，不从with-stream猜测。原内部sync缺物理S身份仍拒绝，未知/额外流/依赖/新诊断不豁免。
+N1模型可行性NOT_RUN；固定增量包前置为服务器700f671，V0→Vmarker→V16 32/2各一次，先交协调窗口审查后另行授权执行。任何失败停止后续组，无恢复/重试，单ZIP回传。Gate10限定G1 PASS及Gate7～9保持；不启动Pilot。
+
+以下7.103是被本地收口取代的历史状态：
 
 **7.103当前工作：N1模型调用层已实现，端到端尚未就绪。** [接线说明](n1_model_wiring_v0_1.md)：沿用协议V16（decode第16层后一次），新增V0/Vmarker/Vsync临时layer包装、实际current-stream调用记录和resident文件入口；相关CPU62 passed，不是模型CUDA资格。G1/旧runner/物理S/B未改。
 下一项仅为把子入口接到已有verified model/preflight，以及模型多API的Canonical ownership消费/拒绝验证；不能把Gate9单API桥接直接改名使用。无选点语义待决，不需重复授权；尚未生成可采集包，用户无需服务器操作。Gate10限定G1 PASS保持，N1模型可行性NOT_RUN，不启动Pilot。

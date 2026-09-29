@@ -1,0 +1,173 @@
+"""Verified entry -> real producer files -> synthetic Raw -> existing S/A/B.
+
+CPU trace recorder only. Expected members below are from the prescribed two
+launches + D2H sequence, not the analyzer. No target CUDA qualification.
+"""
+import json
+import os
+from types import SimpleNamespace
+import pytest
+from qualification_fixture import capture
+from test_n1_verified_entry import source as entry_source
+from test_gate8_identity import UUID, sha, write_json
+
+
+def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, queries=False):
+    queries=queries or damage=='unknown_query'
+    from exposedpath import runner
+    def execute(Backend, clock, db, plan):
+        entry,args,state,events=entry_source(tmp_path,monkeypatch,variant)
+        manifest=json.loads(args['manifest_path'].read_text())
+        manifest.update(gpu_uuid=UUID,gpu_pci_bus_id='0000:E1:00.0')
+        write_json(args['manifest_path'],manifest)
+        write_json(args['preflight_path'],dict(physical_gpu_index=3,logical_gpu_index=0,
+            gpu_uuid=UUID,gpu_pci_bus_id='0000:E1:00.0'))
+        from exposedpath import platform_adapter
+        monkeypatch.setattr(platform_adapter,'cuda_identity_native',lambda _:dict(gpu_uuid=UUID,pci_bus_id='0000:E1:00.0'))
+        backend=Backend(None); cuda=runner.torch.cuda
+        db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=1')
+        db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=2')
+        db.execute('INSERT INTO TARGET_INFO_CUDA_STREAM SELECT 3,hwId,vmId,processId,contextId,priority,2 FROM TARGET_INFO_CUDA_STREAM')
+        def stream_id(): return 2 if cuda.current_stream(0).cuda_stream==123 else 3
+        def launch():
+            a,b,c=backend.api('cudaLaunchKernel_v7000')
+            db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_KERNEL VALUES (?,?,0,1,NULL,?,?,?,?,?,NULL,NULL)',
+                (b,b+2,stream_id(),c,os.getpid()<<24,1,1))
+        def sync():
+            query='cudaGetDevice' if damage=='unknown_query' else 'cudaStreamIsCapturing'
+            if queries: backend.api(query)
+            a,b,c=backend.api('cudaStreamSynchronize_v3020')
+            db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_SYNCHRONIZATION VALUES (?,?,0,1,NULL,?,?,?,NULL,3,4294967295,NULL)',
+                (a+1,b-1,stream_id(),c,os.getpid()<<24))
+            if queries: backend.api(query)
+        create=cuda.Stream
+        def stream(**kw):
+            value=create(**kw); value.synchronize=sync; return value
+        monkeypatch.setattr(cuda,'Stream',stream)
+        monkeypatch.setattr(cuda,'synchronize',backend.prepare)
+        def push(label):
+            backend.push(label)
+            if damage=='unexpected_sync' and label.startswith('EXPOSEDPATH_N1_MODEL_V1:'):
+                payload=json.loads(label.split(':',1)[1])
+                if payload.get('operation')=='intervention': sync()
+        monkeypatch.setattr(cuda.nvtx,'range_push',push)
+        monkeypatch.setattr(cuda.nvtx,'range_pop',backend.pop)
+        monkeypatch.setattr(cuda.nvtx,'mark',backend.mark)
+        run=runner.run_gate8_requests
+        monkeypatch.setattr(runner,'run_gate8_requests',lambda **kw:run(**kw,clock_ns=clock))
+        load=runner.load_model
+        from test_runner_token_ready import _FakeToken
+        cpu=_FakeToken.cpu
+        def read(token):
+            a,b,c=backend.api('cudaMemcpyAsync_v3020')
+            db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_MEMCPY VALUES (?,?,0,1,NULL,?,?,?,4,2,2,1,NULL)',
+                (b,b+2,stream_id(),c,os.getpid()<<24))
+            sync(); return cpu(token)
+        monkeypatch.setattr(_FakeToken,'cpu',read)
+        def model(*a,**kw):
+            result=load(*a,**kw)
+            for i in (0,15): result[0].model.layers[i].forward=lambda x:launch()
+            if internal:
+                def first(x):
+                    launch(); sync()  # Framework internal call, no intervention marker.
+                result[0].model.layers[0].forward=first
+            return result
+        monkeypatch.setattr(runner,'load_model',model)
+        entry.run_diagnostic(**args)
+        if damage=='correlation': db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET correlationId=999999')
+        if damage=='stream': db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET streamId=2 WHERE streamId=3')
+        if damage=='unknown_api': db.execute("UPDATE StringIds SET value='unknownCudaOperation' WHERE value='cudaLaunchKernel_v7000'")
+        if damage=='duplicate_map': db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME SELECT * FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE correlationId=(SELECT MAX(correlationId) FROM CUPTI_ACTIVITY_KIND_KERNEL)')
+        if damage=='warning': db.execute("INSERT INTO DIAGNOSTIC_EVENT VALUES (1,3,2,'Unknown CUDA failure',?,2)",(os.getpid()<<24,))
+        if damage=='boundary': db.execute("DELETE FROM NVTX_EVENTS WHERE eventType=34")
+        if damage=='drain': db.execute("DELETE FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION WHERE syncType=2")
+        if damage=='marker_sync': db.execute("DELETE FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE correlationId=(SELECT MAX(correlationId) FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION WHERE syncType=3)")
+        if damage=='thread': db.execute('UPDATE CUPTI_ACTIVITY_KIND_RUNTIME SET globalTid=globalTid+1 WHERE correlationId=(SELECT MAX(correlationId) FROM CUPTI_ACTIVITY_KIND_KERNEL)')
+        if damage=='dependency': db.execute("UPDATE StringIds SET value='cudaStreamWaitEvent' WHERE value='cudaLaunchKernel_v7000'")
+        if damage=='drain_scope': db.execute('UPDATE CUPTI_ACTIVITY_KIND_SYNCHRONIZATION SET contextId=22 WHERE syncType=2')
+        if damage=='graph': db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET graphId=7')
+        return args['output_dir']/'producer/producer_receipt.json'
+    _,_,sqlite,rep,export=capture(tmp_path,monkeypatch,executor=execute)
+    root=tmp_path/'diagnostic'
+    from exposedpath_v141.gate8_files import write_input_receipt
+    names=dict(preflight='adapter_preflight.json',cuda_probe='cuda_probe.json',wmpc_manifest='manifest.json',
+        prompt='prompt.json',runner_source='runner_source.py',producer_receipt='producer/producer_receipt.json',
+        pass_identity='producer/pass_identity.json',host_ledger='producer/host_boundaries.json',
+        drain_ledger='producer/drain_ledger.json',stage_ledger='producer/stage_ledger.json')
+    receipt=write_input_receipt(tmp_path/'input.json',collector_version='2026.2.1.210',capture_session_id='CPU',
+        artifacts=dict(raw=rep,sqlite=sqlite,export_report=export,**{k:root/v for k,v in names.items()}))
+    return receipt,root/'engineering_execution.json',root/'n1_model_calls.json'
+
+
+@pytest.mark.parametrize('variant,sync_count', [('V0',2),('Vmarker',2),('Vsync',3)])
+def test_verified_model_multi_api_file_chain(tmp_path,monkeypatch,variant,sync_count):
+    receipt,execution,calls=source(tmp_path,monkeypatch,variant)
+    from exposedpath_v141.gate9_domain import process_domain,load_domain
+    path=process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
+    result=load_domain(path,receipt,execution,bridge_path=calls)
+    assert result['status']=='QUALITY_CHECK_PASSED_NOT_QUALIFICATION'
+    assert len(result['a_records'])==3 and len(result['b_records'])==sync_count
+    # 2 kernels + D2H per token. The decode intervention waits for prefix
+    # (3 prior activities) plus its 2 model kernels, before final D2H.
+    assert sorted(len(b['wait_set_activity_ids']) for b in result['b_records']) == ([3,6] if sync_count==2 else [3,5,6])
+    assert all(a['A_unattributed_ns']==0 for a in result['a_records'])
+    for a in result['a_records']:
+        n=2 if a['phase']=='full_request' else 1
+        extra=1 if variant=='Vsync' and a['phase']!='prefill' else 0
+        # Recorder API ranges are 10 ns; kernels end before their sync call.
+        assert a['A_cuda_api_ns']==30*n and a['A_device_wait_ns']==0
+        assert a['A_sync_residual_ns']==10*(n+extra)
+        assert a['A_host_path_ns']==a['T_window_ns']-30*n-10*(n+extra)
+    assert result['dropped_records_status']=='UNKNOWN'
+    assert len(result['model_api_bindings'])==6+sync_count
+
+
+@pytest.mark.parametrize('damage',['correlation','stream','unknown_api','sidecar_identity','count',
+                                  'duplicate_map','warning','boundary','drain','marker_sync','thread','dependency','unknown_query',
+                                  'drain_scope','graph'])
+def test_model_consumer_rejects_missing_ownership_or_intervention(tmp_path,monkeypatch,damage):
+    receipt,execution,calls=source(tmp_path,monkeypatch,damage=damage)
+    if damage in ('sidecar_identity','count'):
+        value=json.loads(calls.read_text())
+        if damage=='count': value['requests'][1]['interventions']=[]
+        else: value['requests'][1]['identity']['request_id']='foreign'
+        write_json(calls,value)
+        value=json.loads(execution.read_text()); value['n1_model_calls_sha256']=sha(calls); write_json(execution,value)
+    from exposedpath_v141.gate9_domain import process_domain
+    with pytest.raises(ValueError): process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
+    assert not (tmp_path/'derived/domain.json').exists()
+
+
+def test_shared_collector_dispatches_model_sidecar_without_controlled_api_assumption(tmp_path,monkeypatch):
+    receipt,execution,calls=source(tmp_path,monkeypatch)
+    from scripts.gate8_diagnostic_collect import analyze_receipt
+    value=json.loads((calls.parent/'manifest.json').read_text())
+    path,result=analyze_receipt(value,receipt,execution,tmp_path/'derived')
+    assert result['adapter_version']=='exposedpath-n1-model-ownership/0.1.0'
+    assert len(result['model_api_bindings'])==9
+
+
+def test_internal_unmarked_blocking_calls_require_physical_s_identity(tmp_path,monkeypatch):
+    receipt,execution,calls=source(tmp_path,monkeypatch,internal=True)
+    from exposedpath_v141.gate9_domain import process_domain
+    # Scope/stream/correlation is available, but frozen physical S additionally
+    # requires origin/callsite/ordinal. Never invent those from a forward range.
+    with pytest.raises(ValueError,match='MODEL_PHYSICAL_B:.*INVOCATION_BOUNDARY_INVALID'):
+        process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
+    assert not (tmp_path/'derived/domain.json').exists()
+
+
+def test_anchor_and_intervention_allow_only_registered_non_submit_companions(tmp_path,monkeypatch):
+    receipt,execution,calls=source(tmp_path,monkeypatch,queries=True)
+    from exposedpath_v141.gate9_domain import process_domain
+    result=json.loads(process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls).read_text())
+    full=next(a for a in result['a_records'] if a['phase']=='full_request')
+    assert full['A_cuda_api_non_submit_ns']==60
+    assert sorted(len(b['wait_set_activity_ids']) for b in result['b_records'])==[3,5,6]
+
+
+def test_vmarker_actual_sync_cannot_pass_by_declaring_false(tmp_path,monkeypatch):
+    receipt,execution,calls=source(tmp_path,monkeypatch,variant='Vmarker',damage='unexpected_sync')
+    from exposedpath_v141.gate9_domain import process_domain
+    with pytest.raises(ValueError,match='MODEL_INTERVENTION_ACTUAL_COUNT'):
+        process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)

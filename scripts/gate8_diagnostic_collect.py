@@ -98,13 +98,18 @@ def profile_argv(nsys,python,prepared,output,root=ROOT):
 
 def analyze_receipt(manifest,receipt,execution,output):
     if 'domain_qualification' in manifest:
-        from exposedpath_v141.gate9_domain import process_domain,load_domain,declaration,G1
-        if manifest['domain_qualification']!=declaration(G1):
+        from exposedpath_v141.gate9_domain import process_domain,load_domain,declaration,G1,N1
+        options={}
+        if 'n1_model' in manifest:
+            from exposedpath.n1_model import validate_manifest
+            validate_manifest(manifest)
+            options['bridge_path']=Path(execution).parent/'n1_model_calls.json'
+        elif manifest['domain_qualification']!=declaration(G1):
             raise ValueError('MODEL_DOMAIN_DECLARATION')
-        result=process_domain(receipt,execution,output)
+        result=process_domain(receipt,execution,output,**options)
         from exposedpath_v141.gate9_domain import analysis_stage
         with analysis_stage('result_reload_validation'):
-            value=load_domain(result,receipt,execution)
+            value=load_domain(result,receipt,execution,**options)
     else:
         from exposedpath_v141.gate8_engineering_scope import process_engineering_scope,load_engineering_scope
         result=process_engineering_scope(receipt,execution,output)
@@ -159,7 +164,7 @@ def main():
     for name in ('nsys','python','prepared','output'):
         parser.add_argument('--'+name,required=True,type=Path)
     parser.add_argument('--execute-engineering-diagnostic',action='store_true',required=True)
-    parser.add_argument('--engineering-a-only',action='store_true')
+    parser.add_argument('--engineering-a-only','--engineering-domain',dest='engineering_a_only',action='store_true')
     args=parser.parse_args()
     output=args.output.resolve()
     if output.exists(): raise FileExistsError(output)
@@ -213,7 +218,8 @@ def main():
         if args.engineering_a_only:
             from exposedpath.gate8_diagnostic import _sha
             result=analyze_model(output,args.prepared,'2026.2.1.210')
-            report.update(status='A_SCOPE_ENGINEERING_ONLY',result_sha256=_sha(result),
+            status='N1_MODEL_ENGINEERING_ONLY' if 'n1_model' in manifest else 'A_SCOPE_ENGINEERING_ONLY'
+            report.update(status=status,result_sha256=_sha(result),
                 result_filename=result.name,
                 schema_version='gate8-qwen-engineering-collection/0.1.0',
                 manifest_sha256=_sha(output/'diagnostic/manifest.json'),
@@ -224,7 +230,7 @@ def main():
         report['error']=str(exc)
     (output/'collection_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(report['status'])
-    return 0 if report['status'] in ('DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY') else 1
+    return 0 if report['status'] in ('DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY') else 1
 
 
 if __name__=='__main__': raise SystemExit(main())

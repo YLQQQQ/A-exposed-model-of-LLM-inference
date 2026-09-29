@@ -399,7 +399,8 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                        pass_fields, request_plan, eos_token_id=None,
                        clock_ns=time.perf_counter_ns, record_drains=False,
                        record_stages=False, model_setup=None, record_load_tasks=False,
-                       setup_observer=None, allow_load_fallback=True, invocation_observer=None):
+                       setup_observer=None, allow_load_fallback=True, invocation_observer=None,
+                       n1_controller=None):
     """Explicit local Gate8 producer API over already-resident inputs.
 
     Not enabled by the legacy CLI/launcher. The caller supplies preflight-bound
@@ -414,6 +415,9 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
 
     if pass_fields.get("pid") != os.getpid():
         raise ValueError("IDENTITY_CONFLICT: producer PID must be current process")
+    if n1_controller is not None and (model_setup is None or not record_stages or not record_drains
+                                     or record_load_tasks or pass_fields['pass_id']!='pass1'):
+        raise ValueError('N1_VERIFIED_SETUP_REQUIRED')
     if type(record_load_tasks) is not bool or (record_load_tasks and (not record_stages or model_setup is None)):
         raise ValueError('LOAD_TASK_SETUP_REQUIRED')
     if record_stages and not record_drains:
@@ -498,6 +502,11 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
             warmup_count=sum(r['request_role']=='warmup' for r in ledger['requests']),
             repeat_count=sum(r['request_role']=='measured' for r in ledger['requests']),
             study_mode='G1_NATURAL',n1_intervention=None)
+        if n1_controller is not None:
+            from exposedpath.n1_model import validate_manifest
+            if validate_manifest(manifest) != n1_controller.policy:
+                raise ValueError('N1_CONTROLLER_DECLARATION_CONFLICT')
+            expected.update(study_mode='N1_INTERVENTION', n1_intervention=manifest['n1_intervention'])
         if (any(k not in manifest or type(manifest[k]) is not type(v) or manifest[k]!=v
                 for k,v in expected.items())
                 or ledger['runner_git_dirty'] is not False):
@@ -535,7 +544,10 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
     for entry in ledger["requests"]:
         if entry["request_role"] == "warmup":
             try:
-                warmup=lambda:run_warmup(model, input_ids, attention_mask, output_len, 1)
+                def warmup():
+                    call=lambda observed:run_warmup(observed, input_ids, attention_mask, output_len, 1)
+                    return call(model) if n1_controller is None else n1_controller.run(
+                        model,entry['identity'],call,warmup=True)
                 if stages is None:
                     warmup()
                 else:
@@ -556,13 +568,15 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                 push=torch.cuda.nvtx.range_push if emit else None,
                 pop=torch.cuda.nvtx.range_pop if emit else None)
         try:
-            invocation = lambda:run_one_invocation(
-                model, input_ids, attention_mask, output_len, device,
+            invoke_model = lambda observed:run_one_invocation(
+                observed, input_ids, attention_mask, output_len, device,
                 "GATE8_REQUEST" if emit else "", "", "", "", eos_token_id,
                 token_ready_identity_base=entry["identity"], clock_ns=clock_ns,
                 gate8_recorder=recorder,
                 drain_recorder=drain_recorder,
             )
+            invocation = lambda:invoke_model(model) if n1_controller is None else n1_controller.run(
+                model,entry['identity'],invoke_model)
             result = invocation() if stages is None else stages.observe('measured',entry['identity'],invocation)
             if invocation_observer is not None:
                 # Existing Host shape/count facts, after the completion window.

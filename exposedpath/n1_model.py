@@ -20,6 +20,13 @@ CALLSITE = 'qwen2.decode.layer_16.after_forward'
 VARIANTS = ('V0', 'Vmarker', 'Vsync')
 
 
+def execution_declaration():
+    return dict(version='N1-VERIFIED-MODEL/0.1', warmup_stream='SEPARATE_HELD_EXPLICIT',
+                measured_stream='FRESH_HELD_EXPLICIT_AFTER_WARMUP',
+                anchor='CURRENT_STREAM_SYNC_BEFORE_FINAL_DRAIN', input_tokens=32, output_tokens=2,
+                batch_size=1, warmup_count=1, repeat_count=1)
+
+
 def require(ok, reason):
     if not ok:
         raise ValueError('N1_MODEL_' + reason)
@@ -31,6 +38,71 @@ def declaration(variant):
                 callsite_id=CALLSITE, phase='decode', layer_index=15,
                 frequency='ONCE_PER_DECODE_FORWARD', stream_policy='HELD_EXPLICIT_NONBLOCKING',
                 declaration_role='PRE_EXECUTION', qualification='NOT_ASSESSED')
+
+
+def validate_manifest(manifest):
+    """Explicit N1 opt-in; the shared verified entry still checks all identities."""
+    from exposedpath_v141.gate9_domain import declaration as domain, N1
+    policy = manifest.get('n1_model')
+    require(isinstance(policy, dict) and policy == declaration(policy.get('variant')), 'DECLARATION')
+    expected = dict(sync_origin='n1_intervention', callsite_id=CALLSITE,
+                    intervention_variant_id=policy['variant'])
+    require(manifest.get('study_mode') == 'N1_INTERVENTION' and manifest.get('n1_intervention') == expected
+            and manifest.get('domain_qualification') == domain(N1), 'DOMAIN_IDENTITY')
+    require('engineering_pair' not in manifest and 'gate10_workload' not in manifest
+            and manifest.get('attention_backend') == 'sdpa'
+            and 'target_python' in manifest and 'isolated_preflight_version' in manifest, 'VERIFIED_ENTRY_REQUIRED')
+    require(manifest.get('n1_model_execution')==execution_declaration(), 'EXECUTION_DECLARATION')
+    return policy
+
+
+class Execution:
+    """Attach to the existing loader/runner, never a replacement entry.
+
+    Hold the warmup stream alive; a different dedicated measured stream is
+    created after warmup's successful drain. All groups share this policy.
+    The out-of-window anchor binds actual native handle to trace stream IDs.
+    """
+    def __init__(self, policy, cuda):
+        self.policy, self.cuda = deepcopy(policy), cuda
+        self.streams, self.requests = [], []
+
+    def run(self, model, identity, operation, *, warmup=False):
+        stream = self.cuda.Stream(device=0)
+        require(int(stream.cuda_stream) > 0 and all(s.cuda_stream != stream.cuda_stream for s in self.streams),
+                'STREAM_GENERATION_REUSE')
+        self.streams.append(stream)
+        generation = identity['run_id'] + ':' + identity['request_id'] + ':held'
+        with self.cuda.stream(stream):
+            proxy = ModelCalls(model, self.cuda, stream, identity, self.policy['variant'], generation=generation)
+            self.requests.append(proxy.record)
+            proxy.record.update(request_role='warmup' if warmup else 'measured', anchor=None)
+            life = dict(schema_version=VERSION, operation='held_lifetime', identity=identity,
+                        generation=generation, native_handle=int(stream.cuda_stream), logical_device=0)
+            proxy.record['lifetime_payload'] = life
+            proxy._push(life)
+            try:
+                if not warmup:
+                    anchor = StreamBridge(self.cuda, stream, identity, generation)
+                    with anchor:
+                        anchor.synchronize('wait')
+                    proxy.record['anchor'] = deepcopy(anchor.records[0])
+                result = operation(proxy)
+                if warmup:
+                    require(len(proxy.record['model_calls']) == 2
+                            and all(r['status'] == 'COMPLETE' for r in proxy.record['model_calls'])
+                            and len(proxy.record['interventions']) == (0 if self.policy['variant']=='V0' else 1), 'WARMUP')
+                    proxy.record['status'] = 'WARMUP_CALLS_COMPLETE_PENDING_TRACE_OWNERSHIP'
+                else:
+                    require(result['actual_input_tokens']==32 and result['actual_output_tokens']==2,
+                            'ACTUAL_WORKLOAD')
+                    proxy.finish(result)
+                return result
+            except BaseException:
+                proxy.record['status'] = 'FAILED'
+                raise
+            finally:
+                self.cuda.nvtx.range_pop()
 
 
 class ModelCalls:
@@ -155,6 +227,7 @@ class ModelCalls:
                 and all(r['status'] == 'COMPLETE' for r in self.record['interventions']), 'INTERVENTION_COUNT')
         self.bridge._current()
         self.record.update(status='COMPLETE_PENDING_TRACE_OWNERSHIP',
+                           actual_input_tokens=result['actual_input_tokens'],
                            observed_tokens=[list(b.host_token_ids) for b in boundaries])
         return deepcopy(self.record)
 

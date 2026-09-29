@@ -149,8 +149,9 @@ def test_model_inventory_binds_content_without_path_escape(tmp_path, monkeypatch
         assert result['revision'] == 'UNKNOWN'
 
 
-@pytest.mark.parametrize('engineering_backend,length',[(None,None),('sdpa',None),('sdpa',128),('sdpa',512)])
-def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path, engineering_backend,length):
+@pytest.mark.parametrize('engineering_backend,length,n1',[(None,None,None),('sdpa',None,None),('sdpa',128,None),('sdpa',512,None),
+                                                       ('sdpa',None,'V0'),('sdpa',None,'Vmarker'),('sdpa',None,'V16')])
+def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path, engineering_backend,length,n1):
     module = api()
     assert callable(getattr(module, 'prepare_diagnostic', None))
     from exposedpath import platform_adapter
@@ -175,7 +176,7 @@ def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path, engi
         prompt_sha256=sha(prompt),expected_commit='d'*40,physical_gpu=3,
         engineering_attention_backend=engineering_backend,
         target_python=sys._base_executable if engineering_backend else None,
-        site_root=sysconfig.get_path('purelib') if engineering_backend else None,gate10_input_tokens=length)
+        site_root=sysconfig.get_path('purelib') if engineering_backend else None,gate10_input_tokens=length,n1_variant=n1)
     manifest=json.loads((output/'manifest.json').read_text())
     assert manifest['repeat_count']==1 and manifest['warmup_count']==1
     assert manifest['attention_backend']==(engineering_backend or 'UNKNOWN_NOT_LOADED')
@@ -187,6 +188,9 @@ def test_prepare_binds_fresh_manifest_to_real_inputs(monkeypatch, tmp_path, engi
     if length:
         assert manifest['fixed_input_tokens']==length
         assert manifest['domain_qualification']['profile']=='G1_NATURAL_PROJECTED_A/0.1.0'
+    if n1:
+        assert manifest['domain_qualification']['profile']=='N1_EXPLICIT_STREAM_AB/0.1.0'
+        assert manifest['n1_model']['protocol_variant']==n1 and manifest['study_mode']=='N1_INTERVENTION'
     assert manifest['runner_git_commit']=='d'*40
     assert manifest['prompt_tokens_sha256']==sha(output/'prompt.json')
     assert manifest['runner_source_sha256']==sha(Path(module.__file__).parent/'runner.py')
