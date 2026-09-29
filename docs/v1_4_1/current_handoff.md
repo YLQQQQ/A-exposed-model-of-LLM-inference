@@ -1,6 +1,10 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.92](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.93](research_progress.md)。
+
+已完成[probe本地实现与独立预期](gate9_stream_probe_v0_1.md)，交付待协调审查。
+本地CPU不证明CUDA：pending-after-return可供窄域资格审查，完成只为INCONCLUSIVE；不自动判全局模式。
+Gate9仍BLOCKED待目标证据，无自动重试、无模型/Nsight。以下7.92为来源。
 
 当前结论C：目标资料无法定实际模式；已发现窗前worker338活动的W/B范围歧义，
 不能把A等价推广到B。静态搜索停止；Gate9入口顶部给出一次同调用路径的区别性方案，

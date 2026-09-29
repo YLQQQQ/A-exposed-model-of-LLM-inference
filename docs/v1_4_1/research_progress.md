@@ -1,5 +1,16 @@
 # ExposedPath 科研进度清单
 
+## 7.93 Gate9单向区别probe本地实现（2026-09-29）
+
+按用户批准完成[固定操作与独立预期](gate9_stream_probe_v0_1.md)，没有N1/model/Nsight。
+实际current_stream().synchronize后，已记录worker事件仍pending才排除本次共享等待；
+事件完成不判LEGACY，INCONCLUSIVE停止。窄域结果仅服务计划调用资格，不回填旧Qwen物理B或mode。
+新增probe、直接解释器/身份/45秒超时监督、CPU正反例；设备查询复用生产native adapter。
+先13例缺实现失败，再最小实现；PCI域宽度回归失败后采用既有normalizer，不用编号相等猜身份。
+相关CPU测试34 passed（本地Python3.12）；新文件compileall/diff-check通过，没有目标CUDA验证。
+Gate9仍BLOCKED待固定probe目标证据/审查；Gate8已收尾；不授Q0总资格、Pilot或Formal。
+单一增量包以前置服务器36ed952为基线，配套固定版本单段步骤与单ZIP回传；本轮不操作服务器。
+
 ## 7.92 默认流有界核对结论C（2026-09-29）
 
 [Gate9入口](gate9_platform_assessment_v0_1.md)保存目标机源码/header/PE依据及一次区别性方案。
