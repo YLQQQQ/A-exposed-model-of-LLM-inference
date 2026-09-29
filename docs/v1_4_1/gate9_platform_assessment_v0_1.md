@@ -1,5 +1,85 @@
 # Gate9 单平台资格评估 0.1
 
+## 7.95 最小分域方案与claim影响（待最终裁决，不是生效amendment）
+
+2026-09-29。用户原则上考虑接受；本版只固定可裁决方案，无实现/采集。
+依据研究设计v7.1的信息增益问题、Pre-Pilot协议v2.1 §4.1–4.5/§5.1及用户单平台路线。
+**推荐有条件采用：保留“可信请求归属＋有限信息增益”；放弃自然默认流完整物理B的当前claim。**
+Gate8 PASS不变，Gate9不自动PASS。7.94原件审计与probe关闭结论保持；不恢复旧probe。
+
+### 1. 两个可证伪的研究命题
+
+| 分域 | 要检验的具体命题 | 相对常规指标可能新增的信息；否证/降级方式 |
+|---|---|---|
+| N1显式流受控 | 在输入与执行合同相同、仅中间同步干预不同的条件下，局部raw sync增加是否等于request E2E增加？等待是否在中间sync与自然token-ready之间迁移？ | Pass0给E2E变化；A定位request增量分量；合格单sync B解释hidden/exposed/terminal变化。kernel/API总时长或一个raw sync时长不直接提供该关系。若常规指标在所测范围已充分解释，则报告等价/边界结果，不宣称额外机制解释必然成立 |
+| G1自然执行 | 在预定单轴输入变化下，kernel/API工作量的变化是否按比例映射到request/prefill/decode的可见暴露？ | 在同一目标证据范围比较常规kernel/API/sync计数、时长与A的分量/变化，说明哪些工作发生变化却未等量暴露、哪些Host/API路径影响窗口。只在数据支持时报告非比例关系；若近似等价则如实报告。不能由A图、守恒或unattributed=0推导信息增益，也不由A解释GPU硬件根因 |
+
+最小G1候选仍为32→64输入、输出2/batch1；只是有限prefill/短decode对照，不代表长decode规律。
+单次Engineering观察不证明效应稳定；选定比较、噪声/开销政策和统计规则在Pilot后冻结，不能按结果追逐反例。
+N1只对有证据的单sync做B，不累加B代替request贡献；Vsync与Vmarker是主要干预比较，V0只量化包装影响，
+不能把Vmarker差值未经论证机械扣成“纯同步因果效应”。
+
+### 2. N1统一执行合同（候选）
+
+全部V0/Vmarker/Vsync使用同一显式**非默认、非阻塞**流策略，同一模型内容、精度/backend、输入digest、
+greedy/cache策略、batch/token、host-readable三边界、warmup及Pass0/1合同。自然token-ready不删。
+Vmarker和Vsync在同一预定decode位置执行同一分支/标记；只有Vsync调用该实际current stream的sync。
+V0不插额外标记/同步。固定variant/callsite/ordinal，输入和输出token内容对齐，不只检查长度。
+
+加载、warmup、成功device drain在request外。优先在warmup/drain后建立专用测量流，并记录创建/销毁及
+native→trace stream/context/PID/thread映射，避免把不可追踪的warmup流前缀带入B；所有组同策略。
+如该流已有工作，必须保留其完整可恢复前缀，不能只因其位于request外或已完成就删出物理W。
+这改变受控N1执行配置，必须明确写入版本合同；不能声称与自然G1调度等价。
+
+`with stream`只表达框架选择，不是完整归属证据：逐enqueue correlation、线程、context、stream/lifetime、
+返回值、所有已观测blocking API及event依赖核对。内部其他流不删：只有已受Gate6支持、能恢复且唯一归属的
+显式依赖才纳入W/terminal/B；若实际出现未覆盖的默认流依赖、混合线程、未记录提交或ambiguous closure，
+停止该候选，不临时关闭模型行为或新增同步来让它通过。首个资格只覆盖最小实际必要集合，不追求通用多流支持。
+专用非阻塞流避免依赖未定的默认流隐式排序，但不是“保证库内部不会使用其他流”的声明。
+
+### 3. 自然G1不发布物理B时，A仍须有S证据
+
+复用D1共同clock边界、身份adapter、成功drain、同线程单实际FIFO后缀及Gate6依赖恢复/互斥union规则；
+现有7.86/7.87只证明那个32/2 request。A按sync区间内必要活动交集恢复wait/residual，
+不是把未决物理B隐藏后直接记Host。已完成的窗前前缀可以有不同物理W成员，但在已证完成的条件下，
+不与窗口/sync阻塞区间相交；**这只支持A投影，不支持完整B hidden量**。
+
+每个新request必须重新满足相同准入义务：边界/身份/时钟、实际drain、全部提交及同步映射、
+ownership、无未知incoming依赖的显式支持条件、无冲突event/其他流、两模式下后缀闭包及唯一frontier、
+必要集合与三窗A一致。有界分类缺口只能unattributed，不能填Host；影响不明则拒绝。
+输入变长可能改变kernel/backend、资源/stream/event或同步路径，任何此类变化都使原单点证据不足；
+新点自身记录通过才接受，不因32/2通过就推定64/2通过。质量判据先固定、不得据结果放宽。
+
+现有实现只输出A_SCOPE_ENGINEERING_ONLY、measurement_validity=NOT_ASSESSED。
+若要把此**投影方法**用于未来科学G1，须另有明确版本化观测/资格条款及独立正反例，
+说明哪些证据支持哪些A claim；不能只去掉Engineering标签或自动授Formal。
+旧UNKNOWN、旧条件性产物、旧BLOCKED报告不改。此项是方法适用域裁决，不是重新要求全capture零丢失。
+
+### 4. 明确损失
+
+- 不发布自然默认流完整物理B、全前缀hidden progress或默认流等待迁移机制结论。
+- N1显式流结论不直接套到G1；不能说二者代表相同库调度、同一隐式依赖或证明自然模型的B。
+- G1保持自然执行；不为了配合N1切流、改边界或关闭内部行为。
+- 论文贡献从统一自然A/B解释收缩为“受控栈机制证据＋自然支持域A的信息边界”，外推性更弱；
+  不授硬件根因、通用预测、决策增益或D/Signature。若核心claim必须是自然模型完整B，此路线不够，应暂停该claim。
+
+### 5. Gate9修订后最小退出条件（待批准）
+
+1. 本地可确定：平台/工具身份、Gate6已知流S/A/B oracle、D1/身份/三窗与A互斥实现直接复用；
+   本方案已明确新增的是N1显式流合同和G1投影资格适用域，不完整重跑Q0，不要求先完成全部N1 runner。
+2. 批准后本地增量：固定上述两分域的支持条件/claim；复用已有反例，只补专用流lifetime/ownership桥接
+   及G1新点不能继承单点资格的入口检查。对未知其他流、缺边/错mapping、两模式不等价仍拒绝。
+   保留同A数值但W/ownership错误的负例，不能只查守恒。
+3. 必要目标证据（另交协调审查，不在本轮执行）：同PyTorch显式流最小kernel/D2H/current-stream同步，
+   对照独立W/terminal/A/B预期并验证实际流标识/依赖；只验证新adapter/调用桥接，不重做所有Gate6用例。
+   可与第一个选定模型点的执行接线证据组织在最小批次，但不能让模型结果替代独立oracle。
+4. 资格结论只覆盖已声明且被证据支持的执行范围。新workload可行性归Gate10、重复/阈值归11、冻结归12、
+   N1/G1信息增益归13。完整N1功能完成不是Gate9单独前置；未来新增路径须满足逐run准入。
+
+**集中裁决建议：接受上述两分域及其claim损失，并授权随后版本化合同设计；本轮不授权实现或目标采集。**
+该路线能保留路线A核心问题，但前提是接受G1没有完整物理B，且不把Engineering A自动升级科学资格。
+若不接受其中任一前提，不应先堆显式流实现。当前Gate9保持BLOCKED、服务器无需操作。
+
 ## 当前停点7.94：probe关闭，不再安排默认流判别采集
 
 [原件审计](gate9_stream_probe_v0_1.md)得到预定义INCONCLUSIVE，不是程序异常，不支持任何模式判定。

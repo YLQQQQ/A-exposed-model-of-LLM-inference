@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.95 N1/G1最小分域方案（2026-09-29，待裁决）
+
+用户原则上考虑接受，未批准立即实现/采集。本轮在[Gate9现有入口](gate9_platform_assessment_v0_1.md)
+集中写明两项可证伪命题、统一N1显式流控制组、内部其他流/依赖拒绝规则、自然G1逐request的A/S准入及claim损失。
+明确Engineering A-only现状不能通过删除标签自动获得科学资格；若采纳，需版本化投影适用条款和独立验证。
+已有Gate6/边界/身份/三窗证据复用；新增只针对显式流调用桥接及G1投影资格，不完整Q0重跑。
+平台资格与workload可行性/Pilot/Freeze/信息增益分开，完整N1 runner不是Gate9单独门槛。
+推荐有条件采纳，取舍为放弃自然默认流物理B及跨域机制外推，保留受控机制＋自然请求A有限信息增益。
+待用户最终裁决；Gate8 PASS、Gate9 BLOCKED，当前无服务器操作，无业务代码/测试/采集或旧证据重算。
+
 ## 7.94 Gate9 probe原件INCONCLUSIVE与路线停点（2026-09-29）
 
 本地直接核验[probe回执](gate9_stream_probe_v0_1.md)：ZIP14183bytes及指定SHA、CRC、29文件安全性、

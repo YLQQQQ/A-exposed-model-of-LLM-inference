@@ -1,6 +1,10 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.94](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.95](research_progress.md)。
+
+当前待裁决方案在Gate9入口7.95：N1统一显式流受控合同，G1自然执行/逐request A投影资格、
+不发布默认流物理B；现Engineering A不能自动变科学资格。只完成方案，无实现采集授权。
+Gate8 PASS；Gate9 BLOCKED。当前服务器无需操作；下方7.94为历史停点依据。
 
 probe原件核验为预定义INCONCLUSIVE，本次尝试关闭，不重跑/延长K。Gate9仅剩自然默认流完整物理B资格受阻，
 不是整个平台能力失败。当前待用户裁决[Gate9入口](gate9_platform_assessment_v0_1.md)的N1显式流/G1自然A claim分域建议，
