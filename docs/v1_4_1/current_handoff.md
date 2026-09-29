@@ -1,6 +1,10 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.93](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.94](research_progress.md)。
+
+probe原件核验为预定义INCONCLUSIVE，本次尝试关闭，不重跑/延长K。Gate9仅剩自然默认流完整物理B资格受阻，
+不是整个平台能力失败。当前待用户裁决[Gate9入口](gate9_platform_assessment_v0_1.md)的N1显式流/G1自然A claim分域建议，
+尚未实施；不要继续旧probe交付或部署。Gate8不重开，无服务器任务。以下7.93为历史。
 
 已完成[probe本地实现与独立预期](gate9_stream_probe_v0_1.md)，交付待协调审查。
 本地CPU不证明CUDA：pending-after-return可供窄域资格审查，完成只为INCONCLUSIVE；不自动判全局模式。

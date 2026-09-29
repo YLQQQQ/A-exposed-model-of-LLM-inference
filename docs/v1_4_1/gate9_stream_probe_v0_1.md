@@ -1,5 +1,26 @@
 # Gate9 current-stream关系probe 0.1
 
+## 7.94 封存回执：INCONCLUSIVE，尝试关闭（2026-09-29）
+
+原件`.local/transfer/gate9_probe_bee6a25_once.zip`，14183 bytes，SHA256
+`02c57ff654a99eb35dc1e280538088ab127bb282f6cec61aff7268a0f81cc5f3`。
+本地直接读取ZIP：29文件，CRC、无重复/越界路径、外层28项与其余文件精确覆盖/大小/hash、
+内层11项与probe目录精确覆盖全部通过；未解压改写或运行probe。
+外层清单SHA256 `c234c5983ae962282c41bb86ecf3a26dbc15843425e4c0ed899b168570ac90ce`。
+包内source_hashes与bee6a25 Git字节一致，DLL身份与预声明一致，runtime snapshot与CPU contract相同。
+服务器CPU 34 passed/7.41s、compile exit0；这是回传执行证据，不是本轮重跑。
+
+`probe/supervisor.json`及`probe/observation/report.json`：INCONCLUSIVE、error=null、
+Popen/目标PID66200一致、timed_out=false、exit2。M TID67204、W TID53976、各handle[0,0]；
+before=false、after=true；worker_recorded→query_before→sync_enter→sync_return→query_after完整。
+stdout/stderr为空。外层receipt BLOCKED/error描述exit2是预定停止路径，不是目标程序异常；不改该receipt。
+checkout日志的PowerShell NativeCommandError包装对应git正常stderr，checkout exit0，不作CUDA故障证据。
+
+解释：before=false只证明查询时尚未完成；到after=true之间，既可能因S等待，也可能独立完成。
+缺少反事实约束，不能选择LEGACY/PTDS。墙钟耗时不参与判别。**本次关闭，不延长K、不重跑、不增加同类概率性实验。**
+没有本次Nsight trace，也不把旧trace拼接为本次调用轨迹。原件与UNKNOWN保持。
+路线裁决见[Gate9当前入口7.94](gate9_platform_assessment_v0_1.md)；以下为原预声明设计，保留历史。
+
 目的仅为目标torch2.6.0+cu124同调用路径的等待关系资格；不是N1、模型、Q0全套或模式自动检测器。
 前置为已批准7.92方案；固定一次执行，无重试。执行资格仍待目标平台回执，本地CPU测试不证明CUDA语义。
 
