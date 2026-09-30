@@ -1,6 +1,7 @@
 # Gate10 最小 workload 可行性准备 0.1
 
-版本：G10-WORKLOAD-FEASIBILITY/0.1。Engineering；[7.102退出裁决：Gate10限定G1 PASS](gate10_closeout_v0_1.md)。下述准备/待执行语句保留为计划历史，两个新点均已完成，不再执行旧交付。
+版本：G10-WORKLOAD-FEASIBILITY/0.1。Engineering；[7.102退出裁决及7.111范围澄清](gate10_closeout_v0_1.md)：Gate10仅选定G1三点一次可行性PASS；容量/OOM/最大长度/batch未探索，512和2不是上限，不外推未测配置。稳定编号下未执行子项见[进度](research_progress.md)。
+下述Gate10准备/待执行语句保留为历史，两个新点均已完成，不再执行旧交付。7.111直接在本计划末尾补充[Gate11本地准备](#gate11-local-preparation)，不另建重复计划。Gate11 NOT_RUN。
 依据：当前研究设计v7.1 §2.1、Pre-Pilot实验协议v2.1 §2.1候选池、用户批准的单平台路线及[Gate9分域资格](gate9_closeout_v0_1.md)。不修改冻结S/A/B公式，不是Pilot或Freeze。
 
 ## 候选与执行边界
@@ -31,7 +32,7 @@
 - [x] 将已接受官方warning review接入G1 domain；原诊断和UNKNOWN保留，新型/目标warning拒绝。以真实fixture文件链验证正反例；collector只在显式domain声明时调用domain，不绕过任何边界/成员/依赖检查。
 - [x] 新增有限batch编排/服务器脚本，逐点停止，保留失败/未执行点；打包同一ZIP。CPU测试验证清单、顺序、停止、未知分类及实际接线；仅相关回归/语法检查。
 
-N1 V0/Vmarker/Vsync模型矩阵尚未实现，未来需相同专用显式流/输入/边界与真实ownership桥接；不阻塞本批G1，不能由G1可行性替代N1可行性。G1每request重新验证身份、三窗口、窗前drain、内部sync、必要成员/依赖边和支持域；长度变化本身不触发新Q0。
+7.100历史：N1 V0/Vmarker/Vsync模型矩阵当时尚未实现；7.110已独立完成[32/2三组一次Engineering可行性](n1_model_feasibility_closeout_v0_1.md)，不是OOM或统计稳定性证据。G1每request重新验证身份、三窗口、窗前drain、内部sync、必要成员/依赖边和支持域；长度变化本身不触发新Q0。
 
 ## 7.101执行调整
 
@@ -53,3 +54,94 @@ N1 V0/Vmarker/Vsync模型矩阵尚未实现，未来需相同专用显式流/输
 执行入口 `scripts/run_gate10_once.ps1`，编排 `scripts/gate10_feasibility.py`；机器本地delivery固定commit/prerequisite、源码/输入hash、模型inventory与路径，随单包交协调窗口审查。以服务器15b24ec为前置，部署后只跑相关CPU测试，再顺序两点；无需重新编译native、跑旧probe/完整Q0/全量测试。prepare会初始化CUDA做设备身份查询，不能称整段CPU-only。
 单次collection仍120秒工具限制/300秒外层限制，包含analysis的point子进程900秒上限；超时不自动延长。所有原始exit/stdout/stderr、entry异常记录、输入/manifest/preflight、producer/drain/stage、REP/SQLite/export、domain/diagnostics和batch机器报告统一单ZIP。任何中断只保留已产生证据，未执行点不得补成失败或成功。
 本批只能确认G1两点一次可行性；不能据此宣布N1同点模型执行或完整N1/G1共同可行域已验证。N1模型功能准备与以后Pilot仍分开。
+
+<a id="gate11-local-preparation"></a>
+## Gate11 本地准备（7.111，G11-PILOT-PREP/0.1，待执行审查）
+
+2026-09-30；这是既有EP-G11-01～04的最小具体化，不是新资格层、采集授权或Protocol Freeze。
+依据研究设计v7.1 §2.3.9/3.2、Pre-Pilot协议v2.1 §1.2/1.4/4.2–4.4/6.2，结合已批准单平台分域路线。
+现有Engineering只提供执行可行性、身份/语义适用依据和粗略资源预算；新Pilot需新run/角色，不能把旧值计入重复样本。
+不沿用旧`docs/small_pilot.md`的v3四点、warmup5/repeat5或任意CV/coverage阈值。
+
+### 代表点、问题和复用边界（EP-G11-01）
+
+| 条件 | 固定点 | Pilot需要回答的问题 |
+|---|---|---|
+| G32、G512 | G1自然32/2、512/2，batch1 | 输入轴两端的latency/投影A及常规API/kernel/sync描述是否可稳定测量；能否估计噪声和profile扰动，而非预选非比例趋势 |
+| N0、Nm、N16 | N1显式流32/2的V0/Vmarker/V16 | 包装/marker成本与同步干预能否区分；A和合格单sync B、raw sync与E2E对照所需精度及成本，不以出现显著效果为成功条件 |
+
+这五个条件按比较问题选取，不按已知A占比、unknown或干预效果选择。128/2保留Engineering证据，不在首批重复；两端不能证明中间单调或完整输入响应。
+模型内容快照、固定prompt及循环构造/digest、fp16/greedy/eager/SDPA/cache、单GPU和32/2的三组公共合同沿用。
+G1不引入N1流或干预；N1层16位置、每个decode一次、各组相同专用流及配置不变。只含一个decode step，不能代表长decode。
+旧证据复用范围见[Gate10收尾](gate10_closeout_v0_1.md)、[N1收尾](n1_model_feasibility_closeout_v0_1.md)与[Gate9资格](gate9_closeout_v0_1.md)；不重跑完整Q0，不补测容量极限。
+
+### 最小配对、组序与warmup评估（EP-G11-02草案）
+
+记录单位为独立进程的一次measured request/phase；进程独立不等于统计独立，配对/三组对比按共同block保留相关性。先保持每进程repeat1，外层block承载重复，不新增长驻多request状态。
+每个条件每block有一组相邻Pass0/Pass1：完全相同输入、variant、warmup1、completion/流政策和输出token；分别绑定run/pass/request/nonce/PID，不能共用一个PID或把旧V0当新Pilot基线。
+Pass0保留N1预定marker/同步，关闭仅用于trace的观测插桩；Pass1沿用已获资格观测方式。公共合同与允许的观测差异须机器列明，不能声称两pass指令流字节完全相同。
+host-readable host时钟边界用于两pass latency对照；Pass1 trace共同锚点用于A，两个时钟不直接相减。
+
+首批3个完整block的条件顺序：
+
+- b1：G32 → N0 → Nm → N16 → G512。
+- b2：G512 → Nm → N16 → N0 → G32。
+- b3：G32 → N16 → N0 → Nm → G512。
+
+若经首批审查仍需更好的噪声/精度估计，最多续b4～b6，分别反转b1～b3；不因差值符号、显著性或图是否好看而追加。
+条件在block中位置为j（从1开始）：b+j为偶数时P0→P1，奇数时P1→P0；六block可平衡次序，首批三block不声称完全平衡。
+N1三组均独立新进程，同block内比较；不得跨域把自然G1当显式流V0。实际执行顺序持久化，不按文件名排序恢复。
+
+warmup1只是Engineering起点，未证明充分。首批复用实际stage ledger的warmup开始/结束/成功记录，结合measured request随block、顺序及allocation的变化筛查热态/漂移；这些只能提示问题，不能证明warmup1充分。
+现有warmup的`actual_output_tokens`是成功后赋目标值，不能当成逐token/EOS实测；测量request仍须读取实际tokens。加载、warmup、成功drain在窗外，不增加CUDA同步来计时。
+N1保留独立held warmup流与fresh measured流；即使模型已热，measured流仍可能发生首次allocation，不能将其移出request或按“冷启动异常”事后删除。
+若首批不足以选定warmup政策，优先把剩余预算用于**五条件各3个P0-warmup1/3相邻对照，共30进程、无新Nsight**；条件顺序复用b1～b3，warmup对照顺序按b+j偶数为1→3、奇数为3→1，其他合同不变。不能把不同warmup混成一个repeat总体或把warmup3当P1-warmup1的配对。
+该对照与b4～b6扩重复二选一，不两项叠加；按热态/精度问题决定，不按干预效果选择。少量数据不能证明等效，warmup3仍不充分或时间漂移不可分时停止政策定案。
+若最终需改变profile warmup，须另审该新政策最小配对Pilot证据，不能拿本批warmup1的Pass1直接冻结warmup3；不自动执行后续增量。
+
+### 预算、精度估计与停止
+
+**首批：3 block × 5条件 ×（P0-w1、P1-w1）=30进程、15条profile；每条件主配对n=3。**
+**本计划总上限：60进程、至多30条profile。** 剩余30进程只选b4～b6（主配对n≤6），或上述warmup对照（主配对仍n=3，最多15条profile）。这是Pilot资源上限，不是已证明足够的正式repeat数；只授权准备，未授权运行。
+首批后统一审查一次再决定是否使用剩余预算；不自动续跑/重试、不按单组补足“成功样本”。失败/partial消耗attempt预算；未执行槽位保留NOT_RUN，不冒称已尝试，也不自动替补或扩预算。关键失败停止余下批次。
+
+先报告每个repeat原值、配对差、median/范围、block/顺序变化及失败原因。用Pilot重复/配对差的波动估计Formal所需n：分别对latency、A分量/unknown及N1配对差建立精度—成本表，按repeat/block重采样，不把token/kernel/sync当独立样本。
+可给`n候选≈n试测×(当前不确定性宽度/预定目标宽度)^2`作粗预算，不当作保证或功效证明；接近零的差用绝对精度，不以相对CV或CI跨0决定加采。
+目标精度/等价带须按可支持claim的最小有意义分辨率，于Formal前结合Pilot噪声和成本明确固定，不从Engineering单值、效果大小或旧v3阈值套出。
+首批n=3甚至上限n=6都可能不足，不能因预算用尽就判Gate11 PASS；预算内不能支撑政策则报告未定并收缩claim/集中审查，不无限加采。
+
+成本只用于调度：已有N1两组driver为219.203/224.157s、G512为231.063s（包含分析复读），profile约36.671–38.312s；旧G32 Pass0约27.437s。
+来源为封存d25两组及700f671/36ed952的`driver/process.json`、`collection_log/process.json`，不是request latency，也不保证Pilot速度。
+按每profile全链4–6分钟、每Pass0进程0.5–1分钟留余量：首批约**1.5–2小时**，上限约**3–4小时**，传输/人工审查另计；warmup增量或失败不据此自动扩超时。
+已有两N1组解压1,131,867,072 bytes，G512 935,230,566 bytes，G32配对928,843,305 bytes；主要是派生文件，不能只按小REP估计。
+首批约**11GB原件/派生（规划15GB）＋0.3–0.5GB ZIP**，上限约22GB（规划30GB）＋0.6–1GB ZIP；按封存与审查副本并存，预留**35GB/70GB**工作空间。不复制仓库/模型，不删除Raw来满足预算。
+这是旧包目录大小/小报告读取的预算，不是新采集、峰值内存证明或哈希复验；实际成本必须逐run记账。
+
+沿用已验证profile/driver的有界超时（工具120s、collection外层300s、含分析driver900s，交付时核对实际接线），禁止自动提高。
+OOM、EOS/输出不一致、身份/边界/drain冲突、必要依赖缺失、超支持域/新型未知影响诊断、分析/守恒失败、磁盘不足或超时即停，保留具体分类和未执行清单。
+不得把慢分析当OOM、把调度总时长当request时长，或自动杀无关进程；写入者退出状态不明先停止封包。
+
+### 区分开销及待冻结政策
+
+- 对同窗口host边界时长T0、T1，记录`delta=T1−T0`和`ratio=(T1−T0)/T0`（T0必须正），负差也保留；它是**profile＋观测插桩＋运行波动的配对差**。当前P0不发通用NVTX，不能称纯Nsight overhead，不从P1 A逐项减这个差。
+- 同pass、同block的Nm−N0估计整套分支/包装/marker成本；N16−Nm估计同步干预总差，不是纯同步API持续时间或因果净等待。
+- Pass0是性能主口径；Pass1给A和合格单sync B用于解释，N1配对还需按pass分别检查差异，识别profile×variant交互。allocation次数/区间/opaque预算差别仅按实际可观测的Pass1保留，不能推定未profile的Pass0也相同；大小未知不填0。
+- 有效性硬门（身份、completion、S/terminal、互斥/守恒、源引用及输出一致性）不由Pilot放宽。已知warning仅按现有官方版本规则，未知影响仍拒绝；UNKNOWN/NOT_ASSESSED不改零或PASS。
+- Pilot需要形成：warmup策略、repeat/block与最大成本、profiler差异可接受范围/处理政策、局部unknown与supported/B-valid覆盖的解释阈值、排除/失败/重试规则、最小精度/等价带。按原因/分布/敏感性与claim决定，不设“unknown必须0”或按结果反向放宽。
+- G1只投影A；N1只合格单sync B，保留RAW_PHYSICAL来源及opaque等待不拆的限制；无自然默认流完整B，B不跨sync加总，D/Signature禁用。null/信息等价也是合法研究结果。
+
+### 本地实际缺口与阶段适用性（未实施，不是服务器方案）
+
+已有入口可复用：固定内容/解释器/设备、isolated preflight、host completion、专用流桥接、producer/文件链、S/A/B及逐request准入；没有理由再跑完整Q0或旧Gate。
+但`gate8_diagnostic.prepare_diagnostic`拒绝N1+pair、Gate10长输入+pair；`n1_model.validate_manifest`及runner/ModelCalls限定pass1。身份schema、declaration和domain消费锁定Engineering，不能仅改manifest文字或直接调用旧v3 Pilot脚本。
+最小后续实现限于：**显式Pilot角色/版本贯通；G512与N1真实Pass0接线和配对绑定；有界block顺序/汇总**。G1现有pair只核输出数量，需持久化已host-readable的token IDs并比值，不新增D2H或同步。首批保留warmup1；warmup1/3参数及实际次数接线只在该分支确需执行时补，不提前泛化多request支持。
+N1 Pass0必须保留干预marker/branch、V16实际sync及原流/anchor/drain，不能随通用NVTX开关一起删掉。保留旧Engineering路径和拒绝门，相关CPU正反例后再固定交付版本；本轮不实现、不测试。
+
+**唯一阶段适用性待明确：**现行Gate9/opaque等资格明确不自动授Pilot/Formal。推荐为未来新采数据显式批准“沿用已限定支持域的Pilot政策估计”适用声明，并保留所有unknown、原始有效性字段与claim限制；不是将Engineering数据改名，也不授科学效果或Formal资格。
+本页是待审执行设计，尚未发布该角色/schema适用版本。无需恢复全capture认证、补整套Q0或重开Gate8～10；任何超支持域的新证据仍拒绝。
+
+### Freeze输入与本轮停点（EP-G11-03/04）
+
+后续Pilot报告须填入：所选有限输入/输出/batch及digest、模型/栈/执行与分析版本、N1/G1分域claim和资格引用、边界/流/opaque政策、实际warmup/repeat/组序/pass差异、失败与排除清单、质量/overhead/精度数值依据、统计单位/方法/seed及图表比较规则。
+未定数值明确PENDING，不用Engineering数据填齐；Protocol Freeze仍Gate12单独决策、Formal须新采。本计划不预授N1信息增益或G1趋势。
+Gate11 NOT_RUN。下一项是集中确认上述Pilot适用边界后，完成最小本地接线并把固定commit、预算清单与单ZIP脚本交协调窗口审查；当前无服务器操作或可执行新包。

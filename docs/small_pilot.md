@@ -1,5 +1,9 @@
 # Small Pilot — ExposedPath v3
 
+> 历史v3入口，不适用于当前v1.4.1路线；不要执行下列旧命令、点集或阈值。
+> 当前Gate11仅本地准备，见[既有计划中的7.111 Pilot准备](v1_4_1/gate10_workload_plan_v0_1.md#gate11-local-preparation)。
+> 本页保留追溯，不代表Pilot已运行或当前服务器方案。
+
 ## Purpose
 
 Estimate variance, profiler overhead, coverage, trace size, and runtime for 4

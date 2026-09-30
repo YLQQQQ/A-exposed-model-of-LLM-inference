@@ -1,8 +1,16 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.110](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.111](research_progress.md)。
 
-**7.110现行：[N1三组限定Engineering可行性PASS](n1_model_feasibility_closeout_v0_1.md)。**
+**7.111现行：Gate10 PASS只表示固定平台/模型/执行配置下，G1 32/2、128/2、512/2的一次Engineering可行性通过。**
+不是完整可行域、统计稳定域或容量边界；OOM、最大输入/输出/batch未探索，512/2不是长度上限，不外推其他配置。原EP-G10-01～03未执行子项保留后移，N1三组独立Engineering PASS不替代OOM探索。
+Gate11 NOT_RUN；[现有计划中的最小本地准备](gate10_workload_plan_v0_1.md#gate11-local-preparation)已完成：G1两端点＋N1固定三组，首批3配对block、30进程/15trace，封顶60进程/30trace，剩余预算只选扩重复或warmup对照。预计首批1.5–2小时/规划15GB数据，预留35GB含审查副本；不是执行授权或统计保证。
+实际入口仍锁Engineering，G512/N1的Pass0配对及实际输出值一致性需最小接线。唯一阶段问题是未来新采Pilot显式沿用限定支持域作政策估计的适用声明；推荐保留UNKNOWN/NOT_ASSESSED、opaque/B及分域claim限制，不升级历史Engineering或授Formal。当前不改代码/角色合同，先集中审查该适用边界，再接线、固定方案交协调窗口。
+本轮仅文档一致性/链接/diff检查，不跑测试/服务器/GPU/Nsight/OOM、不改Raw/历史失败报告；用户DOCX保留且不纳提交。没有可执行新包或服务器任务，旧续跑交付不再使用。
+
+以下7.110的证据结论继续有效，其“尚待本地选点”由7.111准备结果取代：
+
+**7.110历史收尾，证据结论保持：[N1三组限定Engineering可行性PASS](n1_model_feasibility_closeout_v0_1.md)。**
 复用c21 V0在adapter0.3/A-B0.6新合同下的已通过审查，d25 Vmarker/V16原件已直接核验：166文件/165清单、四份reference PASS、实际32/2及tokens一致。
 两组完整W/terminal/逐sync B和Raw来源、真实干预0/1、九窗A与allocation已独立交叉审查；不只核对exit0或守恒。32个producer实际字节与旧V0一致，LF/CRLF交付缺口关闭。
 限定单平台/Qwen/eager/SDPA/batch1/warmup1/repeat1；不是稳定收益、Information Gain、完整新Q0、Pilot/Freeze/Formal。原V0 BLOCKED、新包pending/NOT_QUALIFIED及UNKNOWN/NOT_ASSESSED保持；allocation内部等待不拆、大小未知，B不跨sync求和，D/Signature禁用。
