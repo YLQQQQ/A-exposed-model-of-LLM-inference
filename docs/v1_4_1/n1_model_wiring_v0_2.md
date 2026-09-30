@@ -1,6 +1,7 @@
 # N1 verified模型接线与最小可行性 0.2
 
-状态：两处本地接线已完成，**目标机N1模型可行性仍NOT_RUN**。Gate10限定G1 PASS保持；不启动Pilot。
+状态：两处本地接线已完成，**目标机N1模型支持域审查BLOCKED，尚未授可行性**。Gate10限定G1 PASS保持；不启动Pilot。
+7.106当前入口：[V0实物审查0.1](n1_v0_review_v0_1.md)。c21d835已跨过采集前身份门并完成V0模型/profile/export；本地继续整条S/A/B链，修复局部NON_BLOCKING/default污染及global PID高位适配。仍有cudaMalloc测量政策与内部同步来源身份两项集中待裁决；不得执行下方历史批次指令、安排Vmarker/V16或重采。
 7.105补正：首次c6cdb36服务器尝试在profile前被共享G1-only validator拒绝，未执行模型。该分派遗漏已用真实prepared及prepare→seal/collector边界CPU回归修复；旧attempt仍BLOCKED，详见[进度7.105](research_progress.md)。
 依据：Pre-Pilot协议v2.1 §4.2 V16及[Gate9分域合同0.1](gate9_domain_qualification_contract_v0_1.md)。
 本版接替[0.1的部分实现状态](n1_model_wiring_v0_1.md)，不是新测量语义、完整N1矩阵或新Q0资格。
@@ -15,7 +16,7 @@
 
 ## 多API消费及拒绝
 
-`exposedpath-n1-model-ownership/0.1.0`只由明确N1模型manifest分派；旧Gate9单操作桥接、G1与物理S/A/B实现不改。
+`exposedpath-n1-model-ownership/0.1.1`只由明确N1模型manifest分派；0.1.0执行产物仍原样保留。新适配仅在实际Raw证明nondefault NON_BLOCKING且没有incoming依赖时限定S建图范围，不填全局default模式、不截完整物理前缀；旧Gate9单操作桥接及G1默认路径不opt-in。
 
 1. 复用不可变input receipt、Canonical、D1 projection、stage/drain与已接受官方诊断处置。保留原warning、UNKNOWN/NOT_ASSESSED；不豁免新诊断。
 2. 将锚点与相同process/thread/clock/device/context的drain核对，查CUPTI stream type=NON_BLOCKING及非null流，不能拿runtime flags替代CUPTI编码。前缀活动须在drain完成；measured trace流已有历史工作则拒绝，**不裁掉物理W前缀**。
@@ -35,7 +36,7 @@ tests-first曾复现verified入口拒绝N1、旧单API消费者拒绝模型sidec
 
 相关14文件CPU回归192 passed；收口后三文件定向36 passed（与192有重叠，不累加）。Python语法、PowerShell解析、diff检查；无全量/Q0重跑，无模型/GPU/Nsight或服务器操作。CPU成功只证明接线、编排与确定性判断，不能替代目标机。
 
-## 最小目标机批次：先交协调窗口审查
+## 历史最小目标机批次：已执行V0并停止，当前不再交付或执行
 
 固定提交、单一增量包，当前修复前置为服务器c6cdb36（原700f671包为历史）；只运行相关CPU回归。mask=3、显式目标解释器/site、已有模型及32token内容清单保持。经审查授权后才运行V0→Vmarker→V16各一个warmup/一个measured request，每组独立新目录与manifest。
 

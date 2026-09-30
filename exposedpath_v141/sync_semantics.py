@@ -1576,6 +1576,23 @@ def recover_wait_set(
         for event in inventory.get("event_records", [])
         if event.get("event_sync_id") in relevant_event_ids
     ]
+    # Opt-in qualified N1 adapter only. The tuple is established from a unique
+    # Raw CUPTI NON_BLOCKING stream/context row plus the actual native bridge.
+    # Nonblocking FIFO has no implicit legacy/default-stream predecessor. An
+    # observed incoming event disables this shortcut: its whole closure still
+    # needs the original event/default-stream rules. Do not infer global mode,
+    # erase source activities, or alter the frozen/synthetic default path.
+    isolated_scope = inventory.get("isolated_nonblocking_scope")
+    possibly_incoming = any(
+        wait.get("context_id") == sync.get("context_id")
+        and wait.get("stream_id") == sync.get("stream_id")
+        and (wait.get("host_start_ns") is None or sync.get("host_start_ns") is None
+             or wait["host_start_ns"] <= sync["host_start_ns"])
+        for wait in inventory.get("dependency_events", [])
+    )
+    isolated = (isolated_scope is not None and sync.get("sync_kind") == "STREAM"
+        and tuple(sync.get(k) for k in ("global_pid", "device_id", "context_id", "stream_id")) == isolated_scope
+        and not relevant_waits and not possibly_incoming)
     mode = inventory.get("execution_context", {}).get("default_stream_mode")
     cache_key = (
         sync.get("sync_kind"), sync.get("device_id"), sync.get("context_id"),
@@ -1583,6 +1600,7 @@ def recover_wait_set(
         sync.get("host_start_ns") if mode != "PER_THREAD" else None,
         tuple(str(wait.get("record_id")) for wait in relevant_waits),
         tuple(str(event.get("record_id")) for event in graph_inventory["event_records"]),
+        isolated,
     )
     cache = inventory.setdefault("_semantic_graph_cache", {}) if isinstance(inventory, dict) else {}
     cached = cache.get(cache_key)
@@ -1596,7 +1614,10 @@ def recover_wait_set(
         }
         if sync.get("sync_kind") == "STREAM":
             relevant_streams.add((sync.get("context_id"), sync.get("stream_id")))
-        if sync.get("sync_kind") == "DEVICE":
+        if isolated:
+            graph_activities = [activity for activity in activities
+                if tuple(activity.get(k) for k in ("global_pid", "device_id", "context_id", "stream_id")) == isolated_scope]
+        elif sync.get("sync_kind") == "DEVICE":
             graph_activities = [
                 activity for activity in activities
                 if activity.get("device_id") == sync.get("device_id")

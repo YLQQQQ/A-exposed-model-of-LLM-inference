@@ -12,7 +12,8 @@ from test_n1_verified_entry import source as entry_source
 from test_gate8_identity import UUID, sha, write_json
 
 
-def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, queries=False):
+def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, queries=False,
+           default_prefix=False, allocations=False, vm_bits=False):
     queries=queries or damage=='unknown_query'
     from exposedpath import runner
     def execute(Backend, clock, db, plan):
@@ -71,8 +72,20 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
                 def first(x):
                     launch(); sync()  # Framework internal call, no intervention marker.
                 result[0].model.layers[0].forward=first
+            if allocations:
+                def allocate_then_launch(x):
+                    backend.api('cudaMalloc_v3020'); launch()
+                    if internal: sync()
+                result[0].model.layers[0].forward=allocate_then_launch
             return result
         monkeypatch.setattr(runner,'load_model',model)
+        if default_prefix:
+            # Setup work in NULL stream, finished before warmup/request drain.
+            # It is NOT in the explicit nonblocking stream's physical W.
+            db.execute('INSERT INTO TARGET_INFO_CUDA_STREAM SELECT 1,hwId,vmId,processId,contextId,priority,3 FROM TARGET_INFO_CUDA_STREAM LIMIT 1')
+            a,b,c=backend.api('cudaLaunchKernel_v7000')
+            db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_KERNEL VALUES (?,?,0,1,NULL,?,?,?,?,?,NULL,NULL)',
+                (b,b+2,1,c,os.getpid()<<24,1,1))
         entry.run_diagnostic(**args)
         if damage=='correlation': db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET correlationId=999999')
         if damage=='stream': db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET streamId=2 WHERE streamId=3')
@@ -86,6 +99,16 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         if damage=='dependency': db.execute("UPDATE StringIds SET value='cudaStreamWaitEvent' WHERE value='cudaLaunchKernel_v7000'")
         if damage=='drain_scope': db.execute('UPDATE CUPTI_ACTIVITY_KIND_SYNCHRONIZATION SET contextId=22 WHERE syncType=2')
         if damage=='graph': db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET graphId=7')
+        if damage=='blocking_flag': db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=1 WHERE streamId=3')
+        if damage=='null_measured': db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=3')
+        if vm_bits:
+            # Nsight global process/thread IDs include a VM field above the
+            # 24-bit OS PID. Raw IDs must retain it; PID joins must decode it.
+            for table in ('NVTX_EVENTS','CUPTI_ACTIVITY_KIND_RUNTIME'):
+                db.execute('UPDATE '+table+' SET globalTid=globalTid+?',(1<<48,))
+            for table in ('CUPTI_ACTIVITY_KIND_KERNEL','CUPTI_ACTIVITY_KIND_MEMCPY',
+                          'CUPTI_ACTIVITY_KIND_SYNCHRONIZATION','DIAGNOSTIC_EVENT'):
+                db.execute('UPDATE '+table+' SET globalPid=globalPid+?',(1<<48,))
         return args['output_dir']/'producer/producer_receipt.json'
     _,_,sqlite,rep,export=capture(tmp_path,monkeypatch,executor=execute)
     root=tmp_path/'diagnostic'
@@ -143,7 +166,7 @@ def test_shared_collector_dispatches_model_sidecar_without_controlled_api_assump
     from scripts.gate8_diagnostic_collect import analyze_receipt
     value=json.loads((calls.parent/'manifest.json').read_text())
     path,result=analyze_receipt(value,receipt,execution,tmp_path/'derived')
-    assert result['adapter_version']=='exposedpath-n1-model-ownership/0.1.0'
+    assert result['adapter_version']=='exposedpath-n1-model-ownership/0.1.1'
     assert len(result['model_api_bindings'])==9
 
 
@@ -171,3 +194,51 @@ def test_vmarker_actual_sync_cannot_pass_by_declaring_false(tmp_path,monkeypatch
     from exposedpath_v141.gate9_domain import process_domain
     with pytest.raises(ValueError,match='MODEL_INTERVENTION_ACTUAL_COUNT'):
         process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
+
+
+def test_nonblocking_model_waits_do_not_require_mode_for_unrelated_default_setup(tmp_path,monkeypatch):
+    receipt,execution,calls=source(tmp_path,monkeypatch,variant='V0',default_prefix=True)
+    from exposedpath_v141.gate9_domain import process_domain,load_domain
+    result=process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
+    value=load_domain(result,receipt,execution,bridge_path=calls)
+    # Independent submission sequence: 2 kernels + D2H per token, not setup.
+    assert [len(b['wait_set_activity_ids']) for b in value['b_records']]==[3,6]
+    assert all(b['validity']=='B_VALID' for b in value['b_records'])
+    assert all(a['A_unattributed_ns']==0 for a in value['a_records'])
+
+
+def test_allocation_rejection_keeps_all_source_records_and_other_b_failures(tmp_path,monkeypatch):
+    receipt,execution,calls=source(tmp_path,monkeypatch,variant='V0',allocations=True,internal=True,default_prefix=True)
+    from exposedpath_v141.gate9_domain import process_domain
+    with pytest.raises(ValueError,match='MODEL_UNSUPPORTED_API:') as error:
+        process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
+    details=json.loads(str(error.value).split('MODEL_UNSUPPORTED_API:',1)[1])
+    assert len(details['unsupported_apis'])==2
+    assert {r['phase'] for r in details['unsupported_apis']}=={'prefill','decode'}
+    assert all(r['api_name']=='cudaMalloc_v3020' and r['category'] is None
+        and r['activity_record_ids']==[] and r['sync_record_ids']==[]
+        and r['api_record_id'] and type(r['correlation_id']) is int for r in details['unsupported_apis'])
+    assert len(details['physical_b_failures'])==2
+    assert all(b['reason']=='INVOCATION_BOUNDARY_INVALID' for b in details['physical_b_failures'])
+    assert not any('DEFAULT_STREAM_MODE_UNKNOWN' in b['secondary_reasons'] for b in details['physical_b_failures'])
+    assert not (tmp_path/'derived/domain.json').exists()
+
+
+@pytest.mark.parametrize('damage',['blocking_flag','null_measured','dependency','correlation','stream'])
+def test_nonblocking_scope_opt_in_never_bypasses_actual_evidence(tmp_path,monkeypatch,damage):
+    receipt,execution,calls=source(tmp_path,monkeypatch,variant='V0',default_prefix=True,damage=damage)
+    from exposedpath_v141.gate9_domain import process_domain
+    with pytest.raises(ValueError): process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
+    assert not (tmp_path/'derived/domain.json').exists()
+
+
+def test_nonblocking_raw_scope_preserves_vm_bits_but_joins_decoded_os_pid(tmp_path,monkeypatch):
+    receipt,execution,calls=source(tmp_path,monkeypatch,variant='V0',default_prefix=True,vm_bits=True)
+    from exposedpath_v141.gate9_domain import process_domain,load_domain
+    result=process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
+    value=load_domain(result,receipt,execution,bridge_path=calls)
+    assert [len(b['wait_set_activity_ids']) for b in value['b_records']]==[3,6]
+    from exposedpath_v141.sync_semantics import load_canonical_bundle
+    rows=load_canonical_bundle(result.parent/'canonical/canonical_manifest.json')['records']
+    assert all(a['global_pid']>1<<48 for a in rows['device_activity'])
+    assert {a['process_id'] for a in rows['device_activity']}=={os.getpid()}

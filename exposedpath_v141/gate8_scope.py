@@ -176,7 +176,8 @@ def load_projected_ownership(canonical_path, bundle, scope_path):
     return [*other, *projected], actual["projections"]
 
 
-def build_projected_ab_inputs(canonical_path, scope_path, *, closed_prior_manifest=None):
+def build_projected_ab_inputs(canonical_path, scope_path, *, closed_prior_manifest=None,
+                              isolated_nonblocking_scope=None):
     """Deterministic calculation inputs, NOT an integrity/qualification verdict.
 
     The Gate8 reporting entry point must gate these calculations on explicit
@@ -196,6 +197,26 @@ def build_projected_ab_inputs(canonical_path, scope_path, *, closed_prior_manife
                    for r in bundle["records"][kind] for k in ("start_ns", "end_ns"))):
         raise ValueError("GATE8_SIGNED_AB_ADAPTER_NOT_IMPLEMENTED: Raw/projection preserved; frozen A/B unchanged")
     inventory = build_semantic_inventory({**bundle, "ownership_records": ownership})
+    if isolated_nonblocking_scope is not None:
+        # Explicit representation adapter, not a default-stream-mode guess.
+        # N1 validates its held native handle -> physical anchor before opting
+        # in. Keep original Raw rows and the full physical selected-stream W.
+        if (not isinstance(isolated_nonblocking_scope, tuple)
+                or len(isolated_nonblocking_scope) != 4
+                or any(type(x) is not int or x < 0 for x in isolated_nonblocking_scope)):
+            raise ValueError('N1_NONBLOCKING_SCOPE_INVALID')
+        global_pid, device, context, stream = isolated_nonblocking_scope
+        from .canonical_raw import _global_parts
+        pid = _global_parts(global_pid)[0]
+        streams = [s for s in inventory['streams'] if s.get('process_id') == pid
+            and (s.get('context_id'),s.get('stream_id')) == (context,stream)]
+        contexts = [c for c in inventory['contexts'] if c.get('process_id') == pid
+            and (c.get('device_id'),c.get('context_id')) == (device,context)]
+        if (len(streams) != 1 or len(contexts) != 1 or streams[0].get('flag') != 2
+                or type(contexts[0].get('null_stream_id')) is not int
+                or contexts[0]['null_stream_id'] == stream):
+            raise ValueError('N1_NONBLOCKING_SCOPE_NOT_PROVEN')
+        inventory['isolated_nonblocking_scope'] = isolated_nonblocking_scope
     if closed_prior_manifest is not None:
         from .gate8_closed_prior import load_admissions
         inventory['closed_prior'] = load_admissions(closed_prior_manifest, canonical_path, scope_path,

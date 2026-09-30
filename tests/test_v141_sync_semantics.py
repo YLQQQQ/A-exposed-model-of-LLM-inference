@@ -1185,6 +1185,61 @@ def test_default_stream_mode_is_required_only_when_default_stream_is_observed():
     assert no_default["dependency_closure_status"] == "COMPLETE"
 
 
+def test_opt_in_nonblocking_scope_keeps_complete_prefix_without_unrelated_default():
+    default = _owned_activity('setup:default',0,1,8,enqueue_start=0,enqueue_end=1,request_id='setup')
+    first = _owned_activity('measured:first',3,10,30,enqueue_start=9,enqueue_end=10)
+    last = _owned_activity('measured:last',3,40,90,enqueue_start=32,enqueue_end=35)
+    inventory = _semantic_inventory([default,first,last],mode=None)
+    inventory['isolated_nonblocking_scope'] = (None,0,1,3)
+    sync = _owned_sync('STREAM',60,100,stream_id=3)
+    result = recover_wait_set(inventory,sync)
+    assert result['dependency_closure_status']=='COMPLETE'
+    assert result['wait_set_activity_ids']==['measured:first','measured:last']
+    assert result['reasons']==[]
+    assert inventory['execution_context']['default_stream_mode'] is None
+    assert len(inventory['activities'])==3  # No Raw/physical-prefix erasure.
+
+
+@pytest.mark.parametrize('kind',['STREAM','CONTEXT'])
+def test_scoped_nonblocking_proof_does_not_apply_to_another_scope(kind):
+    default = _owned_activity('default',0,1,8,enqueue_start=0,enqueue_end=1)
+    other = _owned_activity('other',2,10,90,enqueue_start=9,enqueue_end=10)
+    inventory = _semantic_inventory([default,other],mode=None)
+    inventory['isolated_nonblocking_scope'] = (None,0,1,3)
+    result = recover_wait_set(inventory,_owned_sync(kind,60,100,stream_id=2))
+    assert 'DEFAULT_STREAM_MODE_UNKNOWN' in result['reasons']
+
+
+@pytest.mark.parametrize('event_present',[False,True])
+def test_incoming_event_dependency_prevents_isolated_nonblocking_shortcut(event_present):
+    default = _owned_activity('default',0,10,40,enqueue_start=1,enqueue_end=5)
+    consumer = _owned_activity('consumer',3,50,90,enqueue_start=40,enqueue_end=45)
+    event = dict(record_id='event:1',event_id=9,event_sync_id=90,device_id=0,context_id=1,
+        stream_id=0,host_start_ns=25,host_end_ns=30,request_id='req-0',repeat_id='r0',
+        ownership_status='VALID',invocation_identity=_identity('decode'))
+    wait = dict(event,record_id='edge:1',role='DEPENDENCY_EDGE',sync_kind='STREAM_WAIT_EVENT',
+        stream_id=3,host_start_ns=32,host_end_ns=35)
+    inventory = _semantic_inventory([default,consumer],mode=None,
+        event_records=[event] if event_present else [],dependency_events=[wait])
+    inventory['isolated_nonblocking_scope'] = (None,0,1,3)
+    result = recover_wait_set(inventory,_owned_sync('STREAM',60,100,stream_id=3))
+    assert 'DEFAULT_STREAM_MODE_UNKNOWN' in result['reasons']
+    if not event_present: assert 'MISSING_EVENT_RECORD' in result['reasons']
+    assert result['dependency_closure_status']!='COMPLETE'
+
+
+def test_unknown_incoming_event_order_cannot_be_treated_as_no_dependency():
+    default = _owned_activity('default',0,10,40,enqueue_start=1,enqueue_end=5)
+    consumer = _owned_activity('consumer',3,50,90,enqueue_start=40,enqueue_end=45)
+    wait = dict(record_id='edge:unknown',role='DEPENDENCY_EDGE',event_sync_id=90,
+        context_id=1,stream_id=3,host_start_ns=32,host_end_ns=None)
+    inventory = _semantic_inventory([default,consumer],mode=None,dependency_events=[wait])
+    inventory['isolated_nonblocking_scope'] = (None,0,1,3)
+    result = recover_wait_set(inventory,_owned_sync('STREAM',60,100,stream_id=3))
+    assert result['dependency_closure_status']=='AMBIGUOUS'
+    assert 'DEFAULT_STREAM_MODE_UNKNOWN' in result['reasons']
+
+
 def test_legacy_default_stream_adds_only_blocking_stream_edges_while_ptds_does_not():
     default = _owned_activity("a:default", 0, 10, 40, enqueue_start=10, enqueue_end=20)
     blocking = _owned_activity("a:blocking", 2, 45, 90, enqueue_start=30, enqueue_end=40)

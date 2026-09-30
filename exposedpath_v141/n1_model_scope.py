@@ -14,12 +14,12 @@ from exposedpath.gate9_stream_bridge import PREFIX as BRIDGE_PREFIX, VERSION as 
 from exposedpath.gate8_engineering_contract import EXECUTION_VERSION, validate_declaration
 from .gate8_adapter import digest
 from .gate8_files import load_input_receipt, _json
-from .gate9_domain import VERSION, require
+from .gate9_domain import VERSION, require, analysis_stage
 from .gate8_scope import load_projected_ownership, build_projected_ab_inputs
 from .sync_semantics import load_canonical_bundle, build_semantic_inventory, classify_cuda_api
 from .time_representation import SIGNED, time_representation
 
-ADAPTER = 'exposedpath-n1-model-ownership/0.1.0'
+ADAPTER = 'exposedpath-n1-model-ownership/0.1.1'
 
 
 def bindings(bundle, ownership, projections, calls, ledger, policy, drain_api, drain):
@@ -150,7 +150,7 @@ def bindings(bundle, ownership, projections, calls, ledger, policy, drain_api, d
             and all(a['invocation_identity'].get(k)==v for k,v in identity.items() if k!='data_role'),
             'MODEL_ACTIVITY_OWNERSHIP')
         require(a.get('graph_id') in (None,0) and a.get('graph_node_id') in (None,0), 'MODEL_GRAPH_UNSUPPORTED')
-    output=[]; sync_ids=[]
+    output=[]; sync_ids=[]; unsupported=[]
     for a in rows['cuda_api']:
         if a['end_ns']<=start or a['start_ns']>=end: continue
         require(inside(a,p) and a['global_tid']==tid and a['clock_domain_id']==p['clock_domain_id']
@@ -171,7 +171,17 @@ def bindings(bundle, ownership, projections, calls, ledger, policy, drain_api, d
             require(all(inside(x,p) and x['ownership_status']=='VALID' and x.get('enqueue_global_tid')==tid
                 and tuple(x[k] for k in ('device_id','context_id','stream_id'))==scope for x in members),'MODEL_SUBMIT_SCOPE')
         else:
-            require(category=='non_submit' and not members,'MODEL_UNSUPPORTED_API')
+            if category!='non_submit' or members:
+                # Preserve every source record, not just the first exception.
+                # Inspection is not admission: the caller still rejects before
+                # writing domain.json, after diagnosing independent physical B.
+                unsupported.append(dict(api_record_id=a['record_id'],api_name=a['api_name'],
+                    source_table=a['source_table'],source_rowid=a['source_rowid'],
+                    correlation_id=a['correlation_id'],category=category,
+                    semantic_role=semantic['role'],registry_rule_id=semantic['registry_rule_id'],
+                    phase=phase(a),start_ns=a['start_ns'],end_ns=a['end_ns'],
+                    activity_record_ids=[x['record_id'] for x in members],
+                    sync_record_ids=[x['record_id'] for x in syncs]))
         output.append(dict(identity=identity,phase=phase(a),api_record_id=a['record_id'],api_name=a['api_name'],
             category=category,correlation_id=a['correlation_id'],physical_record_ids=[x['record_id'] for x in members+syncs],
             native_handle=handle,generation=generation,device_id=scope[0],context_id=scope[1],trace_stream_id=scope[2],
@@ -185,7 +195,7 @@ def bindings(bundle, ownership, projections, calls, ledger, policy, drain_api, d
     require(len(in_intervention)==(1 if policy['variant']=='Vsync' else 0)
         and all(re.fullmatch(r'cudaStreamSynchronize(?:_v[1-9][0-9]*)?',a['api_name']) for a in in_intervention),
         'MODEL_INTERVENTION_ACTUAL_COUNT')
-    return output,set(sync_ids)
+    return output,set(sync_ids),unsupported,(global_pid,*scope)
 
 
 def calculate_n1_model(root,receipt_path,execution_path,bridge_path):
@@ -222,14 +232,24 @@ def calculate_n1_model(root,receipt_path,execution_path,bridge_path):
     p=next(p for p in projections if p['phase']=='full_request')
     drain_api,drain=_drain(paths['drain_ledger'],{'drain_ledger':{'filename':paths['drain_ledger'].name,
         'sha256':digest(paths['drain_ledger'])}},bundle,p,scope,canonical.parent)
-    bound,sync_ids=bindings(bundle,ownership,projections,calls,ledger,policy,drain_api,drain)
+    bound,sync_ids,unsupported,physical_scope=bindings(bundle,ownership,projections,calls,ledger,policy,drain_api,drain)
     with time_representation(SIGNED):
-        inputs=build_projected_ab_inputs(canonical,scope)
+        with analysis_stage('n1_physical_s_inputs'):
+            inputs=build_projected_ab_inputs(canonical,scope,isolated_nonblocking_scope=physical_scope)
         from .a_accounting import calculate_a_windows
         from .b_provenance import calculate_b_syncs
-        a=list(calculate_a_windows(inputs)); physical_b=list(calculate_b_syncs(inputs))
+        with analysis_stage('n1_a_and_physical_b'):
+            a=list(calculate_a_windows(inputs)); physical_b=list(calculate_b_syncs(inputs))
     b=[x for x in physical_b if x['sync_id'] in sync_ids]
-    invalid=[dict(sync_id=x['sync_id'],reason=x['primary_reason']) for x in b if x['validity']!='B_VALID']
+    invalid=[dict(sync_id=x['sync_id'],reason=x['primary_reason'],secondary_reasons=x['secondary_reasons'])
+             for x in b if x['validity']!='B_VALID']
+    require(not unsupported,'MODEL_UNSUPPORTED_API:'+json.dumps(dict(
+        unsupported_apis=unsupported,
+        physical_b_failures=invalid,
+        global_quality_reasons=list(inputs.global_quality_reasons),
+        a_failure_reasons=[dict(phase=x['phase'],primary_reason=x['primary_reason'],
+            secondary_reasons=x['secondary_reasons']) for x in a
+            if x['primary_reason'] is not None or x['secondary_reasons']]),sort_keys=True))
     require(not inputs.global_quality_reasons and len(b)==len(sync_ids)>0
         and not invalid,'MODEL_PHYSICAL_B:'+json.dumps(invalid,sort_keys=True))
     require(len(a)==3 and all(x['primary_reason'] is None and not x['secondary_reasons'] for x in a),'MODEL_A_VALIDITY')
