@@ -17,14 +17,36 @@ _SCHEMA = json.loads((Path(__file__).resolve().parents[1] / "docs/v1_4_1/contrac
 
 def validate_shape(kind, value):
     """Validate an approved closed schema; cross-record checks are separate."""
+    # Explicit stage extension; the frozen Engineering schema remains unchanged.
+    # Raw markers carry the actual role, so relabelled old sidecars cannot match.
+    def pilot_role(v):
+        if isinstance(v,dict):
+            return v.get('run_role')=='PILOT' or v.get('data_role')=='Pilot' or any(pilot_role(x) for x in v.values())
+        return isinstance(v,list) and any(pilot_role(x) for x in v)
+    schema=_SCHEMA
+    if pilot_role(value):
+        from .gate11_pilot import PASS_VERSION
+        schema=deepcopy(_SCHEMA)
+        for name in ('identity','pass_identity'):
+            schema['$defs'][name]['properties']['run_role']={'const':'PILOT'}
+            schema['$defs'][name]['properties']['data_role']={'const':'Pilot'}
+        definition=schema['$defs']['pass_identity']
+        definition['properties']['schema_version']={'const':PASS_VERSION}
+        definition['properties']['pilot']={'type':'object'}
+        definition['required'].append('pilot')
     try:
-        Draft202012Validator({"$defs": _SCHEMA["$defs"], "$ref": f"#/$defs/{kind}"}).validate(value)
+        Draft202012Validator({"$defs": schema["$defs"], "$ref": f"#/$defs/{kind}"}).validate(value)
     except ValidationError as exc:
         raise ValueError(f"IDENTITY_CONFLICT: {kind}: {exc.message}") from exc
 
 
 def validate_pass_identity(value, *, finalized=False):
     validate_shape("pass_identity", value)
+    if value['run_role']=='PILOT':
+        from .gate11_pilot import validate_binding
+        binding=validate_binding(value['pilot'])
+        if any(value[k]!=binding[k] for k in ('run_id','pass_id')):
+            raise ValueError('PILOT_LEDGER_BINDING')
     planned = value["planned_request_ids"]
     requests = value["requests"]
     ids = [r["identity"]["request_id"] for r in requests]
@@ -65,12 +87,17 @@ def make_gate8_pass_identity(*, requests, **pass_fields):
     This is the pre-export form. The adapter writes a distinct finalized copy
     after Raw/device hashes exist; neither input nor Raw is back-patched.
     """
-    for field, required in (("run_role", "ENGINEERING"), ("data_role", "Engineering")):
+    pilot=pass_fields.get('pilot')
+    if pilot is not None:
+        from .gate11_pilot import validate_binding, PASS_VERSION
+        validate_binding(pilot)
+    roles=dict(run_role='PILOT',data_role='Pilot') if pilot is not None else dict(run_role='ENGINEERING',data_role='Engineering')
+    for field, required in roles.items():
         if field in pass_fields and pass_fields[field] != required:
             raise ValueError(f"IDENTITY_CONFLICT: producer {field}")
     result = {
-        "schema_version": "exposedpath-pass-identity/0.1.0",
-        **deepcopy(pass_fields), "run_role": "ENGINEERING", "data_role": "Engineering",
+        "schema_version": PASS_VERSION if pilot is not None else "exposedpath-pass-identity/0.1.0",
+        **deepcopy(pass_fields), **roles,
         "planned_request_ids": [r["request_id"] for r in requests],
         "requests": [], "raw_artifact_sha256": None, "device_mapping_sha256": None,
     }

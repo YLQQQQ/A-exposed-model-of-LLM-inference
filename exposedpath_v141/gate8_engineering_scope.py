@@ -38,9 +38,13 @@ def _inputs(receipt_path, execution_path):
     manifest, ledger, execution = _json(paths['wmpc_manifest']), _json(paths['pass_identity']), _json(execution_path)
     declared = validate_declaration(manifest)
     controlled=manifest.get('construction')==CONSTRUCTION
+    extension=set(); expected_version=EXECUTION_VERSION
+    if not controlled:
+        from exposedpath.gate11_pilot import execution_extension
+        extension,expected_version=execution_extension(manifest,ledger,execution,execution_path,paths['wmpc_manifest'],paths['producer_receipt'],token_path=paths.get('pilot_tokens'))
     require(set(execution)=={'schema_version','manifest_sha256','producer_receipt_sha256',
-            'identity','declaration','observed_configuration','status'}
-        and execution['schema_version']==(CONTROLLED_EXECUTION_VERSION if controlled else EXECUTION_VERSION)
+            'identity','declaration','observed_configuration','status'} | extension
+        and execution['schema_version']==(CONTROLLED_EXECUTION_VERSION if controlled else expected_version)
         and execution['manifest_sha256']==digest(paths['wmpc_manifest'])
         and execution['producer_receipt_sha256']==digest(paths['producer_receipt'])
         and execution['identity']=={k:ledger[k] for k in ('run_id','pass_id','attempt_id','pid')}

@@ -24,10 +24,11 @@ def validate_declaration(manifest):
                 or manifest.get('run_role')!='ENGINEERING' or manifest.get('data_role')!='Engineering'):
             raise ValueError('CONTROLLED_ENGINEERING_DECLARATION')
         return value
+    from .gate11_pilot import roles
+    roles(manifest)
     if (not isinstance(value, dict) or value != declaration(value.get('attention_backend'))
             or manifest.get('execution_mode') != 'eager'
             or type(manifest.get('batch_size')) is not int or manifest['batch_size'] != 1
-            or manifest.get('attention_backend') != value['attention_backend']
-            or manifest.get('run_role') != 'ENGINEERING' or manifest.get('data_role') != 'Engineering'):
+            or manifest.get('attention_backend') != value['attention_backend']):
         raise ValueError('ENGINEERING_DECLARATION_REQUIRED')
     return value

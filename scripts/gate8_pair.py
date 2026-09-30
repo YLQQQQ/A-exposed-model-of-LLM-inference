@@ -55,6 +55,8 @@ def baseline(python,prepared,output):
     write_new(prepared/'collection_intent.json',dict(run_id=manifest['run_id'],output_root=str(output),collector_pid=os.getpid()))
     output.mkdir(parents=True)
     report=dict(status='BLOCKED',gate8_verdict='NOT_RUN',role='UNPROFILED_ENGINEERING_BASELINE')
+    if 'pilot' in manifest:
+        report.update(role='UNPROFILED_LIMITED_PILOT',pilot=manifest['pilot'],run_role='PILOT',data_role='Pilot',gate11_verdict='NOT_RUN')
     try:
         receipt=isolated.seal(prepared,output,ROOT)
         process=run_once(unprofiled_argv(python,prepared,output),output/'collection_log')
@@ -142,7 +144,26 @@ def inspect_execution(output,expected_pass):
         and claim['preflight_sha256']==sha(output/'auxiliary_preflight.json')
         and read(output/'auxiliary_preflight.final.json')==dict(status='PASS',preflight_sha256=sha(output/'auxiliary_preflight.json'),
             target_claim_sha256=sha(output/'auxiliary_preflight.claim.json')),'PREFLIGHT')
+    if 'pilot' in manifest:
+        from exposedpath.gate11_pilot import validate_tokens
+        tokens=validate_tokens(root/'pilot_tokens.json',manifest,ledger,execution,root/'manifest.json',root/'producer/producer_receipt.json')
+        require(report.get('pilot')==manifest['pilot'] and report.get('run_role')=='PILOT'
+            and report.get('data_role')=='Pilot' and report.get('pilot_tokens_sha256')==sha(root/'pilot_tokens.json'),'PILOT_REPORT')
+        if 'n1_model' in manifest:
+            calls=read(root/'n1_model_calls.json')
+            variant=manifest['n1_model']['variant']; count=0 if variant=='V0' else 1
+            require(sha(root/'n1_model_calls.json')==execution.get('n1_model_calls_sha256')
+                and calls['producer_receipt_sha256']==sha(root/'producer/producer_receipt.json')
+                and calls['manifest_sha256']==sha(root/'manifest.json') and calls['pid']==ledger['pid']
+                and len(calls['requests'])==2,'PILOT_N1_CALLS')
+            for call,request in zip(calls['requests'],requests):
+                require(call['identity']==request['identity'] and call['variant']==variant
+                    and len(call['interventions'])==count and len(call['model_calls'])==2
+                    and all(i['status']=='COMPLETE' and i['token_index']==1 and i['layer_index']==15
+                        and i['synchronize_called']==(variant=='Vsync') for i in call['interventions']), 'PILOT_N1_INTERVENTION')
+            require(calls['requests'][1]['observed_tokens']==tokens,'PILOT_N1_TOKENS')
     return dict(manifest=manifest,pid=ledger['pid'],timing_ns=durations,
+        **(dict(token_ids=tokens,pilot=manifest['pilot']) if 'pilot' in manifest else {}),
         loaded_configuration=execution['observed_configuration'],cuda_probe=probe,
         manifest_sha256=sha(root/'manifest.json'),producer_sha256=sha(root/'producer/producer_receipt.json'))
 
@@ -176,10 +197,15 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__); sub=parser.add_subparsers(dest='command',required=True)
     run=sub.add_parser('baseline')
     for name in ('python','prepared','output'): run.add_argument('--'+name,required=True,type=Path)
-    run.add_argument('--execute-engineering-baseline',required=True,action='store_true')
+    authorization=run.add_mutually_exclusive_group(required=True)
+    authorization.add_argument('--execute-engineering-baseline',action='store_true')
+    authorization.add_argument('--execute-pilot-baseline',action='store_true')
     summary=sub.add_parser('summarize')
     for name in ('pass0','pass1','output'): summary.add_argument('--'+name,required=True,type=Path)
     args=parser.parse_args()
+    if args.command=='baseline':
+        manifest=read(args.prepared/'manifest.json')
+        require(args.execute_pilot_baseline==('pilot' in manifest),'PILOT_OPT_IN')
     if args.command=='baseline':
         result=baseline(args.python,args.prepared,args.output)
         print(result['status']); return 0 if result['status']=='BASELINE_COMPLETE_NOT_ACCEPTANCE' else 1

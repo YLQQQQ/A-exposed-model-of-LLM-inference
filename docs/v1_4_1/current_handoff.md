@@ -1,6 +1,12 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.111](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.112](research_progress.md)。
+
+**7.112现行：新采限定Pilot角色/配对/首批最小本地实现已完成，Gate11 NOT_RUN。** 用户已批准[G11-LIMITED-PILOT/0.1](gate11_pilot_contract_v0_1.md)：manifest→producer/NVTX→Canonical→原S/A/B→配对/报告贯通；N1/G512 Pass0、窗外host token逐值核对及3block/30进程/15profile接线。不是将旧Engineering升级，不改UNKNOWN/NOT_ASSESSED、opaque/B限制或授Formal。
+固定组序和预算沿用[Gate11准备](gate10_workload_plan_v0_1.md#gate11-local-preparation)；只实现首批，失败停、partial/NOT_RUN保留、无retry/resume。60进程不是剩余批次授权。交付以服务器d25b4d1为前置，默认仅部署/相关CPU检查，静态回执审查后才可显式启动真实首批；单ZIP回传，路径/hash以本地delivery为准。无服务器、CUDA/Nsight、模型或旧Raw分析执行；CPU替身不冒充目标验证，DOCX保留且不纳提交。
+Gate7～9、Gate10限定G1一次可行性、N1独立Engineering PASS保持。Pilot repeat/warmup/质量阈值/Freeze输入仍待新证据。下一步仅协调审查交付及静态阶段，无新的研究语义待决。
+
+以下7.111为历史；其中“入口未接线/适用性待批/无交付”已被7.112取代，范围澄清与预算依据继续有效：
 
 **7.111现行：Gate10 PASS只表示固定平台/模型/执行配置下，G1 32/2、128/2、512/2的一次Engineering可行性通过。**
 不是完整可行域、统计稳定域或容量边界；OOM、最大输入/输出/batch未探索，512/2不是长度上限，不外推其他配置。原EP-G10-01～03未执行子项保留后移，N1三组独立Engineering PASS不替代OOM探索。

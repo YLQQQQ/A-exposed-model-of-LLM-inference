@@ -416,7 +416,8 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
     if pass_fields.get("pid") != os.getpid():
         raise ValueError("IDENTITY_CONFLICT: producer PID must be current process")
     if n1_controller is not None and (model_setup is None or not record_stages or not record_drains
-                                     or record_load_tasks or pass_fields['pass_id']!='pass1'):
+                                     or record_load_tasks or (pass_fields['pass_id']!='pass1'
+                                         and pass_fields.get('run_role')!='PILOT')):
         raise ValueError('N1_VERIFIED_SETUP_REQUIRED')
     if type(record_load_tasks) is not bool or (record_load_tasks and (not record_stages or model_setup is None)):
         raise ValueError('LOAD_TASK_SETUP_REQUIRED')
@@ -643,6 +644,9 @@ def run_gate8_requests_to_files(*, output_dir, **request_arguments):
         receipt['schema_version'] = 'exposedpath-gate8-producer-receipt/0.4.0'
         if products[4]['observation_status'] != 'COMPLETE':
             receipt['status'] = 'INCOMPLETE'
+    if ledger['run_role']=='PILOT':
+        receipt.update(schema_version='exposedpath-pilot-producer-receipt/0.1.0',
+                       pilot=ledger['pilot'],run_role='PILOT',data_role='Pilot',gate11_verdict='NOT_RUN')
     with (staging/'producer_receipt.json').open('x',encoding='utf-8') as handle:
         json.dump(receipt,handle,sort_keys=True,indent=2)
         handle.write('\n')

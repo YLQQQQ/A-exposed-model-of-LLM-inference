@@ -13,12 +13,17 @@ from test_gate8_identity import UUID, sha, write_json
 
 
 def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, queries=False,
-           default_prefix=False, allocations=False, vm_bits=False):
+           default_prefix=False, allocations=False, vm_bits=False, pilot_binding=None):
     queries=queries or damage=='unknown_query'
     from exposedpath import runner
     def execute(Backend, clock, db, plan):
         entry,args,state,events=entry_source(tmp_path,monkeypatch,variant)
         manifest=json.loads(args['manifest_path'].read_text())
+        if pilot_binding is not None:
+            from exposedpath.gate11_pilot import minimal_fields
+            if pilot_binding['variant'] is None:
+                manifest.pop('n1_model'); manifest.pop('n1_model_execution')
+            manifest.update(minimal_fields(pilot_binding))
         manifest.update(gpu_uuid=UUID,gpu_pci_bus_id='0000:E1:00.0')
         write_json(args['manifest_path'],manifest)
         write_json(args['preflight_path'],dict(physical_gpu_index=3,logical_gpu_index=0,
@@ -29,6 +34,9 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=1')
         db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=2')
         db.execute('INSERT INTO TARGET_INFO_CUDA_STREAM SELECT 3,hwId,vmId,processId,contextId,priority,2 FROM TARGET_INFO_CUDA_STREAM')
+        if pilot_binding is not None and pilot_binding['variant'] is None:
+            db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=3')
+            db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=3 WHERE streamId=3')
         def stream_id(): return 2 if cuda.current_stream(0).cuda_stream==123 else 3
         def launch():
             a,b,c=backend.api('cudaLaunchKernel_v7000')
@@ -125,11 +133,14 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         return args['output_dir']/'producer/producer_receipt.json'
     _,_,sqlite,rep,export=capture(tmp_path,monkeypatch,executor=execute)
     root=tmp_path/'diagnostic'
+    if pilot_binding is not None and pilot_binding['pass_id']=='pass0':
+        return None,root/'engineering_execution.json',root/'n1_model_calls.json'
     from exposedpath_v141.gate8_files import write_input_receipt
     names=dict(preflight='adapter_preflight.json',cuda_probe='cuda_probe.json',wmpc_manifest='manifest.json',
         prompt='prompt.json',runner_source='runner_source.py',producer_receipt='producer/producer_receipt.json',
         pass_identity='producer/pass_identity.json',host_ledger='producer/host_boundaries.json',
         drain_ledger='producer/drain_ledger.json',stage_ledger='producer/stage_ledger.json')
+    if pilot_binding is not None: names['pilot_tokens']='pilot_tokens.json'
     receipt=write_input_receipt(tmp_path/'input.json',collector_version='2026.2.1.210',capture_session_id='CPU',
         artifacts=dict(raw=rep,sqlite=sqlite,export_report=export,**{k:root/v for k,v in names.items()}))
     return receipt,root/'engineering_execution.json',root/'n1_model_calls.json'

@@ -1,5 +1,19 @@
 # ExposedPath 科研进度清单
 
+## 7.112 Gate11限定Pilot角色、真实配对与首批本地交付（2026-09-30）
+
+用户明确批准仅未来新采Pilot沿用已限定N1/G1支持域作repeat/warmup/观测开销/质量政策估计。[G11-LIMITED-PILOT/0.1](gate11_pilot_contract_v0_1.md)版本化适用声明已固化；旧Engineering和原BLOCKED不升级，UNKNOWN/NOT_ASSESSED及opaque/单sync B限制保持，无Formal或信息增益资格。测量公式、S/A/B恢复/分类和completion时点未修改。
+
+本地实现：闭合Pilot声明贯通manifest、pass ledger0.2、实际NVTX角色、producer/执行/token/input receipt及Canonical/domain报告；旧Engineering版本仍按原门读取。接通G512和N1 Pass0，N1包装、预定marker、V16实际同步及专用流不随通用trace关闭而删除；token值复用原host-readable结果，在计时窗外保存并逐值比较，不增加D2H/sync。每pair核输入、实际配置/解释器/PID/设备、边界/drain/stage、实际N1干预及token，跨block核公共环境和输出一致性；非profile不可观测的physical S/B不伪造。
+
+固定[原计划](gate10_workload_plan_v0_1.md#gate11-local-preparation)首批：G32/G512/N0/Nm/N16，3个已审查block、固定相邻pass顺序，30模型进程/15profile、每进程warmup1/repeat1。独立run/pair/block/variant/pass身份，失败停、partial/NOT_RUN保留，不resume/retry/替补；完整批次只STOP_FOR_REVIEW。60只是总体上限，没有实现或预授权剩余批次、warmup扩展或长驻多request。P1−P0只表示profile/观测差异＋运行波动，不是纯profiler成本；repeat/政策数值仍待Pilot。
+
+tests-first依次复现角色路径缺失、G512/pass0冲突、预算/跨block漂移及进度入口缺失；新增CPU真实prepare→verified producer→receipt/token→Raw/Canonical/投影→原S/A/B→pair文件链和独立W/A预期，包含错角色/输入/token/variant/pass、身份/边界/drain/correlation/未知warning、partial与停止反例。**14个相关文件263 passed（202.42s）**；末轮补G512完整pair与token receipt来源错配反例，修复后**16项文件链/准入定向通过（52.98s，与263有重叠，不相加）**。不是目标机CUDA/Pilot验收。一次测试命令误拼文件名、未执行任何测试，修正后上述整组通过；未隐去失败。改动Python compileall、PowerShell5.1语法及diff检查通过；未跑全量、Q0、旧trace重算、服务器/模型/CUDA/Nsight。自行差异审查未改变核心S/A/B文件，DOCX哈希保持用户版本且不纳提交。
+
+交付前置固定服务器d25b4d1；一个增量bundle/部署ZIP，固定源码LF/CRLF候选字节和输入hash，不以当前字节更新期望。`run_gate11_pilot.ps1`默认部署＋相关CPU（mask=-1），采集默认不启动；协调审查静态回执后显式开关才启动新目录首批。包/机器路径与hash放忽略的本地交接，公共合同不含私有路径。每阶段单ZIP，最终含静态原件；疑似活跃后代停止封包。35GB磁盘要求、阶段输出和20秒状态提示保留原日志字节与既有超时。
+
+**Gate11 NOT_RUN；EP-G11-01代表集及EP-G11-02本地接线完成不等于Pilot政策完成，EP-G11-03未采集、EP-G11-04数值输入未定。** Gate7～9、Gate10限定G1一次Engineering、N1三组独立Engineering PASS保持。没有新增研究语义待决；唯一下一步是协调窗口审查固定交付，再由用户决定部署CPU步骤和后续真实首批。本轮不执行服务器，无Protocol Freeze或Formal数据受影响。
+
 ## 7.111 Gate10范围澄清与Gate11最小本地准备（2026-09-30）
 
 用户确认：**Gate10 PASS仅指固定平台、模型与执行配置下，选定G1候选点的一次Engineering可行性检查通过。** 32/2、128/2、512/2的真实执行、token、边界、支持域与A证据及其历史执行/分析版本不变；不是完整可行域、统计稳定域或容量边界。OOM边界、最大输入/输出/batch均未探索，512和2不是上限，也不外推其他配置。原EP-G10-01～03的广域/容量/共同稳定范围子项保留为未执行、后移，不勾成完成；当前claim不涉及容量极限，不为Gate编号故意跑OOM。以后明确研究长上下文/长decode/更大batch/容量时才另拟对应有界增量。N1三组32/2独立Engineering可行性PASS不替代OOM探索；不重开已通过的检查或改写失败报告。
@@ -895,8 +909,8 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前研究阶段：`Engineering`
 - 当前工作入口：根目录 `main`；目录约定见 `docs/repository_layout.md`。Gate7历史封存验收执行commit为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`。本次N1执行V0为c21d835、Vmarker/V16为d25b4d1；文档收尾提交不是新执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前 Gate 状态（7.111）：Gate0～7历史PASS；Gate8限定Engineering PASS、Gate9限定分域PASS；[Gate10 PASS仅选定G1三点一次Engineering可行性](gate10_closeout_v0_1.md)，容量边界/最大长度/batch未探索，不授完整或统计稳定域；[N1模型三组Engineering可行性独立PASS](n1_model_feasibility_closeout_v0_1.md)。不授完整新版Q0或Formal资格。Gate11～14仍NOT_RUN；UNKNOWN/NOT_ASSESSED与旧BLOCKED不变。
-- 当前最高优先级（7.111）：[Gate11最小方案](gate10_workload_plan_v0_1.md#gate11-local-preparation)已本地具体化；集中明确未来Pilot角色适用边界，再补必要Pass0/身份接线、提交固定服务器方案供协调审查。当前无服务器任务、OOM/重采或重复测试。下方历史opaque待批准、Vmarker/V16未运行及旧部署包均不再是现行待办。
+- 当前 Gate 状态（7.112）：Gate0～7历史PASS；Gate8限定Engineering PASS、Gate9限定分域PASS；[Gate10 PASS仅选定G1三点一次Engineering可行性](gate10_closeout_v0_1.md)，容量边界/最大长度/batch未探索，不授完整或统计稳定域；[N1模型三组Engineering可行性独立PASS](n1_model_feasibility_closeout_v0_1.md)。不授完整新版Q0或Formal资格。Gate11～14仍NOT_RUN；UNKNOWN/NOT_ASSESSED与旧BLOCKED不变。
+- 当前最高优先级（7.112）：[限定Pilot角色合同](gate11_pilot_contract_v0_1.md)和首批最小本地接线已完成，固定交付先供协调审查。默认仅部署CPU，审查回执后才显式启动首批；尚无服务器/Pilot执行。下方历史适用性待批、opaque待批准及Vmarker/V16未运行均不再是现行待办。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -1255,7 +1269,7 @@ compile/graph后移。以下原任务保留编号及历史。
 **Gate verdict：`NOT_RUN`（7.111）。** [本地准备0.1](gate10_workload_plan_v0_1.md#gate11-local-preparation)复用既有计划；选定G1及N1三组Engineering前置已满足，不替代Pilot。首批30进程/15trace，总上限60进程/30trace，不自动执行。尚需Pilot适用版本与必要配对入口，不为此重开旧Gate。
 
 - [x] `EP-G11-01`（7.111仅本地选点）G1自然32/2与512/2、N1显式流32/2 V0/Vmarker/V16；输入轴/marker/同步问题驱动，不按A效果；不是实验已执行。
-- [ ] `EP-G11-02`（7.111设计草案完成，Pilot依据未取得）组序/配对、首批/封顶预算、warmup评估、精度与overhead/质量政策方法已写；正式repeat、数值门和运行规则尚未确定。
+- [ ] `EP-G11-02`（7.112本地合同/配对/首批编排完成，Pilot依据未取得）组序/配对、首批/封顶预算、warmup评估、精度与overhead/质量政策方法已写；正式repeat、数值门和运行规则尚未确定。
 - [ ] `EP-G11-03`（待另行授权采集）独立记录Pilot依据及其非Formal角色，不升级现有Engineering数据。
 - [ ] `EP-G11-04`（7.111本地清单完成、数值仍待Pilot）Freeze输入及待定政策已列，必须由Pilot补依据，不提前Freeze。
 
@@ -1310,7 +1324,7 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ## 7. 固定执行顺序与最近任务
 
-**7.111当前覆盖：** Gate10仅选定G1三点一次可行性，原容量子项后移；N1三组独立Engineering依赖已收口。Gate11本地方案已具体化，下一项是集中明确Pilot阶段适用性并补最小角色/配对接线，之后交协调窗口审查；无当前服务器/OOM/重采任务。下方较早“最近任务”是历史，不重跑Gate/Q0，不再部署Vmarker/V16；以§1和[现行准备](gate10_workload_plan_v0_1.md#gate11-local-preparation)为准。
+**7.112当前覆盖：** Gate10仅选定G1三点一次可行性，原容量子项后移；N1三组独立Engineering依赖已收口。Gate11已批准未来新采限定Pilot适用性，本地角色/配对/首批接线与CPU验证完成，固定交付待协调审查，未采集。下方较早“最近任务”是历史，不重跑Gate/Q0，不再部署Vmarker/V16；以§1和[现行准备](gate10_workload_plan_v0_1.md#gate11-local-preparation)为准。
 
 **7.45当前覆盖：** PE原件已实审，静态路线结束；来源对齐§10的一次Engineering
 来源观察提案已交协调审查。不能重跑7.44工具或继续索包，不能自动启用新profile。
@@ -1355,6 +1369,8 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 7.110（2026-09-30）：原V0新合同审查复用与d25两组新实物完成N1限定Engineering三组可行性PASS；关闭模型准备依赖，不扩张Gate10 G1范围或授统计/科学资格。Gate11只列最小本地准备，无新采集授权；旧报告及UNKNOWN不改，DOCX不纳提交。
 
 7.111（2026-09-30）：用户明确Gate10只通过固定配置下三个G1选定点的一次Engineering检查；OOM/容量/最大长度/batch、完整与统计稳定域未完成，原编号/未执行子项保留后移。Gate11复用原计划完成代表点、有界配对/预算/warmup及Freeze输入草案，阶段适用版本/入口及Pilot数值依据仍待完成。无测量语义/旧判定变更，无Protocol Freeze或Formal数据受影响；不运行测试、服务器、GPU/Nsight/OOM。
+
+7.112（2026-09-30）：按用户批准为未来新采限定Pilot固化G11-LIMITED-PILOT/0.1，最小角色/Pass0/token配对及首批30进程编排完成CPU验证和待审交付。只扩阶段角色适用，不改S/A/B/completion或历史数据；Gate11仍NOT_RUN，数值政策/Freeze未完成，无Formal数据受影响。
 
 7.107（2026-09-30）：按用户批准使内部同步Raw来源身份amendment生效（S0.4/A-B0.5/N1 adapter0.2）；只新增来源证据，不改变W/A/B公式，不修改旧schema/历史资格。allocation只做已知但completion未支持的诊断，opaque例外集中待裁决未实施。复用同一V0 Raw完成P1独立检查；N1仍BLOCKED，Vmarker/V16暂停，无新部署/采集或Formal数据变化。用户DOCX保留在提交之外。
 

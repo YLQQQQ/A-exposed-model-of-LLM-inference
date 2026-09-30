@@ -212,9 +212,11 @@ def calculate_n1_model(root,receipt_path,execution_path,bridge_path,*,adapter_ve
     manifest=_json(paths['wmpc_manifest']); policy=validate_manifest(manifest)
     ledger=_json(paths['pass_identity']); execution=_json(execution_path); calls=_json(bridge_path)
     support=validate_declaration(manifest)
+    from exposedpath.gate11_pilot import execution_extension
+    extension,expected_version=execution_extension(manifest,ledger,execution,execution_path,paths['wmpc_manifest'],paths['producer_receipt'],token_path=paths.get('pilot_tokens'))
     require(set(execution)=={'schema_version','manifest_sha256','producer_receipt_sha256','identity',
-        'declaration','observed_configuration','status','n1_model_calls_sha256'}
-        and execution['schema_version']==EXECUTION_VERSION and execution['status']=='COMPLETE'
+        'declaration','observed_configuration','status','n1_model_calls_sha256'} | extension
+        and execution['schema_version']==expected_version and execution['status']=='COMPLETE'
         and execution['declaration']==support and execution['manifest_sha256']==digest(paths['wmpc_manifest'])
         and execution['producer_receipt_sha256']==digest(paths['producer_receipt'])
         and execution['identity']=={k:ledger[k] for k in ('run_id','pass_id','attempt_id','pid')}

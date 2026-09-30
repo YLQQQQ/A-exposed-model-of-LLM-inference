@@ -20,6 +20,10 @@ def declaration(length):
 
 
 def input_length(manifest):
+    if 'pilot' in manifest:
+        from .gate11_pilot import validate
+        validate(manifest)
+        return manifest['fixed_input_tokens']
     if 'gate10_workload' not in manifest: return 32
     d=manifest['gate10_workload']
     require(isinstance(d,dict) and d==declaration(d.get('input_tokens')),'DECLARATION')

@@ -66,9 +66,10 @@ def validate_prepared(manifest, prepared, root):
     from .workload import load_prompt_tokens
     validate_manifest(manifest)
     validate_declaration(manifest)
+    from .gate11_pilot import roles
     expected=dict(fixed_input_tokens=32,fixed_output_tokens=2,batch_size=1,
-        warmup_count=1,repeat_count=1,execution_mode='eager',run_role='ENGINEERING',
-        data_role='Engineering',dtype_and_quantization='fp16',sampling_config={'do_sample':False})
+        warmup_count=1,repeat_count=1,execution_mode='eager',**roles(manifest),
+        dtype_and_quantization='fp16',sampling_config={'do_sample':False})
     require(all(type(manifest.get(k)) is type(v) and manifest[k]==v for k,v in expected.items()),
             'FIXED_WORKLOAD_CONFLICT')
     prompt=Path(prepared)/'prompt.json'
@@ -136,8 +137,8 @@ class ModelCalls:
     def __init__(self, model, cuda, stream, identity, variant, *, generation):
         validate_shape('identity', identity)
         policy = declaration(variant)
-        require(identity['run_role'] == 'ENGINEERING' and identity['data_role'] == 'Engineering', 'ROLE')
-        require(identity['pass_id'] == 'pass1', 'PROFILE_ONLY_ENTRY')
+        require((identity['run_role'],identity['data_role']) in (('ENGINEERING','Engineering'),('PILOT','Pilot')), 'ROLE')
+        require(identity['pass_id'] == 'pass1' or identity['run_role']=='PILOT', 'PROFILE_ONLY_ENTRY')
         config = model.config
         require(type(model).__name__ == 'Qwen2ForCausalLM' and config.model_type == 'qwen2'
                 and config.num_hidden_layers == 28 and config._attn_implementation == 'sdpa'

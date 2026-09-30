@@ -56,12 +56,14 @@
 本批只能确认G1两点一次可行性；不能据此宣布N1同点模型执行或完整N1/G1共同可行域已验证。N1模型功能准备与以后Pilot仍分开。
 
 <a id="gate11-local-preparation"></a>
-## Gate11 本地准备（7.111，G11-PILOT-PREP/0.1，待执行审查）
+## Gate11 本地准备（7.112，G11-PILOT-PREP/0.1，待执行审查）
 
 2026-09-30；这是既有EP-G11-01～04的最小具体化，不是新资格层、采集授权或Protocol Freeze。
 依据研究设计v7.1 §2.3.9/3.2、Pre-Pilot协议v2.1 §1.2/1.4/4.2–4.4/6.2，结合已批准单平台分域路线。
 现有Engineering只提供执行可行性、身份/语义适用依据和粗略资源预算；新Pilot需新run/角色，不能把旧值计入重复样本。
 不沿用旧`docs/small_pilot.md`的v3四点、warmup5/repeat5或任意CV/coverage阈值。
+
+7.112：用户已批准未来新采限定Pilot适用性，[G11-LIMITED-PILOT/0.1](gate11_pilot_contract_v0_1.md)与最小本地角色/配对/首批编排已实现。以下选点、组序、解释和预算不改；只实现前三block，未实现/授权剩余30进程或warmup扩展。固定交付默认只部署/CPU，真实首批需协调审查后另行显式启动。Gate11仍NOT_RUN。
 
 ### 代表点、问题和复用边界（EP-G11-01）
 
@@ -130,18 +132,16 @@ OOM、EOS/输出不一致、身份/边界/drain冲突、必要依赖缺失、超
 - Pilot需要形成：warmup策略、repeat/block与最大成本、profiler差异可接受范围/处理政策、局部unknown与supported/B-valid覆盖的解释阈值、排除/失败/重试规则、最小精度/等价带。按原因/分布/敏感性与claim决定，不设“unknown必须0”或按结果反向放宽。
 - G1只投影A；N1只合格单sync B，保留RAW_PHYSICAL来源及opaque等待不拆的限制；无自然默认流完整B，B不跨sync加总，D/Signature禁用。null/信息等价也是合法研究结果。
 
-### 本地实际缺口与阶段适用性（未实施，不是服务器方案）
+### 本地接线与阶段适用性（7.112）
 
 已有入口可复用：固定内容/解释器/设备、isolated preflight、host completion、专用流桥接、producer/文件链、S/A/B及逐request准入；没有理由再跑完整Q0或旧Gate。
-但`gate8_diagnostic.prepare_diagnostic`拒绝N1+pair、Gate10长输入+pair；`n1_model.validate_manifest`及runner/ModelCalls限定pass1。身份schema、declaration和domain消费锁定Engineering，不能仅改manifest文字或直接调用旧v3 Pilot脚本。
-最小后续实现限于：**显式Pilot角色/版本贯通；G512与N1真实Pass0接线和配对绑定；有界block顺序/汇总**。G1现有pair只核输出数量，需持久化已host-readable的token IDs并比值，不新增D2H或同步。首批保留warmup1；warmup1/3参数及实际次数接线只在该分支确需执行时补，不提前泛化多request支持。
-N1 Pass0必须保留干预marker/branch、V16实际sync及原流/anchor/drain，不能随通用NVTX开关一起删掉。保留旧Engineering路径和拒绝门，相关CPU正反例后再固定交付版本；本轮不实现、不测试。
+7.111发现的Engineering-only/pass1与仅核输出数量缺口已在明确Pilot分支修复，旧Engineering读取/拒绝门保留。新角色贯通manifest、pass ledger/Raw marker、producer、receipt、Canonical和domain；不能只改文字升级旧产物。G512/N1均有真实Pass0接线，窗外持久化已host-readable token值并逐值配对，不增加D2H或同步。
+N1 Pass0保留干预marker/branch、V16实际sync及原流/anchor/drain；通用观测NVTX关闭不会删掉干预行为。新增CPU producer/文件链正反例、封闭预算/停止测试；它们不是模型CUDA/Pilot验证。首批保留warmup1；后续warmup对照未接线、不预授权。
 
-**唯一阶段适用性待明确：**现行Gate9/opaque等资格明确不自动授Pilot/Formal。推荐为未来新采数据显式批准“沿用已限定支持域的Pilot政策估计”适用声明，并保留所有unknown、原始有效性字段与claim限制；不是将Engineering数据改名，也不授科学效果或Formal资格。
-本页是待审执行设计，尚未发布该角色/schema适用版本。无需恢复全capture认证、补整套Q0或重开Gate8～10；任何超支持域的新证据仍拒绝。
+用户已明确批准仅未来新采“沿用已限定支持域的Pilot政策估计”；版本化声明见上链。原UNKNOWN/NOT_ASSESSED、opaque/B及分域claim限制不变，Engineering不改名，不授科学效果/Formal。无需全capture认证、完整Q0重跑或重开Gate8～10；超支持域仍拒绝。没有新增语义待决，本批尚未采集。
 
 ### Freeze输入与本轮停点（EP-G11-03/04）
 
 后续Pilot报告须填入：所选有限输入/输出/batch及digest、模型/栈/执行与分析版本、N1/G1分域claim和资格引用、边界/流/opaque政策、实际warmup/repeat/组序/pass差异、失败与排除清单、质量/overhead/精度数值依据、统计单位/方法/seed及图表比较规则。
 未定数值明确PENDING，不用Engineering数据填齐；Protocol Freeze仍Gate12单独决策、Formal须新采。本计划不预授N1信息增益或G1趋势。
-Gate11 NOT_RUN。下一项是集中确认上述Pilot适用边界后，完成最小本地接线并把固定commit、预算清单与单ZIP脚本交协调窗口审查；当前无服务器操作或可执行新包。
+Gate11 NOT_RUN。下一项是协调窗口审查固定commit/单ZIP和默认部署CPU方案；静态回执审查后才决定启动首批。完整命令/机器路径只放本地delivery说明。当前没有执行服务器或新采集，首批完成也只停止待审，不自动进入剩余预算、Freeze或Formal。

@@ -11,7 +11,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 
 
-def run_once(argv, output, *, timeout_seconds=300):
+def run_once(argv, output, *, timeout_seconds=300, progress=False):
     output=Path(output); output.mkdir(parents=True,exist_ok=False)
     report=dict(argv=list(argv),attempt_count=1,status='BLOCKED',timed_out=False,
                 pid=None,exit_code=None,descendant_exit_status='NOT_OBSERVED')
@@ -30,7 +30,27 @@ def run_once(argv, output, *, timeout_seconds=300):
             report['pid']=process.pid
             persist()
             try:
-                report['exit_code']=process.wait(timeout=timeout_seconds)
+                if not progress:
+                    report['exit_code']=process.wait(timeout=timeout_seconds)
+                else:
+                    deadline=time.monotonic()+timeout_seconds
+                    with (output/'stdout.txt').open('rb') as visible:
+                        def display():
+                            # Display only; persisted bytes are authoritative and
+                            # never decoded/replaced for an identity check.
+                            text=visible.read().decode('utf-8',errors='backslashreplace')
+                            if text:
+                                try: print(text,end='',flush=True)
+                                except (OSError,UnicodeError): pass
+                        while True:
+                            remaining=deadline-time.monotonic()
+                            if remaining<=0: raise subprocess.TimeoutExpired(argv,timeout_seconds)
+                            try:
+                                report['exit_code']=process.wait(timeout=min(20,remaining))
+                                display(); break
+                            except subprocess.TimeoutExpired:
+                                display()
+                                print(f'[progress] active pid={process.pid} elapsed={time.monotonic()-started:.1f}s',flush=True)
             except subprocess.TimeoutExpired:
                 report['timed_out']=True
                 process.kill()  # Only the recorded launcher, never a name-wide kill.
@@ -148,6 +168,8 @@ def analyze_model(output,prepared,collector_version):
         'producer_receipt':'producer/producer_receipt.json','pass_identity':'producer/pass_identity.json',
         'host_ledger':'producer/host_boundaries.json','drain_ledger':'producer/drain_ledger.json',
         'stage_ledger':'producer/stage_ledger.json'}
+    if 'pilot' in manifest:
+        names['pilot_tokens']='pilot_tokens.json'
     receipt=write_input_receipt(output/'input_receipt.json',collector_version=collector_version,
         capture_session_id=manifest['run_id'],artifacts=dict(raw=output/'capture.nsys-rep',
         sqlite=output/'capture.sqlite',export_report=output/'postprocess_report.json',
@@ -165,7 +187,10 @@ def main():
         parser.add_argument('--'+name,required=True,type=Path)
     parser.add_argument('--execute-engineering-diagnostic',action='store_true',required=True)
     parser.add_argument('--engineering-a-only','--engineering-domain',dest='engineering_a_only',action='store_true')
+    parser.add_argument('--pilot',action='store_true',help='Require prospective G11 Pilot declaration (no role relabelling)')
     args=parser.parse_args()
+    if args.pilot and not args.engineering_a_only:
+        raise ValueError('PILOT_DOMAIN_ENTRY_REQUIRED')
     output=args.output.resolve()
     if output.exists(): raise FileExistsError(output)
     if not args.engineering_a_only and args.python.resolve()!=(ROOT/'.venv/Scripts/python.exe').resolve():
@@ -178,6 +203,8 @@ def main():
         from exposedpath_v141.gate8_qualification import validate_tool_version
         manifest=json.loads((args.prepared/'manifest.json').read_text(encoding='utf-8'))
         validate_declaration(manifest)
+        if args.pilot != ('pilot' in manifest):
+            raise ValueError('PILOT_COLLECTION_OPT_IN_CONFLICT')
         target=validate_probe(manifest['target_python'])
         if target['environment']!=environment() or str(args.python.resolve())!=target['requested_executable']:
             raise ValueError('TARGET_PYTHON_COLLECT_ENVIRONMENT')
@@ -197,6 +224,8 @@ def main():
         process=run_once(profile_argv(args.nsys.resolve(),args.python.resolve(),args.prepared.resolve(),output,ROOT),output/'collection_log')
     report=dict(status='BLOCKED',qualification='NOT_QUALIFIED',gate8_verdict='NOT_RUN',
                 scientific_outputs_allowed=False,collection=process)
+    if args.pilot:
+        report.update(pilot=manifest['pilot'],run_role='PILOT',data_role='Pilot',gate11_verdict='NOT_RUN')
     try:
         if process['status']!='COMPLETE': raise ValueError('Collection failed/timeout; no export or retry')
         if isolated_receipt is not None:
@@ -226,11 +255,13 @@ def main():
                 target_runtime_sha256=_sha(output/'diagnostic/target_runtime.json'),
                 target_launch_sha256=_sha(output/'target_launch.json'),
                 q0_status='NOT_RUN',dropped_records_status='UNKNOWN',measurement_validity='NOT_ASSESSED')
+            if args.pilot:
+                report.update(status='PILOT_RUN_COMPLETE_PENDING_REVIEW',schema_version='gate11-pilot-collection/0.1.0')
     except (ValueError,OSError,KeyError) as exc:
         report['error']=str(exc)
     (output/'collection_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(report['status'])
-    return 0 if report['status'] in ('DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY') else 1
+    return 0 if report['status'] in ('DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW') else 1
 
 
 if __name__=='__main__': raise SystemExit(main())

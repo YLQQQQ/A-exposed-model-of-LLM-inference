@@ -15,6 +15,7 @@ from .gate8_adapter import digest, normalized_uuid, normalized_pci
 RECEIPT_VERSION = 'exposedpath-gate8-input-receipt/0.1.0'
 DRAIN_RECEIPT_VERSION = 'exposedpath-gate8-input-receipt/0.2.0'
 STAGE_RECEIPT_VERSION = 'exposedpath-gate8-input-receipt/0.3.0'
+PILOT_RECEIPT_VERSION = 'exposedpath-pilot-input-receipt/0.1.0'
 STAGE_RESULT_VERSION = 'exposedpath-gate8-file-chain/0.5.0'
 CLOSED_RESULT_VERSION = 'exposedpath-gate8-file-chain/0.4.0'
 RESULT_VERSION = 'exposedpath-gate8-file-chain/0.1.0'
@@ -68,6 +69,14 @@ def _identities(paths):
         producer_files.add('stage_ledger.json')
         from exposedpath.gate8_stages import validate_stage_ledger
         validate_stage_ledger(_json(paths['stage_ledger']),ledger)
+    if ledger['run_role']=='PILOT':
+        from exposedpath.gate11_pilot import validate
+        binding=validate(manifest)
+        if (not with_stages or 'pilot_tokens' not in paths or ledger['pilot']!=binding
+                or producer.get('pilot')!=binding or producer.get('run_role')!='PILOT'
+                or producer.get('data_role')!='Pilot' or producer.get('gate11_verdict')!='NOT_RUN'):
+            raise ValueError('PILOT_PRODUCER_BINDING')
+        producer_version='exposedpath-pilot-producer-receipt/0.1.0'
     if (producer.get('schema_version') != producer_version
             or any(producer.get(k) != ledger[k] for k in ('run_id','pass_id','attempt_id'))
             or producer.get('gate8_verdict') != 'NOT_RUN'
@@ -124,7 +133,7 @@ def write_input_receipt(output_path, *, artifacts, collector_version, capture_se
     output_path = Path(output_path).resolve()
     if output_path.exists():
         raise FileExistsError(output_path)
-    if set(artifacts) not in (ARTIFACTS, ARTIFACTS | {'drain_ledger'}, ARTIFACTS | {'drain_ledger','stage_ledger'}):
+    if set(artifacts) not in (ARTIFACTS, ARTIFACTS | {'drain_ledger'}, ARTIFACTS | {'drain_ledger','stage_ledger'}, ARTIFACTS | {'drain_ledger','stage_ledger','pilot_tokens'}):
         raise ValueError('INPUT_ARTIFACT_SET_INVALID')
     if not isinstance(collector_version,str) or not collector_version or not isinstance(capture_session_id,str) or not capture_session_id:
         raise ValueError('COLLECTOR_SESSION_IDENTITY_MISSING')
@@ -135,6 +144,10 @@ def write_input_receipt(output_path, *, artifacts, collector_version, capture_se
     version = DRAIN_RECEIPT_VERSION if 'drain_ledger' in artifacts else RECEIPT_VERSION
     if 'stage_ledger' in artifacts:
         version=STAGE_RECEIPT_VERSION
+    if identity['run_role']=='PILOT':
+        version=PILOT_RECEIPT_VERSION
+    elif 'pilot_tokens' in artifacts:
+        raise ValueError('PILOT_ARTIFACT_ROLE_CONFLICT')
     _write(output_path, dict(schema_version=version, identity=identity, artifacts=entries,
                             collector_version=collector_version, capture_session_id=capture_session_id))
     return output_path
@@ -146,12 +159,16 @@ def load_input_receipt(path):
     expected_artifacts = ARTIFACTS | ({'drain_ledger'} if value.get('schema_version') in (DRAIN_RECEIPT_VERSION,STAGE_RECEIPT_VERSION) else set())
     if value.get('schema_version')==STAGE_RECEIPT_VERSION:
         expected_artifacts=expected_artifacts | {'stage_ledger'}
+    if value.get('schema_version')==PILOT_RECEIPT_VERSION:
+        expected_artifacts=ARTIFACTS | {'drain_ledger','stage_ledger','pilot_tokens'}
     if (set(value) != {'schema_version','identity','artifacts','collector_version','capture_session_id'}
-            or value['schema_version'] not in (RECEIPT_VERSION,DRAIN_RECEIPT_VERSION,STAGE_RECEIPT_VERSION) or set(value['artifacts']) != expected_artifacts):
+            or value['schema_version'] not in (RECEIPT_VERSION,DRAIN_RECEIPT_VERSION,STAGE_RECEIPT_VERSION,PILOT_RECEIPT_VERSION) or set(value['artifacts']) != expected_artifacts):
         raise ValueError('INPUT_RECEIPT_VERSION_OR_SHAPE_INVALID')
     paths = {k:_resolve(path.parent,e) for k,e in value['artifacts'].items()}
     if value['identity'] != _identities(paths):
         raise ValueError('IDENTITY_CONFLICT: receipt')
+    if (value['identity']['run_role']=='PILOT') != (value['schema_version']==PILOT_RECEIPT_VERSION):
+        raise ValueError('PILOT_RECEIPT_VERSION')
     return value, paths
 
 

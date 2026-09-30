@@ -131,6 +131,9 @@ def seal(prepared,output,root):
         or manifest.get('study_mode')=='N1_INTERVENTION'
         or manifest.get('domain_qualification',{}).get('profile')=='N1_EXPLICIT_STREAM_AB/0.1.0')
     contract={'execution_contract':'N1-VERIFIED-MODEL/0.1'} if n1_intent else {}
+    if 'pilot' in manifest or manifest.get('data_role')=='Pilot' or manifest.get('run_role')=='PILOT':
+        from .gate11_pilot import VERSION as pilot_version
+        contract={'execution_contract':pilot_version}
     issues=validate_pre_model_identity(prepared/'manifest.json',prepared/'preflight.json',root,**contract)
     require(not issues,'IDENTITY:'+ '; '.join(issues))
     git=lambda args:adapter.git(['-C',str(root),*args])

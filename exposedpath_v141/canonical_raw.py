@@ -577,10 +577,12 @@ def convert_sqlite_to_canonical(
             gate8 = None
             if gate8_sources is not None:
                 from .gate8_adapter import prepare_identity
-                if data_role != "Engineering" or source_manifest is not None:
+                if data_role not in ("Engineering","Pilot") or source_manifest is not None:
                     raise ValueError("IDENTITY_CONFLICT: Gate8 uses explicit Engineering per-pass sources")
                 gate8 = prepare_identity(connection, records, gate8_sources,
                                          _sha256(sqlite_path).lower(), raw_sha256, staging)
+                if gate8['identity']['values']['data_role']!=data_role:
+                    raise ValueError('IDENTITY_CONFLICT: Canonical role differs from producer')
         files: dict[str, dict[str, Any]] = {}
         for kind, spec in schema["record_types"].items():
             for record in records[kind]:
