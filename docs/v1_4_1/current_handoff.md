@@ -1,6 +1,15 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.108](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.109](research_progress.md)。
+
+**7.109现行：d51a880续跑在采集前因LF/CRLF交付期望错误停止，已本地修复reference0.2。**
+旧V0执行字节由封存preflight/claim/final/target及manifest/receipt绑定，32个文件24CRLF/8LF；与Git源码内容兼容分开证明。
+当前文件仍严格匹配旧执行hash/长度，不归一化、不重设期望；当前服务器实字节尚未直接观察。缺失/越界/内容差异会留机器记录，初始/逐组前/结束后均核验。
+相关CPU57通过；封存原件的本地CPU参考链通过，不冒充目标验证。原报告不改，Vmarker/V16仍NOT_RUN。
+下一项仅前置**d51a880**的新固定修复单包，协调窗口审查后由用户在新目录续跑Vmarker/V16；不重采V0、不复用旧包。实际路径/包hash见忽略的本地handoff。
+Gate7～9/Gate10限定G1 PASS、7.108 V0新合同离线结论保持；N1三组资格/Pilot未授。用户DOCX修改保留，不纳提交。
+
+以下7.108为历史交接；其中c21作为服务器前置及原producer字节交付期待已由7.109纠正：
 
 **7.108现行：用户批准窄域opaque allocation；同一封存V0的新版本离线支持域审查通过。**
 [合同/审查0.1](n1_opaque_allocation_v0_1.md)：N1 adapter0.3/A-B0.6/registry0.2，旧版本读取及原BLOCKED保持。

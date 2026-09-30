@@ -71,6 +71,7 @@ print(json.dumps(dict(python=sys.version,executable=sys.executable,torch=torch._
         foreach ($Name in @('baseline_reference.json','baseline_review.json')) {
             Copy-Item -LiteralPath (Join-Path $PSScriptRoot $Name) -Destination (Join-Path $Out $Name)
         }
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'baseline_binding') -Destination (Join-Path $Out 'baseline_binding') -Recurse
         $C | Add-Member -NotePropertyName baseline_reference -NotePropertyValue (Join-Path $Out 'baseline_reference.json') -Force
         $C | Add-Member -NotePropertyName baseline_review -NotePropertyValue (Join-Path $Out 'baseline_review.json') -Force
     }

@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.109 N1续跑reference字节身份修复（2026-09-30）
+
+直接核验`n1_remaining_d51a880_once.zip`：21322 bytes，SHA256 `c7bd5553abaee43f67e5bf4d712474ee955bb879d6cb38f5db62d36c40e1cdf2`；CRC、安全/唯一路径、23文件/22清单项与完整覆盖通过。服务器已部署d51a880，CPU107 passed属该原始回执；失败发生于reference校验，Vmarker/V16未进入模型/profile。旧失败目录/报告及原V0证据保留。这不是模型、A/B或allocation政策失败。
+
+交付构建器把本地LF/Git blob字节错误当作目标执行字节。原c21 V0的完整preflight/claim/final/target claim和manifest、input receipt、producer/ledger/calls可重联；32个producer的Git内容c21→d51完全相同，旧观测hash精确解释为24个CRLF、8个LF。旧`__init__.py`为`b46cf529e2c9e9d4b11d0c7f66ca755eedca1f942b82d59c2794da75e2f46268`；原交付误期待LF的`e8a755439f13533ab95b8e5c3475a0ed8852ad386d82130503b631b42acd7d62`。**失败回执未记录当前实字节，当前服务器文件是否CRLF仍未直接观察，不由该错误反推。**
+
+新`N1-REMAINING-REFERENCE/0.2`分别绑定旧执行hash/长度与old/new Git内容证明；Git以二进制读取，LF→CRLF只用于解释已封存hash，不用于运行时归一化。封存preflight四原件随包保留，必须与仍在原位置的原件逐字节一致，并重联nonce/run/PID、final状态、collector argv、manifest/prompt、runner、input receipt与measured V0 calls；32路径集合不能由reference任意缩减。当前文件必须精确匹配旧执行字节，缺失、越界、读取失败、hash/长度不符分别报错，保留expected/actual和实际读取位置。初始、每组执行前、结束后均核验；缺口不能先执行V16再在收尾拒绝。0.1交付reference不自动升级，旧包/历史判定保留。
+
+tests-first复现LF/CRLF及新绑定入口缺失；审查补组间字节变化、measured身份错配的6个失败正反例后最小修复。相关两文件CPU **57 passed**（24.09秒）；覆盖同Git不同执行字节、篡改、错来源/版本/commit、缺文件、越界、读Git失败、公共合同/token及真实CLI→collect_group→profile边界替身。另用封存V0真实reference和32个精确hash的CPU文件替身完成CLI接线，真实本地LF先严格拒绝，再以旧hash绑定的重建字节通过；不是服务器字节复验、模型或GPU验证。compileall、PowerShell本地语法解析及diff检查通过；不重跑全量、Q0或原V0分析。
+
+只改Engineering交付/身份验证，不改producer、runner、插桩、流/输入政策、研究合同、A/B/S/schema或既有资格。7.108 V0新合同支持域结论保持；N1三组可行性仍NOT_RUN，Gate7～9及Gate10限定G1 PASS保持，Pilot/Freeze/Formal不启动。用户DOCX修改不覆盖、不纳提交。下一项为前置**d51a880**的修复单ZIP交协调窗口审查；新目录只续跑Vmarker/V16，身份不符先停并回传具体差异，不修改服务器源码/期望hash、不重采V0、不恢复旧失败批次。
+
 ## 7.108 窄域opaque allocation amendment实施与V0离线收口（2026-09-30）
 
 用户已批准7.107裁决稿的限定资源预算例外；[现行amendment与实物收口0.1](n1_opaque_allocation_v0_1.md)明确只支持精确cudaMalloc/合法数字后缀。新registry0.2、A/B0.6、N1 adapter0.3显式选择；旧registry/schema及0.1.1/0.2.0读取和历史判定保持，基础MC正文不覆盖。五类及互斥union/守恒、S的W/terminal、B公式未变；opaque计入non-submit且单独标注，不是非阻塞或已恢复内部等待，不新增假barrier/W/B、删除先行活动或启用D/Signature。

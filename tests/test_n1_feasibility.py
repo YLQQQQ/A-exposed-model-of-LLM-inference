@@ -73,30 +73,12 @@ def test_remaining_groups_preserve_reviewed_v0_parity_and_stop(tmp_path,damage):
 
 @pytest.mark.parametrize('damage',[None,'source','baseline','review','copied_expected','token'])
 def test_baseline_source_and_review_must_match_not_just_expected_values(tmp_path,monkeypatch,damage):
-    from exposedpath.gate8_isolated_preflight import sha,write_new
-    code=tmp_path/'code'; code.mkdir(); old=tmp_path/'V0'; old.mkdir()
-    (code/'producer.py').write_bytes(b'unchanged producer')
+    from exposedpath.gate8_isolated_preflight import sha
+    from test_n1_reference_bytes import fixture
+    _,_,code,old,review,reference=fixture(tmp_path,monkeypatch)
     (old/'raw.nsys-rep').write_bytes(b'sealed raw')
-    # Minimal actual receipt sources; expected values must be rejoined, not copied.
-    manifest=dict(model_id='m',prompt_tokens_sha256='c'*64,fixed_input_tokens=32,fixed_output_tokens=2,
-        batch_size=1,warmup_count=1,repeat_count=1,execution_mode='eager',attention_backend='sdpa',dtype_and_quantization='fp16',
-        sampling_config={'do_sample':False},runner_git_commit='a'*40,runner_git_dirty=False,runner_source_sha256='d'*64,
-        gpu_index_physical=3,gpu_index_logical=0,gpu_uuid='u',gpu_pci_bus_id='p',model_content_snapshot={'inventory_sha256':'e'*64},
-        n1_model={'stream_policy':'fixed','protocol_variant':'V0'},n1_model_execution={'version':'fixed'},
-        target_python={'actual':{'snapshot':{'version':'cpu'}}})
-    (old/'diagnostic/producer').mkdir(parents=True)
-    write_new(old/'diagnostic/manifest.json',manifest)
-    write_new(old/'diagnostic/producer/pass_identity.json',dict(pid=123))
-    write_new(old/'diagnostic/producer/producer_receipt.json',dict(status='COMPLETE'))
-    write_new(old/'diagnostic/n1_model_calls.json',dict(pid=123,manifest_sha256=sha(old/'diagnostic/manifest.json'),
-        producer_receipt_sha256=sha(old/'diagnostic/producer/producer_receipt.json'),requests=[{},dict(observed_tokens=[[463],[2529]])]))
-    write_new(old/'input_receipt.json',dict(role='synthetic-only'))
-    review=tmp_path/'review.json'; write_new(review,dict(status='V0_NEW_CONTRACT_ENGINEERING_SCOPE_CHECK_PASSED',
-        execution_commit='a'*40,source_receipt_sha256=sha(old/'input_receipt.json'),allocation_policy='N1_OPAQUE_ALLOCATION_BUDGET/0.1.0'))
-    reference=dict(schema_version='N1-REMAINING-REFERENCE/0.1',review_sha256=sha(review),
-        baseline_commit='a'*40,baseline_root=str(old),baseline_files={p.relative_to(old).as_posix():sha(p) for p in old.rglob('*') if p.is_file()},
-        producer_source_hashes={'producer.py':sha(code/'producer.py')},
-        common_identity=api().common_identity(manifest),observed_tokens=[[463],[2529]])
+    reference['baseline_files']['raw.nsys-rep']=sha(old/'raw.nsys-rep')
+    reference['baseline_sizes']['raw.nsys-rep']=(old/'raw.nsys-rep').stat().st_size
     if damage=='source': (code/'producer.py').write_bytes(b'changed')
     if damage=='baseline': (old/'raw.nsys-rep').write_bytes(b'changed')
     if damage=='review': reference['review_sha256']='f'*64

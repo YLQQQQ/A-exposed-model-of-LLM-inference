@@ -37,19 +37,27 @@ def validate_domain(report,path):
     return domain
 
 
-def validate_reference(reference,review_path,code_root):
-    require(reference.get('schema_version')=='N1-REMAINING-REFERENCE/0.1','REFERENCE_VERSION')
+def validate_reference(reference,review_path,code_root,report_path=None):
+    from scripts.n1_reference import VERSION,validate_sources
+    report=dict(schema_version=VERSION,status='BLOCKED',files=[],error=None)
+    try:
+        validate_sources(reference,code_root,report['files'],Path(review_path).parent/'baseline_binding')
+        _validate_baseline(reference,review_path)
+        report['status']='PASS'
+    except Exception as exc:
+        report['error']=f'{type(exc).__name__}: {exc}'
+        raise
+    finally:
+        if report_path is not None: write_new(report_path,report)
+    return reference
+
+
+def _validate_baseline(reference,review_path):
     review=read(review_path)
     require(sha(review_path)==reference['review_sha256']
         and review['status']=='V0_NEW_CONTRACT_ENGINEERING_SCOPE_CHECK_PASSED'
         and review['execution_commit']==reference['baseline_commit']==reference['common_identity']['runner_git_commit']
         and review['allocation_policy']=='N1_OPAQUE_ALLOCATION_BUDGET/0.1.0','BASELINE_REVIEW')
-    for root,refs in ((Path(code_root),reference['producer_source_hashes']),
-                      (Path(reference['baseline_root']),reference['baseline_files'])):
-        require(bool(refs),'REFERENCE_FILE_SET')
-        for name,digest in refs.items():
-            path=(root/name).resolve()
-            require(path.is_relative_to(root.resolve()) and path.is_file() and sha(path)==digest,'REFERENCE_SOURCE:'+name)
     root=Path(reference['baseline_root'])
     required={'diagnostic/manifest.json','diagnostic/n1_model_calls.json',
         'diagnostic/producer/pass_identity.json','diagnostic/producer/producer_receipt.json','input_receipt.json'}
@@ -63,6 +71,11 @@ def validate_reference(reference,review_path,code_root):
         and calls['manifest_sha256']==sha(root/'diagnostic/manifest.json')
         and calls['producer_receipt_sha256']==sha(root/'diagnostic/producer/producer_receipt.json')
         and review['source_receipt_sha256']==sha(root/'input_receipt.json'),'BASELINE_ACTUAL_SOURCE_JOIN')
+    measured=calls['requests'][1]; observed=ledger['requests'][1]
+    require(measured['variant']==measured['declaration']['protocol_variant']=='V0'
+        and measured['request_role']==observed['request_role']=='measured'
+        and measured['identity']==observed['identity'] and measured['interventions']==[]
+        and measured['actual_input_tokens']==manifest['fixed_input_tokens'],'BASELINE_MEASURED_V0_JOIN')
     return reference
 
 
@@ -158,11 +171,17 @@ def main():
     p.add_argument('--execute-reviewed-feasibility',required=True,action='store_true')
     a=p.parse_args(); c=read(a.config)
     if 'baseline_reference' in c:
-        reference=validate_reference(read(c['baseline_reference']),c['baseline_review'],ROOT)
+        reference=validate_reference(read(c['baseline_reference']),c['baseline_review'],ROOT,
+            a.output.parent/'reference_validation.before.json')
+        require(reference['execution_commit']==c['commit'],'REFERENCE_EXECUTION_COMMIT')
         require(c.get('variants')==['Vmarker','V16'],'REMAINING_VARIANTS')
         c['reviewed_baseline']=reference
-        result=run_remaining_groups(a.output,lambda v,path:collect_group(v,path,c),reference,c['commit'])
-        validate_reference(reference,c['baseline_review'],ROOT)
+        def execute(v,path):
+            validate_reference(reference,c['baseline_review'],ROOT,
+                a.output.parent/f'reference_validation.{v}.before.json')
+            return collect_group(v,path,c)
+        result=run_remaining_groups(a.output,execute,reference,c['commit'])
+        validate_reference(reference,c['baseline_review'],ROOT,a.output.parent/'reference_validation.after.json')
         return 0 if result['status']=='BATCH_COMPLETE_PENDING_REVIEW' else 1
     return 0 if run_groups(a.output,lambda v,path:collect_group(v,path,c))['status']=='BATCH_COMPLETE_PENDING_REVIEW' else 1
 
