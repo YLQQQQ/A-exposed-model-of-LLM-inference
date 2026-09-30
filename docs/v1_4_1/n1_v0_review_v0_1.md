@@ -1,5 +1,7 @@
 # N1 V0 实物审查与局部适配修复 0.1
 
+**7.107现行补正：** 用户已批准P1 Raw来源及P2保守识别，已实现并在同一V0副本验证，见[版本化amendment及allocation裁决稿0.1](n1_raw_provenance_allocation_v0_1.md)。内部物理同步的来源缺口已关闭；剩余三次已知allocation的completion/opaque政策未授支持，V0仍BLOCKED。本页以下0.1.1数值/未生效提案保留为7.106历史，不是最新来源资格或再次待批准的P1。
+
 状态：**V0 模型支持域仍 BLOCKED；本轮不是新的 N1/Q0 资格。** 执行身份是 `c21d8358e42e764c37cf9b315d87235989a817e1`，分析侧适配是 `exposedpath-n1-model-ownership/0.1.1`。Gate7～9及Gate10限定G1 PASS保持；Vmarker/V16未运行，Pilot不启动。
 
 ## 1. 输入及完成的检查

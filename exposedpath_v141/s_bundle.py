@@ -42,16 +42,18 @@ def _sha256(path: Path) -> str:
 def load_s_layer_schema(root: Path | None = None, *, version='exposedpath-s-layer/0.2.0') -> dict[str, Any]:
     if root is None:
         root = Path(__file__).resolve().parents[1]
-    if version not in ('exposedpath-s-layer/0.2.0','exposedpath-s-layer/0.3.0'):
+    if version not in ('exposedpath-s-layer/0.2.0','exposedpath-s-layer/0.3.0','exposedpath-s-layer/0.4.0'):
         raise SBundleError('S schema VERSION_UNSUPPORTED')
     path = _SCHEMA_PATH if version.endswith('/0.2.0') else _SCHEMA_PATH.with_name('s_layer_schema_v0_3.json')
+    if version=='exposedpath-s-layer/0.4.0':
+        path=_SCHEMA_PATH.with_name('s_layer_schema_v0_4.json')
     schema = json.loads((root / path).read_text(encoding="utf-8"))
     validate_s_layer_schema(schema)
     return schema
 
 
 def validate_s_layer_schema(schema: Mapping[str, Any]) -> None:
-    if schema.get("schema_version") not in ("exposedpath-s-layer/0.2.0", "exposedpath-s-layer/0.3.0"):
+    if schema.get("schema_version") not in ("exposedpath-s-layer/0.2.0", "exposedpath-s-layer/0.3.0", "exposedpath-s-layer/0.4.0"):
         raise SBundleError("S schema 版本不匹配")
     if schema.get("input_schema_version") != "exposedpath-canonical-raw/0.2.0":
         raise SBundleError("S schema 的 Canonical Raw 输入版本不匹配")
@@ -89,7 +91,8 @@ def _write_records(path: Path, records: list[Mapping[str, Any]]) -> dict[str, An
 
 
 def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path, *, scope_manifest: Path | None = None,
-                           closed_prior_manifest: Path | None = None) -> Path:
+                           closed_prior_manifest: Path | None = None,
+                           raw_physical_sync_ids=None, isolated_nonblocking_scope=None) -> Path:
     """只读分析 Canonical Raw，写入不可覆盖的 S bundle。"""
 
     canonical_manifest = Path(canonical_manifest).resolve()
@@ -99,6 +102,10 @@ def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path, *, scope_
     if closed_prior_manifest is not None and scope_manifest is None:
         raise SBundleError('CLOSED_PRIOR_SCOPE_REQUIRED')
     schema = load_s_layer_schema(version='exposedpath-s-layer/0.3.0' if closed_prior_manifest is not None else 'exposedpath-s-layer/0.2.0')
+    if raw_physical_sync_ids is not None:
+        if scope_manifest is None or closed_prior_manifest is not None:
+            raise SBundleError('RAW_PROVENANCE_VERSION_MISMATCH')
+        schema=load_s_layer_schema(version='exposedpath-s-layer/0.4.0')
     repository_root = Path(__file__).resolve().parents[1]
     registry_path = (
         repository_root / "docs" / "v1_4_1" / "contracts"
@@ -111,11 +118,19 @@ def analyze_canonical_to_s(canonical_manifest: Path, output_dir: Path, *, scope_
         ownership, projections = load_projected_ownership(canonical_manifest, bundle, scope_manifest)
         bundle = {**bundle, "ownership_records": ownership}
     inventory = build_semantic_inventory(bundle)
+    projected_inputs=None
+    if raw_physical_sync_ids is not None:
+        from .gate8_scope import build_projected_ab_inputs
+        from .time_representation import RAW_PHYSICAL,time_representation
+        with time_representation(RAW_PHYSICAL):
+            projected_inputs=build_projected_ab_inputs(canonical_manifest,scope_manifest,
+                raw_physical_sync_ids=raw_physical_sync_ids,isolated_nonblocking_scope=isolated_nonblocking_scope)
     if closed_prior_manifest is not None:
         from .gate8_closed_prior import load_admissions
         inventory['closed_prior'] = load_admissions(closed_prior_manifest, canonical_manifest,
                                                    scope_manifest, bundle, projections, inventory)
-    records = [analyze_sync_semantics(inventory, sync) for sync in inventory["syncs"]]
+    records = (list(projected_inputs.s_records) if projected_inputs is not None else
+               [analyze_sync_semantics(inventory, sync) for sync in inventory["syncs"]])
     records.sort(
         key=lambda record: (
             record["host_start_ns"] is None,

@@ -166,6 +166,12 @@ def _project_b_record(inputs: ABInputs, s_record: Mapping[str, object]) -> dict[
         from copy import deepcopy
         from .gate8_closed_prior import EXTRA_FIELDS
         record.update({k:deepcopy(s_record[k]) for k in EXTRA_FIELDS})
+    if 'sync_provenance' in s_record:
+        from copy import deepcopy
+        from .time_representation import raw_physical_provenance
+        if not raw_physical_provenance() or inputs.s_manifest.get('schema_version')!='exposedpath-s-layer/0.4.0':
+            raise BProvenanceError('RAW_PROVENANCE_VERSION_MISMATCH')
+        record['sync_provenance'] = deepcopy(s_record['sync_provenance'])
     validate_b_record(record)
     return record
 
@@ -189,8 +195,15 @@ def validate_b_record(record: Mapping[str, object]) -> None:
 
     from .gate8_closed_prior import EXTRA_FIELDS, PROFILE
     extra = EXTRA_FIELDS if 'ownership_profile' in record else set()
-    if set(record) != _B_FIELDS | extra:
+    raw_extra = {'sync_provenance'} if 'sync_provenance' in record else set()
+    from .time_representation import raw_physical_provenance
+    if bool(raw_extra) != raw_physical_provenance() or (raw_extra and extra):
+        raise BProvenanceError('RAW_PROVENANCE_VERSION_MISMATCH')
+    if set(record) != _B_FIELDS | extra | raw_extra:
         raise BProvenanceError("B record 字段集合不匹配")
+    if raw_extra:
+        from .raw_sync_provenance import validate_provenance
+        validate_provenance(record)
     if extra:
         from .gate8_closed_prior import validate_provenance
         validate_provenance(record)

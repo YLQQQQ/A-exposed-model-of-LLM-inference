@@ -177,7 +177,7 @@ def load_projected_ownership(canonical_path, bundle, scope_path):
 
 
 def build_projected_ab_inputs(canonical_path, scope_path, *, closed_prior_manifest=None,
-                              isolated_nonblocking_scope=None):
+                              isolated_nonblocking_scope=None, raw_physical_sync_ids=None):
     """Deterministic calculation inputs, NOT an integrity/qualification verdict.
 
     The Gate8 reporting entry point must gate these calculations on explicit
@@ -217,6 +217,16 @@ def build_projected_ab_inputs(canonical_path, scope_path, *, closed_prior_manife
                 or contexts[0]['null_stream_id'] == stream):
             raise ValueError('N1_NONBLOCKING_SCOPE_NOT_PROVEN')
         inventory['isolated_nonblocking_scope'] = isolated_nonblocking_scope
+    if raw_physical_sync_ids is not None:
+        from .time_representation import raw_physical_provenance
+        if not raw_physical_provenance() or closed_prior_manifest is not None:
+            raise ValueError('RAW_PROVENANCE_VERSION_MISMATCH')
+        from .raw_sync_provenance import attach_inventory_provenance
+        attach_inventory_provenance(bundle, inventory, raw_physical_sync_ids)
+    else:
+        from .time_representation import raw_physical_provenance
+        if raw_physical_provenance():
+            raise ValueError('RAW_PROVENANCE_SELECTION_REQUIRED')
     if closed_prior_manifest is not None:
         from .gate8_closed_prior import load_admissions
         inventory['closed_prior'] = load_admissions(closed_prior_manifest, canonical_path, scope_path,
@@ -241,5 +251,6 @@ def build_projected_ab_inputs(canonical_path, scope_path, *, closed_prior_manife
         "observation_profile": PROFILE, "scope_sha256": digest(scope_path),
         "pass_identity_sha256": bundle["manifest"]["gate8_sources"]["pass_identity"]["sha256"],
         "qualification": "NOT_ASSESSED",
+        **({"schema_version":"exposedpath-s-layer/0.4.0"} if raw_physical_sync_ids is not None else {}),
     }, s_records=s_records, windows=windows,
         global_quality_reasons=_global_quality_reasons(canonical), window_discovery_issues=())

@@ -1,5 +1,19 @@
 # ExposedPath 科研进度清单
 
+## 7.107 P1 Raw同步来源增量与P2 allocation保守识别（2026-09-30）
+
+用户批准P1内部同步使用可核验RAW_PHYSICAL来源，批准P2只做已知allocation识别；opaque allocation放行政策未批准、未实施。已完成[版本化amendment及集中裁决稿0.1](n1_raw_provenance_allocation_v0_1.md)。源码origin/callsite/ordinal未观测保持null，不伪造forward/callsite；token-ready及N1预定干预继续要求结构身份，冲突不可由Raw替代。保留成功、唯一映射、进程实例/clock/scope、request/phase、完整W/terminal检查。
+
+新来源schema0.1、S0.4、A/B0.5及N1 adapter0.2.0显式接线；旧schema/读取路径及0.1.1分析文件行为保持，未知/混用版本拒绝。A数值定义与B公式未改；仅P1来源身份扩展已生效，基础MC0.2正文/registry及旧Q0/Gate6证据未修改。Derived拒绝新A/B，不授完整新版Q0资格。P2精确cudaMalloc/合法版本后缀诊断KNOWN_ALLOCATION、completion_support=UNSUPPORTED、scope=null，不注册普通non-submit、假W/B或放行N1。
+
+复用7.106封存V0的独立副本，新派生`continuation_p1_v0_1`；执行提交仍c21d835，consumer分析版本变化不改producer/runner/插桩/allocator/流政策。内部sync348/runtime17576/corr61831来源恢复：完整FIFO8、terminal Memcpy344；token349/350仍STRUCTURED，FIFO1906/3498、terminal Memcpy345/346。三条下层B_VALID；独立按Raw提交顺序及区间union检查，不用被测S/A/B生成预期。
+
+完整准入44.348秒（S28.667、A/B1.982）；仍DOMAIN_MODEL_UNSUPPORTED_API，physical_b_failures为空、不生成domain.json。三次成功cudaMalloc合计1637163ns仍unattributed；内部1195434ns拆为223646ns wait及971788ns追加residual。诊断Request总212715004ns、Host119176616、API90648385、wait223646、residual1029194、unknown1637163；三窗守恒且各分量Request=Prefill+Decode，**不发布为合格模型A/B**。原ZIP/REP/SQLite/report哈希不变，UNKNOWN/NOT_ASSESSED及旧BLOCKED保留。独立checker初稿错误的全residual预期由Raw活动union纠正，未修改analyzer去迎合预期。
+
+tests-first含真实producer替身文件链、独立完整FIFO/来源正反例、必需结构标签、映射/owner/clock/process冲突、来源篡改、schema读写和旧版本回归。相关8文件CPU239 passed（155.85秒）；最终来源文件33 passed（45.68秒，与239重叠不累加）。compileall、contract37/37（内部一致性）、Canonical boundary及静态oracle independence通过；无全量、服务器、模型、GPU、Nsight/export或Q0采集。用户DOCX修改保留且不纳本提交。
+
+**当前唯一研究待决：是否接受无嵌套窄域opaque allocation作为资源管理API占据预算，并限制“不拆内部等待、不授allocation B/完整wait解释”？** 推荐透明修订后有条件采用，不因unknown小或欲放行推荐；有未界定跨流/owner影响、失败/缺边界、unexpected映射仍拒绝。现行代码继续BLOCKED，Vmarker/V16 NOT_RUN，当前无新采集/部署必要，不准备包。Gate7～9及Gate10限定G1 PASS保持，N1模型可行性未授，Pilot/Freeze/Formal不启动。
+
 ## 7.106 N1 V0完整离线审查、局部scope修复与语义停止点（2026-09-30）
 
 直接核验`n1_model_c21d835_once.zip`：2177563 bytes，SHA256 `7867c610da1025cba1e68de2459f45b36d2b5979b949a70711def17315af28ed`，CRC/安全路径/重复项/87项清单完整覆盖通过。执行c21d835，服务器CPU142 passed属于原回传。V0模型/profile35.672秒exit0、producer/diagnostic COMPLETE、export PASS；原错误DOMAIN_MODEL_UNSUPPORTED_API和Raw/旧报告不改，Vmarker/V16 NOT_RUN。详见[有界实物审查0.1](n1_v0_review_v0_1.md)。
@@ -831,8 +845,8 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前研究阶段：`Engineering`
 - 当前工作入口：根目录 `main`，已正规快进整合Gate7收尾及全部必要实现；目录约定见 `docs/repository_layout.md`。唯一验收执行commit仍为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout commit为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`；本轮目录整理提交不是新的执行身份。
 - 当前数据资格：Gate 6 `final-04` 提供 `Engineering` / `Q0_QUALIFICATION_ONLY` 资格证据；历史 trace 仍仅限 `Prototype/Engineering`；尚无 `Pilot/Formal` 合格数据
-- 当前 Gate 状态（7.106）：Gate0～7历史PASS；Gate8限定Engineering PASS、Gate9限定分域PASS保持；[Gate10 PASS仅限选定G1一次可行性](gate10_closeout_v0_1.md)，不授N1模型可行性或共同稳定域。N1 V0模型支持域审查BLOCKED；Gate11 NOT_RUN（N1 Pilot前置仍待模型支持域），Gate12～14 NOT_RUN。UNKNOWN/NOT_ASSESSED与旧BLOCKED不变，不授权Formal。
-- 当前最高优先级（7.106）：N1 verified入口/多API接线已完成，c21d835 V0采集成功后完整离线链已审查；局部default污染修复，剩余为cudaMalloc测量政策与内部同步Raw来源身份的集中裁决。全部独立本地修复/回归已完成，当前不交付重采包、不安排Vmarker/V16、无服务器操作。较早批次指令是历史，不是现行待办。
+- 当前 Gate 状态（7.107）：Gate0～7历史PASS；Gate8限定Engineering PASS、Gate9限定分域PASS保持；[Gate10 PASS仅限选定G1一次可行性](gate10_closeout_v0_1.md)，不授N1模型可行性或共同稳定域。P1 Raw来源已接通，N1 V0仍因allocation政策未授而BLOCKED；Gate11 NOT_RUN，Gate12～14 NOT_RUN。UNKNOWN/NOT_ASSESSED与旧BLOCKED不变，不授权Formal。
+- 当前最高优先级（7.107）：独立本地P1修复/P2保守识别及同一V0完整离线验证已完成；唯一待裁决是[opaque allocation预算例外及解释限制](n1_raw_provenance_allocation_v0_1.md)。当前不交付重采包、不安排Vmarker/V16、无服务器操作；P1不再待批准。较早批次指令为历史，不是现行待办。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -1236,6 +1250,8 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ## 7. 固定执行顺序与最近任务
 
+**7.107当前覆盖：** N1 V0已完成完整离线检查，P1/P2批准范围已实现；仅待opaque allocation测量政策裁决。下方较早“最近任务”均是历史，不重跑Gate/Q0、索取平台资料或安排Vmarker/V16；当前入口以§1及[裁决稿0.1](n1_raw_provenance_allocation_v0_1.md)为准。
+
 **7.45当前覆盖：** PE原件已实审，静态路线结束；来源对齐§10的一次Engineering
 来源观察提案已交协调审查。不能重跑7.44工具或继续索包，不能自动启用新profile。
 
@@ -1275,6 +1291,8 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 **Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
 ## 8. 计划调整记录
+
+7.107（2026-09-30）：按用户批准使内部同步Raw来源身份amendment生效（S0.4/A-B0.5/N1 adapter0.2）；只新增来源证据，不改变W/A/B公式，不修改旧schema/历史资格。allocation只做已知但completion未支持的诊断，opaque例外集中待裁决未实施。复用同一V0 Raw完成P1独立检查；N1仍BLOCKED，Vmarker/V16暂停，无新部署/采集或Formal数据变化。用户DOCX保留在提交之外。
 
 7.106（2026-09-30）：N1 V0真实采集后优先复用同一Raw完成所有独立离线检查，修复局部适配、不重采；停止于已知allocation的completion测量政策及内部Raw同步来源schema要求。仅提出P1/P2未生效amendment，不改冻结schema/registry或W/A/B公式；N1模型支持域BLOCKED、Vmarker/V16暂停，Gate10限定G1范围及Gate7～9 PASS保持。无Formal数据变化，不因分析commit变更笼统要求新V0。
 

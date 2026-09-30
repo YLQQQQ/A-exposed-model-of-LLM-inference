@@ -9,13 +9,14 @@ from contextvars import ContextVar
 LEGACY = 'exposedpath-ab/0.2.0'
 SIGNED = 'exposedpath-ab/0.3.0'
 CLOSED_PRIOR = 'exposedpath-ab/0.4.0'
+RAW_PHYSICAL = 'exposedpath-ab/0.5.0'
 INT64_MIN, INT64_MAX, UINT64_MAX = -(2**63), 2**63-1, 2**64-1
 _version = ContextVar('ab_time_representation', default=LEGACY)
 
 
 @contextmanager
 def time_representation(version):
-    if version not in (LEGACY, SIGNED, CLOSED_PRIOR):
+    if version not in (LEGACY, SIGNED, CLOSED_PRIOR, RAW_PHYSICAL):
         raise ValueError('TIME_REPRESENTATION_VERSION_UNSUPPORTED')
     token = _version.set(version)
     try:
@@ -25,7 +26,11 @@ def time_representation(version):
 
 
 def signed_time():
-    return _version.get() in (SIGNED, CLOSED_PRIOR)
+    return _version.get() in (SIGNED, CLOSED_PRIOR, RAW_PHYSICAL)
+
+
+def raw_physical_provenance():
+    return _version.get() == RAW_PHYSICAL
 
 
 def timestamp(value, label):

@@ -17,9 +17,10 @@ from .gate8_files import load_input_receipt, _json
 from .gate9_domain import VERSION, require, analysis_stage
 from .gate8_scope import load_projected_ownership, build_projected_ab_inputs
 from .sync_semantics import load_canonical_bundle, build_semantic_inventory, classify_cuda_api
-from .time_representation import SIGNED, time_representation
+from .time_representation import SIGNED, RAW_PHYSICAL, time_representation
 
-ADAPTER = 'exposedpath-n1-model-ownership/0.1.1'
+LEGACY_ADAPTER = 'exposedpath-n1-model-ownership/0.1.1'
+ADAPTER = 'exposedpath-n1-model-ownership/0.2.0'
 
 
 def bindings(bundle, ownership, projections, calls, ledger, policy, drain_api, drain):
@@ -182,10 +183,15 @@ def bindings(bundle, ownership, projections, calls, ledger, policy, drain_api, d
                     phase=phase(a),start_ns=a['start_ns'],end_ns=a['end_ns'],
                     activity_record_ids=[x['record_id'] for x in members],
                     sync_record_ids=[x['record_id'] for x in syncs]))
+                from .allocation_semantics import describe_allocation
+                allocation = describe_allocation(a['api_name'])
+                if allocation is not None:
+                    unsupported[-1].update(allocation)
         output.append(dict(identity=identity,phase=phase(a),api_record_id=a['record_id'],api_name=a['api_name'],
             category=category,correlation_id=a['correlation_id'],physical_record_ids=[x['record_id'] for x in members+syncs],
             native_handle=handle,generation=generation,device_id=scope[0],context_id=scope[1],trace_stream_id=scope[2],
             model_forward_refs=[m['record_id'] for m in forwards if inside(a,m)],
+            intervention_refs=[intervention['record_id']] if intervention is not None and inside(a,intervention) else [],
             anchor_api_record_id=apis[0]['record_id'],anchor_sync_record_id=anchor_sync['record_id']))
     require(all(any(b['category']=='submit' and m['record_id'] in b['model_forward_refs'] for b in output)
         for m in forwards),'MODEL_FORWARD_EMPTY')
@@ -198,7 +204,8 @@ def bindings(bundle, ownership, projections, calls, ledger, policy, drain_api, d
     return output,set(sync_ids),unsupported,(global_pid,*scope)
 
 
-def calculate_n1_model(root,receipt_path,execution_path,bridge_path):
+def calculate_n1_model(root,receipt_path,execution_path,bridge_path,*,adapter_version=ADAPTER):
+    require(adapter_version in (ADAPTER,LEGACY_ADAPTER),'MODEL_ADAPTER_VERSION')
     require(bridge_path is not None,'MODEL_CALLS_REQUIRED')
     receipt,paths=load_input_receipt(receipt_path)
     manifest=_json(paths['wmpc_manifest']); policy=validate_manifest(manifest)
@@ -233,9 +240,13 @@ def calculate_n1_model(root,receipt_path,execution_path,bridge_path):
     drain_api,drain=_drain(paths['drain_ledger'],{'drain_ledger':{'filename':paths['drain_ledger'].name,
         'sha256':digest(paths['drain_ledger'])}},bundle,p,scope,canonical.parent)
     bound,sync_ids,unsupported,physical_scope=bindings(bundle,ownership,projections,calls,ledger,policy,drain_api,drain)
-    with time_representation(SIGNED):
+    legacy = adapter_version==LEGACY_ADAPTER
+    raw_ids={s for b in bound if b['category']=='physical_sync' and b['model_forward_refs']
+             and not b['intervention_refs'] for s in b['physical_record_ids']}
+    with time_representation(SIGNED if legacy else RAW_PHYSICAL):
         with analysis_stage('n1_physical_s_inputs'):
-            inputs=build_projected_ab_inputs(canonical,scope,isolated_nonblocking_scope=physical_scope)
+            inputs=build_projected_ab_inputs(canonical,scope,isolated_nonblocking_scope=physical_scope,
+                **({} if legacy else {'raw_physical_sync_ids':raw_ids}))
         from .a_accounting import calculate_a_windows
         from .b_provenance import calculate_b_syncs
         with analysis_stage('n1_a_and_physical_b'):
@@ -253,7 +264,11 @@ def calculate_n1_model(root,receipt_path,execution_path,bridge_path):
     require(not inputs.global_quality_reasons and len(b)==len(sync_ids)>0
         and not invalid,'MODEL_PHYSICAL_B:'+json.dumps(invalid,sort_keys=True))
     require(len(a)==3 and all(x['primary_reason'] is None and not x['secondary_reasons'] for x in a),'MODEL_A_VALIDITY')
-    return dict(schema_version=VERSION,adapter_version=ADAPTER,declaration=manifest['domain_qualification'],
+    if legacy:
+        for binding in bound:
+            binding.pop('intervention_refs')
+    return dict(schema_version=VERSION,adapter_version=adapter_version,declaration=manifest['domain_qualification'],
+        **({} if legacy else {'ab_schema_version':RAW_PHYSICAL,'s_schema_version':'exposedpath-s-layer/0.4.0'}),
         identity=receipt['identity'],status='QUALITY_CHECK_PASSED_NOT_QUALIFICATION',
         model_api_bindings=bound,a_records=a,b_records=b,physical_s_records=list(inputs.s_records),
         physical_b_records=physical_b,stage_diagnostics=stages,

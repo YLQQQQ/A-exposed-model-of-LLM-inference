@@ -101,6 +101,19 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         if damage=='graph': db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET graphId=7')
         if damage=='blocking_flag': db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=1 WHERE streamId=3')
         if damage=='null_measured': db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=3')
+        if damage=='unmarked_token':
+            db.execute("DELETE FROM NVTX_EVENTS WHERE text LIKE '%natural_token_ready%'")
+        if damage=='unmarked_intervention':
+            db.execute("DELETE FROM NVTX_EVENTS WHERE text LIKE 'EXPOSEDPATH_JSON_V1:%n1_intervention%'")
+        if damage=='raw_marker_conflict':
+            # Put a structured sync marker with foreign identity around the
+            # first internal wait; a Raw alternative must never override it.
+            marker=db.execute("SELECT text FROM NVTX_EVENTS WHERE text LIKE '%natural_token_ready%' LIMIT 1").fetchone()[0]
+            payload=json.loads(marker.split(':',1)[1]); payload['request_id']='foreign'
+            first=db.execute('SELECT start,end FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE correlationId=(SELECT MIN(correlationId) FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION WHERE streamId=3)').fetchone()
+            tid=db.execute('SELECT globalTid FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE start=?',(first[0],)).fetchone()[0]
+            db.execute('INSERT INTO NVTX_EVENTS(start,end,eventType,text,globalTid) VALUES (?,?,59,?,?)',
+                (first[0],first[1],'EXPOSEDPATH_JSON_V1:'+json.dumps(payload),tid))
         if vm_bits:
             # Nsight global process/thread IDs include a VM field above the
             # 24-bit OS PID. Raw IDs must retain it; PID joins must decode it.
@@ -166,18 +179,18 @@ def test_shared_collector_dispatches_model_sidecar_without_controlled_api_assump
     from scripts.gate8_diagnostic_collect import analyze_receipt
     value=json.loads((calls.parent/'manifest.json').read_text())
     path,result=analyze_receipt(value,receipt,execution,tmp_path/'derived')
-    assert result['adapter_version']=='exposedpath-n1-model-ownership/0.1.1'
+    assert result['adapter_version']=='exposedpath-n1-model-ownership/0.2.0'
     assert len(result['model_api_bindings'])==9
 
 
 def test_internal_unmarked_blocking_calls_require_physical_s_identity(tmp_path,monkeypatch):
     receipt,execution,calls=source(tmp_path,monkeypatch,internal=True)
     from exposedpath_v141.gate9_domain import process_domain
-    # Scope/stream/correlation is available, but frozen physical S additionally
-    # requires origin/callsite/ordinal. Never invent those from a forward range.
+    from exposedpath_v141.n1_model_scope import calculate_n1_model,LEGACY_ADAPTER
+    # The amended path is explicit; the old adapter continues to reject.
+    result=process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
     with pytest.raises(ValueError,match='MODEL_PHYSICAL_B:.*INVOCATION_BOUNDARY_INVALID'):
-        process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
-    assert not (tmp_path/'derived/domain.json').exists()
+        calculate_n1_model(result.parent,receipt,execution,calls,adapter_version=LEGACY_ADAPTER)
 
 
 def test_anchor_and_intervention_allow_only_registered_non_submit_companions(tmp_path,monkeypatch):
@@ -218,8 +231,9 @@ def test_allocation_rejection_keeps_all_source_records_and_other_b_failures(tmp_
     assert all(r['api_name']=='cudaMalloc_v3020' and r['category'] is None
         and r['activity_record_ids']==[] and r['sync_record_ids']==[]
         and r['api_record_id'] and type(r['correlation_id']) is int for r in details['unsupported_apis'])
-    assert len(details['physical_b_failures'])==2
-    assert all(b['reason']=='INVOCATION_BOUNDARY_INVALID' for b in details['physical_b_failures'])
+    assert details['physical_b_failures']==[]
+    assert all(a['semantic_role']=='KNOWN_ALLOCATION' and a['completion_support']=='UNSUPPORTED'
+               for a in details['unsupported_apis'])
     assert not any('DEFAULT_STREAM_MODE_UNKNOWN' in b['secondary_reasons'] for b in details['physical_b_failures'])
     assert not (tmp_path/'derived/domain.json').exists()
 

@@ -225,6 +225,9 @@ def _load_s_records(manifest_path: Path) -> tuple[dict[str, Any], tuple[dict[str
                 if schema['schema_version'] == 'exposedpath-s-layer/0.3.0':
                     from .gate8_closed_prior import validate_provenance
                     validate_provenance(record)
+                if schema['schema_version'] == 'exposedpath-s-layer/0.4.0':
+                    from .raw_sync_provenance import validate_provenance
+                    validate_provenance(record)
                 records.append(record)
     except ABInputError:
         raise
@@ -263,6 +266,9 @@ def _validate_lineage(
 
 
 def _validate_s_record_identity(canonical: CanonicalBundle, record: Mapping[str, Any]) -> None:
+    if 'sync_provenance' in record:
+        from .raw_sync_provenance import validate_source_join
+        validate_source_join(canonical, record)
     sync_id = _as_text(record.get("sync_id"), "S sync_id")
     candidate = canonical.semantic_sync_by_id.get(sync_id)
     if candidate is None:

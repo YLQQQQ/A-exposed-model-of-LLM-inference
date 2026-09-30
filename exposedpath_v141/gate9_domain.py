@@ -37,7 +37,7 @@ def declaration(profile):
     return dict(contract=CONTRACT, profile=profile, declaration_role='PRE_EXECUTION')
 
 
-def _calculate(root, receipt_path, execution_path, bridge_path=None):
+def _calculate(root, receipt_path, execution_path, bridge_path=None, *, n1_adapter_version=None):
     receipt, paths = load_input_receipt(receipt_path)
     declared = _json(paths['wmpc_manifest']).get('domain_qualification')
     require(isinstance(declared, dict) and declared == declaration(declared.get('profile')), 'DECLARATION')
@@ -45,7 +45,8 @@ def _calculate(root, receipt_path, execution_path, bridge_path=None):
     if declared['profile']==N1:
         if 'n1_model' in _json(paths['wmpc_manifest']):
             from .n1_model_scope import calculate_n1_model
-            return calculate_n1_model(root, receipt_path, execution_path, bridge_path)
+            return calculate_n1_model(root, receipt_path, execution_path, bridge_path,
+                **({} if n1_adapter_version is None else {'adapter_version':n1_adapter_version}))
         from .gate9_n1 import calculate_n1
         return calculate_n1(root, receipt_path, execution_path, bridge_path)
     require(bridge_path is None, 'G1_BRIDGE_FORBIDDEN')
@@ -136,6 +137,7 @@ def load_domain(result_path, receipt_path, execution_path, *, bridge_path=None):
     require(saved.get('schema_version')==VERSION, 'RESULT_VERSION')
     files=[_resolve(path.parent,r) for r in saved['files']]
     require(len(set(files))==len(files) and set(files)=={p.resolve() for p in path.parent.rglob('*') if p.is_file() and p!=path}, 'FILE_SET')
-    actual=_calculate(path.parent,receipt_path,execution_path,bridge_path)
+    actual=_calculate(path.parent,receipt_path,execution_path,bridge_path,
+        n1_adapter_version=saved.get('adapter_version') if saved.get('adapter_version','').startswith('exposedpath-n1-model-ownership/') else None)
     require({k:v for k,v in saved.items() if k!='files'}==actual, 'RESULT_MISMATCH')
     return saved

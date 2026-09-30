@@ -1846,7 +1846,13 @@ def analyze_sync_semantics(
         reasons.append("INVOCATION_OWNERSHIP_AMBIGUOUS")
     elif sync.get("ownership_status") != "VALID":
         reasons.append("INVOCATION_BOUNDARY_INVALID")
-    if any(sync.get(field) is None for field in ("sync_origin", "callsite_id", "sync_ordinal")):
+    proof = inventory.get('sync_provenance', {}).get(sync.get('record_id'))
+    if proof is not None:
+        from .time_representation import raw_physical_provenance
+        if not raw_physical_provenance():
+            raise ValueError('RAW_PROVENANCE_VERSION_MISMATCH')
+    raw_source = proof is not None and proof['basis']=='RAW_PHYSICAL'
+    if not raw_source and any(sync.get(field) is None for field in ("sync_origin", "callsite_id", "sync_ordinal")):
         reasons.append("INVOCATION_BOUNDARY_INVALID")
 
     kind = sync.get("sync_kind")
@@ -1991,6 +1997,11 @@ def analyze_sync_semantics(
     }
     if inventory.get('closed_prior') is not None:
         result = inventory['closed_prior'].annotate(result, sync)
+    if proof is not None:
+        from copy import deepcopy
+        from .raw_sync_provenance import validate_provenance
+        result['sync_provenance'] = deepcopy(proof)
+        validate_provenance(result)
     return result
 
 
