@@ -4,6 +4,9 @@
 本页是[7.107裁决稿](n1_raw_provenance_allocation_v0_1.md)批准后的现行窄域规则。
 这是观察既有V0之后明确批准的测量解释例外，不追认旧BLOCKED报告，不适用于Formal。
 
+7.110现行收尾：[N1模型三组限定Engineering可行性PASS](n1_model_feasibility_closeout_v0_1.md)。
+本页amendment保持；§3为已复用V0审查，§4为当时续跑计划历史，不是新服务器操作指令。
+
 ## 1. 版本与准入
 
 `N1_OPAQUE_ALLOCATION_BUDGET/0.1.0`；[API registry0.2](contracts/a_api_registry_v0_2.json)、
@@ -66,12 +69,12 @@ expected由上述区间直接确定，不调用被测S/A生成。缺边界、失
 **V0新合同下的限定Engineering支持域审查通过；不是整个N1三组可行性或科学效果PASS。**
 allocation大小未观测保持null；`UNKNOWN`、`NOT_ASSESSED`、D/Signature禁用及历史资格边界保持。
 
-## 4. 续跑及证据边界
+## 4. 续跑及证据边界（历史计划，7.110已完成审查）
 
 仅准备尚未运行的Vmarker/V16（32/2、batch1、fp16/eager/SDPA、warmup1/repeat1）；
 各组专用流和第16层位置不变。producer/runner/输入/插桩/allocator/流政策与c21执行版本未改变，
 新增代码只在采集外做版本消费/续跑调度，因此不因consumer提交不同重复V0。
-交付前按Git原字节核对producer与实际模型入口；已改的domain模块只在窗外用于声明及离线分析，
+7.109已纠正交付字节混淆：旧V0实际执行字节由原preflight证据绑定，old/new Git源码兼容另证；运行时不归一化。已改的domain模块只在窗外用于声明及离线分析，
 其声明函数/常量保持一致。服务器校验旧V0来源hash、已审查新review及固定producer字节，
 新组profile前比对公共manifest（仅允许已证明兼容的execution commit不同），再核对实际tokens。
 

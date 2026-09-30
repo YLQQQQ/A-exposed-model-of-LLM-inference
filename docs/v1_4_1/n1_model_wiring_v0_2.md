@@ -1,7 +1,7 @@
 # N1 verified模型接线与最小可行性 0.2
 
-状态：两处本地接线已完成，**目标机N1模型支持域审查BLOCKED，尚未授可行性**。Gate10限定G1 PASS保持；不启动Pilot。
-7.107当前入口：[Raw来源amendment与allocation裁决稿0.1](n1_raw_provenance_allocation_v0_1.md)。c21d835已完成V0模型/profile/export；0.2.0分析适配接通已批准的内部RAW_PHYSICAL来源，S0.4/A-B0.5保留未知源码字段，三条下层B通过但整次V0仍拒绝。cudaMalloc仅识别为已知allocation、completion不支持；唯一待决是其opaque资源API预算例外，尚未实施。不得执行下方历史批次指令、安排Vmarker/V16或重采。[7.106实物审查](n1_v0_review_v0_1.md)保留原失败及旧诊断。
+当前状态（7.110）：[N1模型三组限定Engineering可行性PASS](n1_model_feasibility_closeout_v0_1.md)。V0复用c21封存数据的新合同分析；d25 Vmarker/V16实际回传已审查。现行consumer为adapter0.3/A-B0.6，增加规则见[opaque amendment](n1_opaque_allocation_v0_1.md)；下文保留本版接线设计及历史0.2说明，不是当前待采集批次。无新服务器任务，Pilot尚未启动。
+7.107历史：[Raw来源amendment与allocation裁决稿0.1](n1_raw_provenance_allocation_v0_1.md)曾记录V0因allocation政策未授而拒绝。其原报告和[7.106实物审查](n1_v0_review_v0_1.md)保持；后来批准的0.3分析不覆盖旧判定。
 7.105补正：首次c6cdb36服务器尝试在profile前被共享G1-only validator拒绝，未执行模型。该分派遗漏已用真实prepared及prepare→seal/collector边界CPU回归修复；旧attempt仍BLOCKED，详见[进度7.105](research_progress.md)。
 依据：Pre-Pilot协议v2.1 §4.2 V16及[Gate9分域合同0.1](gate9_domain_qualification_contract_v0_1.md)。
 本版接替[0.1的部分实现状态](n1_model_wiring_v0_1.md)，不是新测量语义、完整N1矩阵或新Q0资格。

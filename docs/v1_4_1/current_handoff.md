@@ -1,8 +1,18 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.109](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.110](research_progress.md)。
 
-**7.109现行：d51a880续跑在采集前因LF/CRLF交付期望错误停止，已本地修复reference0.2。**
+**7.110现行：[N1三组限定Engineering可行性PASS](n1_model_feasibility_closeout_v0_1.md)。**
+复用c21 V0在adapter0.3/A-B0.6新合同下的已通过审查，d25 Vmarker/V16原件已直接核验：166文件/165清单、四份reference PASS、实际32/2及tokens一致。
+两组完整W/terminal/逐sync B和Raw来源、真实干预0/1、九窗A与allocation已独立交叉审查；不只核对exit0或守恒。32个producer实际字节与旧V0一致，LF/CRLF交付缺口关闭。
+限定单平台/Qwen/eager/SDPA/batch1/warmup1/repeat1；不是稳定收益、Information Gain、完整新Q0、Pilot/Freeze/Formal。原V0 BLOCKED、新包pending/NOT_QUALIFIED及UNKNOWN/NOT_ASSESSED保持；allocation内部等待不拆、大小未知，B不跨sync求和，D/Signature禁用。
+Gate7～9及Gate10限定G1 PASS保持；N1模型可行性是独立补充，不改原G1范围或授共同统计稳定域。
+**下一项只有Gate11本地最小准备**：按研究问题选既有可行点代表集，拟定Pilot组序/配对与重复/停止、overhead/质量政策的估计方法，整理Freeze输入。Gate11 NOT_RUN；没有服务器操作、补证或重采任务，不再执行旧续跑包。
+本轮仅审计与文档；本地没有测试重跑/全量分析/GPU/Nsight，服务器CPU57是已读取原日志。用户DOCX不覆盖、不纳提交。
+
+以下7.109及更早均为历史交接，其待部署/未执行状态由7.110取代：
+
+**7.109历史：d51a880续跑在采集前因LF/CRLF交付期望错误停止，已本地修复reference0.2。**
 旧V0执行字节由封存preflight/claim/final/target及manifest/receipt绑定，32个文件24CRLF/8LF；与Git源码内容兼容分开证明。
 当前文件仍严格匹配旧执行hash/长度，不归一化、不重设期望；当前服务器实字节尚未直接观察。缺失/越界/内容差异会留机器记录，初始/逐组前/结束后均核验。
 相关CPU57通过；封存原件的本地CPU参考链通过，不冒充目标验证。原报告不改，Vmarker/V16仍NOT_RUN。
@@ -11,7 +21,7 @@ Gate7～9/Gate10限定G1 PASS、7.108 V0新合同离线结论保持；N1三组�
 
 以下7.108为历史交接；其中c21作为服务器前置及原producer字节交付期待已由7.109纠正：
 
-**7.108现行：用户批准窄域opaque allocation；同一封存V0的新版本离线支持域审查通过。**
+**7.108历史：用户批准窄域opaque allocation；同一封存V0的新版本离线支持域审查通过。**
 [合同/审查0.1](n1_opaque_allocation_v0_1.md)：N1 adapter0.3/A-B0.6/registry0.2，旧版本读取及原BLOCKED保持。
 三次allocation总1637163ns进明确opaque API预算；不拆内部等待、不生成allocation W/B，三条同步完整前缀和B_VALID保持。
 UNKNOWN/NOT_ASSESSED、无未记录incoming依赖支持假设、D/Signature禁用保持；不是N1三组可行性/效果或Formal通过。
