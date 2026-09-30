@@ -12,8 +12,8 @@ def test_internal_raw_identity_preserves_unknown_source_labels(tmp_path, monkeyp
     from exposedpath_v141.gate9_domain import process_domain, load_domain
     path = process_domain(receipt, execution, tmp_path/'derived', bridge_path=calls)
     result = load_domain(path, receipt, execution, bridge_path=calls)
-    assert result['adapter_version'] == 'exposedpath-n1-model-ownership/0.2.0'
-    assert result['ab_schema_version'] == 'exposedpath-ab/0.5.0'
+    assert result['adapter_version'] == 'exposedpath-n1-model-ownership/0.3.0'
+    assert result['ab_schema_version'] == 'exposedpath-ab/0.6.0'
     raw = [s for s in result['physical_s_records'] if s['sync_provenance']['basis']=='RAW_PHYSICAL']
     assert len(raw) == 2
     # Internal wait follows first launch. The second follows the prior 3 activities.
@@ -36,8 +36,10 @@ def test_allocation_remains_blocked_but_internal_raw_sync_is_recovered(tmp_path,
     receipt, execution, calls = source(tmp_path, monkeypatch, variant='V0', allocations=True,
                                        internal=True, default_prefix=True)
     from exposedpath_v141.gate9_domain import process_domain
+    path=process_domain(receipt, execution, tmp_path/'derived', bridge_path=calls)
+    from exposedpath_v141.n1_model_scope import calculate_n1_model,RAW_ADAPTER
     with pytest.raises(ValueError, match='MODEL_UNSUPPORTED_API:') as error:
-        process_domain(receipt, execution, tmp_path/'derived', bridge_path=calls)
+        calculate_n1_model(path.parent,receipt,execution,calls,adapter_version=RAW_ADAPTER)
     details = json.loads(str(error.value).split('MODEL_UNSUPPORTED_API:', 1)[1])
     assert details['physical_b_failures']==[]
     assert len(details['unsupported_apis'])==2
@@ -47,7 +49,7 @@ def test_allocation_remains_blocked_but_internal_raw_sync_is_recovered(tmp_path,
         assert api['completion_support']=='UNSUPPORTED'
         assert api['completion_scope'] is None
         assert api['registry_rule_id']=='ALLOCATION-CUDAMALLOC-001'
-    assert not (tmp_path/'derived/domain.json').exists()
+    assert json.loads(path.read_text())['allocation_policy']=='N1_OPAQUE_ALLOCATION_BUDGET/0.1.0'
 
 
 @pytest.mark.parametrize('name', ['cudaMalloc', 'cudaMalloc_v3020', 'cudaMalloc_v12040'])
@@ -96,7 +98,8 @@ def test_new_s_ab_roundtrip_and_legacy_version_rejection(tmp_path,monkeypatch):
     from exposedpath_v141.ab_inputs import _load_s_records
     receipt,execution,calls=source(tmp_path,monkeypatch,variant='V0',internal=True)
     path=process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
-    result=json.loads(path.read_text())
+    from exposedpath_v141.n1_model_scope import calculate_n1_model,RAW_ADAPTER
+    result=calculate_n1_model(path.parent,receipt,execution,calls,adapter_version=RAW_ADAPTER)
     canonical=path.parent/'canonical/canonical_manifest.json'; scope=path.parent/'projection/scope.json'
     raw=[s for s in result['physical_s_records'] if s['sync_provenance']['basis']=='RAW_PHYSICAL']
     ids={s['sync_id'] for s in raw}; p=raw[0]['sync_provenance']['physical_source']

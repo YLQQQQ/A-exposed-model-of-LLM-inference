@@ -1,5 +1,21 @@
 # ExposedPath 科研进度清单
 
+## 7.108 窄域opaque allocation amendment实施与V0离线收口（2026-09-30）
+
+用户已批准7.107裁决稿的限定资源预算例外；[现行amendment与实物收口0.1](n1_opaque_allocation_v0_1.md)明确只支持精确cudaMalloc/合法数字后缀。新registry0.2、A/B0.6、N1 adapter0.3显式选择；旧registry/schema及0.1.1/0.2.0读取和历史判定保持，基础MC正文不覆盖。五类及互斥union/守恒、S的W/terminal、B公式未变；opaque计入non-submit且单独标注，不是非阻塞或已恢复内部等待，不新增假barrier/W/B、删除先行活动或启用D/Signature。
+
+逐调用准入重建Raw身份/区间/成功/唯一correlation，窗外成功drain、实际非null NON_BLOCKING scope与完整下游闭包仍必需；失败、缺界、clock/owner冲突、嵌套/相交、关联activity/sync冲突、跨流/event或影响不明均拒绝。名字规则本身不能授准入。allocation未知大小null，内部等待NOT_DECOMPOSED；A_device_wait只含受支持sync恢复等待，B hidden只相对单sync。无未记录incoming依赖仍为显式支持域假设，UNKNOWN/NOT_ASSESSED不改，不授完整新版Q0/Formal或干预效果结论。
+
+原c21d835 V0封存副本新派生`continuation_opaque_v0_1`完整准入55.555秒、文件重载全链37.399秒；收口修正严格drain名称/clock/correlation后，同一已保存domain再次完整复读39.950秒，结果精确一致。domain SHA256 `aec788be61053c6edbdb6b262be5b19fbe9d5c25a5233159c1e3cd60bb011d08`，review SHA256 `90d654334dcf28cfec670521516035c06c7a88a8949b82755c2ece250999a28b`。原ZIP/REP/SQLite/collection报告不改，旧attempt保持BLOCKED；新版本记录独立关联，不追认旧报告。
+
+三次成功Prefill allocation（17566/17579/17646，correlation61737/61867/62931）总1637163ns转明确opaque API预算。Request212715004ns：Host119176616/API92285548/wait223646/residual1029194/unknown0；Prefill128172644ns与Decode84542360ns每个分量相加等于Request。五类守恒、API子类及opaque预算无双计；原总时长/Host/wait/residual不变。内部sync348完整FIFO8、terminalMemcpy344，token349/350 FIFO1906/3498、terminalMemcpy345/346仍三条B_VALID；实际32/2、tokens[[463],[2529]]。**V0新合同限定Engineering支持域审查完成，无独立剩余V0阻塞；不是完整N1三组可行性PASS。**
+
+本机Python3.12.7，tests-first独立手算裁剪/守恒、真实producer CPU替身文件链、旧读取/unknown版本、proof和registry hash篡改、同步优先级与下游负例。10文件相关CPU198 passed（115.06秒）；最终allocation/续跑两文件44 passed（20.86秒，和前者重叠），另模型文件/调用层纳入63项收口（重叠不累加）。compileall、contract37/37内部一致性、Canonical boundary、静态oracle independence、PowerShell本地语法解析及diff检查通过；不是目标机或GPU验证，无全量/Q0重跑。
+
+续跑接线复用原verified入口与collector，仅准备Vmarker/V16，各一次32/2；不因consumer变化重采V0。固定baseline review/原manifest/calls/producer/输入hash和未改producer源码；profile前复核公共合同及实际声明variant，之后核对实际tokens及Vmarker 1标记/0同步、V16 1标记/1同步。不能仅信reference期望值，不能将合法V0误接到Vmarker；新组实际allocation分别记录，不要求相同、不归因全部E2E差异。任何失败/超时即停止、无恢复/重试，固定增量单ZIP先交协调窗口审查；本轮未操作服务器、模型、GPU/Nsight。用户DOCX不改、不纳提交。
+
+**当前下一项：协调窗口审查仅剩两组的固定交付后，由用户另行执行服务器步骤并回传单ZIP；Vmarker/V16仍NOT_RUN，N1模型三组可行性未授。** Gate7～9及Gate10限定G1 PASS保持，Pilot/Freeze/Formal不启动。此次amendment不影响历史Gate6资格或尚未存在的Formal数据；没有新的研究裁决项。下方7.107“政策待批准/V0阻塞”为当时历史，不再作为当前指令。
+
 ## 7.107 P1 Raw同步来源增量与P2 allocation保守识别（2026-09-30）
 
 用户批准P1内部同步使用可核验RAW_PHYSICAL来源，批准P2只做已知allocation识别；opaque allocation放行政策未批准、未实施。已完成[版本化amendment及集中裁决稿0.1](n1_raw_provenance_allocation_v0_1.md)。源码origin/callsite/ordinal未观测保持null，不伪造forward/callsite；token-ready及N1预定干预继续要求结构身份，冲突不可由Raw替代。保留成功、唯一映射、进程实例/clock/scope、request/phase、完整W/terminal检查。

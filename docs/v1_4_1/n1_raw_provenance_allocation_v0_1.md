@@ -2,7 +2,7 @@
 
 日期：2026-09-30。Engineering / Pre-Pilot；研究设计v7.1、实验协议v2.1。
 
-**P1已获用户批准并实现；P2仅保守识别已实现；opaque allocation记账政策待批准，未实施。V0仍BLOCKED，Vmarker/V16 NOT_RUN。** Gate7～9及Gate10限定G1 PASS保持；不启动Pilot、D/Signature或Formal。本文接替[7.106审查](n1_v0_review_v0_1.md)中的现行P1/P2状态，不改其历史诊断或原失败报告。
+**本页保留7.107当时的P1/P2及待裁决记录。用户随后已批准窄域opaque allocation；当前规则及V0新版本审查见[7.108 amendment](n1_opaque_allocation_v0_1.md)。** 下文的“未批准/BLOCKED”仅为当时历史，旧报告不改；Vmarker/V16仍NOT_RUN，Gate7～9及Gate10限定G1 PASS保持，不启动Pilot/D/Signature/Formal。
 
 ## 1. P1：版本、来源及兼容边界
 

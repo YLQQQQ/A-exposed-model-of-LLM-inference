@@ -179,7 +179,7 @@ def test_shared_collector_dispatches_model_sidecar_without_controlled_api_assump
     from scripts.gate8_diagnostic_collect import analyze_receipt
     value=json.loads((calls.parent/'manifest.json').read_text())
     path,result=analyze_receipt(value,receipt,execution,tmp_path/'derived')
-    assert result['adapter_version']=='exposedpath-n1-model-ownership/0.2.0'
+    assert result['adapter_version']=='exposedpath-n1-model-ownership/0.3.0'
     assert len(result['model_api_bindings'])==9
 
 
@@ -223,8 +223,10 @@ def test_nonblocking_model_waits_do_not_require_mode_for_unrelated_default_setup
 def test_allocation_rejection_keeps_all_source_records_and_other_b_failures(tmp_path,monkeypatch):
     receipt,execution,calls=source(tmp_path,monkeypatch,variant='V0',allocations=True,internal=True,default_prefix=True)
     from exposedpath_v141.gate9_domain import process_domain
+    path=process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
+    from exposedpath_v141.n1_model_scope import calculate_n1_model,RAW_ADAPTER
     with pytest.raises(ValueError,match='MODEL_UNSUPPORTED_API:') as error:
-        process_domain(receipt,execution,tmp_path/'derived',bridge_path=calls)
+        calculate_n1_model(path.parent,receipt,execution,calls,adapter_version=RAW_ADAPTER)
     details=json.loads(str(error.value).split('MODEL_UNSUPPORTED_API:',1)[1])
     assert len(details['unsupported_apis'])==2
     assert {r['phase'] for r in details['unsupported_apis']}=={'prefill','decode'}
@@ -235,7 +237,7 @@ def test_allocation_rejection_keeps_all_source_records_and_other_b_failures(tmp_
     assert all(a['semantic_role']=='KNOWN_ALLOCATION' and a['completion_support']=='UNSUPPORTED'
                for a in details['unsupported_apis'])
     assert not any('DEFAULT_STREAM_MODE_UNKNOWN' in b['secondary_reasons'] for b in details['physical_b_failures'])
-    assert not (tmp_path/'derived/domain.json').exists()
+    assert json.loads(path.read_text())['allocation_records']
 
 
 @pytest.mark.parametrize('damage',['blocking_flag','null_measured','dependency','correlation','stream'])

@@ -95,13 +95,15 @@ def _reason_values(record: Mapping[str, object]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(values))
 
 
-def _api_category(api: Mapping[str, object], api_by_correlation: Mapping[object, tuple[Mapping[str, object], ...]], activity_correlations: set[object]) -> str | None:
+def _api_category(api: Mapping[str, object], api_by_correlation: Mapping[object, tuple[Mapping[str, object], ...]], activity_correlations: set[object], opaque_ids=frozenset()) -> str | None:
     """返回冻结 API 子类；不支持或有歧义时返回 ``None``。"""
 
     name = api.get("api_name")
     if not isinstance(name, str) or not name:
         return None
     category, rule = classify_a_api_name(name)
+    if rule=='A-OPAQUE-RESOURCE-CUDAMALLOC' and api.get('record_id') not in opaque_ids:
+        return None
     if category is None or (rule and rule.startswith('A-') and 'return_value' in api and api['return_value'] != 0):
         return None
     correlation = api.get("correlation_id")
@@ -221,7 +223,7 @@ def _empty_totals() -> dict[str, int]:
     return {field: 0 for field in (*_TOP_LEVEL, *_CUDA_SUBCATEGORIES, *_WAIT_SUBCATEGORIES)}
 
 
-def _finalize(window: RequestPhaseWindow, totals: Mapping[str, int], reasons: tuple[str, ...]) -> dict[str, object]:
+def _finalize(window: RequestPhaseWindow, totals: Mapping[str, int], reasons: tuple[str, ...], *, opaque_calls=(),opaque_ns=0) -> dict[str, object]:
     record: dict[str, object] = _record_identity(window)
     record["T_window_ns"] = window.end_ns - window.start_ns
     record.update(totals)
@@ -237,6 +239,10 @@ def _finalize(window: RequestPhaseWindow, totals: Mapping[str, int], reasons: tu
             "secondary_reasons": list(reasons[1:]),
         }
     )
+    from .time_representation import opaque_allocation
+    if opaque_allocation():
+        from .opaque_allocation import window_report
+        record['opaque_resource_management']=window_report(window,opaque_calls,opaque_ns)
     validate_a_record(record)
     return record
 
@@ -269,6 +275,8 @@ def _covering_by_segment(records, segments):
 def _window_record(inputs: ABInputs, window: RequestPhaseWindow) -> dict[str, object]:
     window_interval = (window.start_ns, window.end_ns)
     totals = _empty_totals()
+    opaque_ids={p['api_record_id'] for p in inputs.opaque_allocation_admissions}
+    opaque_ns=0
     global_reasons = tuple(reason for reason in inputs.global_quality_reasons if isinstance(reason, str) and reason)
     if global_reasons:
         totals["A_unattributed_ns"] = window.end_ns - window.start_ns
@@ -390,7 +398,7 @@ def _window_record(inputs: ABInputs, window: RequestPhaseWindow) -> dict[str, ob
                 reasons.extend(reason for reason in ownership_reasons if reason is not None)
                 continue
             categories = {
-                _api_category(api, api_by_correlation_frozen, activity_correlations)
+                _api_category(api, api_by_correlation_frozen, activity_correlations,opaque_ids)
                 for api in covering_apis
             }
             if None in categories or len(categories) != 1:
@@ -403,11 +411,13 @@ def _window_record(inputs: ABInputs, window: RequestPhaseWindow) -> dict[str, ob
                 totals["A_cuda_api_submit_ns"] += duration
             else:
                 totals["A_cuda_api_non_submit_ns"] += duration
+                if any(a['record_id'] in opaque_ids for a in covering_apis): opaque_ns+=duration
             continue
 
         totals["A_host_path_ns"] += duration
 
-    return _finalize(window, totals, tuple(dict.fromkeys(reasons)))
+    return _finalize(window, totals, tuple(dict.fromkeys(reasons)),
+                     opaque_calls=inputs.opaque_allocation_admissions,opaque_ns=opaque_ns)
 
 
 def calculate_a_windows(inputs: ABInputs) -> tuple[dict[str, object], ...]:
@@ -415,6 +425,8 @@ def calculate_a_windows(inputs: ABInputs) -> tuple[dict[str, object], ...]:
 
     if not isinstance(inputs, ABInputs):
         raise TypeError("inputs 必须是 ABInputs")
+    from .opaque_allocation import validate_admissions
+    validate_admissions(inputs)
     return tuple(_window_record(inputs, window) for window in inputs.windows)
 
 
@@ -423,7 +435,9 @@ def validate_a_record(record: Mapping[str, object]) -> None:
 
     if not isinstance(record, Mapping):
         raise ValueError("A record 必须是对象")
-    if set(record) != _RECORD_FIELDS:
+    from .time_representation import opaque_allocation
+    extra={'opaque_resource_management'} if opaque_allocation() else set()
+    if set(record) != _RECORD_FIELDS | extra:
         raise ValueError("A record 字段集合不匹配冻结 schema")
     for field in _IDENTITY_FIELDS[:8]:
         if not isinstance(record[field], str) or not record[field]:
@@ -444,6 +458,25 @@ def validate_a_record(record: Mapping[str, object]) -> None:
         raise ValueError("A CUDA API 二级守恒失败")
     if sum(values[field] for field in _WAIT_SUBCATEGORIES) != values["A_device_wait_ns"]:
         raise ValueError("A device-wait 二级守恒失败")
+    if extra:
+        from .opaque_allocation import CONTRACT,REGISTRY
+        report=record['opaque_resource_management']
+        if (set(report)!={'contract_version','registry_version','subtype','internal_wait_status','occupied_non_submit_ns','calls'}
+            or report['contract_version']!=CONTRACT or report['registry_version']!=REGISTRY
+            or report['subtype']!='OPAQUE_RESOURCE_MANAGEMENT' or report['internal_wait_status']!='NOT_DECOMPOSED'):
+            raise ValueError('OPAQUE_ALLOCATION_REPORT_VERSION')
+        occupied=_integer(report['occupied_non_submit_ns'],'opaque occupancy')
+        if occupied>values['A_cuda_api_non_submit_ns']: raise ValueError('OPAQUE_ALLOCATION_DOUBLE_COUNT')
+        spans=[]; ids=[]
+        for call in report['calls']:
+            if set(call)!={'api_record_id','clip_start_ns','clip_end_ns','occupied_ns','allocation_size_bytes'} or call['allocation_size_bytes'] is not None:
+                raise ValueError('OPAQUE_ALLOCATION_CALL_SHAPE')
+            span=_interval(call,'clip_start_ns','clip_end_ns','opaque clipped call')
+            if not start<=span[0]<span[1]<=end or _integer(call['occupied_ns'],'opaque call')!=span[1]-span[0]:
+                raise ValueError('OPAQUE_ALLOCATION_CLIP')
+            spans.append(span); ids.append(call['api_record_id'])
+        if len(ids)!=len(set(ids)) or sum(b-a for a,b in spans)!=occupied or any(x[1]>y[0] for x,y in zip(sorted(spans),sorted(spans)[1:])):
+            raise ValueError('OPAQUE_ALLOCATION_DOUBLE_COUNT')
     for field in _AUDIT_FIELDS:
         if _integer(record.get(field), field) != 0:
             raise ValueError(f"{field} 必须为 0")

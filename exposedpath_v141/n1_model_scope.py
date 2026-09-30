@@ -17,10 +17,11 @@ from .gate8_files import load_input_receipt, _json
 from .gate9_domain import VERSION, require, analysis_stage
 from .gate8_scope import load_projected_ownership, build_projected_ab_inputs
 from .sync_semantics import load_canonical_bundle, build_semantic_inventory, classify_cuda_api
-from .time_representation import SIGNED, RAW_PHYSICAL, time_representation
+from .time_representation import SIGNED, RAW_PHYSICAL, OPAQUE_ALLOCATION, time_representation
 
 LEGACY_ADAPTER = 'exposedpath-n1-model-ownership/0.1.1'
-ADAPTER = 'exposedpath-n1-model-ownership/0.2.0'
+RAW_ADAPTER = 'exposedpath-n1-model-ownership/0.2.0'
+ADAPTER = 'exposedpath-n1-model-ownership/0.3.0'
 
 
 def bindings(bundle, ownership, projections, calls, ledger, policy, drain_api, drain):
@@ -205,7 +206,7 @@ def bindings(bundle, ownership, projections, calls, ledger, policy, drain_api, d
 
 
 def calculate_n1_model(root,receipt_path,execution_path,bridge_path,*,adapter_version=ADAPTER):
-    require(adapter_version in (ADAPTER,LEGACY_ADAPTER),'MODEL_ADAPTER_VERSION')
+    require(adapter_version in (ADAPTER,RAW_ADAPTER,LEGACY_ADAPTER),'MODEL_ADAPTER_VERSION')
     require(bridge_path is not None,'MODEL_CALLS_REQUIRED')
     receipt,paths=load_input_receipt(receipt_path)
     manifest=_json(paths['wmpc_manifest']); policy=validate_manifest(manifest)
@@ -241,16 +242,29 @@ def calculate_n1_model(root,receipt_path,execution_path,bridge_path,*,adapter_ve
         'sha256':digest(paths['drain_ledger'])}},bundle,p,scope,canonical.parent)
     bound,sync_ids,unsupported,physical_scope=bindings(bundle,ownership,projections,calls,ledger,policy,drain_api,drain)
     legacy = adapter_version==LEGACY_ADAPTER
+    opaque = adapter_version==ADAPTER
     raw_ids={s for b in bound if b['category']=='physical_sync' and b['model_forward_refs']
              and not b['intervention_refs'] for s in b['physical_record_ids']}
-    with time_representation(SIGNED if legacy else RAW_PHYSICAL):
+    allocation_records=()
+    with time_representation(SIGNED if legacy else OPAQUE_ALLOCATION if opaque else RAW_PHYSICAL):
         with analysis_stage('n1_physical_s_inputs'):
             inputs=build_projected_ab_inputs(canonical,scope,isolated_nonblocking_scope=physical_scope,
                 **({} if legacy else {'raw_physical_sync_ids':raw_ids}))
         from .a_accounting import calculate_a_windows
         from .b_provenance import calculate_b_syncs
         with analysis_stage('n1_a_and_physical_b'):
-            a=list(calculate_a_windows(inputs)); physical_b=list(calculate_b_syncs(inputs))
+            physical_b=list(calculate_b_syncs(inputs))
+            if opaque:
+                from dataclasses import replace
+                from .opaque_allocation import admit_allocations
+                allocation_records=admit_allocations(inputs,physical_scope,drain_api['record_id'])
+                inputs=replace(inputs,opaque_allocation_admissions=allocation_records)
+                admitted={a['api_record_id'] for a in allocation_records}
+                unsupported=[a for a in unsupported if a['api_record_id'] not in admitted]
+                for binding in bound:
+                    if binding['api_record_id'] in admitted:
+                        binding.update(category='non_submit',subtype='OPAQUE_RESOURCE_MANAGEMENT')
+            a=list(calculate_a_windows(inputs))
     b=[x for x in physical_b if x['sync_id'] in sync_ids]
     invalid=[dict(sync_id=x['sync_id'],reason=x['primary_reason'],secondary_reasons=x['secondary_reasons'])
              for x in b if x['validity']!='B_VALID']
@@ -268,7 +282,10 @@ def calculate_n1_model(root,receipt_path,execution_path,bridge_path,*,adapter_ve
         for binding in bound:
             binding.pop('intervention_refs')
     return dict(schema_version=VERSION,adapter_version=adapter_version,declaration=manifest['domain_qualification'],
-        **({} if legacy else {'ab_schema_version':RAW_PHYSICAL,'s_schema_version':'exposedpath-s-layer/0.4.0'}),
+        **({} if legacy else {'ab_schema_version':OPAQUE_ALLOCATION if opaque else RAW_PHYSICAL,'s_schema_version':'exposedpath-s-layer/0.4.0'}),
+        **({'allocation_policy':'N1_OPAQUE_ALLOCATION_BUDGET/0.1.0','allocation_records':list(allocation_records),
+            'interpretation_limits':['SUPPORTED_SYNC_WAIT_ONLY','B_HIDDEN_RELATIVE_TO_SINGLE_SYNC','OPAQUE_INTERNAL_WAIT_NOT_DECOMPOSED']}
+           if opaque else {}),
         identity=receipt['identity'],status='QUALITY_CHECK_PASSED_NOT_QUALIFICATION',
         model_api_bindings=bound,a_records=a,b_records=b,physical_s_records=list(inputs.s_records),
         physical_b_records=physical_b,stage_diagnostics=stages,

@@ -1,6 +1,16 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.105](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.108](research_progress.md)。
+
+**7.108现行：用户批准窄域opaque allocation；同一封存V0的新版本离线支持域审查通过。**
+[合同/审查0.1](n1_opaque_allocation_v0_1.md)：N1 adapter0.3/A-B0.6/registry0.2，旧版本读取及原BLOCKED保持。
+三次allocation总1637163ns进明确opaque API预算；不拆内部等待、不生成allocation W/B，三条同步完整前缀和B_VALID保持。
+UNKNOWN/NOT_ASSESSED、无未记录incoming依赖支持假设、D/Signature禁用保持；不是N1三组可行性/效果或Formal通过。
+当前只准备前置c21d835的**Vmarker/V16剩余两组**单包，核对producer字节/公共合同/实际tokens，先交协调窗口审查。
+V0不因consumer变化重采；任一失败停止、不恢复/重试。Gate7～9及Gate10限定G1 PASS保持，Pilot不启动。
+本轮未操作服务器、模型、GPU/Nsight；用户DOCX修改保留、不纳提交。具体私有路径/包hash仅本地handoff。
+
+以下7.105及更早为历史交接，不是现行执行指令：
 
 **7.105当前工作：N1采集前身份分派已本地修复，待协调窗口审查交付。** c6cdb36回传原件已核验；CPU141 passed，但V0在profile之前被共享Gate7 G1-only校验拒绝，未执行模型/未采集。Vmarker/V16 NOT_RUN，旧报告不改。
 保留默认Gate7语义；isolated N1只按`N1-VERIFIED-MODEL/0.1`严格分派，通用Git/GPU/mask与输入检查不删。实际prepared/真实prepare→seal及collector→profile调用边界/consume回归纳入，相关CPU142 passed；没有目标机验证或新研究资格。

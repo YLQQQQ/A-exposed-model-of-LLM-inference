@@ -118,6 +118,7 @@ class ABInputs:
     windows: tuple[RequestPhaseWindow, ...]
     global_quality_reasons: tuple[str, ...]
     window_discovery_issues: tuple[WindowDiscoveryIssue, ...]
+    opaque_allocation_admissions: tuple[dict[str, object], ...] = ()
 
 
 def _sha256(path: Path) -> str:

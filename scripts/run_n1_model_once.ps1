@@ -5,8 +5,11 @@ $C=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'delivery.json') -Raw | Con
 $Code=$C.code_root; $Target=$C.commit; $Parent=$C.prerequisite
 $Bundle=Join-Path $PSScriptRoot $C.bundle
 if ((Get-Item -LiteralPath $Bundle).Length -ne $C.bundle_bytes -or (Get-FileHash -LiteralPath $Bundle).Hash -ne $C.bundle_sha256) { throw 'Bundle identity conflict' }
-$Out=Join-Path $C.server_root ('evidence\gate10\n1_model_'+$Target.Substring(0,7)+'_once')
-$Zip=Join-Path $C.server_root ('transfer\n1_model_'+$Target.Substring(0,7)+'_once.zip')
+$Remaining=$null -ne $C.PSObject.Properties['variants']
+$Prefix=if ($Remaining) {'n1_remaining_'} else {'n1_model_'}
+if ($Remaining -and (@($C.variants) -join ',') -ne 'Vmarker,V16') { throw 'Only reviewed remaining Vmarker/V16 allowed' }
+$Out=Join-Path $C.server_root ('evidence\gate10\'+$Prefix+$Target.Substring(0,7)+'_once')
+$Zip=Join-Path $C.server_root ('transfer\'+$Prefix+$Target.Substring(0,7)+'_once.zip')
 if ((Test-Path -LiteralPath $Out) -or (Test-Path -LiteralPath $Zip)) { throw 'No resume, overwrite or retry' }
 New-Item -ItemType Directory -Path $Out | Out-Null
 Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $Out 'executed.ps1')
@@ -64,11 +67,20 @@ print(json.dumps(dict(python=sys.version,executable=sys.executable,torch=torch._
     if ((Get-FileHash -LiteralPath $Prompt).Hash -ne $C.prompt_sha256 -or (Get-FileHash -LiteralPath $Inventory).Hash -ne $C.inventory_sha256) { throw 'Sealed input conflict' }
     $C | Add-Member -NotePropertyName prompt -NotePropertyValue $Prompt -Force
     $C | Add-Member -NotePropertyName inventory -NotePropertyValue $Inventory -Force
+    if ($Remaining) {
+        foreach ($Name in @('baseline_reference.json','baseline_review.json')) {
+            Copy-Item -LiteralPath (Join-Path $PSScriptRoot $Name) -Destination (Join-Path $Out $Name)
+        }
+        $C | Add-Member -NotePropertyName baseline_reference -NotePropertyValue (Join-Path $Out 'baseline_reference.json') -Force
+        $C | Add-Member -NotePropertyName baseline_review -NotePropertyValue (Join-Path $Out 'baseline_review.json') -Force
+    }
     $Config=Join-Path $Out 'run_config.json'
     $C | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $Config -Encoding utf8
     Run $Python @('scripts/n1_model_feasibility.py','--config',$Config,'--output',(Join-Path $Out 'batch'),'--execute-reviewed-feasibility') '07_batch'
     $R=Get-Content -LiteralPath (Join-Path $Out 'batch\batch_report.json') -Raw | ConvertFrom-Json
-    if ($R.status -ne 'BATCH_COMPLETE_PENDING_REVIEW' -or $R.groups.Count -ne 3 -or (@($R.groups | ForEach-Object {$_.variant}) -join ',') -ne 'V0,Vmarker,V16') { throw 'Machine batch report not complete' }
+    $Expected=if ($Remaining) {'Vmarker,V16'} else {'V0,Vmarker,V16'}
+    $Count=if ($Remaining) {2} else {3}
+    if ($R.status -ne 'BATCH_COMPLETE_PENDING_REVIEW' -or $R.groups.Count -ne $Count -or (@($R.groups | ForEach-Object {$_.variant}) -join ',') -ne $Expected) { throw 'Machine batch report not complete' }
     Tree $Target
     $Status='COLLECTED_PENDING_N1_MODEL_REVIEW'
 } catch { $Failure=$_.ToString(); Write-Host ('STOP: '+$Failure) }

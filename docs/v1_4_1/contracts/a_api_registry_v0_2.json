@@ -1,0 +1,10 @@
+{
+  "registry_version": "exposedpath-a-api-registry/0.2.0",
+  "inherits_version": "exposedpath-a-api-registry/0.1.0",
+  "cuda_documentation_version": "12.4.1",
+  "scope": "N1_OPAQUE_ALLOCATION_BUDGET/0.1.0",
+  "unknown_policy": "UNRESOLVED_NOT_NON_SUBMIT",
+  "rules": [
+    {"id": "A-OPAQUE-RESOURCE-CUDAMALLOC", "names": ["cudaMalloc"], "category": "non_submit", "subtype": "OPAQUE_RESOURCE_MANAGEMENT", "admission_required": true, "basis": "Known device allocation, not device-work submission. Host blocking/internal waiting is not decomposed. Only successful uniquely owned nonoverlapping calls in the verified N1 single nonblocking-stream support domain are eligible; downstream dependencies remain mandatory.", "source": "https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__MEMORY.html"}
+  ]
+}
