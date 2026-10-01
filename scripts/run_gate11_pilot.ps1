@@ -3,7 +3,19 @@ param([switch]$CollectReviewedPilot)
 $ErrorActionPreference='Stop'
 $ConfigPath=Join-Path $PSScriptRoot 'delivery.json'
 $C=Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
-if ($C.schema_version -ne 'gate11-pilot-delivery/0.1') { throw 'Unknown delivery version' }
+function DeliveryKind($Value) {
+    if ($Value.schema_version -eq 'gate11-pilot-delivery/0.1' -and !$Value.pilot_contract_version) { return 'first' }
+    if ($Value.schema_version -eq 'gate11-pilot-delivery/0.2' -and
+        $Value.pilot_contract_version -eq 'G11-WARMUP3-PAIR/0.1' -and
+        $Value.model_process_budget -eq 30 -and $Value.profile_budget -eq 15 -and
+        $Value.warmup_count -eq 3 -and $Value.additional_budget_authorized -eq $true) { return 'warmup3_pair' }
+    throw 'Unknown/conflicting delivery version or fixed budget'
+}
+$Kind=DeliveryKind $C
+$Warmup3Pair=$Kind -eq 'warmup3_pair'
+$Prefix=if ($Warmup3Pair) {'gate11_w3_pair_'} else {'gate11_'}
+$BatchStatus=if ($Warmup3Pair) {'WARMUP3_PAIR_BATCH_COMPLETE_STOP_FOR_REVIEW'} else {'FIRST_BATCH_COMPLETE_STOP_FOR_REVIEW'}
+$Gate=if ($Warmup3Pair) {'BLOCKED'} else {'NOT_RUN'}
 $Code=$C.code_root; $Target=$C.commit
 function SafePath([string]$Base,[string]$Relative) {
     $Root=[IO.Path]::GetFullPath($Base).TrimEnd('\')+'\'
@@ -25,10 +37,11 @@ function CheckManifest([string]$Root) {
     if ($Actual.Count -ne $Rows.Count) { throw 'Unlisted delivery files' }
 }
 CheckManifest $PSScriptRoot
-$Static=Join-Path $C.server_root ('logs\gate11_'+$Target.Substring(0,12)+'_static')
+$Static=Join-Path $C.server_root ('logs\'+$Prefix+$Target.Substring(0,12)+'_static')
 $Phase=if ($CollectReviewedPilot) {'pilot'} else {'static'}
-$Out=if ($CollectReviewedPilot) {Join-Path $C.server_root ('evidence\gate11\'+$Target.Substring(0,12)+'_batch1')} else {$Static}
-$Zip=Join-Path $C.server_root ('transfer\gate11_'+$Target.Substring(0,12)+'_'+$Phase+'.zip')
+$BatchSuffix=if ($Warmup3Pair) {'_warmup3_pair'} else {'_batch1'}
+$Out=if ($CollectReviewedPilot) {Join-Path $C.server_root ('evidence\gate11\'+$Target.Substring(0,12)+$BatchSuffix)} else {$Static}
+$Zip=Join-Path $C.server_root ('transfer\'+$Prefix+$Target.Substring(0,12)+'_'+$Phase+'.zip')
 if ((Test-Path -LiteralPath $Out) -or (Test-Path -LiteralPath $Zip)) { throw 'No resume, overwrite or retry' }
 New-Item -ItemType Directory -Path $Out | Out-Null
 Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $Out 'executed.ps1')
@@ -72,8 +85,9 @@ try {
         $Bundle=SafePath $PSScriptRoot $C.bundle
         if ((Get-Item -LiteralPath $Bundle).Length -ne $C.bundle_bytes -or (Get-FileHash -LiteralPath $Bundle).Hash -ne $C.bundle_sha256) { throw 'Bundle conflict' }
         Run 'git' @('bundle','verify',$Bundle) '01_bundle'
-        Run 'git' @('fetch',$Bundle,'refs/heads/main:refs/remotes/gate11-delivery/main') '02_fetch'
-        $H=& git rev-parse refs/remotes/gate11-delivery/main
+        $Ref=if ($Warmup3Pair) {'refs/remotes/gate11-delivery/warmup3_pair'} else {'refs/remotes/gate11-delivery/main'}
+        Run 'git' @('fetch',$Bundle,('refs/heads/main:'+$Ref)) '02_fetch'
+        $H=& git rev-parse $Ref
         if ($LASTEXITCODE -ne 0 -or $H -ne $Target) { throw 'Fetched commit conflict' }
         Run 'git' @('-c','core.autocrlf=false','checkout','--detach',$Target) '03_checkout'
         Tree $Target
@@ -114,15 +128,16 @@ print(json.dumps(dict(python=sys.version,executable=sys.executable,torch=torch._
         $C | Add-Member -NotePropertyName inventory -NotePropertyValue (Join-Path $Out 'model_sha256.csv')
         $Config=Join-Path $Out 'run_config.json'
         $C | ConvertTo-Json -Depth 14 | Set-Content -LiteralPath $Config -Encoding utf8
-        Run $Python @('-u','scripts/gate11_pilot_batch.py','--config',$Config,'--output',(Join-Path $Out 'batch'),'--batch-id',('pilot-'+$Target.Substring(0,12)+'-first'),'--execute-reviewed-pilot') '07_batch'
+        $OptIn=if ($Warmup3Pair) {'--execute-reviewed-warmup3-pair'} else {'--execute-reviewed-pilot'}
+        Run $Python @('-u','scripts/gate11_pilot_batch.py','--config',$Config,'--output',(Join-Path $Out 'batch'),'--batch-id',('pilot-'+$Target.Substring(0,12)+'-'+$Kind),$OptIn) '07_batch'
         $R=Get-Content -LiteralPath (Join-Path $Out 'batch\batch_report.json') -Raw | ConvertFrom-Json
-        if ($R.status -ne 'FIRST_BATCH_COMPLETE_STOP_FOR_REVIEW' -or $R.runs.Count -ne 30 -or $R.pairs.Count -ne 15 -or $R.gate11_verdict -ne 'NOT_RUN') { throw 'Machine batch report not complete' }
+        if ($R.status -ne $BatchStatus -or $R.runs.Count -ne 30 -or $R.pairs.Count -ne 15 -or $R.gate11_verdict -ne $Gate) { throw 'Machine batch report not complete' }
         Tree $Target
-        $Status='FIRST_BATCH_COMPLETE_STOP_FOR_REVIEW'
+        $Status=$BatchStatus
     }
 } catch { $Failure=$_.ToString(); Write-Host ('STOP: '+$Failure) }
 finally {
-    [ordered]@{status=$Status;error=$Failure;commit=$Target;delivery_sha256=(Get-FileHash -LiteralPath $ConfigPath).Hash;static_receipt_sha256=$StaticHash;gate11='NOT_RUN';formal_eligible=$false;automatic_retry=$false} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Out 'receipt.json') -Encoding utf8
+    [ordered]@{status=$Status;error=$Failure;commit=$Target;delivery_sha256=(Get-FileHash -LiteralPath $ConfigPath).Hash;static_receipt_sha256=$StaticHash;gate11=$Gate;formal_eligible=$false;automatic_retry=$false;model_process_budget=30;profile_budget=15;pilot_contract_version=$C.pilot_contract_version;additional_budget_authorized=$Warmup3Pair} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Out 'receipt.json') -Encoding utf8
     Stop-Transcript | Out-Null
 }
 foreach ($P in @(Get-ChildItem -LiteralPath $Out -Recurse -File -Filter 'process.json')) {

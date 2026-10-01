@@ -55,8 +55,13 @@ def _inputs(receipt_path, execution_path):
         require(len(ledger['requests'])==2 and all(r['request_role']=='measured' for r in ledger['requests']),'CONTROLLED_PLAN')
     else:
         _model_configuration(observed,declared)
-    require(all(r['outcome']=='COMPLETE' and not r['early_eos'] and not r['reasons']
-                and r['actual_output_tokens']==r['expected_output_tokens']>=2 for r in ledger['requests']), 'REQUEST_PLAN')
+    from exposedpath.gate11_warmup import active
+    if active(manifest.get('pilot')):
+        from exposedpath.gate11_pilot import validate_actual_requests
+        validate_actual_requests(manifest,ledger)
+    else:
+        require(all(r['outcome']=='COMPLETE' and not r['early_eos'] and not r['reasons']
+                    and r['actual_output_tokens']==r['expected_output_tokens']>=2 for r in ledger['requests']), 'REQUEST_PLAN')
     return receipt, paths, declared, execution
 
 

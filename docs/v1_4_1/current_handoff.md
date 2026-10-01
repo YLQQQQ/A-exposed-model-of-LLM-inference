@@ -1,6 +1,12 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.116](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.117](research_progress.md)。
+
+**7.117现行：共同warmup3追加预算已获用户批准，本地最小接线及固定交付待协调审查；Gate11 BLOCKED。**[新批合同0.1](gate11_warmup3_pair_v0_1.md)复用原配对/测量路径，五条件3block/30新进程/15profile、相邻P0/P1，70～90min/35GB估计。实际3次暖机/未知字段、N1干预及fresh measured流、源身份/硬门保留；旧首批与P0对照不能升级或拼成本批n=6。
+
+新声明/消费者/编排与默认CPU、显式采集入口在本地验证：10相关文件238 passed，新增批次文件最终40 passed；compileall/PS5.1 parser及封闭dispatch、158链接/schema/预算与diff检查通过。CPU模型/设备及Raw替身不是目标机资格。服务器前置4abb5ea；唯一部署ZIP/准确SHA及整段命令以忽略的本地AI_HANDOFF/交付说明为准。先审静态回执，后单批采集；不自动retry/resume/补采，固定结束/硬失败即停，最终一个ZIP回传。当前未操作服务器或GPU/Nsight/模型。
+
+预算后一次确定政策/最终repeat/有限claim，10/5ms仍待审精度候选，3block区间仅探索性；P0性能/P1观测解释、所有有效原值/负差保留，不扣A、不追显著。UNKNOWN/NOT_ASSESSED、opaque及分域限制、D/Signature禁用、旧原件/报告、用户DOCX保持；Gate12未启动。下方7.116及更早是历史，未批准预算/不实现等措辞已被本条取代。
 
 **7.116现行：补证前政策与预算已收敛为待审候选，Gate11 BLOCKED。** 唯一当前方案为[政策决策0.1](gate11_policy_decision_v0_1.md)；[两批审查](gate11_warmup_policy_review_v0_1.md)/[汇总](gate11_warmup_policy_summary_v0_1.json)保持证据依据，执行4abb5ea与221f46c不混池。原60预算已用尽，未批准额外预算，不得再次执行下方旧交付。
 

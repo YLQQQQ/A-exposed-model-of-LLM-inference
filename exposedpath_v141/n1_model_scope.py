@@ -28,7 +28,10 @@ def bindings(bundle, ownership, projections, calls, ledger, policy, drain_api, d
     rows=bundle['records']; inventory=build_semantic_inventory({**bundle,'ownership_records':ownership})
     require(inventory['input_status']=='VALID', 'MODEL_CANONICAL_QUALITY')
     full=[p for p in projections if p['phase']=='full_request']
-    require(len(full)==1 and len(calls['requests'])==2, 'MODEL_REQUEST_SET')
+    from exposedpath.gate11_warmup import active
+    observed_warmups=active(ledger.get('pilot'))
+    warmup_count=ledger['pilot']['warmup_count'] if observed_warmups else 1
+    require(len(full)==1 and len(calls['requests'])==warmup_count+1, 'MODEL_REQUEST_SET')
     p=full[0]; identity=p['identity']; start,end=p['start_ns'],p['end_ns']
     selected=[r for r in calls['requests'] if r['identity']==identity]
     require(len(selected)==1, 'MODEL_REQUEST_IDENTITY')
@@ -40,9 +43,14 @@ def bindings(bundle, ownership, projections, calls, ledger, policy, drain_api, d
         and all(isinstance(t,list) and len(t)==1 and type(t[0]) is int and t[0]>=0
                 for t in r['observed_tokens']), 'MODEL_ACTUAL_WORKLOAD')
     warm=[x for x in calls['requests'] if x['request_role']=='warmup']
-    require(len(warm)==1 and warm[0]['native_handle']!=handle
-        and warm[0]['status']=='WARMUP_CALLS_COMPLETE_PENDING_TRACE_OWNERSHIP'
-        and warm[0]['declaration']==policy, 'MODEL_WARMUP_STREAM')
+    require(len(warm)==warmup_count and all(w['native_handle']!=handle
+        and w['status']=='WARMUP_CALLS_COMPLETE_PENDING_TRACE_OWNERSHIP'
+        and w['declaration']==policy for w in warm), 'MODEL_WARMUP_STREAM')
+    if observed_warmups:
+        handles=[c['native_handle'] for c in calls['requests']]
+        require(all(type(h) is int and h>0 for h in handles) and len(set(handles))==warmup_count+1
+            and all(w['anchor'] is None and w['observed_tokens'] is None for w in warm),
+            'MODEL_OBSERVED_WARMUP_LIFECYCLE')
 
     def marker(prefix,payload):
         matches=[x for x in rows['nvtx'] if (x.get('text') or '').startswith(prefix)
@@ -223,11 +231,18 @@ def calculate_n1_model(root,receipt_path,execution_path,bridge_path,*,adapter_ve
         and execution['n1_model_calls_sha256']==digest(Path(bridge_path)),'MODEL_EXECUTION_IDENTITY')
     from .gate8_engineering_scope import _model_configuration,_diagnostics
     _model_configuration(execution['observed_configuration'],support)
-    require(calls['schema_version']==CALL_VERSION and calls['pid']==ledger['pid']
+    from exposedpath.gate11_warmup import active
+    observed_warmups=active(manifest.get('pilot'))
+    call_version='exposedpath-n1-model-calls/0.2.0' if observed_warmups else CALL_VERSION
+    require(calls['schema_version']==call_version and calls['pid']==ledger['pid']
         and calls['manifest_sha256']==digest(paths['wmpc_manifest'])
         and calls['producer_receipt_sha256']==digest(paths['producer_receipt']),'MODEL_CALLS_IDENTITY')
-    require(len(ledger['requests'])==2 and all(r['outcome']=='COMPLETE' and not r['early_eos'] and not r['reasons']
-        and r['actual_output_tokens']==r['expected_output_tokens']==2 for r in ledger['requests']),'MODEL_REQUEST_COMPLETION')
+    if observed_warmups:
+        from exposedpath.gate11_pilot import validate_actual_requests
+        validate_actual_requests(manifest,ledger)
+    else:
+        require(len(ledger['requests'])==2 and all(r['outcome']=='COMPLETE' and not r['early_eos'] and not r['reasons']
+            and r['actual_output_tokens']==r['expected_output_tokens']==2 for r in ledger['requests']),'MODEL_REQUEST_COMPLETION')
     require([r['identity'] for r in calls['requests']]==[r['identity'] for r in ledger['requests']], 'MODEL_LEDGER_JOIN')
     canonical=root/'canonical/canonical_manifest.json'; scope=root/'projection/scope.json'
     bundle=load_canonical_bundle(canonical)

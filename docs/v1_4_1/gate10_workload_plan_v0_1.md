@@ -1,7 +1,7 @@
 # Gate10 最小 workload 可行性准备 0.1
 
 版本：G10-WORKLOAD-FEASIBILITY/0.1。Engineering；[7.102退出裁决及7.111范围澄清](gate10_closeout_v0_1.md)：Gate10仅选定G1三点一次可行性PASS；容量/OOM/最大长度/batch未探索，512和2不是上限，不外推未测配置。稳定编号下未执行子项见[进度](research_progress.md)。
-下述Gate10准备/待执行语句保留为历史，两个新点均已完成，不再执行旧交付。7.111直接在本计划末尾补充[Gate11本地准备](#gate11-local-preparation)，不另建重复计划。**7.116现行：两批Pilot复用完成补证前[政策/预算决策](gate11_policy_decision_v0_1.md)，Gate11 BLOCKED，60预算耗尽；仅待额外30进程/15profile预算审查，不实现/打包/执行。** 以下组序/预算保留，待执行措辞属于当时准备状态。
+下述Gate10准备/待执行语句保留为历史，两个新点均已完成，不再执行旧交付。7.111直接在本计划末尾补充[Gate11本地准备](#gate11-local-preparation)，不另建重复计划。**7.117现行：用户已批准[共同w3五条件3block](gate11_warmup3_pair_v0_1.md)额外30进程/15profile预算，完成最小本地接线及待审交付，Gate11 BLOCKED；70～90min/35GB估计。**最终repeat/精度/质量政策未定，10/5ms不是冻结阈值；固定批次/硬失败停，不自动采集/加采。以下组序/旧预算保留，待执行措辞属于当时准备状态。
 依据：当前研究设计v7.1 §2.1、Pre-Pilot实验协议v2.1 §2.1候选池、用户批准的单平台路线及[Gate9分域资格](gate9_closeout_v0_1.md)。不修改冻结S/A/B公式，不是Pilot或Freeze。
 
 ## 候选与执行边界

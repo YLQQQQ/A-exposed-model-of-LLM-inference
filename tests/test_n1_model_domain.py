@@ -37,7 +37,14 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         if pilot_binding is not None and pilot_binding['variant'] is None:
             db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=3')
             db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=3 WHERE streamId=3')
-        def stream_id(): return 2 if cuda.current_stream(0).cuda_stream==123 else 3
+        native_streams={123:2,456:3,0:3}
+        def stream_id():
+            handle=cuda.current_stream(0).cuda_stream
+            if handle not in native_streams:
+                sid=max(native_streams.values())+1
+                db.execute('INSERT INTO TARGET_INFO_CUDA_STREAM SELECT ?,hwId,vmId,processId,contextId,priority,2 FROM TARGET_INFO_CUDA_STREAM WHERE streamId=3',(sid,))
+                native_streams[handle]=sid
+            return native_streams[handle]
         def launch():
             a,b,c=backend.api('cudaLaunchKernel_v7000')
             db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_KERNEL VALUES (?,?,0,1,NULL,?,?,?,?,?,NULL,NULL)',

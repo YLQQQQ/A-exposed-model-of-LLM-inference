@@ -9,12 +9,12 @@ from test_gate8_identity import write_json,sha
 from exposedpath import gate11_pilot as pilot
 
 
-def pair_files(tmp_path,monkeypatch,condition='N16'):
+def pair_files(tmp_path,monkeypatch,condition='N16',bindings=None):
     import test_n1_model_domain as fixture
     from exposedpath_v141 import gate8_target_python as target
     from exposedpath_v141.gate9_domain import process_domain
     contract=target.probe(sys._base_executable,sysconfig.get_path('purelib'))
-    rows=[r for r in pilot.schedule('file-batch') if r['condition']==condition and r['block']==1]
+    rows=bindings if bindings is not None else [r for r in pilot.schedule('file-batch') if r['condition']==condition and r['block']==1]
     output=[]
     for binding in rows:
         folder=tmp_path/binding['pass_id']; folder.mkdir()

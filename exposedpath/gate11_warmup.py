@@ -30,6 +30,9 @@ def schedule(batch_id):
 
 def validate_binding(value):
     require(isinstance(value,dict),'WARMUP_BINDING')
+    from . import gate11_warmup_pair as pair
+    if pair.active(value):
+        return pair.validate_binding(value)
     try:Draft202012Validator(SCHEMA).validate(value)
     except ValidationError as exc:raise ValueError('PILOT_WARMUP_SCHEMA: '+exc.message) from exc
     require(any(value==r and all(type(value[k]) is type(v) for k,v in r.items())
@@ -38,8 +41,9 @@ def validate_binding(value):
 
 
 def active(value):
-    """Only an explicitly recognized binding selects the new path."""
-    return isinstance(value,dict) and value.get('version')==VERSION
+    """Shared actual-warmup semantics; both prospective bindings stay closed."""
+    from .gate11_warmup_pair import active as pair_active
+    return (isinstance(value,dict) and value.get('version')==VERSION) or pair_active(value)
 
 
 def request_plan(binding):

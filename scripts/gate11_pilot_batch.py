@@ -18,16 +18,20 @@ def persist(path,value):
     pending.replace(path)
 
 
-def run_batch(output,batch_id,execute,summarize, *, warmup_control=False):
-    require(type(warmup_control) is bool,'BATCH_KIND')
+def run_batch(output,batch_id,execute,summarize, *, warmup_control=False,warmup_pair=False):
+    require(type(warmup_control) is bool and type(warmup_pair) is bool
+        and not (warmup_control and warmup_pair),'BATCH_KIND')
     from exposedpath.gate11_warmup import schedule as warmup_schedule,VERSION as warmup_version
-    version=warmup_version if warmup_control else VERSION
+    from exposedpath.gate11_warmup_pair import schedule as paired_schedule,VERSION as paired_version
+    version=paired_version if warmup_pair else warmup_version if warmup_control else VERSION
     output=Path(output); output.mkdir(parents=True,exist_ok=False)
-    plan=warmup_schedule(batch_id) if warmup_control else schedule(batch_id)
+    plan=paired_schedule(batch_id) if warmup_pair else warmup_schedule(batch_id) if warmup_control else schedule(batch_id)
     write_new(output/'planned_runs.json',dict(version=version,runs=plan,
-        model_process_budget=30,profile_budget=0 if warmup_control else 15,overall_future_cap_not_authorization=60))
+        model_process_budget=30,profile_budget=0 if warmup_control else 15,
+        **(dict(cumulative_authorized_process_cap=90,additional_budget_authorized=True) if warmup_pair
+           else dict(overall_future_cap_not_authorization=60))))
     result=dict(version=version,status='BLOCKED',run_role='PILOT',data_role='Pilot',
-        gate11_verdict='BLOCKED' if warmup_control else 'NOT_RUN',formal_eligible=False,automatic_retry=False,
+        gate11_verdict='BLOCKED' if warmup_control or warmup_pair else 'NOT_RUN',formal_eligible=False,automatic_retry=False,
         runs=[dict(binding=b,status='NOT_RUN') for b in plan],pairs=[],error=None)
     report=output/'batch_report.json'; persist(report,result)
     completed=[]
@@ -60,7 +64,8 @@ def run_batch(output,batch_id,execute,summarize, *, warmup_control=False):
         persist(report,result)
     else:
         require(len(result['pairs'])==15,'PAIR_BUDGET')
-        result['status']='WARMUP_BATCH_COMPLETE_STOP_FOR_REVIEW' if warmup_control else 'FIRST_BATCH_COMPLETE_STOP_FOR_REVIEW'
+        result['status']=('WARMUP3_PAIR_BATCH_COMPLETE_STOP_FOR_REVIEW' if warmup_pair else
+            'WARMUP_BATCH_COMPLETE_STOP_FOR_REVIEW' if warmup_control else 'FIRST_BATCH_COMPLETE_STOP_FOR_REVIEW')
         persist(report,result)
     return result
 
@@ -110,11 +115,13 @@ def summarize_pair(first,second,output):
     require(ma.get('n1_model')==mb.get('n1_model') and ma.get('n1_model_execution')==mb.get('n1_model_execution'),'PAIR_N1')
     require(ma['target_python']['actual']['snapshot']==mb['target_python']['actual']['snapshot'],'PAIR_RUNTIME')
     require(a['loaded_configuration']==b['loaded_configuration'] and a['token_ids']==b['token_ids'],'PAIR_OUTPUT_OR_CONFIGURATION')
-    result=dict(version=VERSION,status='PAIR_COMPLETE_PENDING_REVIEW',pair_id=ordered[0]['pair_id'],
+    from exposedpath.gate11_warmup_pair import active as paired
+    require(ordered[0]['version']==ordered[1]['version'],'PAIR_VERSION')
+    result=dict(version=ordered[0]['version'],status='PAIR_COMPLETE_PENDING_REVIEW',pair_id=ordered[0]['pair_id'],
         condition=ordered[0]['condition'],block=ordered[0]['block'],order=[x['pass_id'] for x in ordered],
         environment=dict(manifest={k:ma[k] for k in GLOBAL_COMMON},
             runtime=ma['target_python']['actual']['snapshot'],loaded_configuration=a['loaded_configuration']),
-        run_role='PILOT',data_role='Pilot',gate11_verdict='NOT_RUN',formal_eligible=False,
+        run_role='PILOT',data_role='Pilot',gate11_verdict='BLOCKED' if paired(ordered[0]) else 'NOT_RUN',formal_eligible=False,
         token_ids=a['token_ids'],output_token_value_parity='EXACT_MATCH',
         overhead=overhead(a['timing_ns'],b['timing_ns']),pass0=a,pass1=b,
         clock='PYTHON_PERF_COUNTER_NS',timing='host-observed start to last host-readable completion',
@@ -159,9 +166,20 @@ def collect_run(binding,path,config):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--config',required=True,type=Path); p.add_argument('--output',required=True,type=Path)
-    p.add_argument('--batch-id',required=True); p.add_argument('--execute-reviewed-pilot',required=True,action='store_true')
+    p.add_argument('--batch-id',required=True)
+    opt=p.add_mutually_exclusive_group(required=True)
+    opt.add_argument('--execute-reviewed-pilot',action='store_true')
+    opt.add_argument('--execute-reviewed-warmup3-pair',action='store_true')
     a=p.parse_args(); config=read(a.config)
-    return 0 if run_batch(a.output,a.batch_id,lambda b,path:collect_run(b,path,config),summarize_pair)['status']=='FIRST_BATCH_COMPLETE_STOP_FOR_REVIEW' else 1
+    if a.execute_reviewed_warmup3_pair:
+        from exposedpath.gate11_warmup_pair import VERSION as paired_version
+        require(config.get('pilot_contract_version')==paired_version,'WARMUP3_PAIR_CONFIG_VERSION')
+    else:
+        require(config.get('pilot_contract_version',VERSION)==VERSION,'FIRST_BATCH_CONFIG_VERSION')
+    result=run_batch(a.output,a.batch_id,lambda b,path:collect_run(b,path,config),summarize_pair,
+        warmup_pair=a.execute_reviewed_warmup3_pair)
+    complete='WARMUP3_PAIR_BATCH_COMPLETE_STOP_FOR_REVIEW' if a.execute_reviewed_warmup3_pair else 'FIRST_BATCH_COMPLETE_STOP_FOR_REVIEW'
+    return 0 if result['status']==complete else 1
 
 
 if __name__=='__main__': raise SystemExit(main())

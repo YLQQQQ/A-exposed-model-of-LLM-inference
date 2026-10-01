@@ -72,11 +72,15 @@ def _identities(paths):
     if ledger['run_role']=='PILOT':
         from exposedpath.gate11_pilot import validate
         binding=validate(manifest)
+        from exposedpath.gate11_warmup import active
+        observed_warmups=active(binding)
         if (not with_stages or 'pilot_tokens' not in paths or ledger['pilot']!=binding
                 or producer.get('pilot')!=binding or producer.get('run_role')!='PILOT'
-                or producer.get('data_role')!='Pilot' or producer.get('gate11_verdict')!='NOT_RUN'):
+                or producer.get('data_role')!='Pilot'
+                or producer.get('gate11_verdict')!=('BLOCKED' if observed_warmups else 'NOT_RUN')):
             raise ValueError('PILOT_PRODUCER_BINDING')
-        producer_version='exposedpath-pilot-producer-receipt/0.1.0'
+        producer_version=('exposedpath-pilot-producer-receipt/0.2.0' if observed_warmups
+                          else 'exposedpath-pilot-producer-receipt/0.1.0')
     if (producer.get('schema_version') != producer_version
             or any(producer.get(k) != ledger[k] for k in ('run_id','pass_id','attempt_id'))
             or producer.get('gate8_verdict') != 'NOT_RUN'

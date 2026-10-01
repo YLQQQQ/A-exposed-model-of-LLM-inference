@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:exposedpath:gate11:warmup3-pair:0.1",
+  "type": "object", "additionalProperties": false,
+  "required": ["version", "batch_id", "block", "position", "condition", "variant", "pair_id", "run_id", "pass_id", "pass_order", "warmup_count", "purpose", "declaration_role", "formal_eligible"],
+  "properties": {
+    "version": {"const": "G11-WARMUP3-PAIR/0.1"},
+    "batch_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,100}$"},
+    "block": {"type": "integer", "minimum": 1, "maximum": 3},
+    "position": {"type": "integer", "minimum": 1, "maximum": 5},
+    "condition": {"enum": ["G32", "G512", "N0", "Nm", "N16"]},
+    "variant": {"enum": [null, "V0", "Vmarker", "Vsync"]},
+    "pair_id": {"type": "string", "minLength": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "pass_id": {"enum": ["pass0", "pass1"]},
+    "pass_order": {"enum": [["pass0", "pass1"], ["pass1", "pass0"]]},
+    "warmup_count": {"const": 3},
+    "purpose": {"const": "COMMON_WARMUP_POLICY_ESTIMATION_ONLY"},
+    "declaration_role": {"const": "PRE_EXECUTION"},
+    "formal_eligible": {"const": false}
+  }
+}

@@ -140,3 +140,18 @@ def versions(binding):
     validate_binding(binding)
     from . import gate11_warmup as warmup
     return (warmup.PASS_VERSION,warmup.EXECUTION_VERSION) if warmup.active(binding) else (PASS_VERSION,EXECUTION_VERSION)
+
+
+def validate_actual_requests(manifest, ledger):
+    """Validate observed warmup nulls separately from measured completion facts."""
+    from .gate11_warmup import active, request_plan
+    binding=validate(manifest)
+    require(active(binding) and ledger.get('pilot')==binding,'OBSERVED_WARMUP_BINDING')
+    from .gate8_identity import validate_pass_identity
+    validate_pass_identity(ledger)
+    require(len(ledger['requests'])==len(request_plan(binding)) and all(
+        r['outcome']=='COMPLETE' and not r['reasons'] and r['expected_output_tokens']==2
+        and ((r['actual_output_tokens'] is None and r['early_eos'] is None)
+             if r['request_role']=='warmup' else
+             (r['actual_output_tokens']==2 and r['early_eos'] is False))
+        for r in ledger['requests']),'ACTUAL_WARMUP_OR_MEASURED_COMPLETION')
