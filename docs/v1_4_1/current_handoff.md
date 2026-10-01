@@ -1,8 +1,16 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.112](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.113](research_progress.md)。
 
-**7.112现行：新采限定Pilot角色/配对/首批最小本地实现已完成，Gate11 NOT_RUN。** 用户已批准[G11-LIMITED-PILOT/0.1](gate11_pilot_contract_v0_1.md)：manifest→producer/NVTX→Canonical→原S/A/B→配对/报告贯通；N1/G512 Pass0、窗外host token逐值核对及3block/30进程/15profile接线。不是将旧Engineering升级，不改UNKNOWN/NOT_ASSESSED、opaque/B限制或授Formal。
+**7.113现行：首批新Pilot可用于限定政策估计，Gate11 BLOCKED（政策未定）。** [首批审查0.1](gate11_first_batch_review_v0_1.md)、[机器汇总](gate11_first_batch_summary_v0_1.json)、[30次原值](gate11_first_batch_durations_v0_1.csv)钉住执行221f46c和封存包；30run/15pair的实际身份/输入/token/干预、45A和30N1逐sync B审查通过，不是稳定性或信息增益。完整CRC/hash为协调窗口核验回传，本窗口独立核源身份及实际消费Raw/派生证据，未重跑完整analyzer/Q0/测试。
+
+每条件仅3对；Request P1−P0相对差−18.109%～+101.142%，不能当纯profiler成本或从A扣除。warmup1未证明充分，不等于发现不足；正式repeat/精度、数值扰动与质量政策未定。UNKNOWN/NOT_ASSESSED、G1投影A/N1单sync B、opaque与D/Signature禁用保持；原STOP_FOR_REVIEW/NOT_RUN及历史BLOCKED不改。
+
+唯一推荐原计划五条件各3对**Pass0 warmup1/3**，30进程/0新profile、约25～35min，0.5GB规划预留；先审查未来最小参数/逐stage接线，不在本轮实现/执行，不同时加profile block。硬失败或固定批次结束即停，60预算上限不保证定案；旧P1-w1不替代P1-w3政策证据。当前没有新部署包或服务器任务，Gate12/Freeze/Formal不启动。用户DOCX保留、不纳提交；Gate7～9、Gate10限定G1及N1独立Engineering PASS保持。
+
+以下7.112为历史本地准备/交付状态，“尚未采集/待部署首批”已被7.113取代：
+
+**7.112历史：新采限定Pilot角色/配对/首批最小本地实现已完成，Gate11当时NOT_RUN。** 用户已批准[G11-LIMITED-PILOT/0.1](gate11_pilot_contract_v0_1.md)：manifest→producer/NVTX→Canonical→原S/A/B→配对/报告贯通；N1/G512 Pass0、窗外host token逐值核对及3block/30进程/15profile接线。不是将旧Engineering升级，不改UNKNOWN/NOT_ASSESSED、opaque/B限制或授Formal。
 固定组序和预算沿用[Gate11准备](gate10_workload_plan_v0_1.md#gate11-local-preparation)；只实现首批，失败停、partial/NOT_RUN保留、无retry/resume。60进程不是剩余批次授权。交付以服务器d25b4d1为前置，默认仅部署/相关CPU检查，静态回执审查后才可显式启动真实首批；单ZIP回传，路径/hash以本地delivery为准。无服务器、CUDA/Nsight、模型或旧Raw分析执行；CPU替身不冒充目标验证，DOCX保留且不纳提交。
 Gate7～9、Gate10限定G1一次可行性、N1独立Engineering PASS保持。Pilot repeat/warmup/质量阈值/Freeze输入仍待新证据。下一步仅协调审查交付及静态阶段，无新的研究语义待决。
 

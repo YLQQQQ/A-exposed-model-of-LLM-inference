@@ -1,7 +1,7 @@
 # Gate10 最小 workload 可行性准备 0.1
 
 版本：G10-WORKLOAD-FEASIBILITY/0.1。Engineering；[7.102退出裁决及7.111范围澄清](gate10_closeout_v0_1.md)：Gate10仅选定G1三点一次可行性PASS；容量/OOM/最大长度/batch未探索，512和2不是上限，不外推未测配置。稳定编号下未执行子项见[进度](research_progress.md)。
-下述Gate10准备/待执行语句保留为历史，两个新点均已完成，不再执行旧交付。7.111直接在本计划末尾补充[Gate11本地准备](#gate11-local-preparation)，不另建重复计划。Gate11 NOT_RUN。
+下述Gate10准备/待执行语句保留为历史，两个新点均已完成，不再执行旧交付。7.111直接在本计划末尾补充[Gate11本地准备](#gate11-local-preparation)，不另建重复计划。**7.113现行：首批已审查、Gate11 BLOCKED（政策未定），见[首批审查](gate11_first_batch_review_v0_1.md)。** 以下组序/预算保留，待执行措辞属于当时准备状态。
 依据：当前研究设计v7.1 §2.1、Pre-Pilot实验协议v2.1 §2.1候选池、用户批准的单平台路线及[Gate9分域资格](gate9_closeout_v0_1.md)。不修改冻结S/A/B公式，不是Pilot或Freeze。
 
 ## 候选与执行边界
@@ -56,14 +56,16 @@
 本批只能确认G1两点一次可行性；不能据此宣布N1同点模型执行或完整N1/G1共同可行域已验证。N1模型功能准备与以后Pilot仍分开。
 
 <a id="gate11-local-preparation"></a>
-## Gate11 本地准备（7.112，G11-PILOT-PREP/0.1，待执行审查）
+## Gate11 本地准备（G11-PILOT-PREP/0.1；7.113首批审查后停点）
 
 2026-09-30；这是既有EP-G11-01～04的最小具体化，不是新资格层、采集授权或Protocol Freeze。
 依据研究设计v7.1 §2.3.9/3.2、Pre-Pilot协议v2.1 §1.2/1.4/4.2–4.4/6.2，结合已批准单平台分域路线。
 现有Engineering只提供执行可行性、身份/语义适用依据和粗略资源预算；新Pilot需新run/角色，不能把旧值计入重复样本。
 不沿用旧`docs/small_pilot.md`的v3四点、warmup5/repeat5或任意CV/coverage阈值。
 
-7.112：用户已批准未来新采限定Pilot适用性，[G11-LIMITED-PILOT/0.1](gate11_pilot_contract_v0_1.md)与最小本地角色/配对/首批编排已实现。以下选点、组序、解释和预算不改；只实现前三block，未实现/授权剩余30进程或warmup扩展。固定交付默认只部署/CPU，真实首批需协调审查后另行显式启动。Gate11仍NOT_RUN。
+7.113：前三block已新采并通过[限定证据审查](gate11_first_batch_review_v0_1.md)，不是全部政策/Freeze完成。Gate11 BLOCKED；唯一推荐既定P0 warmup1/3方向，剩余30进程/0新profile，先审查最小参数/逐stage接线再决定执行，不同时加profile block。以下7.112实现及原计划内容为历史依据，组序/解释/预算不改。
+
+7.112历史：用户已批准未来新采限定Pilot适用性，[G11-LIMITED-PILOT/0.1](gate11_pilot_contract_v0_1.md)与最小本地角色/配对/首批编排已实现。只实现前三block，未实现/授权剩余30进程或warmup扩展；当时Gate11 NOT_RUN。
 
 ### 代表点、问题和复用边界（EP-G11-01）
 
@@ -144,4 +146,4 @@ N1 Pass0保留干预marker/branch、V16实际sync及原流/anchor/drain；通用
 
 后续Pilot报告须填入：所选有限输入/输出/batch及digest、模型/栈/执行与分析版本、N1/G1分域claim和资格引用、边界/流/opaque政策、实际warmup/repeat/组序/pass差异、失败与排除清单、质量/overhead/精度数值依据、统计单位/方法/seed及图表比较规则。
 未定数值明确PENDING，不用Engineering数据填齐；Protocol Freeze仍Gate12单独决策、Formal须新采。本计划不预授N1信息增益或G1趋势。
-Gate11 NOT_RUN。下一项是协调窗口审查固定commit/单ZIP和默认部署CPU方案；静态回执审查后才决定启动首批。完整命令/机器路径只放本地delivery说明。当前没有执行服务器或新采集，首批完成也只停止待审，不自动进入剩余预算、Freeze或Formal。
+7.112历史停点为固定首批交付/部署CPU审查；已由7.113首批审查取代。当前Gate11 BLOCKED，下一项仅审查唯一推荐P0 warmup1/3及未来必要最小接线；尚无新服务器步骤/部署包，不自动进入剩余预算、Freeze或Formal。原批次NOT_RUN/STOP_FOR_REVIEW报告不改写。

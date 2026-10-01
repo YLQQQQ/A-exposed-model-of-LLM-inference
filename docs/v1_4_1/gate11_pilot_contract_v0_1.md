@@ -1,6 +1,6 @@
 # Gate11 限定 Pilot 角色与首批执行合同 0.1
 
-2026-09-30；`G11-LIMITED-PILOT/0.1`。用户已批准，**仅适用于本版本声明之后的新采Pilot**；不是Protocol Freeze。执行设计沿用[既有Gate11准备](gate10_workload_plan_v0_1.md#gate11-local-preparation)，进度以[科研进度7.112](research_progress.md)为准。
+2026-09-30；`G11-LIMITED-PILOT/0.1`。用户已批准，**仅适用于本版本声明之后的新采Pilot**；不是Protocol Freeze。执行设计沿用[既有Gate11准备](gate10_workload_plan_v0_1.md#gate11-local-preparation)，进度以[科研进度7.113](research_progress.md)为准。2026-10-01的[首批审查](gate11_first_batch_review_v0_1.md)只记录证据与政策停点，不修改本合同规范或原批次报告。
 
 ## 适用范围与不可继承的资格
 
