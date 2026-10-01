@@ -20,11 +20,13 @@ CALLSITE = 'qwen2.decode.layer_16.after_forward'
 VARIANTS = ('V0', 'Vmarker', 'Vsync')
 
 
-def execution_declaration():
-    return dict(version='N1-VERIFIED-MODEL/0.1', warmup_stream='SEPARATE_HELD_EXPLICIT',
+def execution_declaration(*, warmup_count=1, control=False):
+    require(type(control) is bool and type(warmup_count) is int
+            and warmup_count in ((1,3) if control else (1,)), 'WARMUP_DECLARATION')
+    return dict(version='N1-VERIFIED-MODEL/0.2' if control else 'N1-VERIFIED-MODEL/0.1', warmup_stream='SEPARATE_HELD_EXPLICIT',
                 measured_stream='FRESH_HELD_EXPLICIT_AFTER_WARMUP',
                 anchor='CURRENT_STREAM_SYNC_BEFORE_FINAL_DRAIN', input_tokens=32, output_tokens=2,
-                batch_size=1, warmup_count=1, repeat_count=1)
+                batch_size=1, warmup_count=warmup_count, repeat_count=1)
 
 
 def require(ok, reason):
@@ -52,7 +54,10 @@ def validate_manifest(manifest):
     require('engineering_pair' not in manifest and 'gate10_workload' not in manifest
             and manifest.get('attention_backend') == 'sdpa'
             and 'target_python' in manifest and 'isolated_preflight_version' in manifest, 'VERIFIED_ENTRY_REQUIRED')
-    require(manifest.get('n1_model_execution')==execution_declaration(), 'EXECUTION_DECLARATION')
+    from .gate11_warmup import active,validate_binding
+    control=active(manifest.get('pilot'))
+    count=validate_binding(manifest['pilot'])['warmup_count'] if control else 1
+    require(manifest.get('n1_model_execution')==execution_declaration(warmup_count=count,control=control), 'EXECUTION_DECLARATION')
     return policy
 
 
@@ -68,7 +73,7 @@ def validate_prepared(manifest, prepared, root):
     validate_declaration(manifest)
     from .gate11_pilot import roles
     expected=dict(fixed_input_tokens=32,fixed_output_tokens=2,batch_size=1,
-        warmup_count=1,repeat_count=1,execution_mode='eager',**roles(manifest),
+        warmup_count=manifest['n1_model_execution']['warmup_count'],repeat_count=1,execution_mode='eager',**roles(manifest),
         dtype_and_quantization='fp16',sampling_config={'do_sample':False})
     require(all(type(manifest.get(k)) is type(v) and manifest[k]==v for k,v in expected.items()),
             'FIXED_WORKLOAD_CONFLICT')
@@ -85,8 +90,10 @@ class Execution:
     created after warmup's successful drain. All groups share this policy.
     The out-of-window anchor binds actual native handle to trace stream IDs.
     """
-    def __init__(self, policy, cuda):
+    def __init__(self, policy, cuda, *, warmup_tokens_unknown=False):
+        require(type(warmup_tokens_unknown) is bool,'WARMUP_OBSERVATION_POLICY')
         self.policy, self.cuda = deepcopy(policy), cuda
+        self.warmup_tokens_unknown=warmup_tokens_unknown
         self.streams, self.requests = [], []
 
     def run(self, model, identity, operation, *, warmup=False):
@@ -99,6 +106,8 @@ class Execution:
             proxy = ModelCalls(model, self.cuda, stream, identity, self.policy['variant'], generation=generation)
             self.requests.append(proxy.record)
             proxy.record.update(request_role='warmup' if warmup else 'measured', anchor=None)
+            if warmup and self.warmup_tokens_unknown:
+                proxy.record['observed_tokens']=None  # No token D2H occurs in run_warmup.
             life = dict(schema_version=VERSION, operation='held_lifetime', identity=identity,
                         generation=generation, native_handle=int(stream.cuda_stream), logical_device=0)
             proxy.record['lifetime_payload'] = life

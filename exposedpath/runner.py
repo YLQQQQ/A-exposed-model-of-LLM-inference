@@ -440,9 +440,11 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
         boundary_ids = [f"{prefix}:start", *[f"{prefix}:token:{i}" for i in range(output_len)]]
         if plan["request_role"] == "warmup":
             boundary_ids = []
-        requests.append({**plan, "expected_output_tokens":output_len, "actual_output_tokens":0,
+        from exposedpath.gate11_warmup import active as warmup_control
+        unknown_warmup=plan['request_role']=='warmup' and warmup_control(pass_fields.get('pilot'))
+        requests.append({**plan, "expected_output_tokens":output_len, "actual_output_tokens":None if unknown_warmup else 0,
                          "expected_boundary_ids":boundary_ids, "observed_boundary_ids":[],
-                         "outcome":"FAILED", "early_eos":False, "reasons":["NOT_EXECUTED"]})
+                         "outcome":"FAILED", "early_eos":None if unknown_warmup else False, "reasons":["NOT_EXECUTED"]})
     ledger = make_gate8_pass_identity(requests=requests, **pass_fields)
     host_records = []
     drain_records = []
@@ -545,6 +547,8 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
     for entry in ledger["requests"]:
         if entry["request_role"] == "warmup":
             try:
+                if warmup_control(ledger.get('pilot')):
+                    print('[stage] '+entry['identity']['request_id']+' START',flush=True)
                 def warmup():
                     call=lambda observed:run_warmup(observed, input_ids, attention_mask, output_len, 1)
                     return call(model) if n1_controller is None else n1_controller.run(
@@ -553,9 +557,14 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                     warmup()
                 else:
                     stages.observe('warmup',entry['identity'],warmup)
-                entry.update(actual_output_tokens=output_len, outcome="COMPLETE", reasons=[])
+                entry.update(actual_output_tokens=None if warmup_control(ledger.get('pilot')) else output_len,
+                             outcome="COMPLETE", reasons=[])
+                if warmup_control(ledger.get('pilot')):
+                    print('[stage] '+entry['identity']['request_id']+' COMPLETE',flush=True)
             except Exception as exc:
                 entry["reasons"] = [f"WARMUP_FAILED:{type(exc).__name__}"]
+                if warmup_control(ledger.get('pilot')):
+                    print('[stage] '+entry['identity']['request_id']+' FAILED: '+type(exc).__name__,flush=True)
                 break
             continue
         recorder = Gate8BoundaryRecorder(entry["identity"], entry["expected_boundary_ids"],
@@ -645,8 +654,10 @@ def run_gate8_requests_to_files(*, output_dir, **request_arguments):
         if products[4]['observation_status'] != 'COMPLETE':
             receipt['status'] = 'INCOMPLETE'
     if ledger['run_role']=='PILOT':
-        receipt.update(schema_version='exposedpath-pilot-producer-receipt/0.1.0',
-                       pilot=ledger['pilot'],run_role='PILOT',data_role='Pilot',gate11_verdict='NOT_RUN')
+        from exposedpath.gate11_warmup import active
+        control=active(ledger['pilot'])
+        receipt.update(schema_version='exposedpath-pilot-producer-receipt/0.2.0' if control else 'exposedpath-pilot-producer-receipt/0.1.0',
+                       pilot=ledger['pilot'],run_role='PILOT',data_role='Pilot',gate11_verdict='BLOCKED' if control else 'NOT_RUN')
     with (staging/'producer_receipt.json').open('x',encoding='utf-8') as handle:
         json.dump(receipt,handle,sort_keys=True,indent=2)
         handle.write('\n')

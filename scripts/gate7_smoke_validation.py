@@ -140,8 +140,10 @@ def validate_pre_model_identity(manifest_path: Path, preflight_path: Path, proje
         elif execution_contract == 'N1-VERIFIED-MODEL/0.1':
             from exposedpath.n1_model import validate_prepared
             validate_prepared(manifest, manifest_path.parent, project_root)
-        elif execution_contract == 'G11-LIMITED-PILOT/0.1':
+        elif execution_contract in ('G11-LIMITED-PILOT/0.1','G11-WARMUP-CONTROL/0.1'):
             from exposedpath.gate11_pilot import validate_prepared
+            if manifest.get('pilot',{}).get('version')!=execution_contract:
+                raise ValueError('Pilot pre-model contract version conflicts')
             validate_prepared(manifest, manifest_path.parent, project_root)
         else:
             raise ValueError('Unknown pre-model execution contract')

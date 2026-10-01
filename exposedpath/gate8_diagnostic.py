@@ -171,12 +171,13 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     from .gate11_pilot import roles
     role=roles(manifest)
     pilot=manifest.get('pilot')
+    from .gate11_warmup import active as warmup_control,request_plan as warmup_plan
     from exposedpath.gate8_engineering_contract import validate_declaration, EXECUTION_VERSION
     declared = validate_declaration(manifest) if 'engineering_scope' in manifest else None
     n1 = None
     if 'n1_model' in manifest:
         from exposedpath.n1_model import Execution, validate_manifest
-        n1 = Execution(validate_manifest(manifest), runner.torch.cuda)
+        n1 = Execution(validate_manifest(manifest), runner.torch.cuda,warmup_tokens_unknown=warmup_control(pilot))
     elif manifest.get('study_mode') != 'G1_NATURAL' or manifest.get('n1_intervention') is not None:
         raise ValueError('DIAGNOSTIC_MODE_CONFLICT')
     isolated='isolated_preflight_version' in manifest
@@ -209,7 +210,8 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         validate_input(json.loads(prompt_path.read_text(encoding='utf-8')),
             json.loads((Path(manifest['model_id'])/'config.json').read_text(encoding='utf-8')),length)
     expected = dict(fixed_input_tokens=length, fixed_output_tokens=2, batch_size=1,
-                    warmup_count=1, repeat_count=1, execution_mode='eager',
+                    warmup_count=manifest['pilot'].get('warmup_count',1) if pilot is not None else 1,
+                    repeat_count=1, execution_mode='eager',
                     **role,
                     dtype_and_quantization='fp16', sampling_config={'do_sample':False},
                     runner_git_dirty=False)
@@ -288,6 +290,9 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
             # ranges. No Tensor operation, D2H or synchronization here.
             observed_tokens.append(dict(identity=identity,
                 token_ids=[list(b.host_token_ids) for b in result['token_ready_boundaries']]))
+    plan=warmup_plan(pilot) if warmup_control(pilot) else [
+        dict(request_id='warmup-0',repeat_id='warmup-0',request_role='warmup'),
+        dict(request_id='request-0',repeat_id='0',request_role='measured')]
     path = runner.run_gate8_requests_to_files(
         output_dir=output_dir/'producer', output_len=2,
         device=f"cuda:{manifest['gpu_index_logical']}", pass_fields=fields,
@@ -298,8 +303,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         model_setup=dict(model_path=manifest['model_id'], prompt_path=output_dir/'prompt.json',
                          physical_gpu_index=manifest['gpu_index_physical'], batch_size=1,
                          manifest_path=output_dir/'manifest.json'),
-        request_plan=[dict(request_id='warmup-0', repeat_id='warmup-0', request_role='warmup'),
-                      dict(request_id='request-0', repeat_id='0', request_role='measured')])
+        request_plan=plan)
     producer = json.loads(path.read_text(encoding='utf-8'))
     if pilot is not None:
         with (output_dir/'pilot_tokens.json').open('x',encoding='utf-8') as handle:
@@ -309,7 +313,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     if n1 is not None:
         from exposedpath.n1_model import VERSION
         with (output_dir/'n1_model_calls.json').open('x',encoding='utf-8') as handle:
-            json.dump(dict(schema_version=VERSION, manifest_sha256=_sha(manifest_path),
+            json.dump(dict(schema_version='exposedpath-n1-model-calls/0.2.0' if warmup_control(pilot) else VERSION, manifest_sha256=_sha(manifest_path),
                 producer_receipt_sha256=_sha(path),pid=os.getpid(),requests=n1.requests),handle,indent=2,sort_keys=True)
     if 'gate10_workload' in manifest or pilot is not None:
         with (output_dir/'workload_observed.json').open('x',encoding='utf-8') as handle:
@@ -327,7 +331,8 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         if n1 is not None:
             execution['n1_model_calls_sha256']=_sha(output_dir/'n1_model_calls.json')
         if pilot is not None:
-            from .gate11_pilot import EXECUTION_VERSION as pilot_execution
+            from .gate11_pilot import versions
+            pilot_execution=versions(pilot)[1]
             execution.update(schema_version=pilot_execution,**role,pilot=pilot,
                 pilot_tokens_sha256=_sha(output_dir/'pilot_tokens.json'))
         with (output_dir/'engineering_execution.json').open('x',encoding='utf-8') as handle:
@@ -342,8 +347,8 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
                   producer_receipt_sha256=_sha(path), manifest_sha256=_sha(output_dir/'manifest.json'),
                   prompt_sha256=_sha(output_dir/'prompt.json'), run_id=manifest['run_id'])
     if pilot is not None:
-        result.update(schema_version='gate11-pilot-diagnostic/0.1.0',**role,pilot=pilot,
-            pilot_tokens_sha256=_sha(output_dir/'pilot_tokens.json'),gate11_verdict='NOT_RUN')
+        result.update(schema_version='gate11-pilot-diagnostic/0.2.0' if warmup_control(pilot) else 'gate11-pilot-diagnostic/0.1.0',**role,pilot=pilot,
+            pilot_tokens_sha256=_sha(output_dir/'pilot_tokens.json'),gate11_verdict='BLOCKED' if warmup_control(pilot) else 'NOT_RUN')
     report = output_dir/'diagnostic_report.json'
     with report.open('x', encoding='utf-8') as handle:
         json.dump(result, handle, indent=2, sort_keys=True)

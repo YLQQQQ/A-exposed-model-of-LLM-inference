@@ -56,7 +56,9 @@ def baseline(python,prepared,output):
     output.mkdir(parents=True)
     report=dict(status='BLOCKED',gate8_verdict='NOT_RUN',role='UNPROFILED_ENGINEERING_BASELINE')
     if 'pilot' in manifest:
-        report.update(role='UNPROFILED_LIMITED_PILOT',pilot=manifest['pilot'],run_role='PILOT',data_role='Pilot',gate11_verdict='NOT_RUN')
+        from exposedpath.gate11_warmup import active
+        report.update(role='UNPROFILED_LIMITED_PILOT',pilot=manifest['pilot'],run_role='PILOT',data_role='Pilot',
+            gate11_verdict='BLOCKED' if active(manifest['pilot']) else 'NOT_RUN')
     try:
         receipt=isolated.seal(prepared,output,ROOT)
         process=run_once(unprofiled_argv(python,prepared,output),output/'collection_log')
@@ -114,10 +116,15 @@ def inspect_execution(output,expected_pass):
         and probe['cuda_device_order']=='PCI_BUS_ID'
         and probe['cuda_visible_devices']==str(manifest['gpu_index_physical']),'DEVICE_IDENTITY')
     requests=ledger['requests']
-    require(len(requests)==2 and [r['request_role'] for r in requests]==['warmup','measured']
-        and all(r['outcome']=='COMPLETE' and not r['early_eos'] and not r['reasons']
-            and r['actual_output_tokens']==r['expected_output_tokens']==2 for r in requests),'REQUESTS')
-    measured=requests[1]; host=read(root/'producer/host_boundaries.json')
+    from exposedpath.gate11_warmup import active
+    control=active(manifest.get('pilot'))
+    count=manifest['pilot']['warmup_count'] if control else 1
+    require(len(requests)==count+1 and [r['request_role'] for r in requests]==['warmup']*count+['measured']
+        and all(r['outcome']=='COMPLETE' and not r['reasons'] and r['expected_output_tokens']==2 for r in requests)
+        and all((r['actual_output_tokens'] is None and r['early_eos'] is None) if control else
+                (r['actual_output_tokens']==2 and r['early_eos'] is False) for r in requests[:-1])
+        and requests[-1]['actual_output_tokens']==2 and requests[-1]['early_eos'] is False,'REQUESTS')
+    measured=requests[-1]; host=read(root/'producer/host_boundaries.json')
     require(len(host)==3 and all(r['payload']['identity']==measured['identity'] for r in host)
         and [r['payload']['boundary_id'] for r in host]==measured['observed_boundary_ids'],'HOST_IDENTITY')
     durations=host_durations(host)
@@ -125,16 +132,19 @@ def inspect_execution(output,expected_pass):
     require(len(drains)==1 and drains[0]['identity']==measured['identity'] and drains[0]['status']=='COMPLETE'
         and drains[0]['error'] is None and drains[0]['host_clock_id']=='PYTHON_PERF_COUNTER_NS'
         and drains[0]['host_start_ns']<=drains[0]['host_end_ns']<=host[0]['host_observed_ns'],'DRAIN')
-    stages=read(root/'producer/stage_ledger.json')['stages']
-    require(len(stages)==3 and [s['payload']['stage_role'] for s in stages]==['setup','warmup','measured']
+    from exposedpath.gate8_stages import validate_stage_ledger
+    stage_ledger=read(root/'producer/stage_ledger.json')
+    validate_stage_ledger(stage_ledger,ledger)
+    stages=stage_ledger['stages']
+    require(len(stages)==count+2 and [s['payload']['stage_role'] for s in stages]==['setup']+['warmup']*count+['measured']
         and all(s['status']=='COMPLETE' and s['error'] is None
             and s['host_clock_id']=='PYTHON_PERF_COUNTER_NS'
             and type(s['host_start_ns']) is int and type(s['host_end_ns']) is int
             and s['host_start_ns']<=s['host_end_ns'] for s in stages)
-        and stages[0]['host_end_ns']<=stages[1]['host_start_ns']
-        and stages[1]['host_end_ns']<=stages[2]['host_start_ns']<=drains[0]['host_start_ns']
-        and host[-1]['host_observed_ns']<=stages[2]['host_end_ns']
-        and stages[2]['payload']['request_identity']==measured['identity'],'STAGE_ORDER')
+        and all(a['host_end_ns']<=b['host_start_ns'] for a,b in zip(stages,stages[1:]))
+        and stages[-1]['host_start_ns']<=drains[0]['host_start_ns']
+        and host[-1]['host_observed_ns']<=stages[-1]['host_end_ns']
+        and stages[-1]['payload']['request_identity']==measured['identity'],'STAGE_ORDER')
     sealed=read(output/'auxiliary_preflight.json'); claim=read(output/'auxiliary_preflight.claim.json')
     require(sealed['run_id']==manifest['run_id']
         and sealed['input_hashes']['manifest.json']==sha(root/'manifest.json')
@@ -147,24 +157,41 @@ def inspect_execution(output,expected_pass):
     if 'pilot' in manifest:
         from exposedpath.gate11_pilot import validate_tokens
         tokens=validate_tokens(root/'pilot_tokens.json',manifest,ledger,execution,root/'manifest.json',root/'producer/producer_receipt.json')
+        require(producer.get('pilot')==manifest['pilot'] and producer.get('run_role')=='PILOT'
+            and producer.get('data_role')=='Pilot' and producer['schema_version']==
+                ('exposedpath-pilot-producer-receipt/0.2.0' if control else 'exposedpath-pilot-producer-receipt/0.1.0'), 'PILOT_PRODUCER')
+        require(report['schema_version']==('gate11-pilot-diagnostic/0.2.0' if control else 'gate11-pilot-diagnostic/0.1.0'),'PILOT_DIAGNOSTIC_VERSION')
         require(report.get('pilot')==manifest['pilot'] and report.get('run_role')=='PILOT'
             and report.get('data_role')=='Pilot' and report.get('pilot_tokens_sha256')==sha(root/'pilot_tokens.json'),'PILOT_REPORT')
         if 'n1_model' in manifest:
             calls=read(root/'n1_model_calls.json')
-            variant=manifest['n1_model']['variant']; count=0 if variant=='V0' else 1
+            variant=manifest['n1_model']['variant']; intervention_count=0 if variant=='V0' else 1
             require(sha(root/'n1_model_calls.json')==execution.get('n1_model_calls_sha256')
                 and calls['producer_receipt_sha256']==sha(root/'producer/producer_receipt.json')
                 and calls['manifest_sha256']==sha(root/'manifest.json') and calls['pid']==ledger['pid']
-                and len(calls['requests'])==2,'PILOT_N1_CALLS')
+                and len(calls['requests'])==count+1,'PILOT_N1_CALLS')
             for call,request in zip(calls['requests'],requests):
                 require(call['identity']==request['identity'] and call['variant']==variant
-                    and len(call['interventions'])==count and len(call['model_calls'])==2
+                    and len(call['interventions'])==intervention_count and len(call['model_calls'])==2
                     and all(i['status']=='COMPLETE' and i['token_index']==1 and i['layer_index']==15
                         and i['synchronize_called']==(variant=='Vsync') for i in call['interventions']), 'PILOT_N1_INTERVENTION')
-            require(calls['requests'][1]['observed_tokens']==tokens,'PILOT_N1_TOKENS')
+            require(calls['requests'][-1]['observed_tokens']==tokens,'PILOT_N1_TOKENS')
+            if control:
+                handles=[c['native_handle'] for c in calls['requests']]
+                require(calls['schema_version']=='exposedpath-n1-model-calls/0.2.0'
+                    and all(type(h) is int and h>0 for h in handles) and len(set(handles))==count+1
+                    and all(c['request_role']==r['request_role'] and c['anchor'] is None
+                        and c['observed_tokens'] is None
+                        and c['status']=='WARMUP_CALLS_COMPLETE_PENDING_TRACE_OWNERSHIP'
+                        for c,r in zip(calls['requests'][:-1],requests[:-1]))
+                    and calls['requests'][-1]['anchor'] is not None,'WARMUP_N1_STREAM_LIFECYCLE')
     return dict(manifest=manifest,pid=ledger['pid'],timing_ns=durations,
         **(dict(token_ids=tokens,pilot=manifest['pilot']) if 'pilot' in manifest else {}),
         loaded_configuration=execution['observed_configuration'],cuda_probe=probe,
+        **(dict(warmups=[dict(identity=s['payload']['request_identity'],ordinal=i,
+            host_clock_id=s['host_clock_id'],host_start_ns=s['host_start_ns'],host_end_ns=s['host_end_ns'],
+            duration_ns=s['host_end_ns']-s['host_start_ns'],status=s['status'],
+            actual_output_tokens=None,early_eos=None) for i,s in enumerate(stages[1:-1])]) if control else {}),
         manifest_sha256=sha(root/'manifest.json'),producer_sha256=sha(root/'producer/producer_receipt.json'))
 
 

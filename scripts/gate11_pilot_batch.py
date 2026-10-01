@@ -18,18 +18,21 @@ def persist(path,value):
     pending.replace(path)
 
 
-def run_batch(output,batch_id,execute,summarize):
+def run_batch(output,batch_id,execute,summarize, *, warmup_control=False):
+    require(type(warmup_control) is bool,'BATCH_KIND')
+    from exposedpath.gate11_warmup import schedule as warmup_schedule,VERSION as warmup_version
+    version=warmup_version if warmup_control else VERSION
     output=Path(output); output.mkdir(parents=True,exist_ok=False)
-    plan=schedule(batch_id)
-    write_new(output/'planned_runs.json',dict(version=VERSION,runs=plan,
-        model_process_budget=30,profile_budget=15,overall_future_cap_not_authorization=60))
-    result=dict(version=VERSION,status='BLOCKED',run_role='PILOT',data_role='Pilot',
-        gate11_verdict='NOT_RUN',formal_eligible=False,automatic_retry=False,
+    plan=warmup_schedule(batch_id) if warmup_control else schedule(batch_id)
+    write_new(output/'planned_runs.json',dict(version=version,runs=plan,
+        model_process_budget=30,profile_budget=0 if warmup_control else 15,overall_future_cap_not_authorization=60))
+    result=dict(version=version,status='BLOCKED',run_role='PILOT',data_role='Pilot',
+        gate11_verdict='BLOCKED' if warmup_control else 'NOT_RUN',formal_eligible=False,automatic_retry=False,
         runs=[dict(binding=b,status='NOT_RUN') for b in plan],pairs=[],error=None)
     report=output/'batch_report.json'; persist(report,result)
     completed=[]
     for i,binding in enumerate(plan):
-        print(f"[pilot {i+1}/30] block={binding['block']} condition={binding['condition']} pass={binding['pass_id']} START",flush=True)
+        print(f"[pilot {i+1}/30] block={binding['block']} condition={binding['condition']} pass={binding['pass_id']} warmup={binding.get('warmup_count',1)} START",flush=True)
         row=result['runs'][i]; row['status']='RUNNING'; persist(report,result)
         try:
             observed=execute(binding,output/binding['run_id'])
@@ -57,7 +60,8 @@ def run_batch(output,batch_id,execute,summarize):
         persist(report,result)
     else:
         require(len(result['pairs'])==15,'PAIR_BUDGET')
-        result['status']='FIRST_BATCH_COMPLETE_STOP_FOR_REVIEW'; persist(report,result)
+        result['status']='WARMUP_BATCH_COMPLETE_STOP_FOR_REVIEW' if warmup_control else 'FIRST_BATCH_COMPLETE_STOP_FOR_REVIEW'
+        persist(report,result)
     return result
 
 

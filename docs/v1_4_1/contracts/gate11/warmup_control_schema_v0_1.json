@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:exposedpath:gate11:warmup-control:0.1",
+  "$defs": {
+    "binding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "batch_id", "block", "position", "condition", "variant", "pair_id", "run_id", "pass_id", "warmup_count", "warmup_order", "purpose", "declaration_role", "formal_eligible"],
+      "properties": {
+        "version": {"const": "G11-WARMUP-CONTROL/0.1"},
+        "batch_id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,100}$"},
+        "block": {"type": "integer", "minimum": 1, "maximum": 3},
+        "position": {"type": "integer", "minimum": 1, "maximum": 5},
+        "condition": {"enum": ["G32", "G512", "N0", "Nm", "N16"]},
+        "variant": {"enum": [null, "V0", "Vmarker", "Vsync"]},
+        "pair_id": {"type": "string", "minLength": 1},
+        "run_id": {"type": "string", "minLength": 1},
+        "pass_id": {"const": "pass0"},
+        "warmup_count": {"enum": [1, 3]},
+        "warmup_order": {"enum": [[1, 3], [3, 1]]},
+        "purpose": {"const": "WARMUP_POLICY_ESTIMATION_ONLY"},
+        "declaration_role": {"const": "PRE_EXECUTION"},
+        "formal_eligible": {"const": false}
+      }
+    },
+    "warmup_observations": {
+      "type": "object",
+      "required": ["actual_output_tokens", "early_eos"],
+      "properties": {"actual_output_tokens": {"type": "null"}, "early_eos": {"type": "null"}}
+    }
+  },
+  "$ref": "#/$defs/binding"
+}

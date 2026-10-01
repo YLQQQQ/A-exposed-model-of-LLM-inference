@@ -25,15 +25,27 @@ def validate_shape(kind, value):
         return isinstance(v,list) and any(pilot_role(x) for x in v)
     schema=_SCHEMA
     if pilot_role(value):
-        from .gate11_pilot import PASS_VERSION
+        from .gate11_pilot import versions
+        from .gate11_warmup import active,SCHEMA as warmup_schema
+        binding=value.get('pilot') if kind=='pass_identity' else None
+        pass_version=versions(binding)[0] if binding is not None else 'exposedpath-pass-identity/0.2.0'
         schema=deepcopy(_SCHEMA)
         for name in ('identity','pass_identity'):
             schema['$defs'][name]['properties']['run_role']={'const':'PILOT'}
             schema['$defs'][name]['properties']['data_role']={'const':'Pilot'}
         definition=schema['$defs']['pass_identity']
-        definition['properties']['schema_version']={'const':PASS_VERSION}
+        definition['properties']['schema_version']={'const':pass_version}
         definition['properties']['pilot']={'type':'object'}
         definition['required'].append('pilot')
+        if active(binding):
+            entry=schema['$defs']['request_entry']
+            for key in ('actual_output_tokens','early_eos'):
+                original=deepcopy(entry['properties'][key])
+                entry['properties'][key]={'anyOf':[original,{'type':'null'}]}
+            entry['allOf']=[{'if':{'properties':{'request_role':{'const':'warmup'}}},
+                'then':deepcopy(warmup_schema['$defs']['warmup_observations']),
+                'else':{'properties':{k:_SCHEMA['$defs']['request_entry']['properties'][k]
+                                     for k in ('actual_output_tokens','early_eos')}}}]
     try:
         Draft202012Validator({"$defs": schema["$defs"], "$ref": f"#/$defs/{kind}"}).validate(value)
     except ValidationError as exc:
@@ -47,6 +59,13 @@ def validate_pass_identity(value, *, finalized=False):
         binding=validate_binding(value['pilot'])
         if any(value[k]!=binding[k] for k in ('run_id','pass_id')):
             raise ValueError('PILOT_LEDGER_BINDING')
+        from .gate11_warmup import active,request_plan
+        if active(binding):
+            expected=request_plan(binding)
+            actual=[dict(request_id=r['identity']['request_id'],repeat_id=r['identity']['repeat_id'],
+                         request_role=r['request_role']) for r in value['requests']]
+            if actual!=expected or value['planned_request_ids']!=[r['request_id'] for r in expected]:
+                raise ValueError('PILOT_WARMUP_ACTUAL_ORDER_OR_COUNT')
     planned = value["planned_request_ids"]
     requests = value["requests"]
     ids = [r["identity"]["request_id"] for r in requests]
@@ -67,7 +86,9 @@ def validate_pass_identity(value, *, finalized=False):
         if entry["request_role"] == "measured" and len(expected) != entry["expected_output_tokens"] + 1:
             raise ValueError("IDENTITY_CONFLICT: boundary plan/token count")
         if entry["outcome"] == "COMPLETE":
-            if (entry["actual_output_tokens"] != entry["expected_output_tokens"]
+            from .gate11_warmup import active
+            unknown_warmup=entry['request_role']=='warmup' and active(value.get('pilot'))
+            if ((not unknown_warmup and entry["actual_output_tokens"] != entry["expected_output_tokens"])
                     or entry["early_eos"] or entry["reasons"] or observed != expected):
                 raise ValueError("IDENTITY_CONFLICT: incomplete COMPLETE request")
         elif not entry["reasons"]:
@@ -89,14 +110,14 @@ def make_gate8_pass_identity(*, requests, **pass_fields):
     """
     pilot=pass_fields.get('pilot')
     if pilot is not None:
-        from .gate11_pilot import validate_binding, PASS_VERSION
+        from .gate11_pilot import validate_binding, versions
         validate_binding(pilot)
     roles=dict(run_role='PILOT',data_role='Pilot') if pilot is not None else dict(run_role='ENGINEERING',data_role='Engineering')
     for field, required in roles.items():
         if field in pass_fields and pass_fields[field] != required:
             raise ValueError(f"IDENTITY_CONFLICT: producer {field}")
     result = {
-        "schema_version": PASS_VERSION if pilot is not None else "exposedpath-pass-identity/0.1.0",
+        "schema_version": versions(pilot)[0] if pilot is not None else "exposedpath-pass-identity/0.1.0",
         **deepcopy(pass_fields), **roles,
         "planned_request_ids": [r["request_id"] for r in requests],
         "requests": [], "raw_artifact_sha256": None, "device_mapping_sha256": None,

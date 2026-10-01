@@ -44,6 +44,9 @@ def schedule(batch_id, *, blocks=3):
 
 def validate_binding(value):
     require(isinstance(value,dict),'BINDING')
+    from . import gate11_warmup as warmup
+    if warmup.active(value):
+        return warmup.validate_binding(value)
     candidates=schedule(value.get('batch_id'))
     require(any(value==r and all(type(value[k]) is type(v) for k,v in r.items()) for r in candidates),'BINDING')
     return value
@@ -54,13 +57,15 @@ def minimal_fields(binding):
     from exposedpath_v141.gate9_domain import declaration as domain, N1, G1
     from .n1_model import declaration, execution_declaration, CALLSITE
     length,variant=CONDITIONS[binding['condition']]
+    from .gate11_warmup import active
+    count=binding['warmup_count'] if active(binding) else 1
     result=dict(pilot=deepcopy(binding),run_role='PILOT',data_role='Pilot',run_id=binding['run_id'],
-        fixed_input_tokens=length,fixed_output_tokens=2,batch_size=1,warmup_count=1,repeat_count=1,
+        fixed_input_tokens=length,fixed_output_tokens=2,batch_size=1,warmup_count=count,repeat_count=1,
         execution_mode='eager',attention_backend='sdpa',dtype_and_quantization='fp16',
         sampling_config={'do_sample':False},domain_qualification=domain(N1 if variant else G1),
         study_mode='N1_INTERVENTION' if variant else 'G1_NATURAL',n1_intervention=None)
     if variant:
-        result.update(n1_model=declaration(variant),n1_model_execution=execution_declaration(),
+        result.update(n1_model=declaration(variant),n1_model_execution=execution_declaration(warmup_count=count, control=active(binding)),
             n1_intervention=dict(sync_origin='n1_intervention',callsite_id=CALLSITE,intervention_variant_id=variant))
     return result
 
@@ -100,9 +105,10 @@ def validate_prepared(manifest, prepared, root):
 def validate_tokens(path, manifest, ledger, execution, manifest_path, producer_path):
     import json
     binding=validate(manifest)
-    require(ledger.get('pilot')==binding and ledger['schema_version']==PASS_VERSION
+    pass_version,execution_version=versions(binding)
+    require(ledger.get('pilot')==binding and ledger['schema_version']==pass_version
         and ledger['run_role']=='PILOT' and ledger['data_role']=='Pilot','PRODUCER_ROLE')
-    require(execution.get('schema_version')==EXECUTION_VERSION and execution.get('pilot')==binding
+    require(execution.get('schema_version')==execution_version and execution.get('pilot')==binding
         and execution.get('run_role')=='PILOT' and execution.get('data_role')=='Pilot'
         and execution.get('pilot_tokens_sha256')==sha(path),'EXECUTION_ROLE_OR_TOKEN_HASH')
     value=json.loads(Path(path).read_text(encoding='utf-8'))
@@ -127,4 +133,10 @@ def execution_extension(manifest, ledger, execution, execution_path, manifest_pa
     require(token_path is not None and Path(token_path).resolve()==(Path(execution_path).parent/'pilot_tokens.json').resolve(),
         'TOKEN_RECEIPT_SOURCE')
     validate_tokens(Path(execution_path).parent/'pilot_tokens.json',manifest,ledger,execution,manifest_path,producer_path)
-    return {'pilot','run_role','data_role','pilot_tokens_sha256'}, EXECUTION_VERSION
+    return {'pilot','run_role','data_role','pilot_tokens_sha256'}, versions(manifest['pilot'])[1]
+
+
+def versions(binding):
+    validate_binding(binding)
+    from . import gate11_warmup as warmup
+    return (warmup.PASS_VERSION,warmup.EXECUTION_VERSION) if warmup.active(binding) else (PASS_VERSION,EXECUTION_VERSION)
