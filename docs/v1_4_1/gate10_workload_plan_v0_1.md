@@ -1,7 +1,7 @@
 # Gate10 最小 workload 可行性准备 0.1
 
 版本：G10-WORKLOAD-FEASIBILITY/0.1。Engineering；[7.102退出裁决及7.111范围澄清](gate10_closeout_v0_1.md)：Gate10仅选定G1三点一次可行性PASS；容量/OOM/最大长度/batch未探索，512和2不是上限，不外推未测配置。稳定编号下未执行子项见[进度](research_progress.md)。
-下述Gate10准备/待执行语句保留为历史，两个新点均已完成，不再执行旧交付。7.111直接在本计划末尾补充[Gate11本地准备](#gate11-local-preparation)，不另建重复计划。**7.115现行：两批Pilot集中审查完成，Gate11 BLOCKED，60预算耗尽；见[集中政策审查](gate11_warmup_policy_review_v0_1.md)。** 以下组序/预算保留，待执行措辞属于当时准备状态。
+下述Gate10准备/待执行语句保留为历史，两个新点均已完成，不再执行旧交付。7.111直接在本计划末尾补充[Gate11本地准备](#gate11-local-preparation)，不另建重复计划。**7.116现行：两批Pilot复用完成补证前[政策/预算决策](gate11_policy_decision_v0_1.md)，Gate11 BLOCKED，60预算耗尽；仅待额外30进程/15profile预算审查，不实现/打包/执行。** 以下组序/预算保留，待执行措辞属于当时准备状态。
 依据：当前研究设计v7.1 §2.1、Pre-Pilot实验协议v2.1 §2.1候选池、用户批准的单平台路线及[Gate9分域资格](gate9_closeout_v0_1.md)。不修改冻结S/A/B公式，不是Pilot或Freeze。
 
 ## 候选与执行边界
@@ -56,14 +56,14 @@
 本批只能确认G1两点一次可行性；不能据此宣布N1同点模型执行或完整N1/G1共同可行域已验证。N1模型功能准备与以后Pilot仍分开。
 
 <a id="gate11-local-preparation"></a>
-## Gate11 本地准备（G11-PILOT-PREP/0.1；7.115集中政策停点）
+## Gate11 本地准备（G11-PILOT-PREP/0.1；7.116补证前政策停点）
 
 2026-09-30；这是既有EP-G11-01～04的最小具体化，不是新资格层、采集授权或Protocol Freeze。
 依据研究设计v7.1 §2.3.9/3.2、Pre-Pilot协议v2.1 §1.2/1.4/4.2–4.4/6.2，结合已批准单平台分域路线。
 现有Engineering只提供执行可行性、身份/语义适用依据和粗略资源预算；新Pilot需新run/角色，不能把旧值计入重复样本。
 不沿用旧`docs/small_pilot.md`的v3四点、warmup5/repeat5或任意CV/coverage阈值。
 
-7.115：首批30进程/15profile和[新合同0.1](gate11_warmup_control_v0_1.md)的30P0/60实际暖机已执行并[集中审查](gate11_warmup_policy_review_v0_1.md)，60预算耗尽。推荐共同warmup3及6平衡block候选，但缺新政策profile与最终repeat/绝对精度/数值门，Gate11仍BLOCKED。仅提出同五条件3block新P0/P1-w3、额外30进程/15profile的唯一有界补证预算，未授权/实现/执行；现在无服务器任务。以下原组序/解释/预算保留为历史依据，不自动再用剩余预算。
+7.116：已执行两批证据复用，当前只读[政策/预算决策0.1](gate11_policy_decision_v0_1.md)。共同w3、三个原组序block、相邻P0/P1的额外30进程/15profile为唯一补证提案；约70～90min/35GB，追加预算未批准，未实现/打包/执行。提出解释尺度候选和n=3/6/12成本比较，n6不是充分性结论；预先保留负差/所有有效样本、block不确定性及预算不足claim收缩，不要求波动归零或干预有效。原60已耗尽，Gate11仍BLOCKED；以下原组序/解释/预算是历史依据，不自动再用剩余预算。
 
 7.112历史：用户已批准未来新采限定Pilot适用性，[G11-LIMITED-PILOT/0.1](gate11_pilot_contract_v0_1.md)与最小本地角色/配对/首批编排已实现。只实现前三block，未实现/授权剩余30进程或warmup扩展；当时Gate11 NOT_RUN。
 

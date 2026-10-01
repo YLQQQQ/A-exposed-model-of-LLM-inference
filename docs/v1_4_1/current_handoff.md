@@ -1,16 +1,16 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.115](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.116](research_progress.md)。
 
-**7.115现行：首批与warmup对照的集中审查已完成，Gate11 BLOCKED（政策依据尚未齐全）。** [审查0.1](gate11_warmup_policy_review_v0_1.md)、[机器汇总](gate11_warmup_policy_summary_v0_1.json)、[15对原值](gate11_warmup_pair_durations_v0_1.csv)钉住warmup执行4abb5ea和首批221f46c。原60预算已用尽：合计60模型进程/15profile；不得再次执行下方旧首批/暖机交付。
+**7.116现行：补证前政策与预算已收敛为待审候选，Gate11 BLOCKED。** 唯一当前方案为[政策决策0.1](gate11_policy_decision_v0_1.md)；[两批审查](gate11_warmup_policy_review_v0_1.md)/[汇总](gate11_warmup_policy_summary_v0_1.json)保持证据依据，执行4abb5ea与221f46c不混池。原60预算已用尽，未批准额外预算，不得再次执行下方旧交付。
 
-新批实际30P0/60暖机、固定顺序、token、三窗口/窗外drain及N1干预/独立held暖机流/fresh measured流吻合。完整1383项/CRC/静态副本复用协调审查；本地核338关键来源hash与独立整数算术，无完整analyzer/Q0/测试重跑。服务器65 passed是原日志成绩。Request w3−w1为12负/3正，G32/N0的prefill三block同向，其余/Decode有反转；第2/3暖机较第1短，但不证明完全收敛。未观测暖机token/EOS仍null，P0不冒充物理A/B资格。
+精简表区分Request/Prefill、单步Decode、N1差值、观测A/B与profile扰动；h=10/5ms是有限解释候选，不是已冻结阈值/等价带，n=3/6/12只比较精度—成本，不宣称repeat6足够。原始作者资料支持不确定性/变异层级/成本原则，不提供通用次数。此次只复用两批汇总，不重扫包、重算或测试；用户DOCX保持。
 
-**单一推荐/停点：**未来共同warmup3候选；repeat6完整平衡block仅成本候选，最终repeat/绝对精度/数值政策未冻结。缺同政策profile依据，旧P1-w1不能验证w3。唯一补证提案为同五条件3block新P0/P1-w3相邻配对，额外30进程/15profile、约70～90min/35GB工作空间，需用户集中决定新增预算；不实现/打包/执行，不自动扩采或追求显著性。现在无服务器任务，Gate12/Freeze/Formal未启动。
+**单一推荐/停点：**五条件共同w3、三个原block组序的新相邻P0/P1，额外30模型进程/15profile、约70～90min/规划15GB/预留35GB。新批每条件n=3，不拼旧w1成6；先由用户批准追加预算，才做固定版本/单部署ZIP/命令/单ZIP回传并交协调审查。现在不实现/打包/操作服务器。预算或硬失败即停，不自动retry/替补/加采；保留所有有效值、负差与对照，不按显著性/波动归零选规则。
 
-P0性能/P1观测解释、signed差不扣A、硬性身份/边界/依赖/诊断门已有依据；局部缺口保留，数值阈值不按当前unknown0或coverage100%追设。UNKNOWN/NOT_ASSESSED、opaque内部等待未拆、G1投影A/N1单sync B、D/Signature禁用及原报告/证据保持。Gate7～9、Gate10限定G1及N1独立Engineering PASS不变；用户DOCX不覆盖、不纳提交。
+批次后按预定比较、探索性block区间与原值/留出敏感性一次裁决；不足则缩细尺度/稳定收益/P1→P0迁移claim，不删除样本或用工程流程代替证据。P0性能/P1观测解释且不扣A；硬门、UNKNOWN/NOT_ASSESSED、opaque限制、G1投影A/N1单sync B、D/Signature禁用及旧报告保持。Gate7～9、Gate10限定G1及N1独立Engineering PASS不变；Gate12未启动，不授Formal，用户DOCX不纳提交。
 
-以下7.113及更早是历史；首批证据结论有效，“下一步warmup/尚未部署”等已由7.115取代：
+以下7.113及更早是历史；首批证据结论有效，“下一步warmup/尚未部署”等已由7.116取代：
 
 **7.113现行：首批新Pilot可用于限定政策估计，Gate11 BLOCKED（政策未定）。** [首批审查0.1](gate11_first_batch_review_v0_1.md)、[机器汇总](gate11_first_batch_summary_v0_1.json)、[30次原值](gate11_first_batch_durations_v0_1.csv)钉住执行221f46c和封存包；30run/15pair的实际身份/输入/token/干预、45A和30N1逐sync B审查通过，不是稳定性或信息增益。完整CRC/hash为协调窗口核验回传，本窗口独立核源身份及实际消费Raw/派生证据，未重跑完整analyzer/Q0/测试。
 
