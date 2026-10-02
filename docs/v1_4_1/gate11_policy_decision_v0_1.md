@@ -2,6 +2,8 @@
 
 2026-10-01；`G11-POLICY-DECISION/0.1`。Material Passport：ExposedPath / 本地政策设计；数值政策状态 **ANALYZED / PROPOSED**，不是新实验或 Protocol Freeze。
 
+**7.118现行：追加共同w3批次已审查，见[限定Pilot政策收口0.1](gate11_policy_closeout_v0_1.md)，Gate11 PASS、Gate12 NOT_RUN。**§4预定方法未改，实际证据支持有限warmup3适用/有界6block建议及明确claim收缩，不保证10/5ms或稳定性；旧成本上修、无新采集授权。以下7.117/7.116预算提案和待执行语句为历史，不重新执行；最终政策确认/版本签字留Gate12，不把本页或Pilot作为Freeze。
+
 **7.117现行授权追加：用户已批准本页唯一30进程/15profile共同w3批次预算，已进行[最小接线与待审交付](gate11_warmup3_pair_v0_1.md)。**10/5ms、repeat及最终政策仍待审；只批准此有限批次，不自动续采、不授Gate11 PASS。本页以下“预算未批/不实现”保留为7.116形成提案时的历史，不再是当前操作指令；§4裁决方法保持。
 
 **推荐只补一批：五条件共同 warmup3、三个完整 block、相邻 Pass0/Pass1，共30新模型进程/15新profile。**本次仅收敛方案；原60进程预算已耗尽，追加预算未批准，不实现或制作新部署包。Gate11 **BLOCKED**，Gate12 **NOT_RUN**。补证目标是确定可执行的有限政策，不是证明同步干预有效或波动归零。

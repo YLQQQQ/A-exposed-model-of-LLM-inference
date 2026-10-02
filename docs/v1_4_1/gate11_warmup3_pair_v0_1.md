@@ -1,5 +1,7 @@
 # Gate11 共同 warmup3 配对批次 0.1
 
+**2026-10-02现行审查：**本页规定批次已执行，固定470c5afa，30run/15profile/90实际暖机、45A/30N1 B审查通过；[限定政策收尾](gate11_policy_closeout_v0_1.md)记录Gate11 PASS及保留限制。原STOP_FOR_REVIEW/BLOCKED不改，Gate12仍NOT_RUN；下方准备/待审措辞和70～90min成本为当时计划，不是新采集指令。本合同测量/拒绝行为不改。
+
 2026-10-01；`G11-WARMUP3-PAIR/0.1`，未来新采 **Pilot / POLICY ESTIMATION ONLY**。用户已批准额外30模型进程/15profile预算；本地准备不是目标机验证，Gate11 **BLOCKED**，Protocol Freeze未启动。依据[政策决策0.1](gate11_policy_decision_v0_1.md)，不修改研究设计v7.1 / Pre-Pilot协议v2.1的S/A/B公式或已有资格支持域。
 
 ## 固定执行与适用范围

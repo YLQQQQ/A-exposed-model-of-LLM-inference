@@ -1,14 +1,20 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.117](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.118](research_progress.md)。
 
-**7.117现行：共同warmup3追加预算已获用户批准，本地最小接线及固定交付待协调审查；Gate11 BLOCKED。**[新批合同0.1](gate11_warmup3_pair_v0_1.md)复用原配对/测量路径，五条件3block/30新进程/15profile、相邻P0/P1，70～90min/35GB估计。实际3次暖机/未知字段、N1干预及fresh measured流、源身份/硬门保留；旧首批与P0对照不能升级或拼成本批n=6。
+**7.118现行：Gate11限定Pilot政策审查PASS，Gate12仍NOT_RUN。**[唯一当前收尾](gate11_policy_closeout_v0_1.md)、[机器汇总](gate11_w3_pair_summary_v0_1.json)及[30次原值](gate11_w3_pair_durations_v0_1.csv)关联执行470c5afa和新封存包；30入口/15pair、90实际成功暖机、45A及30N1合格单sync B已Raw交叉审查。完整1746文件/1745清单CRC/大小/hash本地流式核验通过。无完整analyzer/Q0/测试或服务器/CUDA/Nsight/模型重跑，原报告/Raw/ZIP不改。
 
-新声明/消费者/编排与默认CPU、显式采集入口在本地验证：10相关文件238 passed，新增批次文件最终40 passed；compileall/PS5.1 parser及封闭dispatch、158链接/schema/预算与diff检查通过。CPU模型/设备及Raw替身不是目标机资格。服务器前置4abb5ea；唯一部署ZIP/准确SHA及整段命令以忽略的本地AI_HANDOFF/交付说明为准。先审静态回执，后单批采集；不自动retry/resume/补采，固定结束/硬失败即停，最终一个ZIP回传。当前未操作服务器或GPU/Nsight/模型。
+政策建议共同warmup3、每进程repeat1、正式6完整平衡block；有限conditioning/次序平衡和成本依据，不承诺10/5ms、稳态或稳定收益。P0性能/P1观测解释，全部有效值及负差保留、whole-block分析、不扣A、不跨批/暖机混池。实际扰动仍−36.030%～+61.908%，N1方向反转保留；缩细微稳定收益/排名与精确P1→P0迁移claim，不追加Pilot。实耗约99.87min/21.03GB展开，未来6block仅200～240min/42.1GB原件/90GB空间粗预算，非执行授权。
 
-预算后一次确定政策/最终repeat/有限claim，10/5ms仍待审精度候选，3block区间仅探索性；P0性能/P1观测解释、所有有效原值/负差保留，不扣A、不追显著。UNKNOWN/NOT_ASSESSED、opaque及分域限制、D/Signature禁用、旧原件/报告、用户DOCX保持；Gate12未启动。下方7.116及更早是历史，未批准预算/不实现等措辞已被本条取代。
+硬性身份/边界/drain/依赖/terminal/诊断门不变；有界局部缺口保留unattributed/原因、不可界定拒绝。G1投影A、N1单sync B、opaque内部等待未拆、UNKNOWN/NOT_ASSESSED及D/Signature禁用保持，不授完整新版Q0/信息增益/Formal。用户DOCX不覆盖/不纳提交，执行commit与收尾commit分开。
 
-**7.116现行：补证前政策与预算已收敛为待审候选，Gate11 BLOCKED。** 唯一当前方案为[政策决策0.1](gate11_policy_decision_v0_1.md)；[两批审查](gate11_warmup_policy_review_v0_1.md)/[汇总](gate11_warmup_policy_summary_v0_1.json)保持证据依据，执行4abb5ea与221f46c不混池。原60预算已用尽，未批准额外预算，不得再次执行下方旧交付。
+**唯一下一步：Gate12本地确认上述有限政策与claim并绑定代码/registry/schema/analyzer/统计/绘图/排除及签字版本。服务器现在无需操作，无新部署包/采集任务。**下方7.117及更早全为历史，旧“当前/待执行/预算未批”等不是现行指令。
+
+### 历史7.117：共同w3接线与待审交付
+
+当时本地238相关CPU/新增文件最终40 passed、compileall/PS5.1解析/158链接通过；前置4abb5ea。现在目标批次已执行并由上方7.118取代待部署/采集状态，不重复运行旧交付。
+
+**7.116历史：补证前政策与预算收敛为待审候选，当时Gate11 BLOCKED。** 当时方案为[政策决策0.1](gate11_policy_decision_v0_1.md)；[两批审查](gate11_warmup_policy_review_v0_1.md)/[汇总](gate11_warmup_policy_summary_v0_1.json)保持证据依据，执行4abb5ea与221f46c不混池。原60预算当时用尽、额外预算未批；这些待执行指令已被7.118取代，不重复旧交付。
 
 精简表区分Request/Prefill、单步Decode、N1差值、观测A/B与profile扰动；h=10/5ms是有限解释候选，不是已冻结阈值/等价带，n=3/6/12只比较精度—成本，不宣称repeat6足够。原始作者资料支持不确定性/变异层级/成本原则，不提供通用次数。此次只复用两批汇总，不重扫包、重算或测试；用户DOCX保持。
 
