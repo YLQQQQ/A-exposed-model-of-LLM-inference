@@ -1,5 +1,19 @@
 # ExposedPath 科研进度清单
 
+## 7.119 Gate12本地科学适用性审查与冻结草案（2026-10-02）
+
+**Gate11限定Pilot政策PASS保持；Gate12 NOT_RUN，已开始本地准备但未冻结，Gate13/14未启动。** 当前只保留[科学适用性审查0.1](gate12_scientific_readiness_review_v0_1.md)和[协议冻结草案0.1](gate12_protocol_freeze_draft_v0_1.md)两个新入口，7.118实物/政策依据继续有效；没有服务器、CUDA/Nsight/模型/追加Pilot或Formal任务。用户研究设计DOCX修改保留，不覆盖、不纳提交。
+
+读当前研究设计v7.1/Pre-Pilot协议v2.1及已批准路线A/分域/opaque合同，固定G1两输入端点的解释信息问题和N1 marker/同步两个必要对照。公平baseline同P1目标窗/clock/输入/registry，包含常规聚合与timeline，不通过少给字段制造优势；明确正确性、机制事实、信息增益、性能收益四层及“不支持/不确定”。G1只有32/512、输出2，不能提出输入响应图谱/长decode或默认流完整B；N1不将单sync hidden加总或迁移到自然G1，D/Signature禁用。
+
+复用共同w3汇总和原值，未重扫全包/重跑analyzer/Q0/测试。消费两个已有来源hash绑定的小manifest，复算G1同block差、A分量与单sync B自身波动。G1 P0 Request差13.4596/19.9525/14.0855ms，SD3.5817ms；N1两项P0 Request差SD101.3507/85.0782ms。六block只由有限成本/原三序加镜像、pass先后与位置平均平衡支持，不是完整Latin-square/随机化或10/5ms保证；候选精度未获支持就如实保留，不另设效应/等价带、不追采到显著。
+
+**集中待确认：是否接受P0性能与P1机制并列、撤去精确P1→P0组成/细微稳定收益claim，以五条件共同w3/repeat1、6完整block开展未来有限Formal？** 推荐接受这一有限信息增益检验，公平baseline可能已足够且允许负结果；若自然P0精确组成/5ms收益为最低目标，本设计不足，不能用“允许不确定”伪装达标。明确列出原DOCX5/10%overhead、dropped=0/重跑等政策与批准窄路线的拟覆盖，当前只草案、不静默改正文或历史资格。
+
+实际代码仍Engineering/Pilot-only（roles/Canonical gate8_sources及报告false）；冻结前确有最小Formal封套接线及同窗baseline/成块统计CPU复算、最终实现commit/源码/registry/schema/hash与有限资格签字绑定缺口。旧数据不能仅改role升级；不重写S/A/B或恢复完整新版Q0，变化影响增量而非机械重采。假设/UNKNOWN/NOT_ASSESSED、opaque内部等待未拆及native backend未知保持。未来60进程/30profile粗预算200～240min、42.1GB原件/90GB含审查，尚非授权或默认执行计划。
+
+本轮只新增两份Markdown及同步入口；相关算术/原值、六block顺序预算、来源/隐私/链接/diff检查按本轮实际完成记录，不用历史测试冒充。首次数值自检误用四舍五入后的手录端点整数而停；改为源JSON原整数复核后通过，未修改源汇总/Raw/analyzer。Gate7～10限定PASS及N1独立Engineering PASS保持；下一项是上述一次集中范围确认，之后才最小本地角色/复算绑定，不要求服务器操作或交付包。
+
 ## 7.118 Gate11共同warmup3实物审查与限定Pilot政策收口（2026-10-02）
 
 **Gate11 PASS：限定Pilot政策评估和Freeze输入准备完成，Gate12～14仍NOT_RUN。**[当前收尾0.1](gate11_policy_closeout_v0_1.md)、[机器汇总](gate11_w3_pair_summary_v0_1.json)及[30次原值](gate11_w3_pair_durations_v0_1.csv)为唯一当前入口；以下7.117及更早的待部署/待采集/BLOCKED状态均保留为历史，不重启旧指令。不是30/30即PASS或证明稳定性，而是同政策实际链/硬门成立、有限运行和质量政策、成本与claim收缩已一次记录；下一阶段还须确认政策并绑定Protocol Freeze，无本轮采集/执行授权。
@@ -940,7 +954,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 
 ## 1. 当前快照
 
-- 清单版本：`7.118`（下方较早逐条记录为历史；当前状态以本节现行字段及顶部7.118为准）
+- 清单版本：`7.119`（下方较早逐条记录为历史；当前状态以顶部7.119及Gate摘要为准）
 - 7.57路线收敛：[Route A执行/退出v0.2](gate8_route_a_execution_v0_2.md)把未来Gate8结论限定A_SCOPE_ENGINEERING_ONLY的五项实际证据，B/Derived后移，不冒充旧全链通过、不设真实unknown=0门。runner未固定attention backend，旧1-byte内部D2H/sync须纳入T；本地已知selector可能默认SDPA。复用快照工具新增qwen-request/0.1选择、回执0.2，限定7源文件；不读DLL/模型、不导入目标包。先RED后实现，21项工具测试（含隔离子进程禁止包导入/native/网络）及compileall/diff通过；未重跑核心全量，7.55的1379/5结果只属于当时实现。仅准备一次目标来源补证，无部署/实验；回传仍不能闭合必要依赖则停止，不扩搜索。
 - 7.56有界只读收口：[默认流后缀等价备忘录](gate8_request_suffix_equivalence_review_v0_1.md)。直接只读旧QwenSQLite：每候选request有3492K/3copy/3memset及3次stream sync，额外内部同步不能只按Token标签忽略；已记录Q同TID/context/NULL stream，不等于无遗漏。严格受证单FIFO Q条件下W_Q/唯一terminal/A可条件等价，W_full/B历史仍可能不同；独立反例显示另一blocking stream会使wait40与10不同。现有producer/资料未证明来源闭合，当前没有单个现成充分补证，不建议重复采集或再传泛化安装包。0.1实现及合同不改，服务器无动作；Gate7 PASS、新Q0/Gate8 NOT_RUN。
 - 7.55当前实现：[request/drain A范围amendment 0.1](gate8_request_drain_scope_amendment_v0_1.md)。用户批准前缀完成证书＋合格Q独立A资格；旧MC正文及S/A-B/Q0不改。新增文件入口/显式reader，保留原physical S/B，后缀证明不冒充W；源身份、真实drain scope、时序、资源重建、跨线程/迟发、后缀S失败均拒绝。仅SYNTHETIC_CONTROLLED_ORACLE来源，本地确定性验证不是新Q0资格；真实来源SOURCE_NOT_QUALIFIED，默认流尚不在首版支持域。collector暂停，无服务器动作。
@@ -985,14 +999,14 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 7.34后续用户回传（原件待收）：0.2首次export PASS，audit因`RAW_TABLE_MISSING:CUPTI_ACTIVITY_KIND_MEMSET` BLOCKED，尚未本地核验实际schema。先据对应版本的按需表规则审计，不默认缺表为空、不重采/重export；若只需分析adapter修复，使用原输入新目录离线复验。Gate8/新Q0仍NOT_RUN。
 - 7.33后续用户回传（原件待收）：07625b7的0.2窄受控capture已结束，run `controlled_20260926T133649Z_8dd7210fc970474eb1b6358a9e91d8cd`，plan/REP生成、capture exit0；未export/analysis/模型。本窗口尚未取得完整目录，不能声称trace语义或文件身份链通过。下一步仅到件只读审计及新run绑定后处理草案；Gate8/新Q0仍NOT_RUN。
 - 7.32验证：37项受控定向通过；本地Python3.12.7 CPU-only全量1169 passed/5 skipped（nvcc编译项），compileall/合同37/37/Canonical7模块/oracle/diff-check通过。不是目标机新native编译或采集资格。
-- 最近更新：`2026-10-02`（7.118）
+- 最近更新：`2026-10-02`（7.119）
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：`docs/current/ExposedPath_实验协议.docx`，文内版本 `v2.1`；仍为 `Pre-Pilot`，不是 `Protocol Freeze`
-- 当前研究阶段：`Pilot`（限定政策估计，非Formal）
+- 当前研究阶段：Gate12本地科学适用性与Protocol Freeze草案准备（未冻结，非Formal；已有数据仍Pilot）
 - 当前工作入口：根目录 `main`；目录约定见 `docs/repository_layout.md`。Gate7历史封存验收执行commit为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`。N1历史Engineering执行V0为c21d835、Vmarker/V16为d25b4d1；新Pilot首批执行221f46c；审查提交不是新执行身份。
-- 当前数据资格（7.118）：Gate6历史Engineering/Q0结论保持；[首批221f46c及warmup对照4abb5ea](gate11_warmup_policy_review_v0_1.md)与[新共同w3配对470c5afa](gate11_policy_closeout_v0_1.md)各自可用于限定Pilot政策估计，不混池/升级。累计90进程/30profile预算结束，Gate11政策审查PASS不是Formal资格；尚无Formal合格数据，UNKNOWN/NOT_ASSESSED不变。
-- 当前 Gate 状态（7.118）：Gate0～7历史PASS；Gate8限定Engineering PASS、Gate9限定分域PASS；[Gate10 PASS仅选定G1三点一次Engineering可行性](gate10_closeout_v0_1.md)，容量边界/最大长度/batch未探索，不授完整或统计稳定域；[N1模型三组Engineering可行性独立PASS](n1_model_feasibility_closeout_v0_1.md)。[Gate11限定Pilot政策审查PASS](gate11_policy_closeout_v0_1.md)，共同w3/有界6block建议/硬门与claim收缩有依据，不保证10/5ms或稳定性。Gate12～14 NOT_RUN；不授完整新版Q0或Formal资格，原报告/UNKNOWN/NOT_ASSESSED与旧BLOCKED不变。
-- 当前最高优先级（7.118）：Gate12本地确认政策/有限claim与最终执行、分析、排除/统计/绘图和签字版本；现在无需服务器操作或新Pilot。不得将Pilot/旧Engineering升级为Formal，h不是阈值或保证，不自动加采；下方历史待预算/待部署/待采集语句均不再是现行操作指令。
+- 当前数据资格（7.119）：Gate6历史Engineering/Q0结论保持；[首批221f46c及warmup对照4abb5ea](gate11_warmup_policy_review_v0_1.md)与[新共同w3配对470c5afa](gate11_policy_closeout_v0_1.md)各自可用于限定Pilot政策估计，不混池/升级。累计90进程/30profile预算结束，Gate11政策审查PASS不是Formal资格；尚无Formal合格数据，UNKNOWN/NOT_ASSESSED不变。本轮两份草案不是新数据或资格。
+- 当前 Gate 状态（7.119）：Gate0～7历史PASS；Gate8限定Engineering PASS、Gate9限定分域PASS；[Gate10 PASS仅选定G1三点一次Engineering可行性](gate10_closeout_v0_1.md)，容量边界/最大长度/batch未探索；[N1模型三组Engineering可行性独立PASS](n1_model_feasibility_closeout_v0_1.md)。[Gate11限定Pilot政策审查PASS](gate11_policy_closeout_v0_1.md)，不保证10/5ms或稳定性。Gate12 NOT_RUN但两份本地审查/冻结草案可审阅，尚缺范围确认及最小Formal封套/统计/baseline/最终身份签字；Gate13/14 NOT_RUN。原报告/UNKNOWN/NOT_ASSESSED及历史资格不变。
+- 当前最高优先级（7.119）：集中确认[Gate12草案](gate12_protocol_freeze_draft_v0_1.md)的有限P0/P1 claim、窄支持域Formal适用与n6预算，再完成最小本地角色封套/同窗baseline/统计及最终版本签字；现在无需服务器操作、新Pilot或部署包。未确认/未绑定不能Gate12 PASS或生成Formal任务；下方历史待预算/待部署/待采集语句均不再是现行操作指令。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -1357,10 +1371,10 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ### Gate 12：Protocol Freeze
 
-**Gate verdict：`NOT_RUN`。** 只有前置 Gate 完成后才允许冻结。
+**Gate verdict：`NOT_RUN`（7.119）。** 本地[科学适用性审查](gate12_scientific_readiness_review_v0_1.md)/[冻结草案](gate12_protocol_freeze_draft_v0_1.md)完成，不是已冻结或Formal授权；限定claim/阶段适用与n6预算待集中确认，真实Formal封套、baseline/统计版本及最终身份绑定尚缺。
 
-- [ ] `EP-G12-01`～`EP-G12-04`（未开始）冻结代码提交、analyzer/schema、平台栈、协议版本、workload matrix、seed/input digest、repeat、Pass0/Pass1 配对、排除规则、质量 gate、统计方法、绘图方案与 N1/G1/G2 claim 评估规则。
-- [ ] `EP-G12-05`（未开始）建立冻结后实质变更的新版协议及 Formal 数据失效规则。
+- [ ] `EP-G12-01`～`EP-G12-04`（本地草案已准备，未冻结）五条件/共同w3/6完整block建议、预定对照/统计/图表/质量及解释限制可审阅；最终执行/analyzer/schema/registry/角色封套/hash与有限资格仍需绑定签字。G2/D/Signature后移不启用，10/5ms未保证，P1不当P0精确组成。
+- [ ] `EP-G12-05`（新版/失效规则草案已列，未签字实施）冻结后实质修改必须新协议、标明受影响Formal失效，不回写旧Raw/报告/角色或挑有利输入统一重算。
 
 ### Gate 13：N1 与 G1
 
@@ -1406,6 +1420,8 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ## 7. 固定执行顺序与最近任务
 
+**7.119现行覆盖：** Gate12两份草案已可审阅但NOT_RUN；唯一下一项是有限P0/P1 claim、窄支持域Formal适用与n6预算集中确认，再完成最小本地角色封套/同窗baseline/统计及最终身份签字。无新Pilot、部署包或服务器步骤；Gate11 PASS限定政策评估，不授正式科学结论。以下7.118及更早的下一步是历史，不重复检查/采集。
+
 **7.118现行覆盖：** Gate11限定政策审查PASS，唯一当前入口[政策收尾0.1](gate11_policy_closeout_v0_1.md)；没有本阶段必要新实物阻塞，不再执行旧Pilot/部署包。下一项Gate12本地确认共同w3、6完整block建议及有限claim并冻结版本/统计/排除/图表；精度不保证、UNKNOWN/NOT_ASSESSED及历史原报告不变。现在无服务器操作，以下覆盖语句均历史。
 
 **7.114当前覆盖：** Gate11首批Pilot审查保持；原计划P0 warmup1/3最小本地接线/待审交付完成，目标批次未执行，Gate11 BLOCKED。30新进程/0profile用完60预算，不同时续profile、不自动执行或加采。Gate10范围与N1独立Engineering PASS保持；以§1和[对照合同](gate11_warmup_control_v0_1.md)为准，下方历史状态不重启。
@@ -1449,6 +1465,8 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 **Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
 ## 8. 计划调整记录
+
+7.119（2026-10-02）：按用户授权完成Gate12本地科学审查及两份冻结草案，明确公平baseline/负结果、P0性能与P1机制双对象及精确迁移目标损失；六block推荐依据成本/有限次序平衡，不保证10/5ms。Formal阶段适用/预算仍待集中确认，当前实际角色消费者只接Engineering/Pilot，列出最小封套/统计/baseline版本与身份签字缺口而不扩Q0/平台。未修改业务/测量语义、DOCX或Raw、未冻结、无Formal数据或执行授权；Gate11限定PASS、Gate12 NOT_RUN。
 
 7.118（2026-10-02）：已批准共同w3追加Pilot实物一次审查完成；30run/90实际暖机/15pair、45A/30N1单sync B硬门有证据，按7.116预定方法完成有限运行/质量/扰动与精度政策。建议正式6完整平衡block、共同w3、repeat1，不承诺精度/稳定收益；撤去精细E2E排名/精确P1→P0迁移claim，保留有限观测归属与信息增益待检问题。预算结束不再加采，Gate11限定政策PASS、Gate12未启动；不改S/A/B/支持域/诊断门，不冻结Protocol或影响Formal（尚无），原件/旧判定及用户DOCX保留。成本按新实物上修而非沿旧估计部署。
 

@@ -1,6 +1,12 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.118](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.119](research_progress.md)。
+
+**7.119现行：Gate12本地准备完成两份可审阅草案，Gate12 NOT_RUN，Formal不启动。** [科学适用性审查0.1](gate12_scientific_readiness_review_v0_1.md)和[冻结草案0.1](gate12_protocol_freeze_draft_v0_1.md)是当前入口；Gate11限定政策PASS和7.118实物继续有效。只复用Pilot汇总/原值、消费两个有来源hash的小manifest，算术/顺序/链接及文档核对；不重扫全包、不跑测试/analyzer/Q0/服务器/模型/CUDA/Nsight，用户DOCX不覆盖、不纳提交。
+
+推荐有限P0性能/P1观测机制双对象、公平常规指标与timeline对照、共同w3/repeat1和6完整镜像block；可检有限信息增益及明确负结果，不能检精确P1→P0组成、细微稳定收益、广域输入规律。n6只有成本/有限次序平衡依据，不保证10/5ms/独立平稳；N1两项必要对照与有效长值/负差保留。G1只投影A、N1合格单sync B、opaque内部等待未拆、UNKNOWN/NOT_ASSESSED、D/Signature禁用保持。
+
+**下一项集中确认：是否接受草案的有限claim/窄支持域Formal适用和六block固定预算？** 确认后才最小本地Formal封套贯通和同窗baseline/成块统计复算及最终commit/schema/registry/hash、资格签字绑定。当前实际消费者只接受Engineering/Pilot，不能改label就采Formal。草案完成不授Gate12 PASS；服务器现在无需操作，没有新部署包或默认可运行任务。下方7.118及更早均历史收尾/指令，不重新执行。
 
 **7.118现行：Gate11限定Pilot政策审查PASS，Gate12仍NOT_RUN。**[唯一当前收尾](gate11_policy_closeout_v0_1.md)、[机器汇总](gate11_w3_pair_summary_v0_1.json)及[30次原值](gate11_w3_pair_durations_v0_1.csv)关联执行470c5afa和新封存包；30入口/15pair、90实际成功暖机、45A及30N1合格单sync B已Raw交叉审查。完整1746文件/1745清单CRC/大小/hash本地流式核验通过。无完整analyzer/Q0/测试或服务器/CUDA/Nsight/模型重跑，原报告/Raw/ZIP不改。
 

@@ -2,6 +2,8 @@
 
 2026-10-02；`G11-POLICY-CLOSEOUT/0.1`。**Gate11 PASS：限定Pilot的政策评估与Freeze输入准备完成，不是Protocol Freeze、Formal资格、统计稳定性或信息增益通过。**沿用[预定裁决方法](gate11_policy_decision_v0_1.md#4-批次结束后的政策裁决方法预先固定非找显著性)，通过依据是实际同政策配对可用、硬门成立，以及有界运行/解释政策和claim收缩明确；不是30/30或bootstrap较窄。Gate12仍NOT_RUN，政策需在下一阶段确认并绑定版本，当前不采集。
 
+7.119后续入口：[Gate12科学适用性审查](gate12_scientific_readiness_review_v0_1.md)与[冻结草案](gate12_protocol_freeze_draft_v0_1.md)已本地准备，待集中范围确认及最小角色/统计/版本绑定；不是Gate12 PASS或采集任务。下文Pilot实物与原政策依据不改。
+
 ## 1. 唯一新证据及审查范围
 
 执行commit **`470c5afa6400a77fb79692699cdd8cecc47b314d`**，与本报告的文档收尾commit分开。封存包`gate11_w3_pair_470c5afa6400_pilot.zip`，653736655 bytes，SHA256 `64F930679FAF7B2B55538E4381AB4A6A8B8652CFE8892BB21EBDFFBDC2A0884D`；清单SHA256 `4EB0D72252D1754C1CC374CDD130A9686DEABA2BDA61CAB02FBEA5559A1ABADA`。本地流式核验1746个文件/1745项清单、唯一安全路径、完整覆盖、CRC及全部大小/hash；原件和原`WARMUP3_PAIR_BATCH_COMPLETE_STOP_FOR_REVIEW`/BLOCKED报告不改。定位用本机交接索引，公共文件不提交私有路径/Raw。
