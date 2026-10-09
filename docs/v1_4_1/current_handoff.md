@@ -1,6 +1,10 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.121](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.122](research_progress.md)。
+
+**7.122现行：Gate12限定PASS已签署；Gate13/14 NOT_RUN。** 用户已接受有限P0性能/P1机制、限定Formal适用与六block预算；[签署发布](gate12_protocol_signed_v0_1.json)/[收尾](gate12_closeout_v0_1.md)是当前身份。协议hash389a28a1…，执行/分析固定e38fa91850b8f31e17cc0ee264987ef3c1313d7d，文档/外部交付提交不替代执行身份。旧候选与Engineering/Pilot/BLOCKED原件原判定保留；UNKNOWN/NOT_ASSESSED、opaque/G1只A/N1单sync B与D禁用不变，不授完整新版Q0/精确P0组成/10或5ms保证。
+
+下一项：[Gate13固定单包](gate13_delivery_v0_1.md)先交协调窗口审查；前置470c5afa，默认只部署/必要CPU，静态单ZIP审核后用户独立显式采集未来六block（60新模型进程/30profile），不是自动启动或PASS。本轮不操作服务器。实际私有路径、ZIP大小/hash和完整命令在本地交付索引；200–240min/42.1GB/90GB为粗估，新增CPU复核/封包/传输另计。硬失败或预算结束停，无重试/补采；活动写入者不明拒绝封包/清理。审查归档后才生成准确待删清单和LiteralPath逐文件清理回执，当前未删除任何证据。用户DOCX保持不纳提交。以下所有7.121及更早“现行/待确认”均为历史。
 
 **7.121现行：Gate12本地实现与未签署候选已绑定，Gate12 NOT_RUN。** [候选0.1](gate12_freeze_candidate_v0_1.json)执行/分析均为e38fa91850b8f31e17cc0ee264987ef3c1313d7d，125个Git源码/合同hash；候选/交接文档提交不是执行commit。协议内容hash389a28a17bec830e4f32bea72c259dce15ba279ce69fc20caebfdca88a1326e2，候选文件hash78cff3228d00b8410a42d51930df4556121eaf879eb95b430c9365ac8788e761，approval=null，预算未批准。候选锁定实现提交中的草案快照；下方后续文字用于审阅说明，不替换其锁定hash。
 
