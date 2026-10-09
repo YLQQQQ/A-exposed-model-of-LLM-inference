@@ -120,3 +120,7 @@ Pre-Pilot原设计§2.11的5%目标/10%门、协议§6.2 dropped=0/失败重跑�
 11/11风险核对沿§5保持：按condition/pass/block分层、不推广平台总体、不择样/删长值或按allocation/profile差过滤、不从跨批变窄推因果、固定全部对照/预算与signed差、无p值择claim/伪重复/零差等价。基率型诊断不适用；新CPU数据仅检查实现，不重新估计Pilot精度。六block仍是有限预算/顺序平衡，不保证10/5ms；允许“不支持增益/不确定”，不以更多bootstrap迭代替代样本量。最终仍须用户集中确认此有限claim及预算并签署完整内容hash。
 
 最终本地证据：九文件相关回归224 passed、0 failed、0 skipped（336.25s）；实际命令及临时目录ACL初次失败见[进度7.120](research_progress.md)。compileall、170相对文件链接、Formal schema校验、4份生成SVG的XML结构、保护语义文件zero diff、公开内容私有路径及用户DOCX原SHA检查通过。图表结构检查不是研究解释验收。代码审查逐入口核对版本分派、外部批准与prospective时序、实际输入/角色/文件来源、未知映射、joint block重采样与逐sync B不加总；没有发现本次范围内必须新增平台实物的测量变化。签署及执行授权仍是独立未决项。
+
+版本绑定已收口：[未签署候选0.1](gate12_freeze_candidate_v0_1.json)执行/分析e38fa91850b8f31e17cc0ee264987ef3c1313d7d，protocol SHA256389a28a17bec830e4f32bea72c259dce15ba279ce69fc20caebfdca88a1326e2。候选引用该实现提交的本审查/草案快照，后续文档提交不是执行身份；125个hash锁定实现、schema/registry和限定资格，不自动授全面Q0或未启用功能。当前DOCX保留本地用户修改，候选仅记录其审阅来源hash，不提交或要求服务器覆盖。
+
+推荐方案仍可检验原研究的有限信息增益：同P1 scope的常规cost/timeline与基于必要依赖的A/单sync B解释公平比较，baseline已经足够则不支持增益、证据或方向混合则不确定。它不承担自然P0精确组成迁移或细微稳定收益。六block只为固定预算/次序平衡，正式预算及签署尚未批准；本地实现完成不等于Gate12 PASS。唯一待用户集中确认仍是上述有限claim/阶段适用、预算和完整候选签署，无新增平台、实验或工程设施前置。

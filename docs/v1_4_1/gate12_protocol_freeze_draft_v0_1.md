@@ -101,9 +101,9 @@ baseline具体口径不得偷换：raw API全量包含同步，另列已识别sy
 **冻结必需项及历史缺口（2026-10-09：第2/3项本地实现已验证，见§7；第1/4项仍待确认/绑定签署，不能Gate12 PASS）：**
 
 1. 用户集中确认本草案的有限claim、Formal阶段适用及六block固定预算；不承诺10/5ms或P1→P0组成迁移。
-2. 新Formal角色/冻结协议引用贯通实际producer→receipt/ledger/NVTX→Canonical→消费者/报告的**最小显式封套**；当前Engineering/Pilot-only门保持至新版本就绪。CPU文件链必须拒绝仅改role、旧Pilot升级、错协议/hash/run/pass、配置或token冲突；不能复制一套runner或改变测量同步。
-3. 最小同窗baseline/配对统计入口的确定性CPU检查与固定hash（signed差、错scope/mapping、union嵌套、whole-block单位、固定预算/错误停止）；将统计/图表生成版本绑定，未完成不默认现有Pilot脚本可跑Formal。
-4. 将最终执行commit、clean/source字节、分析commit、registry/schema/profile全部hash和受影响资格复用矩阵写入签字冻结记录。当前审查基线05cfc9edbdbf1d29b4d9e9bd95a1baa08da2a268、Pilot执行470c5afa，**都不是已经选定的Formal执行身份**。先固定实现commit，再冻结引用其hash；不让执行产物反向包含尚未产生的自身commit/hash。文档收尾commit与执行commit分开。
+2. 新Formal封套producer→receipt/ledger/NVTX→Canonical→消费者/报告已在本地实际文件入口完成。224项相关CPU回归包含仅改role/旧数据升级、错协议/hash/run/pass、配置/token等拒绝；未签署仍不能接受Formal结果。旧Engineering/Pilot读取保留，不复制runner或改变测量同步。
+3. 同窗baseline及成块配对统计/图表已完成独立预期与文件链检查，源码hash绑定如下；CPU合成事实不授目标机或全面Q0资格。signed差、错scope/mapping、union嵌套、不完整block及固定失败处理保留。
+4. 执行/分析版本已绑定e38fa91850b8f31e17cc0ee264987ef3c1313d7d，schema/registry/profile及限定资格来源见候选；签署仍未完成。旧审查基线05cfc9e和Pilot执行470c5afa均不充作Formal执行commit。候选/收尾文档提交另行，不包含自身hash。
 
 这些是本地封套/复算/确认缺口，不提出新平台实验。若只改角色/封套而边界/流/插桩/S/A/B无变化，定向CPU链+旧资格可复用；若实际改变提交/同步/依赖/clock，则仅相应资格增量需审查，不能自动继承或静默扩域。
 
@@ -140,3 +140,11 @@ baseline具体口径不得偷换：raw API全量包含同步，另列已识别sy
 ### 最终本地验证
 
 恢复后的实际九文件命令及temp ACL初次失败记录见[进度7.120](research_progress.md)：224 passed，0 failed，0 skipped，336.25s。覆盖旧Pilot、N1及token-ready回归、未签署/旧数据升级/错身份配置、baseline同窗/嵌套/缺mapping、signed配对/完整block及60run CPU替身文件链；compileall与diff-check通过。不是60次模型、目标机CUDA、真实Nsight或正式实验。独立手算预期与文件hash复核不授全面新Q0资格。
+
+### 未签署候选身份及集中确认
+
+[绑定候选0.1](gate12_freeze_candidate_v0_1.json)采用`exposedpath-freeze-candidate-record/0.1.0`，执行/分析均为**e38fa91850b8f31e17cc0ee264987ef3c1313d7d**。125个Git源码/合同/资格hash取该提交，包含本草案和科学审查在实现提交中的快照；当前文档仅补充绑定说明，不以文档HEAD替换其源码或hash。候选自身不在artifact集合，实际运行字节另seal。
+
+协议规范化内容SHA256：`389a28a17bec830e4f32bea72c259dce15ba279ce69fc20caebfdca88a1326e2`；候选文件SHA256：`cdd6764a2f37bf6089b1c916685a7040571fb221e58a95ec1ba1bb8765cd234e`。approval=null/PENDING_USER_SIGNATURE；没有签署回执、执行脚本或服务器预算授权。绑定设备/模型/input/software来自已有Pilot小manifest的复核引用，不证明服务器此刻未变、不升级Pilot结果。schema/registry版本及限定资格来源完整列于候选；hash锁不授列出源码中其他功能资格。
+
+集中确认项：是否接受本草案限定P0性能/P1观测机制、公平baseline及负结果判据和窄资格Formal适用，并批准五条件w3/repeat1、六完整block的固定预算与上述完整候选签署？估计60进程/30profile、200～240min、42.1GB原件/90GB空间，不保证10/5ms。批准者/批准原文与完整hash须独立封存；签署和未来服务器执行授权分开，当前仍Gate12 NOT_RUN。
