@@ -170,6 +170,8 @@ def analyze_model(output,prepared,collector_version):
         'stage_ledger':'producer/stage_ledger.json'}
     if 'pilot' in manifest:
         names['pilot_tokens']='pilot_tokens.json'
+    if 'formal' in manifest:
+        names['formal_tokens']='formal_tokens.json'
     receipt=write_input_receipt(output/'input_receipt.json',collector_version=collector_version,
         capture_session_id=manifest['run_id'],artifacts=dict(raw=output/'capture.nsys-rep',
         sqlite=output/'capture.sqlite',export_report=output/'postprocess_report.json',
@@ -188,9 +190,12 @@ def main():
     parser.add_argument('--execute-engineering-diagnostic',action='store_true',required=True)
     parser.add_argument('--engineering-a-only','--engineering-domain',dest='engineering_a_only',action='store_true')
     parser.add_argument('--pilot',action='store_true',help='Require prospective G11 Pilot declaration (no role relabelling)')
+    parser.add_argument('--signed-formal-protocol',action='store_true',help='Explicit opt-in; exact external human approval is required')
     args=parser.parse_args()
     if args.pilot and not args.engineering_a_only:
         raise ValueError('PILOT_DOMAIN_ENTRY_REQUIRED')
+    if args.signed_formal_protocol and (args.pilot or not args.engineering_a_only):
+        raise ValueError('FORMAL_DOMAIN_ENTRY_REQUIRED')
     output=args.output.resolve()
     if output.exists(): raise FileExistsError(output)
     if not args.engineering_a_only and args.python.resolve()!=(ROOT/'.venv/Scripts/python.exe').resolve():
@@ -205,6 +210,11 @@ def main():
         validate_declaration(manifest)
         if args.pilot != ('pilot' in manifest):
             raise ValueError('PILOT_COLLECTION_OPT_IN_CONFLICT')
+        if args.signed_formal_protocol!=('formal' in manifest):
+            raise ValueError('FORMAL_COLLECTION_OPT_IN_CONFLICT')
+        if args.signed_formal_protocol:
+            from exposedpath.formal_protocol import validate_prepared
+            validate_prepared(manifest,args.prepared,ROOT)
         target=validate_probe(manifest['target_python'])
         if target['environment']!=environment() or str(args.python.resolve())!=target['requested_executable']:
             raise ValueError('TARGET_PYTHON_COLLECT_ENVIRONMENT')
@@ -226,6 +236,9 @@ def main():
                 scientific_outputs_allowed=False,collection=process)
     if args.pilot:
         report.update(pilot=manifest['pilot'],run_role='PILOT',data_role='Pilot',gate11_verdict='NOT_RUN')
+    if args.signed_formal_protocol:
+        from exposedpath.formal_protocol import reference
+        report.update(formal=manifest['formal'],formal_reference=reference(manifest['formal']),run_role='FORMAL',data_role='Formal')
     try:
         if process['status']!='COMPLETE': raise ValueError('Collection failed/timeout; no export or retry')
         if isolated_receipt is not None:
@@ -257,11 +270,13 @@ def main():
                 q0_status='NOT_RUN',dropped_records_status='UNKNOWN',measurement_validity='NOT_ASSESSED')
             if args.pilot:
                 report.update(status='PILOT_RUN_COMPLETE_PENDING_REVIEW',schema_version='gate11-pilot-collection/0.1.0')
+            if args.signed_formal_protocol:
+                report.update(status='FORMAL_RUN_COMPLETE_PENDING_REVIEW',schema_version='gate12-formal-collection/0.1.0')
     except (ValueError,OSError,KeyError) as exc:
         report['error']=str(exc)
     (output/'collection_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(report['status'])
-    return 0 if report['status'] in ('DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW') else 1
+    return 0 if report['status'] in ('DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW','FORMAL_RUN_COMPLETE_PENDING_REVIEW') else 1
 
 
 if __name__=='__main__': raise SystemExit(main())

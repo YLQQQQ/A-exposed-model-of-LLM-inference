@@ -20,6 +20,10 @@ def declaration(length):
 
 
 def input_length(manifest):
+    if 'formal' in manifest:
+        from .formal_protocol import validate
+        validate(manifest)
+        return manifest['fixed_input_tokens']
     if 'pilot' in manifest:
         from .gate11_pilot import validate
         validate(manifest)

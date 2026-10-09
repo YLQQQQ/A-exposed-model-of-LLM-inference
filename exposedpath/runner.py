@@ -417,7 +417,7 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
         raise ValueError("IDENTITY_CONFLICT: producer PID must be current process")
     if n1_controller is not None and (model_setup is None or not record_stages or not record_drains
                                      or record_load_tasks or (pass_fields['pass_id']!='pass1'
-                                         and pass_fields.get('run_role')!='PILOT')):
+                                         and pass_fields.get('run_role') not in ('PILOT','FORMAL'))):
         raise ValueError('N1_VERIFIED_SETUP_REQUIRED')
     if type(record_load_tasks) is not bool or (record_load_tasks and (not record_stages or model_setup is None)):
         raise ValueError('LOAD_TASK_SETUP_REQUIRED')
@@ -441,7 +441,8 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
         if plan["request_role"] == "warmup":
             boundary_ids = []
         from exposedpath.gate11_warmup import active as warmup_control
-        unknown_warmup=plan['request_role']=='warmup' and warmup_control(pass_fields.get('pilot'))
+        from exposedpath.formal_protocol import control
+        unknown_warmup=plan['request_role']=='warmup' and warmup_control(control(pass_fields))
         requests.append({**plan, "expected_output_tokens":output_len, "actual_output_tokens":None if unknown_warmup else 0,
                          "expected_boundary_ids":boundary_ids, "observed_boundary_ids":[],
                          "outcome":"FAILED", "early_eos":None if unknown_warmup else False, "reasons":["NOT_EXECUTED"]})
@@ -547,7 +548,7 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
     for entry in ledger["requests"]:
         if entry["request_role"] == "warmup":
             try:
-                if warmup_control(ledger.get('pilot')):
+                if warmup_control(control(ledger)):
                     print('[stage] '+entry['identity']['request_id']+' START',flush=True)
                 def warmup():
                     call=lambda observed:run_warmup(observed, input_ids, attention_mask, output_len, 1)
@@ -557,13 +558,13 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                     warmup()
                 else:
                     stages.observe('warmup',entry['identity'],warmup)
-                entry.update(actual_output_tokens=None if warmup_control(ledger.get('pilot')) else output_len,
+                entry.update(actual_output_tokens=None if warmup_control(control(ledger)) else output_len,
                              outcome="COMPLETE", reasons=[])
-                if warmup_control(ledger.get('pilot')):
+                if warmup_control(control(ledger)):
                     print('[stage] '+entry['identity']['request_id']+' COMPLETE',flush=True)
             except Exception as exc:
                 entry["reasons"] = [f"WARMUP_FAILED:{type(exc).__name__}"]
-                if warmup_control(ledger.get('pilot')):
+                if warmup_control(control(ledger)):
                     print('[stage] '+entry['identity']['request_id']+' FAILED: '+type(exc).__name__,flush=True)
                 break
             continue
@@ -658,6 +659,10 @@ def run_gate8_requests_to_files(*, output_dir, **request_arguments):
         control=active(ledger['pilot'])
         receipt.update(schema_version='exposedpath-pilot-producer-receipt/0.2.0' if control else 'exposedpath-pilot-producer-receipt/0.1.0',
                        pilot=ledger['pilot'],run_role='PILOT',data_role='Pilot',gate11_verdict='BLOCKED' if control else 'NOT_RUN')
+    if ledger['run_role']=='FORMAL':
+        from exposedpath.formal_protocol import PRODUCER_VERSION, reference
+        receipt.update(schema_version=PRODUCER_VERSION,formal=ledger['formal'],run_role='FORMAL',
+                       data_role='Formal',formal_reference=reference(ledger['formal']))
     with (staging/'producer_receipt.json').open('x',encoding='utf-8') as handle:
         json.dump(receipt,handle,sort_keys=True,indent=2)
         handle.write('\n')

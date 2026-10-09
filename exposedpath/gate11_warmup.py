@@ -29,6 +29,8 @@ def schedule(batch_id):
 
 
 def validate_binding(value):
+    from .formal_protocol import active as formal_active,validate_binding as formal_validate
+    if formal_active(value): return formal_validate(value)
     require(isinstance(value,dict),'WARMUP_BINDING')
     from . import gate11_warmup_pair as pair
     if pair.active(value):
@@ -43,7 +45,8 @@ def validate_binding(value):
 def active(value):
     """Shared actual-warmup semantics; both prospective bindings stay closed."""
     from .gate11_warmup_pair import active as pair_active
-    return (isinstance(value,dict) and value.get('version')==VERSION) or pair_active(value)
+    from .formal_protocol import active as formal_active
+    return (isinstance(value,dict) and value.get('version')==VERSION) or pair_active(value) or formal_active(value)
 
 
 def request_plan(binding):

@@ -131,6 +131,9 @@ def seal(prepared,output,root):
         or manifest.get('study_mode')=='N1_INTERVENTION'
         or manifest.get('domain_qualification',{}).get('profile')=='N1_EXPLICIT_STREAM_AB/0.1.0')
     contract={'execution_contract':'N1-VERIFIED-MODEL/0.1'} if n1_intent else {}
+    if 'formal' in manifest or manifest.get('run_role')=='FORMAL' or manifest.get('data_role')=='Formal':
+        from .formal_protocol import validate
+        contract={'execution_contract':validate(manifest)['version']}
     if 'pilot' in manifest or manifest.get('data_role')=='Pilot' or manifest.get('run_role')=='PILOT':
         from .gate11_pilot import validate
         contract={'execution_contract':validate(manifest)['version']}
@@ -156,6 +159,9 @@ def seal(prepared,output,root):
         gpu_observation=dict(physical_index=physical,gpu_uuid=gpu,pci_bus_id=pci),
         input_hashes={name:sha(prepared/name) for name in INPUTS},
         excluded=sorted(excluded),tree_hashes=inventory,git_metadata=git_metadata(root),environment=environment())
+    if 'formal' in manifest:
+        from .formal_protocol import reference
+        value.update(execution_contract=contract['execution_contract'],formal_reference=reference(manifest['formal']))
     require((git(['rev-parse','HEAD']),git(['status','--porcelain']))==before,'PREFLIGHT_CHANGED')
     verify_snapshot(value,prepared,root)
     value.update(issued_wall_ns=time.time_ns(),issued_monotonic_ns=time.monotonic_ns())
@@ -170,6 +176,12 @@ def consume(*,receipt,expected_sha,nonce,prepared,output,root):
     require(value['nonce']==nonce and value['output_root']==str(Path(output).resolve()),'LAUNCH_IDENTITY')
     require(Path(receipt).resolve()==Path(output).resolve()/'auxiliary_preflight.json','RECEIPT_LOCATION')
     require(value['run_id']==read(Path(prepared)/'manifest.json')['run_id'],'RUN')
+    manifest=read(Path(prepared)/'manifest.json')
+    if 'formal' in manifest:
+        from .formal_protocol import validate,reference
+        binding=validate(manifest)
+        require(value.get('formal_reference')==reference(binding)
+            and value.get('execution_contract')==binding['version'],'FORMAL_REFERENCE')
     require(value['git_dirty'] is False and value['git_observation_role']=='PREFLIGHT_NOT_TARGET_GIT_QUERY','GIT_OBSERVATION')
     def fresh():
         for observed,key in ((time.time_ns(),'issued_wall_ns'),(time.monotonic_ns(),'issued_monotonic_ns')):
@@ -179,6 +191,7 @@ def consume(*,receipt,expected_sha,nonce,prepared,output,root):
     fresh()
     claim=dict(schema_version=VERSION,preflight_sha256=expected_sha,nonce=nonce,run_id=value['run_id'],
         target_pid=os.getpid(),parent_pid=os.getppid(),git_observation_role=value['git_observation_role'])
+    if 'formal' in manifest:claim['formal_reference']=reference(binding)
     write_new(Path(output)/'auxiliary_preflight.claim.json',claim)
     return claim
 

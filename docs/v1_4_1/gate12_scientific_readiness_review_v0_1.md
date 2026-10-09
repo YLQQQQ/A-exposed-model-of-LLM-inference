@@ -101,8 +101,22 @@ Pre-Pilot原设计§2.11的5%目标/10%门、协议§6.2 dropped=0/失败重跑�
 
 用户只需集中确认一个范围决策：**是否接受这一有限P0/P1双对象claim、窄支持域Formal适用声明及n6固定预算，不要求10/5ms保证？**推荐接受并允许负结果；若必须保留自然P0精确组成/细微性能收益，当前草案不足，停在该目标，不默认追加采集。
 
-确认后，冻结前仍不可省：最小Formal封套接线与baseline/统计CPU复算、绑定最终执行与分析commit/源码/registry/schema/hash、发布有限资格与签字版本。它们是具体本地交付缺口，不是新一轮平台实验。Gate12不能因本轮两份文档通过即PASS；本轮不启动这些业务修改、不生成可直接启动的Formal命令。
+历史审查停点（2026-10-02）：冻结前仍不可省最小Formal封套、baseline/统计CPU复算、版本绑定及签字。本地实现已获后续授权，接线说明见[草案§7](gate12_protocol_freeze_draft_v0_1.md#7-冻结前实现封套与审阅入口2026-10-09)。Gate12不能因实现/CPU文件链通过即PASS；不生成可直接启动的Formal任务。
 
 本轮11/11统计风险核对：按condition/pass/block分层防Simpson；不推广平台总体防生态谬误；不按漂亮A/有效长值择样防Berkson/幸存偏差；不按allocation/profile差筛样防collider；基率型诊断不适用；跨批变窄不作因果防回归均值；固定全部主要对照防look-elsewhere/forking paths；不把配对差或同期机制当纯因果，亦不倒推方向。没有p-value选择、伪重复、零差等价或bootstrap伪样本。数值是ANALYZED，未重跑实验；不承诺投稿结果。
 
 本轮必要验证：本地`python -X utf8`运行独立描述性算术与文档校核，核原整数signed差/SD/SE预算、保存A的阶段加法及两份所消费manifest引用；六block组序/镜像、pass先后、条件平均位置和对照先后平衡、60进程/30profile/180实际暖机拟预算通过。174相对文件链接、公开私有路径扫描、DOCX原字节与暂存五份Markdown范围、`git diff --check`通过。未运行仓库测试/compileall、原analyzer/collect/export或全包再次hash扫描，因为业务代码未改；这些文档校核不冒称GPU或Formal资格。数值检查初稿的舍入手录值、负号显示字符检查不一致均在本地更正后通过，不修改源JSON/Raw。
+
+## 6. 冻结前本地实现与资格复用审查（2026-10-09）
+
+上述“仍只接Engineering/Pilot/不实施”等是10月2日的代码事实，不是现行限制。后续本地封套已按新版本贯通协议→manifest→producer/ledger/NVTX→receipt/Canonical→域报告，并增加同窗baseline和完整block统计入口；**协议未签署，Formal未授权，Gate12 NOT_RUN**。实现提交及精确内容绑定分两次提交，最终候选记录引用前者，不以候选/文档commit执行。
+
+独立预期固定为：嵌套API[-8,4)、[-6,2)及sync[4,10)在[-10,20)内，sum26ns/union18ns，sync union6ns；kernel[0,8)、[6,14)的sum16ns/union14ns。signed post-return为−4/+4，不截零。缺mapping/ownership不是已知零；错scope/clock/重复record或未知registry拒绝。成块样例中每对P1−P0=−2ns，预定条件差10ns、交互0，whole-block联合抽样不能把条件/pass/kernel作为独立重复。实际CPU文件链还覆盖旧角色升级、未签署/错hash、设备/来源/token冲突、缺drain、wrong slot与完整60run索引；它们使用明确合成批准、设备/模型替身，不是CUDA或Formal实物。
+
+审查测量差异：runner只扩展角色/同计划暖机/回执身份，不改变host-readable completion、window、drain、专用流、实际同步或S/A/B公式。新增driver只读baseline层不回写Canonical/S，缺表仍unknown；现有Raw、资格及所有历史输出不改。因此复用Gate9分域、N1模型/RAW_PHYSICAL/opaque及G1投影资格，增量仅为元数据与CPU文件链；不自动授全部新版Q0、默认流完整B或D/Signature。未来实际source/collector/执行语义改变须重新审查相应增量。
+
+当前DOCX逐条对应仍为：研究设计§1.3–1.4的信息充分性/负结果、§2.4资源管理API成本、§2.11 repeat-cluster及Pass0主性能；协议§1.5–1.6 prospective Freeze、§4.5 raw指标已足够则收缩、§6.1同合法映射baseline、§6.2统计与质量。后续用户已批准单平台/单模型、分域、RAW_PHYSICAL、opaque和目标scope质量政策沿版本文档保留。**待签署的实质范围覆盖**只有原5/10%统一overhead/精确P0迁移与本草案双对象、全面registry/扩展Q0/广域矩阵与窄资格清单、dropped=0/自动重跑与保留UNKNOWN/硬停、不启用D/G2/长decode。不能把DOCX原文改成已经满足，也不提交用户DOCX。
+
+11/11风险核对沿§5保持：按condition/pass/block分层、不推广平台总体、不择样/删长值或按allocation/profile差过滤、不从跨批变窄推因果、固定全部对照/预算与signed差、无p值择claim/伪重复/零差等价。基率型诊断不适用；新CPU数据仅检查实现，不重新估计Pilot精度。六block仍是有限预算/顺序平衡，不保证10/5ms；允许“不支持增益/不确定”，不以更多bootstrap迭代替代样本量。最终仍须用户集中确认此有限claim及预算并签署完整内容hash。
+
+最终本地证据：九文件相关回归224 passed、0 failed、0 skipped（336.25s）；实际命令及临时目录ACL初次失败见[进度7.120](research_progress.md)。compileall、170相对文件链接、Formal schema校验、4份生成SVG的XML结构、保护语义文件zero diff、公开内容私有路径及用户DOCX原SHA检查通过。图表结构检查不是研究解释验收。代码审查逐入口核对版本分派、外部批准与prospective时序、实际输入/角色/文件来源、未知映射、joint block重采样与逐sync B不加总；没有发现本次范围内必须新增平台实物的测量变化。签署及执行授权仍是独立未决项。

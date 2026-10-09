@@ -577,7 +577,7 @@ def convert_sqlite_to_canonical(
             gate8 = None
             if gate8_sources is not None:
                 from .gate8_adapter import prepare_identity
-                if data_role not in ("Engineering","Pilot") or source_manifest is not None:
+                if data_role not in ("Engineering","Pilot","Formal") or source_manifest is not None:
                     raise ValueError("IDENTITY_CONFLICT: Gate8 uses explicit Engineering per-pass sources")
                 gate8 = prepare_identity(connection, records, gate8_sources,
                                          _sha256(sqlite_path).lower(), raw_sha256, staging)

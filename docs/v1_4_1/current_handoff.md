@@ -1,6 +1,10 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.119](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.120](research_progress.md)。
+
+**7.120现行（2026-10-09）：Gate12冻结前本地实现收口，Gate12 NOT_RUN。** Formal封套0.1贯通文件入口，旧Engineering/Pilot分派保留；同窗baseline和完整block统计/图表已实现。导入遮蔽修复后九文件回归224 passed/0 failed/0 skipped，336.25s；compileall/diff-check通过。CPU合成批准/设备/模型不等于目标机、新Q0或Formal验收；实际命令/temp ACL记录见进度7.120。
+
+先实现commit再绑定执行/分析commit与源码/schema/registry/资格hash，不自引用。下一项只集中确认有限P0性能/P1机制、公平baseline负结果、限定Formal适用与六block预算及完整候选签署；无采集任务、部署包或服务器操作。n6不保证10/5ms或稳定收益，不作P1→P0精确迁移、不扣A/累加B。UNKNOWN/NOT_ASSESSED、G1只A/N1单sync B、opaque及D禁用保持。用户DOCX不纳提交；以下7.119及更早段落均历史，不重复其待实现步骤。
 
 **7.119现行：Gate12本地准备完成两份可审阅草案，Gate12 NOT_RUN，Formal不启动。** [科学适用性审查0.1](gate12_scientific_readiness_review_v0_1.md)和[冻结草案0.1](gate12_protocol_freeze_draft_v0_1.md)是当前入口；Gate11限定政策PASS和7.118实物继续有效。只复用Pilot汇总/原值、消费两个有来源hash的小manifest，算术/顺序/链接及文档核对；不重扫全包、不跑测试/analyzer/Q0/服务器/模型/CUDA/Nsight，用户DOCX不覆盖、不纳提交。
 

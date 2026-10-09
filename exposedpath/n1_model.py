@@ -55,8 +55,10 @@ def validate_manifest(manifest):
             and manifest.get('attention_backend') == 'sdpa'
             and 'target_python' in manifest and 'isolated_preflight_version' in manifest, 'VERIFIED_ENTRY_REQUIRED')
     from .gate11_warmup import active,validate_binding
-    control=active(manifest.get('pilot'))
-    count=validate_binding(manifest['pilot'])['warmup_count'] if control else 1
+    from .formal_protocol import control as execution_control
+    binding=execution_control(manifest)
+    control=active(binding)
+    count=validate_binding(binding)['warmup_count'] if control else 1
     require(manifest.get('n1_model_execution')==execution_declaration(warmup_count=count,control=control), 'EXECUTION_DECLARATION')
     return policy
 
@@ -146,8 +148,8 @@ class ModelCalls:
     def __init__(self, model, cuda, stream, identity, variant, *, generation):
         validate_shape('identity', identity)
         policy = declaration(variant)
-        require((identity['run_role'],identity['data_role']) in (('ENGINEERING','Engineering'),('PILOT','Pilot')), 'ROLE')
-        require(identity['pass_id'] == 'pass1' or identity['run_role']=='PILOT', 'PROFILE_ONLY_ENTRY')
+        require((identity['run_role'],identity['data_role']) in (('ENGINEERING','Engineering'),('PILOT','Pilot'),('FORMAL','Formal')), 'ROLE')
+        require(identity['pass_id'] == 'pass1' or identity['run_role'] in ('PILOT','FORMAL'), 'PROFILE_ONLY_ENTRY')
         config = model.config
         require(type(model).__name__ == 'Qwen2ForCausalLM' and config.model_type == 'qwen2'
                 and config.num_hidden_layers == 28 and config._attn_implementation == 'sdpa'

@@ -10,6 +10,7 @@ from .gate8_files import load_input_receipt, _json, _write, _entry, _resolve
 
 VERSION = 'exposedpath-domain-qualification/0.1.0'
 PILOT_VERSION = 'exposedpath-pilot-domain-check/0.1.0'
+FORMAL_VERSION = 'exposedpath-formal-domain-check/0.1.0'
 CONTRACT = 'G9-DOMAIN-QUALIFICATION/0.1.0'
 G1 = 'G1_NATURAL_PROJECTED_A/0.1.0'
 N1 = 'N1_EXPLICIT_STREAM_AB/0.1.0'
@@ -44,10 +45,23 @@ def _calculate(root, receipt_path, execution_path, bridge_path=None, *, n1_adapt
     from exposedpath.gate11_pilot import roles
     expected=roles(manifest)
     require(all(receipt['identity'][k]==v for k,v in expected.items()),'ROLE_NOT_QUALIFIED')
+    analysis_sources=None
+    if 'formal' in manifest:
+        from exposedpath.formal_protocol import validate_analysis
+        analysis_sources=validate_analysis(manifest)
+        require(receipt['collector_version']==manifest['formal']['protocol']['execution_constraints']['collector_version'],'FORMAL_COLLECTOR_VERSION')
     result=_calculate_domain(root,receipt_path,execution_path,bridge_path,n1_adapter_version=n1_adapter_version)
     if 'pilot' in manifest:
         result.update(schema_version=PILOT_VERSION,pilot=manifest['pilot'],**expected,
             gate11_verdict='NOT_RUN',usage='POLICY_ESTIMATION_ONLY')
+    if 'formal' in manifest:
+        from exposedpath.formal_protocol import validate,reference
+        binding=validate(manifest)
+        result.update(schema_version=FORMAL_VERSION,formal=binding,**expected,
+            usage='LIMITED_PROTOCOL_ANALYSIS_NOT_GLOBAL_CERTIFICATION',
+            formal_admission=dict(status='ADMITTED_LIMITED_PROTOCOL' if result['status']=='QUALITY_CHECK_PASSED_NOT_QUALIFICATION' else 'REJECTED',
+                reference=reference(binding),input_receipt_sha256=digest(Path(receipt_path)),
+                execution_receipt_sha256=digest(Path(execution_path)),analysis_sources=analysis_sources))
     return result
 
 
@@ -147,7 +161,7 @@ def process_domain(receipt_path, execution_path, output_dir, *, bridge_path=None
 
 def load_domain(result_path, receipt_path, execution_path, *, bridge_path=None):
     path=Path(result_path); saved=_json(path)
-    require(saved.get('schema_version') in (VERSION,PILOT_VERSION), 'RESULT_VERSION')
+    require(saved.get('schema_version') in (VERSION,PILOT_VERSION,FORMAL_VERSION), 'RESULT_VERSION')
     files=[_resolve(path.parent,r) for r in saved['files']]
     require(len(set(files))==len(files) and set(files)=={p.resolve() for p in path.parent.rglob('*') if p.is_file() and p!=path}, 'FILE_SET')
     actual=_calculate(path.parent,receipt_path,execution_path,bridge_path,

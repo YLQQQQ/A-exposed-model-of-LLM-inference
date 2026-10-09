@@ -122,6 +122,8 @@ def prepare_identity(connection, records, sources, sqlite_sha256, raw_sha256, st
     ledger, preflight, probe = [json.loads(sources[k].read_text(encoding="utf-8"))
                               for k in ("pass_identity", "preflight", "cuda_probe")]
     validate_pass_identity(ledger)
+    from exposedpath.formal_protocol import reference
+    formal_ref=reference(ledger['formal']) if ledger['run_role']=='FORMAL' else None
     if ledger["pass_id"] != "pass1" or not isinstance(raw_sha256, str) or not re.fullmatch("[0-9a-fA-F]{64}", raw_sha256):
         raise ValueError("IDENTITY_CONFLICT: Canonical requires pass1 and Raw hash")
     requests = {r["identity"]["request_id"]: r["identity"] for r in ledger["requests"]}
@@ -137,6 +139,8 @@ def prepare_identity(connection, records, sources, sqlite_sha256, raw_sha256, st
             raise ValueError("IDENTITY_CONFLICT: NVTX request/pass/attempt")
         if "data_role" in identity and identity["data_role"] != expected["data_role"]:
             raise ValueError("IDENTITY_CONFLICT: NVTX data_role")
+        if formal_ref is not None and identity.get('formal_reference')!=formal_ref:
+            raise ValueError('IDENTITY_CONFLICT: Formal NVTX protocol')
         if row["process_id"] != ledger["pid"]:
             raise ValueError("IDENTITY_CONFLICT: NVTX process")
     mapping = resolve_device_mapping(
@@ -167,4 +171,5 @@ def prepare_identity(connection, records, sources, sqlite_sha256, raw_sha256, st
                      "requests": final["requests"], "missing_fields": [],
                      "filename_inference_used": False, "nvtx_status": "VALID", "issues": []},
         "selected_device_id": mapping["trace_device_id"],
+        **({'formal_reference':formal_ref} if formal_ref is not None else {}),
     }

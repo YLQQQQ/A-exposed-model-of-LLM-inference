@@ -143,7 +143,8 @@ def validate_stage_ledger(value, ledger):
             require((stage['status']=='FAILED')==(request['outcome']=='FAILED'))
         else:
             from .gate11_warmup import active
-            expected_count=None if request['request_role']=='warmup' and active(ledger.get('pilot')) else 0
+            from .formal_protocol import control
+            expected_count=None if request['request_role']=='warmup' and active(control(ledger)) else 0
             require(request['outcome']=='FAILED' and request['actual_output_tokens']==expected_count
                     and request['observed_boundary_ids']==[])
             require(request['reasons']==([f"SETUP_FAILED:{value['stages'][0]['error']}"]

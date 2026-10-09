@@ -98,7 +98,7 @@ baseline具体口径不得偷换：raw API全量包含同步，另列已识别sy
 
 新角色封套只能记录“允许进入本冻结限定分析”及逐窗证据/claim裁决；它不将源字段UNKNOWN/NOT_ASSESSED改成全局有效。旧Pilot的formal_eligible=false不改，新采Formal是否可用由新封套与已签字的有限资格/逐request硬门共同决定，不能靠把这个布尔值改成true取得资格。
 
-**尚未冻结的实际项（未满足就不能Gate12 PASS）：**
+**冻结必需项及历史缺口（2026-10-09：第2/3项本地实现已验证，见§7；第1/4项仍待确认/绑定签署，不能Gate12 PASS）：**
 
 1. 用户集中确认本草案的有限claim、Formal阶段适用及六block固定预算；不承诺10/5ms或P1→P0组成迁移。
 2. 新Formal角色/冻结协议引用贯通实际producer→receipt/ledger/NVTX→Canonical→消费者/报告的**最小显式封套**；当前Engineering/Pilot-only门保持至新版本就绪。CPU文件链必须拒绝仅改role、旧Pilot升级、错协议/hash/run/pass、配置或token冲突；不能复制一套runner或改变测量同步。
@@ -109,4 +109,34 @@ baseline具体口径不得偷换：raw API全量包含同步，另列已识别sy
 
 冻结后实质修改measurement、runner/插桩/流政策、分类、分析、输入选择、排除/统计或claim判据：建立新协议版本，明确受影响Formal数据失效/分开数据集；不能看结果重选规则或只对有利trace重算。仅consumer修复也需版本化统一评估所有受影响输入，不把错误结果默认为有效。历史Raw/原报告不改。
 
-**本轮停点：两份草案可审阅，Gate12仍NOT_RUN。**仅更新文档/本地算术，不修改业务代码、不生成部署包或默认可运行Formal任务；下一步是一次集中范围确认，随后完成上述最小本地绑定，签字冻结与服务器执行仍分别授权。
+**历史停点（2026-10-02）：**两份草案可审阅，Gate12仍NOT_RUN；当时仅有文档/本地算术。用户随后批准冻结前本地实现，当前接线与待签署边界见§7，不把该实现批准解释为协议签署或预算批准。
+
+## 7. 冻结前实现封套与审阅入口（2026-10-09）
+
+本节是已批准草案的工程实现说明，不变更§1～5测量与比较语义。候选协议版本`G12-ROUTEA/0.1`、封套`G12-FORMAL-ENVELOPE/0.1`；仍为**待签署、不可接受Formal数据、Gate12 NOT_RUN**。先提交实现取得实际commit，再由后续绑定记录引用该commit的Git内容hash；绑定文档commit不是执行commit，不将候选记录纳入其自身hash。
+
+### 签署与跨文件链
+
+`formal_protocol.py`只验证外部的人类批准回执，不签署协议，也不能证明回执的作者身份。真实签署必须另行保存用户对**完整候选内容hash、有限claim与预算**的批准；不能由脚本填写`SIGNED`代替。候选hash采用UTF-8、ASCII JSON转义、键排序、紧凑分隔符及末尾LF的规范化JSON编码；原文件SHA256独立保留，不冒充该内容hash。批准时间为UTC，run预声明必须晚于批准，不收旧Engineering/Pilot引用。
+
+协议对象闭合绑定执行/分析commit、源码/合同hash、两份输入hash、模型inventory、设备及软件栈、五条件、六block、warmup3与支持域。manifest承载完整协议、批准及slot；producer/pass ledger承载相同binding；request身份及结构NVTX承载`protocol_version/protocol_sha256/approval_sha256`。sealed preflight与target claim贯通该引用并继续保留当前真实字节校验、输入/Git/设备/解释器门。receipt→Canonical→scope→domain→报告核对引用、Raw/hash与actual plan/token；分析器另核实际analysis commit与clean/source内容。新schema是显式元数据扩展，不修改旧Engineering/Pilot schema读取和S/A/B公式。
+
+源码兼容证明只接受预先绑定的Git内容精确字节，或**明确记录**的LF/CRLF表示等价；保留实际运行文件SHA256/长度，不能用任意当前hash更新期望，运行时seal仍严格核实际字节。不同执行/分析commit必须分别锁定；不能用收尾文档HEAD代替执行身份。未签署、错协议/hash/role、旧role升级、配置/设备/输入/token冲突、partial或错pair均拒绝。
+
+### 公平baseline文件入口
+
+`exposedpath_v141.activity_baseline.write_baseline`消费已准入的domain、同一input receipt、Canonical与projection及原SQLite；新独立目录保存结果，`load_baseline`复核来源与数值。使用同一目标PID/主要TID、request/phase、trace clock、实际ownership及API registry0.2；从同一Raw只读补充可用driver层，不把它接入S/A/B推导。driver表/字段未采集时为UNKNOWN，不能与观察到空表的零值等同。
+
+按相交的physical record计count，sum使用逐record裁剪时长，union按层去重；runtime/driver嵌套分别列sum并列联合union。同步API、已分类非同步API及未分类record分别保留；raw API包含同步，而A CUDA API排除优先拆分的同步，该差异随结果说明。GPU active ratio为已知owned activity裁剪union/窗口，不是必要等待。launch成员按原API起点落入半开phase；合法correlation/context/stream映射后报告原始未裁剪launch-to-start及signed post-return差，嵌套/歧义/missing/ownership unknown不填零。组合API统计只覆盖实际可读表，不能声称完整CUDA SDK或collector过滤之外的记录已观测。
+
+### 配对、统计与图表文件入口
+
+`paired_statistics.read_formal_batch`只读取完整60run文件索引及实际回执，不接受索引提供的测量数值。六block、五条件、相邻pass、唯一run/pair/slot、固定顺序、共同协议/输入/环境/loaded配置及逐值token均检查；P1另须合格domain及同窗baseline，P0无P1产物。缺失/错位/跨批/不完整block不能拼接或补值。
+
+`write_formal_report`生成全原值CSV、P0/P1逐block配对图、独立P1三窗A图、逐sync B来源文件及机器统计。预定G1两端点、N1两必要对照、profile差及交互全部保留；signed差、whole-block联合重采样、固定seed/10000次、线性分位、留一及前后三block敏感性沿§4。B记录随整个block保留，**不跨sync求和**；具体W/terminal与同语义单sync解释由审阅者逐record核对，不因数值表生成就宣告信息增益。通用未准入原值描述入口始终标记`DESCRIPTIVE_NOT_QUALIFICATION`，不是Formal准入捷径。
+
+这些函数没有默认采集任务或Formal批次launcher；实际采集入口须显式选择已签署协议，当前没有签署文件、部署包、执行脚本或服务器预算。所有mock批准/设备事实/完整性条件仅用于CPU接口测试，不授目标机或新版本全面Q0资格。最终集中待确认仍是：有限P0性能/P1机制与公平负结果范围、限定资格适用、六block固定预算及对应候选hash。签署和未来执行授权分开处理。
+
+### 最终本地验证
+
+恢复后的实际九文件命令及temp ACL初次失败记录见[进度7.120](research_progress.md)：224 passed，0 failed，0 skipped，336.25s。覆盖旧Pilot、N1及token-ready回归、未签署/旧数据升级/错身份配置、baseline同窗/嵌套/缺mapping、signed配对/完整block及60run CPU替身文件链；compileall与diff-check通过。不是60次模型、目标机CUDA、真实Nsight或正式实验。独立手算预期与文件hash复核不授全面新Q0资格。

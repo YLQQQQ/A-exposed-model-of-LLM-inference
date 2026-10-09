@@ -29,8 +29,9 @@ def bindings(bundle, ownership, projections, calls, ledger, policy, drain_api, d
     require(inventory['input_status']=='VALID', 'MODEL_CANONICAL_QUALITY')
     full=[p for p in projections if p['phase']=='full_request']
     from exposedpath.gate11_warmup import active
-    observed_warmups=active(ledger.get('pilot'))
-    warmup_count=ledger['pilot']['warmup_count'] if observed_warmups else 1
+    from exposedpath.formal_protocol import control
+    observed_warmups=active(control(ledger))
+    warmup_count=control(ledger)['warmup_count'] if observed_warmups else 1
     require(len(full)==1 and len(calls['requests'])==warmup_count+1, 'MODEL_REQUEST_SET')
     p=full[0]; identity=p['identity']; start,end=p['start_ns'],p['end_ns']
     selected=[r for r in calls['requests'] if r['identity']==identity]
@@ -221,7 +222,7 @@ def calculate_n1_model(root,receipt_path,execution_path,bridge_path,*,adapter_ve
     ledger=_json(paths['pass_identity']); execution=_json(execution_path); calls=_json(bridge_path)
     support=validate_declaration(manifest)
     from exposedpath.gate11_pilot import execution_extension
-    extension,expected_version=execution_extension(manifest,ledger,execution,execution_path,paths['wmpc_manifest'],paths['producer_receipt'],token_path=paths.get('pilot_tokens'))
+    extension,expected_version=execution_extension(manifest,ledger,execution,execution_path,paths['wmpc_manifest'],paths['producer_receipt'],token_path=paths.get('formal_tokens',paths.get('pilot_tokens')))
     require(set(execution)=={'schema_version','manifest_sha256','producer_receipt_sha256','identity',
         'declaration','observed_configuration','status','n1_model_calls_sha256'} | extension
         and execution['schema_version']==expected_version and execution['status']=='COMPLETE'
@@ -232,13 +233,17 @@ def calculate_n1_model(root,receipt_path,execution_path,bridge_path,*,adapter_ve
     from .gate8_engineering_scope import _model_configuration,_diagnostics
     _model_configuration(execution['observed_configuration'],support)
     from exposedpath.gate11_warmup import active
-    observed_warmups=active(manifest.get('pilot'))
+    from exposedpath.formal_protocol import control
+    observed_warmups=active(control(manifest))
     call_version='exposedpath-n1-model-calls/0.2.0' if observed_warmups else CALL_VERSION
     require(calls['schema_version']==call_version and calls['pid']==ledger['pid']
         and calls['manifest_sha256']==digest(paths['wmpc_manifest'])
         and calls['producer_receipt_sha256']==digest(paths['producer_receipt']),'MODEL_CALLS_IDENTITY')
     if observed_warmups:
-        from exposedpath.gate11_pilot import validate_actual_requests
+        if 'formal' in manifest:
+            from exposedpath.formal_protocol import validate_actual_requests
+        else:
+            from exposedpath.gate11_pilot import validate_actual_requests
         validate_actual_requests(manifest,ledger)
     else:
         require(len(ledger['requests'])==2 and all(r['outcome']=='COMPLETE' and not r['early_eos'] and not r['reasons']

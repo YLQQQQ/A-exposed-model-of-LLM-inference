@@ -82,6 +82,10 @@ def validate(manifest):
 
 def roles(manifest):
     """No role inference from a friendly label; Pilot requires the whole declaration."""
+    if 'formal' in manifest or manifest.get('run_role')=='FORMAL' or manifest.get('data_role')=='Formal':
+        from .formal_protocol import validate as validate_formal
+        validate_formal(manifest)
+        return dict(run_role='FORMAL',data_role='Formal')
     if 'pilot' in manifest or manifest.get('run_role')=='PILOT' or manifest.get('data_role')=='Pilot':
         validate(manifest)
         return dict(run_role='PILOT',data_role='Pilot')
@@ -128,6 +132,9 @@ def validate_tokens(path, manifest, ledger, execution, manifest_path, producer_p
 def execution_extension(manifest, ledger, execution, execution_path, manifest_path, producer_path, *, token_path=None):
     """Validate new fields before reusing unchanged execution/measurement checks."""
     roles(manifest)
+    if 'formal' in manifest:
+        from .formal_protocol import execution_extension as formal_extension
+        return formal_extension(manifest,ledger,execution,execution_path,manifest_path,producer_path,token_path)
     if 'pilot' not in manifest:
         return set(), 'exposedpath-engineering-execution/0.1.0'
     require(token_path is not None and Path(token_path).resolve()==(Path(execution_path).parent/'pilot_tokens.json').resolve(),

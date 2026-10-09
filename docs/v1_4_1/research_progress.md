@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.120 Gate12冻结前本地封套、baseline与成块统计收口（2026-10-09）
+
+**Gate12 NOT_RUN；本地实现与相关CPU验证已完成，候选绑定、限定Formal适用/预算确认及签署仍待完成。** 用户批准的是冻结前实现，不是协议签署或采集授权。当前入口仍为[科学适用性审查0.1](gate12_scientific_readiness_review_v0_1.md)与[冻结草案0.1](gate12_protocol_freeze_draft_v0_1.md)。7.119“仅Engineering/Pilot实现”为历史描述；旧数据和原报告不升级。
+
+显式`G12-FORMAL-ENVELOPE/0.1`贯通外部人类批准回执、manifest、producer、ledger/NVTX、sealed preflight、receipt、Canonical与限定domain/报告；未签署、错hash/角色/身份/配置/输入、过期或旧角色升级均拒绝。代码不签署回执，也不证明批准者身份，必须独立保存用户对完整候选hash的批准。复用runner与N1包装，未修改host-readable completion、流/同步、S的W/terminal或A/B公式。旧Pilot局部导入遮蔽最小修为显式别名，保留旧分派和反例，不修改测试追绿。
+
+新增同P1窗口/clock/ownership/registry的baseline文件入口：count、裁剪sum、union、同步/非同步、GPU活动和合法映射时序；driver缺表/字段为UNKNOWN，不补零。新增完整60run文件索引、逐值token配对、signed差、完整block联合bootstrap/留一及顺序敏感性、原值/图表及逐sync B来源；不拼接partial、不扣A或累加B。独立手算API sum26/union18、kernel sum16/union14及signed差−2；实际文件链使用合成批准/设备/模型替身，不冒称目标机、CUDA、新Q0或Formal验证。
+
+本次实际命令：`python -m pytest -q -p no:cacheprovider tests/test_gate12_formal.py tests/test_gate12_baseline.py tests/test_gate12_statistics.py tests/test_gate11_pilot.py tests/test_gate11_pilot_files.py tests/test_gate11_warmup_pair.py tests/test_n1_model_domain.py tests/test_runner_token_ready.py tests/test_n1_preprofile_identity.py --tb=short --basetemp=.local/diagnostics/gate12_resume_20261009/tmp --junitxml=.local/diagnostics/gate12_resume_20261009/related.xml`，**224 passed，0 failed，0 skipped，336.25s**，CUDA mask=−1。此前151 passed/73 failed不是最终结果；本次首个默认temp运行49 passed/175 setup errors源于旧临时目录ACL，使用全新仓库内temp后得到最终结果，未削弱测试。`python -m compileall -q exposedpath analysis exposedpath_v141 scripts`及`git diff --check`通过；未跑无关全量、完整Q0或实验。
+
+先提交实现，再绑定真实执行/分析commit、Git内容hash、schema/registry与限定资格复用，避免自引用；文档commit不冒充执行身份。P0性能/P1观测机制分开、公平baseline允许“不支持/不确定”；六block只为预算/有限次序平衡，10/5ms不保证。UNKNOWN/NOT_ASSESSED、G1只A/N1单sync B、opaque内部等待未拆及D禁用保持。DOCX原修改保留不纳提交；Gate7～11限定PASS保持。无服务器、模型、CUDA/Nsight、追加Pilot或默认Formal任务。本节覆盖下方7.119及当前阶段/优先级中尚未实现的历史描述。
+
 ## 7.119 Gate12本地科学适用性审查与冻结草案（2026-10-02）
 
 **Gate11限定Pilot政策PASS保持；Gate12 NOT_RUN，已开始本地准备但未冻结，Gate13/14未启动。** 当前只保留[科学适用性审查0.1](gate12_scientific_readiness_review_v0_1.md)和[协议冻结草案0.1](gate12_protocol_freeze_draft_v0_1.md)两个新入口，7.118实物/政策依据继续有效；没有服务器、CUDA/Nsight/模型/追加Pilot或Formal任务。用户研究设计DOCX修改保留，不覆盖、不纳提交。

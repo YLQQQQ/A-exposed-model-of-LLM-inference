@@ -59,6 +59,11 @@ def baseline(python,prepared,output):
         from exposedpath.gate11_warmup import active
         report.update(role='UNPROFILED_LIMITED_PILOT',pilot=manifest['pilot'],run_role='PILOT',data_role='Pilot',
             gate11_verdict='BLOCKED' if active(manifest['pilot']) else 'NOT_RUN')
+    if 'formal' in manifest:
+        from exposedpath.formal_protocol import validate,reference
+        binding=validate(manifest)
+        report.update(role='UNPROFILED_LIMITED_FORMAL',formal=binding,formal_reference=reference(binding),
+                      run_role='FORMAL',data_role='Formal')
     try:
         receipt=isolated.seal(prepared,output,ROOT)
         process=run_once(unprofiled_argv(python,prepared,output),output/'collection_log')
@@ -117,8 +122,10 @@ def inspect_execution(output,expected_pass):
         and probe['cuda_visible_devices']==str(manifest['gpu_index_physical']),'DEVICE_IDENTITY')
     requests=ledger['requests']
     from exposedpath.gate11_warmup import active
-    control=active(manifest.get('pilot'))
-    count=manifest['pilot']['warmup_count'] if control else 1
+    from exposedpath.formal_protocol import control as role_control
+    binding=role_control(manifest)
+    control=active(binding)
+    count=binding['warmup_count'] if control else 1
     require(len(requests)==count+1 and [r['request_role'] for r in requests]==['warmup']*count+['measured']
         and all(r['outcome']=='COMPLETE' and not r['reasons'] and r['expected_output_tokens']==2 for r in requests)
         and all((r['actual_output_tokens'] is None and r['early_eos'] is None) if control else
@@ -154,16 +161,30 @@ def inspect_execution(output,expected_pass):
         and claim['preflight_sha256']==sha(output/'auxiliary_preflight.json')
         and read(output/'auxiliary_preflight.final.json')==dict(status='PASS',preflight_sha256=sha(output/'auxiliary_preflight.json'),
             target_claim_sha256=sha(output/'auxiliary_preflight.claim.json')),'PREFLIGHT')
+    if 'formal' in manifest or 'pilot' in manifest:
+        if 'formal' in manifest:
+            from exposedpath import formal_protocol as formal
+            formal.execution_extension(manifest,ledger,execution,root/'engineering_execution.json',
+                root/'manifest.json',root/'producer/producer_receipt.json',root/'formal_tokens.json')
+            tokens=read(root/'formal_tokens.json')['requests'][0]['token_ids']
+            require(producer.get('formal')==manifest['formal'] and producer.get('formal_reference')==formal.reference(binding)
+                and producer.get('run_role')=='FORMAL' and producer.get('data_role')=='Formal'
+                and producer['schema_version']==formal.PRODUCER_VERSION,'FORMAL_PRODUCER')
+            require(report['schema_version']=='exposedpath-formal-execution-report/0.1.0'
+                and report.get('formal')==binding and report.get('formal_reference')==formal.reference(binding)
+                and report.get('run_role')=='FORMAL' and report.get('data_role')=='Formal'
+                and report.get('formal_tokens_sha256')==sha(root/'formal_tokens.json'),'FORMAL_REPORT')
+        else:
+            from exposedpath.gate11_pilot import validate_tokens
+            tokens=validate_tokens(root/'pilot_tokens.json',manifest,ledger,execution,root/'manifest.json',root/'producer/producer_receipt.json')
     if 'pilot' in manifest:
-        from exposedpath.gate11_pilot import validate_tokens
-        tokens=validate_tokens(root/'pilot_tokens.json',manifest,ledger,execution,root/'manifest.json',root/'producer/producer_receipt.json')
         require(producer.get('pilot')==manifest['pilot'] and producer.get('run_role')=='PILOT'
             and producer.get('data_role')=='Pilot' and producer['schema_version']==
                 ('exposedpath-pilot-producer-receipt/0.2.0' if control else 'exposedpath-pilot-producer-receipt/0.1.0'), 'PILOT_PRODUCER')
         require(report['schema_version']==('gate11-pilot-diagnostic/0.2.0' if control else 'gate11-pilot-diagnostic/0.1.0'),'PILOT_DIAGNOSTIC_VERSION')
         require(report.get('pilot')==manifest['pilot'] and report.get('run_role')=='PILOT'
             and report.get('data_role')=='Pilot' and report.get('pilot_tokens_sha256')==sha(root/'pilot_tokens.json'),'PILOT_REPORT')
-        if 'n1_model' in manifest:
+    if ('formal' in manifest or 'pilot' in manifest) and 'n1_model' in manifest:
             calls=read(root/'n1_model_calls.json')
             variant=manifest['n1_model']['variant']; intervention_count=0 if variant=='V0' else 1
             require(sha(root/'n1_model_calls.json')==execution.get('n1_model_calls_sha256')
@@ -187,6 +208,7 @@ def inspect_execution(output,expected_pass):
                     and calls['requests'][-1]['anchor'] is not None,'WARMUP_N1_STREAM_LIFECYCLE')
     return dict(manifest=manifest,pid=ledger['pid'],timing_ns=durations,
         **(dict(token_ids=tokens,pilot=manifest['pilot']) if 'pilot' in manifest else {}),
+        **(dict(token_ids=tokens,formal=manifest['formal']) if 'formal' in manifest else {}),
         loaded_configuration=execution['observed_configuration'],cuda_probe=probe,
         **(dict(warmups=[dict(identity=s['payload']['request_identity'],ordinal=i,
             host_clock_id=s['host_clock_id'],host_start_ns=s['host_start_ns'],host_end_ns=s['host_end_ns'],
@@ -227,12 +249,14 @@ def main():
     authorization=run.add_mutually_exclusive_group(required=True)
     authorization.add_argument('--execute-engineering-baseline',action='store_true')
     authorization.add_argument('--execute-pilot-baseline',action='store_true')
+    authorization.add_argument('--execute-signed-formal-baseline',action='store_true')
     summary=sub.add_parser('summarize')
     for name in ('pass0','pass1','output'): summary.add_argument('--'+name,required=True,type=Path)
     args=parser.parse_args()
     if args.command=='baseline':
         manifest=read(args.prepared/'manifest.json')
         require(args.execute_pilot_baseline==('pilot' in manifest),'PILOT_OPT_IN')
+        require(args.execute_signed_formal_baseline==('formal' in manifest),'FORMAL_OPT_IN')
     if args.command=='baseline':
         result=baseline(args.python,args.prepared,args.output)
         print(result['status']); return 0 if result['status']=='BASELINE_COMPLETE_NOT_ACCEPTANCE' else 1

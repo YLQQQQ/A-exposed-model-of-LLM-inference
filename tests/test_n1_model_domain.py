@@ -4,6 +4,7 @@ CPU trace recorder only. Expected members below are from the prescribed two
 launches + D2H sequence, not the analyzer. No target CUDA qualification.
 """
 import json
+from copy import deepcopy
 import os
 from types import SimpleNamespace
 import pytest
@@ -13,12 +14,31 @@ from test_gate8_identity import UUID, sha, write_json
 
 
 def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, queries=False,
-           default_prefix=False, allocations=False, vm_bits=False, pilot_binding=None):
+           default_prefix=False, allocations=False, vm_bits=False, pilot_binding=None,formal_binding=None,driver_apis=False):
     queries=queries or damage=='unknown_query'
     from exposedpath import runner
     def execute(Backend, clock, db, plan):
         entry,args,state,events=entry_source(tmp_path,monkeypatch,variant)
         manifest=json.loads(args['manifest_path'].read_text())
+        if formal_binding is not None:
+            from itertools import count
+            from types import SimpleNamespace
+            serial=count(100)
+            monkeypatch.setattr(runner.torch.cuda,'Stream',lambda **kw:SimpleNamespace(
+                cuda_stream=next(serial),device=SimpleNamespace(index=0),synchronize=lambda:None))
+            from exposedpath import formal_protocol as f
+            p=deepcopy(formal_binding['protocol']);a=deepcopy(formal_binding['approval'])
+            p['execution_commit']=manifest['runner_git_commit'];p['analysis_commit']=manifest['runner_git_commit']
+            p['input_hashes']['G512' if formal_binding['condition']=='G512' else 'G32']=manifest['prompt_tokens_sha256']
+            # Isolated CPU Git adapter, never evidence of a target platform checkout.
+            from exposedpath import platform_adapter
+            monkeypatch.setattr(platform_adapter,'git',lambda argv:manifest['runner_git_commit'] if 'rev-parse' in argv else '')
+            a['protocol_sha256']=f.content_hash(p)
+            b=f.make_binding(p,a,**{k:formal_binding[k] for k in ('batch_id','block','condition','pass_id','declared_at')})
+            if b['variant'] is None:manifest.pop('n1_model');manifest.pop('n1_model_execution')
+            manifest.update(f.minimal_fields(b))
+            from test_gate12_formal import observed_cpu_manifest
+            observed_cpu_manifest(manifest)
         if pilot_binding is not None:
             from exposedpath.gate11_pilot import minimal_fields
             if pilot_binding['variant'] is None:
@@ -34,7 +54,7 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=1')
         db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=2')
         db.execute('INSERT INTO TARGET_INFO_CUDA_STREAM SELECT 3,hwId,vmId,processId,contextId,priority,2 FROM TARGET_INFO_CUDA_STREAM')
-        if pilot_binding is not None and pilot_binding['variant'] is None:
+        if (pilot_binding is not None and pilot_binding['variant'] is None) or (formal_binding is not None and formal_binding['variant'] is None):
             db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=3')
             db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=3 WHERE streamId=3')
         native_streams={123:2,456:3,0:3}
@@ -101,7 +121,16 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
             a,b,c=backend.api('cudaLaunchKernel_v7000')
             db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_KERNEL VALUES (?,?,0,1,NULL,?,?,?,?,?,NULL,NULL)',
                 (b,b+2,1,c,os.getpid()<<24,1,1))
+        if formal_binding is not None:
+            from exposedpath import gate8_isolated_preflight as isolated
+            monkeypatch.setattr(isolated,'consume',lambda **kw:dict(target_pid=os.getpid(),
+                formal_reference=f.reference(manifest['formal'])))
         entry.run_diagnostic(**args)
+        if driver_apis:
+            # Independent nested driver layer: duration 8 inside each 10ns launch.
+            db.execute("INSERT INTO StringIds VALUES (900003,'cuLaunchKernel')")
+            db.execute('CREATE TABLE CUPTI_ACTIVITY_KIND_DRIVER AS SELECT * FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE nameId IN (SELECT id FROM StringIds WHERE value=?)',('cudaLaunchKernel_v7000',))
+            db.execute('UPDATE CUPTI_ACTIVITY_KIND_DRIVER SET start=start+1,end=end-1,nameId=900003,correlationId=correlationId+100000')
         if damage=='correlation': db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET correlationId=999999')
         if damage=='stream': db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET streamId=2 WHERE streamId=3')
         if damage=='unknown_api': db.execute("UPDATE StringIds SET value='unknownCudaOperation' WHERE value='cudaLaunchKernel_v7000'")
@@ -140,7 +169,7 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         return args['output_dir']/'producer/producer_receipt.json'
     _,_,sqlite,rep,export=capture(tmp_path,monkeypatch,executor=execute)
     root=tmp_path/'diagnostic'
-    if pilot_binding is not None and pilot_binding['pass_id']=='pass0':
+    if (pilot_binding is not None and pilot_binding['pass_id']=='pass0') or (formal_binding is not None and formal_binding['pass_id']=='pass0'):
         return None,root/'engineering_execution.json',root/'n1_model_calls.json'
     from exposedpath_v141.gate8_files import write_input_receipt
     names=dict(preflight='adapter_preflight.json',cuda_probe='cuda_probe.json',wmpc_manifest='manifest.json',
@@ -148,6 +177,7 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         pass_identity='producer/pass_identity.json',host_ledger='producer/host_boundaries.json',
         drain_ledger='producer/drain_ledger.json',stage_ledger='producer/stage_ledger.json')
     if pilot_binding is not None: names['pilot_tokens']='pilot_tokens.json'
+    if formal_binding is not None: names['formal_tokens']='formal_tokens.json'
     receipt=write_input_receipt(tmp_path/'input.json',collector_version='2026.2.1.210',capture_session_id='CPU',
         artifacts=dict(raw=rep,sqlite=sqlite,export_report=export,**{k:root/v for k,v in names.items()}))
     return receipt,root/'engineering_execution.json',root/'n1_model_calls.json'

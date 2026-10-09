@@ -24,6 +24,26 @@ def validate_shape(kind, value):
             return v.get('run_role')=='PILOT' or v.get('data_role')=='Pilot' or any(pilot_role(x) for x in v.values())
         return isinstance(v,list) and any(pilot_role(x) for x in v)
     schema=_SCHEMA
+    from . import formal_protocol as formal
+    def formal_role(v):
+        if isinstance(v,dict): return v.get('run_role')=='FORMAL' or v.get('data_role')=='Formal' or any(formal_role(x) for x in v.values())
+        return isinstance(v,list) and any(formal_role(x) for x in v)
+    if formal_role(value):
+        schema=deepcopy(_SCHEMA)
+        definition=json.loads((Path(__file__).resolve().parents[1]/'docs/v1_4_1/contracts/formal_envelope_schema_v0_1.json').read_text(encoding='utf-8'))
+        reference_schema=deepcopy(definition['$defs']['reference'])
+        for name in ('protocol_sha256','approval_sha256'):
+            reference_schema['properties'][name]=deepcopy(definition['$defs']['sha256'])
+        identity=schema['$defs']['identity']
+        identity['properties'].update(run_role={'const':'FORMAL'},data_role={'const':'Formal'},formal_reference=reference_schema)
+        identity['required'].append('formal_reference')
+        definition=schema['$defs']['pass_identity']
+        definition['properties'].update(run_role={'const':'FORMAL'},data_role={'const':'Formal'},
+            schema_version={'const':formal.PASS_VERSION},formal={'type':'object'})
+        definition['required'].append('formal')
+        entry=schema['$defs']['request_entry']
+        for key in ('actual_output_tokens','early_eos'):
+            entry['properties'][key]={'anyOf':[deepcopy(entry['properties'][key]),{'type':'null'}]}
     if pilot_role(value):
         from .gate11_pilot import versions
         from .gate11_warmup import active,SCHEMA as warmup_schema
@@ -54,6 +74,13 @@ def validate_shape(kind, value):
 
 def validate_pass_identity(value, *, finalized=False):
     validate_shape("pass_identity", value)
+    from . import formal_protocol as formal
+    if value['run_role']=='FORMAL':
+        b=formal.validate_binding(value['formal'])
+        if value['run_id']!=b['run_id'] or value['pass_id']!=b['pass_id'] or value['runner_git_commit']!=b['protocol']['execution_commit'] or value['runner_git_dirty'] is not False:
+            raise ValueError('FORMAL_LEDGER_BINDING')
+        for r in value['requests']:
+            if r['identity']['formal_reference']!=formal.reference(b): raise ValueError('FORMAL_NVTX_PROTOCOL_CONFLICT')
     if value['run_role']=='PILOT':
         from .gate11_pilot import validate_binding
         binding=validate_binding(value['pilot'])
@@ -87,7 +114,7 @@ def validate_pass_identity(value, *, finalized=False):
             raise ValueError("IDENTITY_CONFLICT: boundary plan/token count")
         if entry["outcome"] == "COMPLETE":
             from .gate11_warmup import active
-            unknown_warmup=entry['request_role']=='warmup' and active(value.get('pilot'))
+            unknown_warmup=entry['request_role']=='warmup' and active(formal.control(value))
             if ((not unknown_warmup and entry["actual_output_tokens"] != entry["expected_output_tokens"])
                     or entry["early_eos"] or entry["reasons"] or observed != expected):
                 raise ValueError("IDENTITY_CONFLICT: incomplete COMPLETE request")
@@ -109,15 +136,21 @@ def make_gate8_pass_identity(*, requests, **pass_fields):
     after Raw/device hashes exist; neither input nor Raw is back-patched.
     """
     pilot=pass_fields.get('pilot')
+    from . import formal_protocol as formal
+    formal_binding=pass_fields.get('formal')
+    if formal_binding is not None:
+        formal.validate_binding(formal_binding)
+        if pilot is not None: raise ValueError('IDENTITY_CONFLICT: mixed roles')
     if pilot is not None:
         from .gate11_pilot import validate_binding, versions
         validate_binding(pilot)
     roles=dict(run_role='PILOT',data_role='Pilot') if pilot is not None else dict(run_role='ENGINEERING',data_role='Engineering')
+    if formal_binding is not None: roles=dict(run_role='FORMAL',data_role='Formal')
     for field, required in roles.items():
         if field in pass_fields and pass_fields[field] != required:
             raise ValueError(f"IDENTITY_CONFLICT: producer {field}")
     result = {
-        "schema_version": versions(pilot)[0] if pilot is not None else "exposedpath-pass-identity/0.1.0",
+        "schema_version": formal.PASS_VERSION if formal_binding is not None else versions(pilot)[0] if pilot is not None else "exposedpath-pass-identity/0.1.0",
         **deepcopy(pass_fields), **roles,
         "planned_request_ids": [r["request_id"] for r in requests],
         "requests": [], "raw_artifact_sha256": None, "device_mapping_sha256": None,
@@ -125,6 +158,7 @@ def make_gate8_pass_identity(*, requests, **pass_fields):
     for source in requests:
         entry = deepcopy(source)
         identity = {k: result[k] for k in PASS_FIELDS}
+        if formal_binding is not None: identity['formal_reference']=formal.reference(formal_binding)
         identity.update(request_id=entry.pop("request_id"), repeat_id=entry.pop("repeat_id"))
         result["requests"].append({"identity": identity, **entry})
     validate_pass_identity(result)

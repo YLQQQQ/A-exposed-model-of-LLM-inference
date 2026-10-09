@@ -9,7 +9,7 @@ from test_gate8_identity import write_json,sha
 from exposedpath import gate11_pilot as pilot
 
 
-def pair_files(tmp_path,monkeypatch,condition='N16',bindings=None):
+def pair_files(tmp_path,monkeypatch,condition='N16',bindings=None,shared_model=None):
     import test_n1_model_domain as fixture
     from exposedpath_v141 import gate8_target_python as target
     from exposedpath_v141.gate9_domain import process_domain
@@ -23,8 +23,9 @@ def pair_files(tmp_path,monkeypatch,condition='N16',bindings=None):
             def entry_source(*args,**kwargs):
                 entry,opts,state,events=original(*args,**kwargs)
                 value=json.loads(opts['manifest_path'].read_text()); value['target_python']=contract
+                if shared_model is not None:value['model_id']=str(shared_model)
                 if condition=='G512':
-                    model=tmp_path/'cpu_model';model.mkdir(exist_ok=True)
+                    model=shared_model if shared_model is not None else tmp_path/'cpu_model';model.mkdir(exist_ok=True)
                     write_json(model/'config.json',dict(model_type='qwen2',vocab_size=100,max_position_embeddings=1024))
                     prompt=json.loads(opts['prompt_path'].read_text());prompt['fixed_input_tokens']=512
                     prompt['samples']=[dict(input_ids=[1]*512,attention_mask=[1]*512)]
@@ -34,16 +35,22 @@ def pair_files(tmp_path,monkeypatch,condition='N16',bindings=None):
                 m.setattr(target,'current',lambda _:dict(pid=os.getpid(),parent_pid=os.getppid(),snapshot=contract['actual']['snapshot']))
                 return entry,opts,state,events
             m.setattr(fixture,'entry_source',entry_source)
-            receipt,execution,calls=fixture.source(folder,m,binding['variant'] or 'V0',pilot_binding=binding)
+            formal=binding['version']=='G12-FORMAL-ENVELOPE/0.1'
+            options={'formal_binding' if formal else 'pilot_binding':binding}
+            receipt,execution,calls=fixture.source(folder,m,binding['variant'] or 'V0',**options)
             if receipt is not None:
                 path=process_domain(receipt,execution,folder/'analyzed',**(dict(bridge_path=calls) if binding['variant'] else {}))
                 # The common collection adapter uses this fixed receipt name.
                 (folder/'input_receipt.json').write_bytes(receipt.read_bytes())
-                report=dict(status='PILOT_RUN_COMPLETE_PENDING_REVIEW',pilot=binding,
+                actual=json.loads((folder/'diagnostic/manifest.json').read_text()).get('formal',binding)
+                report=dict(status='FORMAL_RUN_COMPLETE_PENDING_REVIEW' if formal else 'PILOT_RUN_COMPLETE_PENDING_REVIEW',
+                    **{('formal' if formal else 'pilot'):actual},
                     collection={'status':'COMPLETE'},export_status='PASS',error=None,result_sha256=sha(path))
                 write_json(folder/'collection_report.json',report)
             else:
-                write_json(folder/'baseline_report.json',dict(status='BASELINE_COMPLETE_NOT_ACCEPTANCE',pilot=binding,role='UNPROFILED_LIMITED_PILOT'))
+                actual=json.loads((folder/'diagnostic/manifest.json').read_text()).get('formal',binding)
+                write_json(folder/'baseline_report.json',dict(status='BASELINE_COMPLETE_NOT_ACCEPTANCE',
+                    **{('formal' if formal else 'pilot'):actual},role='UNPROFILED_LIMITED_FORMAL' if formal else 'UNPROFILED_LIMITED_PILOT'))
         root=folder/'diagnostic'; manifest=json.loads((root/'manifest.json').read_text())
         (folder/'diagnostic-entry').mkdir()
         write_json(folder/'diagnostic-entry/exit.json',dict(status='EXITED',exit_code=0,pid=os.getpid()))
