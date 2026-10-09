@@ -2,9 +2,11 @@
 
 ## 7.121 Gate12实现commit与未签署冻结候选绑定（2026-10-09）
 
+补充交付校核：候选初稿生成器采用Windows CRLF，暂存检查报行尾空白；格式化为UTF-8无BOM/LF并更新全部文件hash引用，协议规范化内容hash不变。初稿候选文档提交6ee660a仅为未签署历史，最终文件身份以下述LF版本为准；未改变执行实现e38fa91、JSON值或任何数据资格。最终推送前按整体差异重新校验，不把初稿失败写成检查通过。
+
 **Gate12 NOT_RUN；本地实现/验证和候选绑定已完成，未签署、未授权Formal预算或执行。** [候选记录0.1](gate12_freeze_candidate_v0_1.json)绑定执行及分析commit **e38fa91850b8f31e17cc0ee264987ef3c1313d7d**（parent3619f46f2a198a36ccc3fbe983e5fb59b49c98d2）；本次候选/入口文档提交不是执行commit。封套`G12-FORMAL-ENVELOPE/0.1`、协议`G12-ROUTEA/0.1`；125个源码/合同/资格引用取该commit的Git内容SHA256，包含同窗baseline/统计与相关schema/registry。候选自身不进入artifact锁，避免自引用；运行时实际字节仍另seal，只允许显式LF/CRLF表示等价，不能用当前任意hash放行。
 
-协议规范化内容hash **389a28a17bec830e4f32bea72c259dce15ba279ce69fc20caebfdca88a1326e2**；候选文件hash **cdd6764a2f37bf6089b1c916685a7040571fb221e58a95ec1ba1bb8765cd234e**。候选`PENDING_USER_SIGNATURE`、approval=null、budget=NOT_APPROVED；没有生成SIGNED回执或部署/采集任务。人类批准须关联完整候选及协议内容hash，程序验证不代替作者/授权证明。
+协议规范化内容hash **389a28a17bec830e4f32bea72c259dce15ba279ce69fc20caebfdca88a1326e2**；候选文件hash **78cff3228d00b8410a42d51930df4556121eaf879eb95b430c9365ac8788e761**。候选`PENDING_USER_SIGNATURE`、approval=null、budget=NOT_APPROVED；没有生成SIGNED回执或部署/采集任务。人类批准须关联完整候选及协议内容hash，程序验证不代替作者/授权证明。
 
 只消费已审查共同w3包内G32/G512两个小manifest，按公开source索引复核大小/hash，绑定既有输入/model inventory/GPU/软件栈；不是重新核当前服务器状态或升级Pilot。G32输入hash4dffd0dd…、G51236c507c5…；model inventory72465c90…，固定既有Windows/4090、physical3/logical0、torch2.6.0+cu124/CUDA12.4/Python3.11.16/Nsight2026.2.1.210。完整值与原件引用在候选中。用户DOCX的本地hash仅为审阅来源，不把未提交DOCX当作服务器源码artifact或覆盖文件。
 

@@ -145,6 +145,6 @@ baseline具体口径不得偷换：raw API全量包含同步，另列已识别sy
 
 [绑定候选0.1](gate12_freeze_candidate_v0_1.json)采用`exposedpath-freeze-candidate-record/0.1.0`，执行/分析均为**e38fa91850b8f31e17cc0ee264987ef3c1313d7d**。125个Git源码/合同/资格hash取该提交，包含本草案和科学审查在实现提交中的快照；当前文档仅补充绑定说明，不以文档HEAD替换其源码或hash。候选自身不在artifact集合，实际运行字节另seal。
 
-协议规范化内容SHA256：`389a28a17bec830e4f32bea72c259dce15ba279ce69fc20caebfdca88a1326e2`；候选文件SHA256：`cdd6764a2f37bf6089b1c916685a7040571fb221e58a95ec1ba1bb8765cd234e`。approval=null/PENDING_USER_SIGNATURE；没有签署回执、执行脚本或服务器预算授权。绑定设备/模型/input/software来自已有Pilot小manifest的复核引用，不证明服务器此刻未变、不升级Pilot结果。schema/registry版本及限定资格来源完整列于候选；hash锁不授列出源码中其他功能资格。
+协议规范化内容SHA256：`389a28a17bec830e4f32bea72c259dce15ba279ce69fc20caebfdca88a1326e2`；候选文件SHA256：`78cff3228d00b8410a42d51930df4556121eaf879eb95b430c9365ac8788e761`。approval=null/PENDING_USER_SIGNATURE；没有签署回执、执行脚本或服务器预算授权。绑定设备/模型/input/software来自已有Pilot小manifest的复核引用，不证明服务器此刻未变、不升级Pilot结果。schema/registry版本及限定资格来源完整列于候选；hash锁不授列出源码中其他功能资格。
 
 集中确认项：是否接受本草案限定P0性能/P1观测机制、公平baseline及负结果判据和窄资格Formal适用，并批准五条件w3/repeat1、六完整block的固定预算与上述完整候选签署？估计60进程/30profile、200～240min、42.1GB原件/90GB空间，不保证10/5ms。批准者/批准原文与完整hash须独立封存；签署和未来服务器执行授权分开，当前仍Gate12 NOT_RUN。

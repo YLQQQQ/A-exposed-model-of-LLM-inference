@@ -2,7 +2,7 @@
 
 当前唯一进度事实源：[research_progress 7.121](research_progress.md)。
 
-**7.121现行：Gate12本地实现与未签署候选已绑定，Gate12 NOT_RUN。** [候选0.1](gate12_freeze_candidate_v0_1.json)执行/分析均为e38fa91850b8f31e17cc0ee264987ef3c1313d7d，125个Git源码/合同hash；候选/交接文档提交不是执行commit。协议内容hash389a28a17bec830e4f32bea72c259dce15ba279ce69fc20caebfdca88a1326e2，候选文件hashcdd6764a2f37bf6089b1c916685a7040571fb221e58a95ec1ba1bb8765cd234e，approval=null，预算未批准。候选锁定实现提交中的草案快照；下方后续文字用于审阅说明，不替换其锁定hash。
+**7.121现行：Gate12本地实现与未签署候选已绑定，Gate12 NOT_RUN。** [候选0.1](gate12_freeze_candidate_v0_1.json)执行/分析均为e38fa91850b8f31e17cc0ee264987ef3c1313d7d，125个Git源码/合同hash；候选/交接文档提交不是执行commit。协议内容hash389a28a17bec830e4f32bea72c259dce15ba279ce69fc20caebfdca88a1326e2，候选文件hash78cff3228d00b8410a42d51930df4556121eaf879eb95b430c9365ac8788e761，approval=null，预算未批准。候选锁定实现提交中的草案快照；下方后续文字用于审阅说明，不替换其锁定hash。
 
 下一步仅集中确认[冻结草案](gate12_protocol_freeze_draft_v0_1.md)及[科学审查](gate12_scientific_readiness_review_v0_1.md)的有限P0性能/P1机制与公平负结果、窄资格Formal适用、六block固定预算和完整候选签署。60进程/30profile估计200～240min/42.1GB原件/90GB空间，非授权或精度保证；10/5ms未保证，取消精确P1→P0组成/细微稳定收益claim。224项相关CPU验证已完成，不重做；服务器不用操作，无部署包或Formal默认任务。用户DOCX不纳提交；Gate7～11限定PASS及所有未知/历史原件保持。以下7.120及更早均历史。
 
