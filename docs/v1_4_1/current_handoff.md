@@ -1,6 +1,10 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.122](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.123](research_progress.md)。
+
+**7.123现行：Gate13阶段A回执审查通过，Gate13仍NOT_RUN。** 用户服务器部署/CPU原件15文件/14清单、CRC/hash及四步exit0已本地直接核验；实际e38fa918 clean、125实字节匹配（55LF/70CRLF）、签署/脚本/输入绑定一致。计划60进程/30对，默认入口无模型/CUDA初始化/collector调用；不重跑测试/实验。静态ZIP 51983 bytes，SHA256 ef05a58b85fcc1721b5616d9dd491ea7d673777f653478d5db28fae756fb1d6d；详细清单/脚本hash与证据边界见进度7.123。
+
+唯一下一步：用户经协调审查后显式阶段B，复用原包和c5fcb77控制器，执行/分析仍e38fa918，任何新文档HEAD不替代。90GB门/六block/60进程/30profile和停止/原件保留规则不变。原正式结果尚未采集，UNKNOWN/NOT_ASSESSED及角色边界保持；不重部署/重包/重采旧数据，本助手不操作服务器。以下7.122为签署/交付历史，旧“阶段A待审”已由本条关闭。
 
 **7.122现行：Gate12限定PASS已签署；Gate13/14 NOT_RUN。** 用户已接受有限P0性能/P1机制、限定Formal适用与六block预算；[签署发布](gate12_protocol_signed_v0_1.json)/[收尾](gate12_closeout_v0_1.md)是当前身份。协议hash389a28a1…，执行/分析固定e38fa91850b8f31e17cc0ee264987ef3c1313d7d，文档/外部交付提交不替代执行身份。旧候选与Engineering/Pilot/BLOCKED原件原判定保留；UNKNOWN/NOT_ASSESSED、opaque/G1只A/N1单sync B与D禁用不变，不授完整新版Q0/精确P0组成/10或5ms保证。
 

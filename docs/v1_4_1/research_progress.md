@@ -1,5 +1,13 @@
 # ExposedPath 科研进度清单
 
+## 7.123 Gate13阶段A原始静态回执审查（2026-10-09）
+
+**阶段A回执审查通过；Gate13仍NOT_RUN，尚无Formal采集。** 本地直接读取用户服务器回传`gate13_e38fa91850b8_static.zip`：51983 bytes，SHA256 `ef05a58b85fcc1721b5616d9dd491ea7d673777f653478d5db28fae756fb1d6d`；清单hash `b56e1744e5e74096f20fb0c95487b304b9e5dcc5a2627f63d870a441e6970802`。15文件/14清单完整覆盖、大小/hash、CRC及安全路径通过；原件未解包改写。用户执行服务器部署和CPU检查，本助手只审计，未重跑224/23项、Q0、实验或目标机命令。
+
+四份原始exit回执均0；bundle/fetch/checkout/CPU日志与transcript一致。实际checkout为e38fa91850b8f31e17cc0ee264987ef3c1313d7d，CPU真实Git状态检查和脚本末次Tree门通过，最终clean。125项实际源码hash/length均匹配签署锁及显式表示（55 LF、70 CRLF），不是仅引用本地测试；签署、delivery配置和执行脚本逐字节匹配原交付包，输入/model清单绑定一致。执行脚本SHA256 `26b88cada4be7537fe6bfb4300fe29476d978fe11304be91157c9dce4c6d6472`。控制层仍c5fcb77，后续记录提交不替代执行/分析身份。
+
+CPU回执DELIVERY_CPU_PASS：计划60进程/30对，model_executed=false、cuda_initialized=false、collector_executed=false；核对实际默认分支/导入与四步命令，没有模型执行、CUDA初始化或collector调用。Git正常stderr被PowerShell呈现NativeCommandError，不据此认定失败：原始exit0、成功消息及后续严格检查均成立。保持UNKNOWN/NOT_ASSESSED、原数据角色和签署语义；不重新包装或改现有协议。唯一下一步是用户经协调审查后显式阶段B，固定六block/60新进程/30profile、90GB空间门与既有停止规则；收集完成后再本地审查，不自动Gate13 PASS。
+
 ## 7.122 Gate12限定签署、收尾及Gate13待审交付（2026-10-09）
 
 **Gate12 PASS，限于`G12-ROUTEA/0.1`未来限定Formal；Gate13/14 NOT_RUN。** 用户当前明确接受有限P0性能/P1机制、限定Formal适用和六block预算，授权记录签署。[签署发布](gate12_protocol_signed_v0_1.json)/[唯一收尾](gate12_closeout_v0_1.md)于`2026-10-09T13:21:15Z`生效，批准ID USER-20261009-G12-ROUTEA-01；助手记录人类授权，不冒称密码学签名。原未签署候选/旧角色/Raw/BLOCKED报告保留，不追认旧数据。payload内FREEZE_CANDIDATE是封套固定内容字段，实际生效状态由外层SIGNED及approval hash决定。
@@ -1044,7 +1052,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前工作入口：根目录 `main`；目录约定见 `docs/repository_layout.md`。Gate7历史封存验收执行commit为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`。N1历史Engineering执行V0为c21d835、Vmarker/V16为d25b4d1；新Pilot首批执行221f46c；审查提交不是新执行身份。
 - 当前数据资格（7.122）：Gate6历史Engineering/Q0保持；[首批/暖机对照](gate11_warmup_policy_review_v0_1.md)及[共同w3 Pilot](gate11_policy_closeout_v0_1.md)仍只作政策依据、不混池/升级。累计90进程/30profile Pilot预算结束；签署仅准未来限定Formal声明，尚无Formal采集或合格结果。UNKNOWN/NOT_ASSESSED与旧资格边界保持。
 - 当前 Gate 状态（7.122）：Gate0～7历史PASS、Gate8限定Engineering PASS、Gate9分域PASS、[Gate10仅选定G1三点一次可行性PASS](gate10_closeout_v0_1.md)、[N1独立Engineering PASS](n1_model_feasibility_closeout_v0_1.md)、[Gate11限定Pilot政策PASS](gate11_policy_closeout_v0_1.md)、[Gate12限定签署PASS](gate12_closeout_v0_1.md)；Gate13/14 NOT_RUN。容量/精度/稳定性未授，旧报告/UNKNOWN/NOT_ASSESSED保持。
-- 当前最高优先级（7.122）：协调窗口审查[Gate13交付](gate13_delivery_v0_1.md)及本地单ZIP身份，之后用户默认部署CPU/回传静态单ZIP，审核后独立显式启动签署后的固定六block。本轮不操作服务器，旧待签署/待批准不是现行指令。
+- 当前最高优先级（7.123）：阶段A用户服务器原始回执已本地审查通过；用户经协调审查后独立显式阶段B，启动已签署固定六block。复用[Gate13交付](gate13_delivery_v0_1.md)及原包/脚本hash，不重部署/包装/测试；本助手不操作服务器，回传正式结果后另行审查。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -1458,7 +1466,7 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ## 7. 固定执行顺序与最近任务
 
-**7.122现行覆盖：** Gate12已限定签署PASS，不重复旧确认/验证；Gate13先审固定单包，再由用户默认部署CPU，静态审核后独立显式启动六block。签署不等于采集或信息增益，不改旧角色/报告；归档审查后才可清理准确名单中的重复中间文件。
+**7.123现行覆盖：** Gate12限定签署PASS保持，阶段A原回执已本地核验通过；唯一下一步为用户显式阶段B，不重跑或包装。Gate13仍NOT_RUN，签署/静态成功不等于采集或信息增益；原报告/角色/UNKNOWN不改，完整归档和批次审查后才可清理准确名单中的重复中间文件。
 
 **7.118现行覆盖：** Gate11限定政策审查PASS，唯一当前入口[政策收尾0.1](gate11_policy_closeout_v0_1.md)；没有本阶段必要新实物阻塞，不再执行旧Pilot/部署包。下一项Gate12本地确认共同w3、6完整block建议及有限claim并冻结版本/统计/排除/图表；精度不保证、UNKNOWN/NOT_ASSESSED及历史原报告不变。现在无服务器操作，以下覆盖语句均历史。
 
