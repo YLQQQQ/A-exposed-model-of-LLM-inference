@@ -1,5 +1,19 @@
 # ExposedPath 科研进度清单
 
+## 7.128 Gate13后处理超时审查与逐run等价复用（2026-10-10）
+
+**Gate13 BLOCKED，60次执行完成仍待Formal资格审查；不恢复原批次、不新增样本。** [当前后处理入口](gate13_postprocess_timeout_review_v0_1.md)直接核验小诊断包86330 bytes / SHA256 `ae8c6deb277a61cb1dbd77ced06d9926df684f04221ba86f42e645625e803fea`；11文件/10项索引、CRC、安全路径、完整覆盖、全部大小/hash通过，索引`cf27ee85231bb2e3f1f55bd5f66dc53b8fa090f3359142e61aec1737cd29796f`，missing_files=[]。batch_report与formal_index的60槽位一致、30pair；执行/原分析仍`99f3bae966f2fb794073ff4d7468233b6b8dd2ac`。小包缺实际各run的输入、Raw/SQLite/Canonical/domain/baseline/token，不能据此判60次Formal合格。原7200.016秒超时、UNKNOWN_STOP_AND_INSPECT_NO_RETRY及BLOCKED不改。
+
+完整日志与实际调用链确认每条profile采集3次、最终复核2次完整domain恢复；finish完成53次、另1次S中断。S累计4729.759秒，A/准入与N1 A/B647.184秒，G1 B0.281秒；转发日志与包裹计时不双计。依据固定串行顺序推定前26条各2次、第27条第二次中断、最后3条未复核，仅作定位而非身份重建。历史实物CPU profiling亦显示每sync依赖图和registry重复读取：N1 40494/G1 20776次registry load；558MB/930MB domain大对象成本真实存在，重复load不是声称唯一瓶颈。
+
+最小实现只改最终复核接线：同一run的`DomainReview`先执行原完整S/A/B验证，baseline使用严格绑定的小准入凭据，仍独立重算count/sum/union/mapping并逐值对比。完整source/derived集合、hash/大小、代码/registry/schema、SQLite非空WAL/journal和Formal冻结artifact门逐次复核；变化、错run、缺文件、篡改、合同冲突均拒绝。逐run释放大型对象，无全批缓存；新增domain/baseline进度。原读取路径、S/A/B、baseline范围、signed差、whole-block统计/排除规则和超时保持。代码审查已补齐合同锁与sidecar负例，无剩余重要发现。
+
+实际最终命令：`python -m pytest -q -p no:cacheprovider tests/test_domain_review_reuse.py tests/test_gate12_baseline.py tests/test_gate12_statistics.py --basetemp=.local/diagnostics/gate13_finish_timeout_v0_1/final_guard_tmp --junitxml=.local/diagnostics/gate13_finish_timeout_v0_1/final_guard.xml`，**36 passed/0 failed/0 skipped，244.25s**。含实际producer文件链及完整60 CPU替身批次，30条P1只恢复30次；tests-first最初10项因缺会话失败，sidecar红例2项未拒绝，子目录schema红例1项未拒绝，修复后通过。中间测试曾因运行中源码改动触发FORMAL_ARTIFACT_CONTENT，保留原回执且未弱化门，最终源码稳定后36项才是最终成绩。没有全量/Q0/模型/CUDA/Nsight或服务器执行。
+
+历史封存G1/N1同输入最终无profiler比较：G1 **106.945→66.377s**，N1 **103.601→66.466s**，domain与baseline完全等值、输入hash不变、完整恢复2→1。各一次本地CPU观察，不是当前Formal实物或目标机性能保证；保留UNKNOWN/NOT_ASSESSED，旧Engineering数据不升级。用户DOCX原修改保持且不纳提交。
+
+本补丁是纯性能/生命周期修复，不改变已签署研究规则，但新analysis commit不能静默继承0.1.1的99f3bae精确seal。原`validate_analysis`仍严格，新三文件源码差异须单独精确兼容绑定；相对冻结集另继承两份Gate12文档的此前签署状态提示变化，已审查不改条款，仍明确列入hash差异。不改旧manifest/domain/approval。唯一待审步骤：一次当前只读静止检查→协调审查→完整原树取证ZIP回传，外部新索引保留历史UNKNOWN、不删.active、不调用旧retention/finish入口、不清理现场。完整档及分析兼容绑定核验后才在新派生目录CPU复核60/30与统计；7.127的阶段B启动指令现为历史，不重启或替补。
+
 ## 7.127 Gate13 0.1.1阶段A原始回执审查通过（2026-10-10）
 
 **阶段A回执审查通过；Gate12限定PASS保持，Gate13仍BLOCKED（待新正式批次与结果审查），Gate14 NOT_RUN。** 用户在服务器执行部署/CPU检查后回传`gate13_99f3bae966f2_static.zip`，本地直接只读消费原件：52961 bytes，SHA256 **b5a6e3c49ab7d4b5dcb64b78076516f05af3e44dae6fd9482230b473a3e993fc**，清单SHA256 **cf05fe98783f91b339b90aa5be69341286db0c1a2725fc0fefec240fb5ba95dc**。15文件/14清单、CRC、安全唯一路径、完整覆盖及全部大小/hash通过；没有解包或改写原件。原服务器transcript时间11:44:36–11:44:41，Windows PowerShell 5.1.20348.2849。

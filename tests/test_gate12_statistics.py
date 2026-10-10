@@ -110,7 +110,16 @@ def test_complete_signed_cpu_file_batch_to_block_report(tmp_path,monkeypatch):
                     domain_sha256=sha(out/'analyzed/domain.json') if pid=='pass1' else None,
                     baseline_sha256=sha(out/'baseline/baseline.json') if pid=='pass1' else None))
     index=tmp_path/'index.json';index.write_text(json.dumps(dict(schema_version='exposedpath-formal-batch-index/0.1.0',runs=runs)))
+    from exposedpath_v141 import gate9_domain as domain_module
+    original_load=domain_module.load_domain
+    verifications=[]
+    def counted_load(path,*args,**kwargs):
+        verifications.append(str(path))
+        return original_load(path,*args,**kwargs)
+    monkeypatch.setattr(domain_module,'load_domain',counted_load)
     rows,sources=read_formal_batch(index)
+    assert len(verifications)==len(set(verifications))==30  # Exactly one full check per P1 run.
+    monkeypatch.setattr(domain_module,'load_domain',original_load)
     assert len(rows)==60 and len({r['pair_id'] for r in rows})==30
     assert rows[0]['condition']=='G32' and rows[-1]['condition']=='G32'
     output=write_formal_report(index,tmp_path/'report')

@@ -49,7 +49,7 @@ def read_formal_batch(index_path):
     """
     from exposedpath.formal_protocol import validate,ORDERS,reference
     from .gate8_adapter import digest
-    from .gate9_domain import load_domain,FORMAL_VERSION
+    from .gate9_domain import DomainReview,FORMAL_VERSION,analysis_stage
     from scripts.gate8_pair import inspect_execution
     from scripts.gate11_pilot_batch import COMMON,GLOBAL_COMMON
     index_path=Path(index_path).resolve();root=index_path.parent
@@ -83,17 +83,23 @@ def read_formal_batch(index_path):
             require(report.get('formal')==b and report.get('status')=='FORMAL_RUN_COMPLETE_PENDING_REVIEW'
                 and report.get('error') is None and report['collection']['status']=='COMPLETE'
                 and report['export_status']=='PASS' and report['result_sha256']==digest(dpath),'P1_REPORT')
-            domain=load_domain(dpath,out/'input_receipt.json',epath,
-                **({'bridge_path':out/'diagnostic/n1_model_calls.json'} if b['variant'] else {}))
-            require(domain['schema_version']==FORMAL_VERSION and domain.get('formal')==b
-                and domain['formal_admission']['status']=='ADMITTED_LIMITED_PROTOCOL','DOMAIN_ADMISSION')
-            from .activity_baseline import load_baseline
-            baseline=load_baseline(base,dpath,out/'input_receipt.json',epath,
-                **({'bridge_path':out/'diagnostic/n1_model_calls.json'} if b['variant'] else {}))
+            bridge={'bridge_path':out/'diagnostic/n1_model_calls.json'} if b['variant'] else {}
+            # One verified object for this run only; no batch-sized cache.
+            print(f'[review] order={order}/60 block={block} condition={condition} pass=pass1',flush=True)
+            with DomainReview() as review:
+                with analysis_stage('formal_domain_review'):
+                    domain=review.load(dpath,out/'input_receipt.json',epath,**bridge)
+                require(domain['schema_version']==FORMAL_VERSION and domain.get('formal')==b
+                    and domain['formal_admission']['status']=='ADMITTED_LIMITED_PROTOCOL','DOMAIN_ADMISSION')
+                from .activity_baseline import load_baseline
+                with analysis_stage('formal_baseline_review'):
+                    baseline=load_baseline(base,dpath,out/'input_receipt.json',epath,
+                        domain_review=review,**bridge)
             arecords=[a for r in domain['requests'] for a in r['a_records']]
             require(len(arecords)==3 and {a['phase'] for a in arecords}==set(PHASES),'A_WINDOWS')
             a={r['phase']:r for r in arecords}
             physical_b=domain.get('b_records',[]) if b['variant'] else []
+            del domain  # Release large physical S/W records before the next run.
         observed.append(facts)
         rows.append(dict(block=block,condition=condition,pass_id=b['pass_id'],pair_id=b['pair_id'],
             run_id=b['run_id'],order=order,host_ns=facts['timing_ns'],p1_a=a,

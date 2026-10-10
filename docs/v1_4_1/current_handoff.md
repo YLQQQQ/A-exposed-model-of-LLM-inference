@@ -1,6 +1,12 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.127](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.128](research_progress.md)。
+
+**7.128现行：Gate13后处理超时，保持BLOCKED；不恢复采集或原finish入口。** [当前审查/恢复方案](gate13_postprocess_timeout_review_v0_1.md)核验小诊断包11文件/10索引CRC/hash通过、missing_files=[]，但没有60run实物；60 RUN_COMPLETE_PENDING_REVIEW不等于Formal合格。执行仍99f3bae，原7200秒超时、UNKNOWN与BLOCKED不改。逐run复用已完整验证的domain准入，baseline仍独立重算；36项CPU通过，历史G1/N1结果等值、本地耗时106.945→66.377s/103.601→66.466s。不是当前Formal验收或目标机速度保证。
+
+唯一待审步骤为一次当前静止只读检查、外部新回执、完整原树取证ZIP回传；不删.active、不调用旧封包门、不清理、不重采。完整档及新analysis精确兼容绑定审查后才新派生目录CPU收口；原99f3bae seal不自动接受新HEAD。Gate7～12限定PASS保持，Gate14未启动；私有路径和命令仅在忽略的本地恢复索引。
+
+以下7.127及此前指令为历史，不再启动原批次。
 
 **7.127现行：0.1.1阶段A回执审查通过；Gate12限定PASS、Gate13仍BLOCKED，尚无本版Formal测量验收。** 用户服务器回传静态原件52961 bytes/SHA256 b5a6e3c49ab7d4b5dcb64b78076516f05af3e44dae6fd9482230b473a3e993fc，清单cf05fe98783f91b339b90aa5be69341286db0c1a2725fc0fefec240fb5ba95dc；15文件/14清单/CRC/hash通过。四步exit0、DELIVERY_CPU_PASS、126源码实字节（56LF/70CRLF）与签署Git锁一致；真实99f3bae clean由CPU Git adapter和最后Tree门支持。签署、配置及launcher与原交付逐字节一致；计划60进程/30pair，没有模型/CUDA初始化/collector。助手仅本地只读审计，无测试重跑或服务器操作。
 

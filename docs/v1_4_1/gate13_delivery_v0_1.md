@@ -1,5 +1,9 @@
 # Gate13 固定版本待审交付与数据保留 0.1
 
+**当前：99f3bae 六block执行完成待审，但最终CPU后处理超时，Gate13 BLOCKED。**
+原批次不得恢复/重试，旧封包因历史 UNKNOWN 正确拒绝；当前后处理/安全归档入口见
+[超时审查0.1](gate13_postprocess_timeout_review_v0_1.md)。下方部署/采集指令为历史，不再执行。
+
 **2026-10-10后续状态：旧e38首槽prepare失败，Gate13 BLOCKED。** 本页为原交付历史，不能执行旧阶段B。[0.1.1重签收尾](gate12_closeout_v0_1_1.md)、[签署发布](gate12_protocol_signed_v0_1_1.json)及科研进度7.126优先；执行/分析99f3bae、前置e38，新唯一签署包先阶段A默认部署/CPU，静态单ZIP审查通过后才显式B。原包/报告/签署保持，下方原预算/测量/归档原则作为历史修订来源；实际路径与命令见忽略的本地交付索引。
 
 2026-10-09；`G13-DELIVERY/0.1`。依据[签署记录](gate12_protocol_signed_v0_1.json)/[Gate12收尾](gate12_closeout_v0_1.md)。**Gate13 NOT_RUN；本轮只本地交付准备。** 机器路径、唯一ZIP/大小/hash和可复制命令存于忽略的本地交付索引，不提交私有配置。

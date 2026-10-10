@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 import tempfile
 import time
+from copy import deepcopy
 from contextlib import contextmanager
 
 from .gate8_adapter import digest
@@ -168,3 +169,86 @@ def load_domain(result_path, receipt_path, execution_path, *, bridge_path=None):
         n1_adapter_version=saved.get('adapter_version') if saved.get('adapter_version','').startswith('exposedpath-n1-model-ownership/') else None)
     require({k:v for k,v in saved.items() if k!='files'}==actual, 'RESULT_MISMATCH')
     return saved
+
+
+class DomainReview:
+    """One-run, file-bound reuse of a completed *full* domain verification.
+
+    Not an admission shortcut: source/derived bytes and the complete file set
+    are checked on each use. Baseline values are still independently recomputed.
+    No global cache; exit drops the value even when a consumer raises.
+    """
+    def __init__(self):
+        self._key = self._snapshot = self._value = None
+        self._closed = False
+
+    def __enter__(self):
+        require(not self._closed, 'REVIEW_CLOSED')
+        return self
+
+    def __exit__(self, *exc):
+        self._key = self._snapshot = self._value = None
+        self._closed = True
+
+    @staticmethod
+    def _sources(key):
+        domain, receipt, execution, bridge = key
+        _, paths = load_input_receipt(receipt)
+        from .gate8_diagnostic_scope import _require_sealed
+        _require_sealed(paths['sqlite'])
+        sources = {domain, receipt, execution, *paths.values()}
+        if bridge is not None:
+            sources.add(bridge)
+        # Include domain.json plus *every* derived file, so a newly inserted
+        # unreferenced file cannot hide behind a cached FILE_SET check.
+        sources.update(p.resolve() for p in domain.parent.rglob('*') if p.is_file())
+        # Bind same-contract reuse for Engineering/Pilot too, not only Formal.
+        # These are source/registry bytes, never result-derived cache keys.
+        from . import a_api_classification, sync_semantics
+        code_root = Path(__file__).resolve().parents[1]
+        sources.update(code_root.joinpath('exposedpath_v141').glob('*.py'))
+        sources.update(code_root.joinpath('exposedpath').glob('*.py'))
+        sources.update(code_root.joinpath('docs/v1_4_1/contracts').rglob('*.json'))
+        sources.update((a_api_classification.REGISTRY_PATH,
+                        a_api_classification.REGISTRY_PATH.with_name('a_api_registry_v0_2.json'),
+                        code_root / sync_semantics._REGISTRY_PATH))
+        return {str(p): (p.stat().st_size, digest(p)) for p in sources}
+
+    def load(self, result_path, receipt_path, execution_path, *, bridge_path=None):
+        require(not self._closed, 'REVIEW_CLOSED')
+        key = tuple(Path(p).resolve() if p is not None else None
+                    for p in (result_path, receipt_path, execution_path, bridge_path))
+        require(self._key is None or self._key == key, 'REVIEW_INPUT_CONFLICT')
+        before = self._sources(key)
+        if self._value is None:
+            value = load_domain(*key[:3], bridge_path=key[3])
+            require(before == self._sources(key), 'REVIEW_SOURCE_CHANGED')
+            # Retain only the admission fact; physical S/W JSON can be hundreds
+            # of MB. The caller owns the full value, never our cache.
+            self._key, self._snapshot, self._value = key, before, {'status': value['status']}
+        else:
+            self.check_unchanged(snapshot=before)
+            value = _json(key[0])
+            self.check_unchanged()
+        return value
+
+    def admission(self, result_path, receipt_path, execution_path, *, bridge_path=None):
+        """Same-file verified status for baseline; do not parse/copy S/W again."""
+        require(not self._closed and self._value is not None, 'REVIEW_CLOSED')
+        key = tuple(Path(p).resolve() if p is not None else None
+                    for p in (result_path, receipt_path, execution_path, bridge_path))
+        require(self._key == key, 'REVIEW_INPUT_CONFLICT')
+        self.check_unchanged()
+        return deepcopy(self._value)
+
+    def check_unchanged(self, *, snapshot=None):
+        require(not self._closed and self._value is not None, 'REVIEW_CLOSED')
+        require((self._sources(self._key) if snapshot is None else snapshot) == self._snapshot,
+                'REVIEW_SOURCE_CHANGED')
+        # Keep the frozen Formal implementation/artifact gate. A session
+        # never exempts a changed analysis checkout or protocol source.
+        _, paths = load_input_receipt(self._key[1])
+        manifest = _json(paths['wmpc_manifest'])
+        if 'formal' in manifest:
+            from exposedpath.formal_protocol import validate_analysis
+            validate_analysis(manifest)

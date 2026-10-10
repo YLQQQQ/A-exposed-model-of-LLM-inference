@@ -118,7 +118,7 @@ def _driver_records(path):
         return records,'OBSERVED_TABLE'
 
 
-def _file_value(domain_path,receipt_path,execution_path,*,bridge_path=None):
+def _file_value(domain_path,receipt_path,execution_path,*,bridge_path=None,domain_review=None):
     """Use the same accepted domain, projected scope, clock, registry and Raw."""
     from .gate9_domain import load_domain
     from .sync_semantics import load_canonical_bundle,build_semantic_inventory,_phase_ownership
@@ -128,7 +128,11 @@ def _file_value(domain_path,receipt_path,execution_path,*,bridge_path=None):
     from .gate8_files import load_input_receipt
     from .time_representation import OPAQUE_ALLOCATION,time_representation
     domain_path=Path(domain_path)
-    result=load_domain(domain_path,receipt_path,execution_path,bridge_path=bridge_path)
+    if domain_review is not None:
+        from .gate9_domain import DomainReview
+        require(isinstance(domain_review,DomainReview),'REVIEW_TYPE')
+    loader=load_domain if domain_review is None else domain_review.admission
+    result=loader(domain_path,receipt_path,execution_path,bridge_path=bridge_path)
     require(result['status']=='QUALITY_CHECK_PASSED_NOT_QUALIFICATION','DOMAIN_REJECTED')
     canonical=domain_path.parent/'canonical/canonical_manifest.json'
     scope=domain_path.parent/'projection/scope.json'
@@ -161,6 +165,8 @@ def _file_value(domain_path,receipt_path,execution_path,*,bridge_path=None):
     value['api_table_scope']=sorted({r['source_table'] for r in apis})
     value['driver_layer_status']=driver_status
     value['input_receipt_sha256']=digest(Path(receipt_path))
+    if domain_review is not None:
+        domain_review.check_unchanged()
     return value
 
 
@@ -175,8 +181,9 @@ def write_baseline(domain_path,receipt_path,execution_path,output_dir,*,bridge_p
     return output_dir/'baseline.json'
 
 
-def load_baseline(path,domain_path,receipt_path,execution_path,*,bridge_path=None):
+def load_baseline(path,domain_path,receipt_path,execution_path,*,bridge_path=None,domain_review=None):
     import json
     saved=json.loads(Path(path).read_text(encoding='utf-8'))
-    require(saved==_file_value(domain_path,receipt_path,execution_path,bridge_path=bridge_path),'FILE_SCOPE_OR_VALUES')
+    require(saved==_file_value(domain_path,receipt_path,execution_path,bridge_path=bridge_path,
+                              domain_review=domain_review),'FILE_SCOPE_OR_VALUES')
     return saved
