@@ -85,7 +85,32 @@ WAL/journal、baseline 篡改及重算期间源变化、子目录 schema 变化�
 当前根目录还有保留的用户 DOCX 修改，亦不能冒称满足 clean-analysis 门。
 完整 Formal 原件与明确的分析身份重绑定是新派生复核的前置，不是再次采集或研究语义变更。
 
-## 唯一待审恢复方案
+## 7.129现行：身份补证停止，取证字节副本待审
+
+新回执14910 bytes，SHA256 `7536d1ee6f37953fd7b89e7b3115546aa5209a29075e379ebfd0f4d10d22340b`
+为本地按原件实测（无独立服务器摘要回执）。15组原实例与封存quiescence引用一致；
+非管理员令牌，成功单次CIM查询。11组PID/创建时间匹配但exe/cmd均缺，UNKNOWN保留；
+4原实例EXITED。不能把身份缺失直接归因权限、path match=null解释为无关或改写历史退出状态。
+用户决定本次有界补证结束，不再查进程、重跑静止/权限检查。
+
+当前只准备[独立取证工具](../../scripts/gate13_forensic_copy.py)和本地私有完整命令。
+它固定源文件/目录集，记录长度/hash、mtime等、全部目录和空目录；
+拒绝越界、大小写/Unicode规范化重复和reparse point；ZIP64流式压缩保留全部原件及marker。
+所有工作索引/回执写在原树之外；ZIP内另存这些记录的副本及原身份JSON/静止ZIP/工具源码。
+不另展开一套大型副本，不使用旧pack或分析入口，不查询进程。
+复制过程中逐文件核hash，复制后及ZIP验证后再核源文件集/内容；
+ZIP逐项CRC/hash/长度和完整覆盖必须一致。变化或读错即保留`.partial`与外部失败回执，STOP。
+仅全部通过才发布最终ZIP名和`FORENSIC_BYTE_COPY_VERIFIED_NOT_ACCEPTANCE`回执。
+最终ZIP hash记录在外部回执/控制台，不放进自身；ZIP内checkpoint不冒称最终自验证结果。
+
+空间按实际源总量+2GiB与每项元数据余量检查，不假定压缩率；
+既有元数据清单约39.85GiB，建议45GiB空闲，仅是规划值。
+CPU最终28 passed/1 skipped（本机无真实symlink创建权限，属性拒绝另有测试）；
+PS5.1仅语法核验。没有目标机执行/完整Formal实物验证。
+这只证明有限观察期间的字节一致性，不证明无写者或跨文件原子状态，也不保存ACL/ADS磁盘镜像。
+原UNKNOWN/BLOCKED、Raw与marker不变。新分析兼容绑定及新派生CPU收口须等完整原件取得后处理。
+
+## 历史7.128恢复方案（静止补证前置已由7.129覆盖，不再执行）
 
 1. 原现场冻结。先一次只读检查当前相关进程可见性、active/WAL/journal 状态及文件元数据稳定性；
    外部新回执只证明本次观测，不能把历史 descendant UNKNOWN 改成已退出。

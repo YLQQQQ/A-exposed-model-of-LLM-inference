@@ -1,6 +1,12 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.128](research_progress.md)。
+**7.129唯一现行：Gate13 BLOCKED；一次身份补证已结束，禁止继续追索进程/重跑静止检查或权限试验。** [进度7.129](research_progress.md)直接核验新JSON14910 bytes/`7536d1ee6f37953fd7b89e7b3115546aa5209a29075e379ebfd0f4d10d22340b`（本地实测，未获独立服务器hash回执），15组PID/创建时间与原封存源一致。实际非管理员令牌、成功单次查询；11匹配实例缺ExecutablePath/CommandLine仍UNKNOWN，4原实例EXITED。不推断缺字段原因或无写者。
+
+唯一下一步：协调审查保留UNKNOWN的完整取证复制命令，暂不执行；工具[gate13_forensic_copy.py](../../scripts/gate13_forensic_copy.py)只用stdlib，固定文件集、全部长度/hash/空目录、拒绝reparse/越界/重复，流式ZIP64及源前后/ZIP CRC全覆盖复核；失败副本保留，输出全部在原树外。28项CPU通过、1项真实symlink权限skip，PS5.1仅AST通过，不是目标机验证。私有准确路径/整段命令在本地恢复索引；按实际总量+2GiB/元数据余量核容量，建议45GiB空闲。
+
+这是取证保全，不是旧retention准入/原子快照/所有写者不存在的证明。不运行旧pack/finish-only、不删除marker或改UNKNOWN/BLOCKED、不清理/重采。原执行99f3bae及拟分析e19c308不变，完整档核验后才处理精确分析兼容绑定和新派生CPU复核；Formal资格未授，用户DOCX保留。以下7.128及更早静止/启动指令均历史，由本段覆盖。
+
+以下为7.128历史交接，当前唯一进度事实源为[research_progress 7.129](research_progress.md)。
 
 实现/拟分析固定e19c308d1254feb0e643ae56429d5afd2ab6b4fd，后续文档HEAD不代替它；[精确兼容记录](gate13_analysis_compatibility_v0_1.json)列126冻结artifact中的121不变/3实现变化/2此前签署状态文档变化，尚非新Formal分析授权。当前不部署服务器，完整原件及明确分析身份重绑定待审。
 
