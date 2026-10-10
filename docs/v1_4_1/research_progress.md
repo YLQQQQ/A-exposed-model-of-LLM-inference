@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.127 Gate13 0.1.1阶段A原始回执审查通过（2026-10-10）
+
+**阶段A回执审查通过；Gate12限定PASS保持，Gate13仍BLOCKED（待新正式批次与结果审查），Gate14 NOT_RUN。** 用户在服务器执行部署/CPU检查后回传`gate13_99f3bae966f2_static.zip`，本地直接只读消费原件：52961 bytes，SHA256 **b5a6e3c49ab7d4b5dcb64b78076516f05af3e44dae6fd9482230b473a3e993fc**，清单SHA256 **cf05fe98783f91b339b90aa5be69341286db0c1a2725fc0fefec240fb5ba95dc**。15文件/14清单、CRC、安全唯一路径、完整覆盖及全部大小/hash通过；没有解包或改写原件。原服务器transcript时间11:44:36–11:44:41，Windows PowerShell 5.1.20348.2849。
+
+四步bundle verify/fetch/detached checkout/CPU检查原始exit回执均0，原日志与transcript一致。实际执行/分析 **99f3bae966f2fb794073ff4d7468233b6b8dd2ac**，不是后续文档HEAD。126项源码实字节逐项与该commit的Git内容锁及已签署允许表示核验，**56 LF、70 CRLF**；没有任意归一化后放行。最终clean依据实际CPU Git adapter和成功状态前最后`Tree($Target)`门（不是另有独立porcelain输出）。签署发布、delivery配置、执行脚本均与原交付逐字节一致；协议d9204a80…/发布1378c89d…/脚本26b88cad…及固定输入、模型清单绑定一致。CPU原回执`DELIVERY_CPU_PASS`，60计划槽位/30pair；静态receipt为`STATIC_READY_FOR_COORDINATOR_REVIEW`、error=null。
+
+实际默认调用无`-CollectReviewedFormal`，源码/原始调用链确认没有模型加载、CUDA初始化或collector执行；没有重跑150项、完整Q0、实验或目标机命令。Git正常stderr经PowerShell呈现`NativeCommandError`，结合原exit0、成功消息和后续严格门，不判为部署失败。本地首次日志读取按UTF-8遭遇实际UTF-16 BOM，随后严格按BOM只读解码；审计脚本首次漏用冻结规范化hash的终止换行而拒绝，核对既定ASCII+LF算法后通过。这两项是本地审计工具错误，不是服务器缺陷，未改Raw或身份规则。
+
+唯一下一步：用户经协调审查后显式阶段B，复用同一签署交付及固定launcher，不重包/重部署/恢复旧失败目录。五条件/六平衡block、60新进程/30profile、共同warmup3/repeat1及90GB门、200–240分钟粗估和失败即停规则不变；无自动重试/替补/扩预算。最终单ZIP回传后逐项审查，采集完成不等于Gate13 PASS或信息增益成立。旧BLOCKED、原0.1/seal、UNKNOWN/NOT_ASSESSED、G1投影A/N1合格单sync B/opaque/D禁用与用户DOCX保持；尚不清理任何证据。私有路径及完整阶段B命令仍在忽略的本地交付索引；下方7.126“新阶段A待审”已由本节关闭。
+
 ## 7.126 Gate12 0.1.1精确重签及Gate13唯一新交付（2026-10-10）
 
 用户明确授权沿用已批准的研究范围和六block预算，审查后记录[0.1.1重签发布](gate12_protocol_signed_v0_1_1.json)/[收尾](gate12_closeout_v0_1_1.md)。**Gate12限定PASS，Gate13仍BLOCKED、Gate14 NOT_RUN。** approval ID USER-20261010-G12-ROUTEA-011，生效2026-10-10T03:25:04Z；是明确人类授权记录，不冒称密码学签名。协议内容hash **d9204a80bf15ce810093ec53c506d4bf3eadd2f1ad71db8844cff330f0c7448b**，发布文件hash **1378c89db04336102a9dc0ce53ef7b1ef17dd9c518320c060e74d39abaa5b669**，approval hash423852a31bd858a56255ca092bc370eb2349fc293ecab182c9fae7dbc562780e；原候选approval=null保持，旧0.1签署/seal/失败包/报告不改。

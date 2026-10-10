@@ -1,6 +1,10 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.126](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.127](research_progress.md)。
+
+**7.127现行：0.1.1阶段A回执审查通过；Gate12限定PASS、Gate13仍BLOCKED，尚无本版Formal测量验收。** 用户服务器回传静态原件52961 bytes/SHA256 b5a6e3c49ab7d4b5dcb64b78076516f05af3e44dae6fd9482230b473a3e993fc，清单cf05fe98783f91b339b90aa5be69341286db0c1a2725fc0fefec240fb5ba95dc；15文件/14清单/CRC/hash通过。四步exit0、DELIVERY_CPU_PASS、126源码实字节（56LF/70CRLF）与签署Git锁一致；真实99f3bae clean由CPU Git adapter和最后Tree门支持。签署、配置及launcher与原交付逐字节一致；计划60进程/30pair，没有模型/CUDA初始化/collector。助手仅本地只读审计，无测试重跑或服务器操作。
+
+下一项仅用户经协调审查后手动显式阶段B，沿用忽略的本地交付说明、同一固定签署包/launcher与99f3bae执行身份；不重部署/重包/恢复旧attempt。90GB/六block/60进程/30profile/w3/repeat1及硬失败即停、无重试替补保持，正式单ZIP回传后再审查。旧BLOCKED、UNKNOWN/NOT_ASSESSED、用户DOCX及各支持域限制保留，当前不清理。下方7.126和更早“阶段A待审”均历史。
 
 **7.126现行：G12-ROUTEA/0.1.1已按本次用户明确授权重签，Gate12限定PASS、Gate13仍BLOCKED。** [签署发布](gate12_protocol_signed_v0_1_1.json)/[当前收尾](gate12_closeout_v0_1_1.md)，approval ID USER-20261010-G12-ROUTEA-011，生效2026-10-10T03:25:04Z；protocol hash d9204a80bf15ce810093ec53c506d4bf3eadd2f1ad71db8844cff330f0c7448b。执行/分析99f3bae966f2fb794073ff4d7468233b6b8dd2ac，126源锁/12schema/资格引用已核验；文档提交不替代执行。仅显式0.1/0.1.1闭集兼容，actual副本finalize→原严格校验和未签署/错schema/旧role/混版本拒绝保持。150项原验证直接复用。
 
