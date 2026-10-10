@@ -166,8 +166,12 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     if formal_binding is not None:
         manifest.pop('gate10_workload',None)
         manifest.update(formal.minimal_fields(formal_binding))
-        formal.validate(manifest)
     manifest = finalize_manifest(manifest,prompt,prompt_tokens_path=output/'prompt.json')
+    if formal_binding is not None:
+        # Validate the final producer object: create_manifest deliberately leaves
+        # input hash / WMPC unfinished. Never substitute the declared expectation
+        # for the SHA256 recomputed from the actual copied input bytes.
+        formal.validate(manifest)
     for name, value in (('manifest.json',manifest),('preflight.json',preflight)):
         with (output/name).open('x',encoding='utf-8') as handle:
             json.dump(value,handle,indent=2,sort_keys=True)

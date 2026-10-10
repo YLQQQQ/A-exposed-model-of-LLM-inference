@@ -48,7 +48,10 @@ def validate_release(protocol, approval):
           'warmup_count','blocks','input_hashes','supported_domains','claims',
           'p0_composition_transfer','d_signature','execution_constraints'}
     require(isinstance(protocol,dict) and set(protocol)==keys,'PROTOCOL_SCHEMA')
-    require(protocol['version']=='G12-ROUTEA/0.1' and protocol['status']=='FREEZE_CANDIDATE','PROTOCOL_VERSION')
+    # 0.1 remains readable; 0.1.1 is a prospective prepare-order repair with
+    # unchanged measurements. Its new content hash still requires new approval.
+    require(protocol['version'] in ('G12-ROUTEA/0.1','G12-ROUTEA/0.1.1')
+        and protocol['status']=='FREEZE_CANDIDATE','PROTOCOL_VERSION')
     require(all(isinstance(protocol[k],str) and re.fullmatch('[0-9a-f]{40}',protocol[k])
                 for k in ('execution_commit','analysis_commit')),'CODE_COMMIT')
     require(type(protocol['blocks']) is int and protocol['blocks']==6
@@ -62,6 +65,9 @@ def validate_release(protocol, approval):
             and isinstance(v,str) and re.fullmatch('[0-9a-f]{64}',v) for k,v in value.items()),'CONTENT_HASHES')
     require(set(protocol['input_hashes'])=={'G32','G512'},'INPUT_SET')
     require(REQUIRED_ARTIFACTS<=protocol['artifact_hashes'].keys(),'SOURCE_LOCK_INCOMPLETE')
+    if protocol['version']=='G12-ROUTEA/0.1.1':
+        require('docs/v1_4_1/contracts/formal_envelope_schema_v0_1_1.json'
+            in protocol['artifact_hashes'],'SOURCE_LOCK_INCOMPLETE')
     c=protocol['execution_constraints']
     require(isinstance(c,dict) and set(c)=={'model_inventory_sha256','gpu','software','collector_version'}
         and isinstance(c['model_inventory_sha256'],str) and re.fullmatch('[0-9a-f]{64}',c['model_inventory_sha256']),'EXECUTION_CONSTRAINTS')

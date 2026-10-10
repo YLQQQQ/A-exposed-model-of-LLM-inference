@@ -30,10 +30,16 @@ def validate_shape(kind, value):
         return isinstance(v,list) and any(formal_role(x) for x in v)
     if formal_role(value):
         schema=deepcopy(_SCHEMA)
-        definition=json.loads((Path(__file__).resolve().parents[1]/'docs/v1_4_1/contracts/formal_envelope_schema_v0_1.json').read_text(encoding='utf-8'))
-        reference_schema=deepcopy(definition['$defs']['reference'])
-        for name in ('protocol_sha256','approval_sha256'):
-            reference_schema['properties'][name]=deepcopy(definition['$defs']['sha256'])
+        references=[]
+        for filename in ('formal_envelope_schema_v0_1.json','formal_envelope_schema_v0_1_1.json'):
+            definition=json.loads((Path(__file__).resolve().parents[1]/'docs/v1_4_1/contracts'/filename).read_text(encoding='utf-8'))
+            ref=deepcopy(definition['$defs']['reference'])
+            for name in ('protocol_sha256','approval_sha256'):
+                ref['properties'][name]=deepcopy(definition['$defs']['sha256'])
+            references.append(ref)
+        # Closed compatibility set, not a fallback. Cross-record validation
+        # below additionally requires the exact signed binding's reference.
+        reference_schema={'oneOf':references}
         identity=schema['$defs']['identity']
         identity['properties'].update(run_role={'const':'FORMAL'},data_role={'const':'Formal'},formal_reference=reference_schema)
         identity['required'].append('formal_reference')

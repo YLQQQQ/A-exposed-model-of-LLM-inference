@@ -1,6 +1,10 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.123](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.124](research_progress.md)。
+
+**7.124现行：Gate13 BLOCKED，首槽prepare失败，无模型或测量样本。** [集中审查](gate13_prepare_repair_v0_1.md)核验原失败ZIP39文件/38清单/CRC/hash；原报告不改、59槽位未运行。冻结输入字节未变化，原代码在finalize填hash前校验，实际读到缺失/None；已最小顺序修复。最终相关CPU **150 passed/0 failed/0 skipped（67.07s）**，五条件/两pass/新旧版本真实文件链及冲突拒绝覆盖，非CUDA或Formal验证。
+
+只新增G12-ROUTEA/0.1.1补丁及独立reference schema/闭集兼容，边界、流/同步、S/A/B、输入、预算和claim不变。旧签署历史Gate12 PASS保持，但新执行/分析commit、源码锁和内容hash必须绑定并重新签署；旧approval/seal不能沿用。下一项只审查未签署精确候选和唯一待审包，不操作服务器/重采/恢复旧目录。UNKNOWN/NOT_ASSESSED及DOCX保持。**以下7.123及旧阶段B启动指令全部是历史，不执行。**
 
 **7.123现行：Gate13阶段A回执审查通过，Gate13仍NOT_RUN。** 用户服务器部署/CPU原件15文件/14清单、CRC/hash及四步exit0已本地直接核验；实际e38fa918 clean、125实字节匹配（55LF/70CRLF）、签署/脚本/输入绑定一致。计划60进程/30对，默认入口无模型/CUDA初始化/collector调用；不重跑测试/实验。静态ZIP 51983 bytes，SHA256 ef05a58b85fcc1721b5616d9dd491ea7d673777f653478d5db28fae756fb1d6d；详细清单/脚本hash与证据边界见进度7.123。
 

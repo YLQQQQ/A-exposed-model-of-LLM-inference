@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "exposedpath-formal-envelope/0.1.1",
+  "description": "Prospective 0.1.1 prepare-order repair; unchanged measurement semantics. New content approval required. Historical 0.1 schema remains separate.",
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "reference": {
+      "type": "object", "additionalProperties": false,
+      "required": ["protocol_version", "protocol_sha256", "approval_sha256"],
+      "properties": {
+        "protocol_version": {"const": "G12-ROUTEA/0.1.1"},
+        "protocol_sha256": {"$ref": "#/$defs/sha256"},
+        "approval_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "approval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["version", "status", "protocol_sha256", "authority", "signed_at", "approval_id", "scope", "budget_approved"],
+      "properties": {
+        "version": {"const": "exposedpath-protocol-approval/0.1.0"},
+        "status": {"const": "SIGNED"},
+        "protocol_sha256": {"$ref": "#/$defs/sha256"},
+        "authority": {"const": "HUMAN_USER"},
+        "signed_at": {"type": "string", "pattern": "Z$"},
+        "approval_id": {"type": "string", "minLength": 1},
+        "scope": {"const": "LIMITED_ROUTE_A"},
+        "budget_approved": {"const": true}
+      }
+    }
+  },
+  "$ref": "#/$defs/reference"
+}
