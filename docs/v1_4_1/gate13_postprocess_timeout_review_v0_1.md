@@ -76,6 +76,15 @@ WAL/journal、baseline 篡改及重算期间源变化、子目录 schema 变化�
 当前 `validate_analysis` 未放宽，原 seal/manifest/domain 的来源字段不回写。
 兼容记录不是自动重新签署、Formal 合格或原批次 PASS；不因性能修复作废或重采原样本。
 
+实现/候选分析 commit：**e19c308d1254feb0e643ae56429d5afd2ab6b4fd**，parent
+`6e34959da44e5ede9f3f04241934194713144301`；后续文档 HEAD 不替代它。
+[精确兼容记录](gate13_analysis_compatibility_v0_1.json)以 Git blob 逐项绑定原126 artifact：
+121项不变、3项本次分析接线变化、2项此前签署状态文档变化。
+记录状态为 `REVIEWED_SOURCE_DELTA_NOT_ACTIVE_FORMAL_AUTHORIZATION`；
+没有把新 HEAD 填进旧协议，没有给 `validate_analysis` 加白名单。
+当前根目录还有保留的用户 DOCX 修改，亦不能冒称满足 clean-analysis 门。
+完整 Formal 原件与明确的分析身份重绑定是新派生复核的前置，不是再次采集或研究语义变更。
+
 ## 唯一待审恢复方案
 
 1. 原现场冻结。先一次只读检查当前相关进程可见性、active/WAL/journal 状态及文件元数据稳定性；

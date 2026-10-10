@@ -2,6 +2,8 @@
 
 ## 7.128 Gate13后处理超时审查与逐run等价复用（2026-10-10）
 
+实现/拟分析commit **e19c308d1254feb0e643ae56429d5afd2ab6b4fd**，parent **6e34959da44e5ede9f3f04241934194713144301**；本节追加绑定的文档提交不代替它。[精确兼容记录](gate13_analysis_compatibility_v0_1.json)逐项核验126冻结Git artifact：121不变、3分析接线变化、2此前签署状态文档变化。状态仅REVIEWED_SOURCE_DELTA_NOT_ACTIVE_FORMAL_AUTHORIZATION，无新签署/运行白名单，原协议hash与执行99f3bae保持；完整原件及明确分析身份重绑定后才进入新派生Formal复核。根目录用户DOCX修改保留，不称clean或已可执行Formal新分析。
+
 **Gate13 BLOCKED，60次执行完成仍待Formal资格审查；不恢复原批次、不新增样本。** [当前后处理入口](gate13_postprocess_timeout_review_v0_1.md)直接核验小诊断包86330 bytes / SHA256 `ae8c6deb277a61cb1dbd77ced06d9926df684f04221ba86f42e645625e803fea`；11文件/10项索引、CRC、安全路径、完整覆盖、全部大小/hash通过，索引`cf27ee85231bb2e3f1f55bd5f66dc53b8fa090f3359142e61aec1737cd29796f`，missing_files=[]。batch_report与formal_index的60槽位一致、30pair；执行/原分析仍`99f3bae966f2fb794073ff4d7468233b6b8dd2ac`。小包缺实际各run的输入、Raw/SQLite/Canonical/domain/baseline/token，不能据此判60次Formal合格。原7200.016秒超时、UNKNOWN_STOP_AND_INSPECT_NO_RETRY及BLOCKED不改。
 
 完整日志与实际调用链确认每条profile采集3次、最终复核2次完整domain恢复；finish完成53次、另1次S中断。S累计4729.759秒，A/准入与N1 A/B647.184秒，G1 B0.281秒；转发日志与包裹计时不双计。依据固定串行顺序推定前26条各2次、第27条第二次中断、最后3条未复核，仅作定位而非身份重建。历史实物CPU profiling亦显示每sync依赖图和registry重复读取：N1 40494/G1 20776次registry load；558MB/930MB domain大对象成本真实存在，重复load不是声称唯一瓶颈。
