@@ -1,6 +1,10 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.125](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.126](research_progress.md)。
+
+**7.126现行：G12-ROUTEA/0.1.1已按本次用户明确授权重签，Gate12限定PASS、Gate13仍BLOCKED。** [签署发布](gate12_protocol_signed_v0_1_1.json)/[当前收尾](gate12_closeout_v0_1_1.md)，approval ID USER-20261010-G12-ROUTEA-011，生效2026-10-10T03:25:04Z；protocol hash d9204a80bf15ce810093ec53c506d4bf3eadd2f1ad71db8844cff330f0c7448b。执行/分析99f3bae966f2fb794073ff4d7468233b6b8dd2ac，126源锁/12schema/资格引用已核验；文档提交不替代执行。仅显式0.1/0.1.1闭集兼容，actual副本finalize→原严格校验和未签署/错schema/旧role/混版本拒绝保持。150项原验证直接复用。
+
+唯一新包gate13_99f3bae966f2_signed_delivery.zip（106697 bytes / c223b8b09710a02727449cc3962b1b675916e73ea78440447f96daf30401f677），服务器前置e38fa918；15文件/14清单/CRC/hash/bundle/PS5.1解析通过。包和完整A/B命令见忽略的本地交付索引：先交协调窗口审查，再用户默认阶段A仅部署/CPU，新的静态单ZIP审查通过才独立显式B。固定五条件/6block/60进程/30profile/w3/repeat1，不retry/resume/替补/扩预算；新目录不复用旧失败现场。旧0.1、seal/ZIP/报告、UNKNOWN/NOT_ASSESSED及DOCX保持；没有本轮服务器/模型/CUDA/Nsight动作。以下待签署与旧阶段B指令全部是历史。
 
 **7.125现行：修复已提交，未签署候选与唯一待审包完成；服务器暂停。** 执行/分析固定99f3bae966f2fb794073ff4d7468233b6b8dd2ac（parent c443c105018606b6b7a7f9992c6ad574990e3e16）；本候选/交接文档提交不是执行身份。[0.1.1候选](gate12_freeze_candidate_v0_1_1.json)protocol hash d9204a80bf15ce810093ec53c506d4bf3eadd2f1ad71db8844cff330f0c7448b，approval=null；126源码锁/12schema、无自引用，旧approval拒绝。输入、测量/流/同步、五条件及原预算不变，需集中确认新精确锁后重新签署。
 

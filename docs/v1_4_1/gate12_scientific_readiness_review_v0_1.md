@@ -1,5 +1,7 @@
 # Gate12 科学适用性审查 0.1
 
+> 2026-10-10最新：用户已授权精确0.1.1[重签发布](gate12_protocol_signed_v0_1_1.json)，有限claim/统计/原预算保持，见[收尾](gate12_closeout_v0_1_1.md)/进度7.126。下方“补丁待签”为历史；本轮无服务器或Formal测量，Gate13仍BLOCKED。
+
 > 2026-10-10：有限P0/P1范围、负结果判据及原预算仍有效。Gate13 prepare工程修复需[0.1.1新精确候选](gate12_freeze_candidate_v0_1_1.json)重新签署，不重选claim或重新评估Pilot；没有新的测量语义或资格采集。旧0.1发布/失败证据保留，当前Gate13 BLOCKED；源码/文档锁与后续状态提交分开，见进度7.125。
 
 > 2026-10-09：用户已接受本页有限P0性能/P1观测机制、限定Formal适用和六block预算，已记录[签署与Gate12收尾](gate12_closeout_v0_1.md)。下文待裁决/NOT_RUN保留为历史，不重新要求确认；科学限制和负结果判据不变，尚无Formal采集或信息增益结论。

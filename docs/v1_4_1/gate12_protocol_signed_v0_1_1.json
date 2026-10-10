@@ -1,0 +1,344 @@
+{
+  "schema_version": "exposedpath-signed-protocol-release/0.1.0",
+  "status": "SIGNED_EFFECTIVE_PROSPECTIVELY",
+  "effective_from": "2026-10-10T03:25:04Z",
+  "protocol": {
+    "version": "G12-ROUTEA/0.1.1",
+    "status": "FREEZE_CANDIDATE",
+    "execution_commit": "99f3bae966f2fb794073ff4d7468233b6b8dd2ac",
+    "analysis_commit": "99f3bae966f2fb794073ff4d7468233b6b8dd2ac",
+    "artifact_hashes": {
+      "analysis/accounting_utils.py": "c2e3965293323424558f4355e1491d302c6ee35e1d2776989fa5fd4d5258feae",
+      "analysis/exposed_accounting.py": "cbcc2933bf9b285aaaa4151a138869fc6d023c61d58fd6211f028d0b29199d22",
+      "analysis/generate_p1_audit.py": "636f14bd503d8ee55a4e9a89d336e81f8fd3bf6b8d8f1329d6e8e59ef7dbe961",
+      "analysis/parse_nsys_sqlite.py": "cebe2c5d9f07fe03e401b70ed6acfe9f6e040643a5c46c1fc0e3ee0e02dac143",
+      "analysis/summarize_matrix.py": "22120de72cd01b2ced2ec025932530492352ac9236e83662e4cda2653bafdd90",
+      "analysis/summarize_small_pilot.py": "624bc7d8cb01021cdbd7d89f60fcc6246ff60973e3ae6e972aec0e890b757072",
+      "docs/v1_4_1/contracts/a_api_registry_v0_1.json": "e3b9b87b71e02101690012fc322bb7f78e4e902c08ac10bd7130cd8ea0fbbe7b",
+      "docs/v1_4_1/contracts/a_api_registry_v0_2.json": "915c5a1d09ee1f42e1fe331d0f7776e78b7ecfde3b9eee3f325950da3df880b4",
+      "docs/v1_4_1/contracts/ab_schema_v0_3.json": "f774d922f5c0c1179b5bb0cd8d2c778c25e404c625e0a014a9a1321b6f3dc02c",
+      "docs/v1_4_1/contracts/ab_schema_v0_6.json": "8073d7507472b267991b190ecc9b7ca4eaff267fb36cf7e787fd7cc8a33ec9c8",
+      "docs/v1_4_1/contracts/canonical_raw_schema_v0_2.json": "b4bae25a617054c5cec12dc56cd2e4d11ed7486772ee8f2e0ae2d10dadb76c34",
+      "docs/v1_4_1/contracts/formal_envelope_schema_v0_1.json": "d4fcc1e2af7787ddaa6886699fa488d9a8b54f09dc40969b608bd0b9ddd97371",
+      "docs/v1_4_1/contracts/formal_envelope_schema_v0_1_1.json": "5f6aaefb4a5cab9e8f272772a9703d6a994f84c34fdfc9184b653d8e52236372",
+      "docs/v1_4_1/contracts/gate8/coverage_reporting_schema_v0_1.json": "c7efe579ae9c6533618c1981f716866395ba3c3c562ed356d88dd241532a9a27",
+      "docs/v1_4_1/contracts/gate8/observation_boundary_schema_v0_1.json": "6081fad3f5460287090df6976d1002c9de7157f734eaecade1d0f7956935a5c0",
+      "docs/v1_4_1/contracts/measurement_contract_v0_2.json": "30aec3c8cca68ecfed2a9583d32840492ef35e92c4544f82fa8bcba807bfbc89",
+      "docs/v1_4_1/contracts/s_layer_schema_v0_4.json": "e8648df1cb285ae631e0701fc49c8d3b97b1df3525cbca101aed047ad492a5e4",
+      "docs/v1_4_1/contracts/sync_semantics_registry_v0_2.json": "5d83971680593d6d24e4671cf885998600f4b52025848d5669cc6100d0b5dbd0",
+      "docs/v1_4_1/gate11_policy_closeout_v0_1.md": "fd56b0196826eb22e6d33e9e04f93ae2b321f701708cf0c4d56463ed25981427",
+      "docs/v1_4_1/gate12_protocol_freeze_draft_v0_1.md": "73e496ccd3384d0a821aa94566ae821eff473df0fc7205e5d8a706ff1d4e3fa4",
+      "docs/v1_4_1/gate12_scientific_readiness_review_v0_1.md": "ff529f70993911185d27ca0c8f5bfd762e546850593387d2bd90da4dee42c019",
+      "docs/v1_4_1/gate8_bounded_qualification_review_v0_1.md": "99714753024d80d40d00d728f1b6c285ec1583ae29a6c9a39e4e43b8f3b4beaa",
+      "docs/v1_4_1/gate8_coverage_reporting_amendment_v0_1.md": "f1601f6a755ed0f0ac1b9f77c18ff548030a0f4803d45b47f8c1dd8241bf547e",
+      "docs/v1_4_1/gate8_non_submit_api_review_v0_1.md": "9dc9821201e7f727bed47524213212096175f142c65e2b0c26688dfdd8694df0",
+      "docs/v1_4_1/gate8_observation_boundary_amendment_v0_1.md": "3cdb2beb678d0687702dc83c12143d83223a8919d3a30a2abe5f7e24bafeb8ff",
+      "docs/v1_4_1/gate8_warning_evidence_review_v0_1.md": "a1ab2d8f9644f8937e8f000bf023e2f258fbab40f9e551d4ca47212459ca7602",
+      "docs/v1_4_1/gate9_closeout_v0_1.md": "450de86d26cf0e149623a9dbb45cb63498447a7649bf43d2486aad50a74ef31a",
+      "docs/v1_4_1/gate9_domain_qualification_contract_v0_1.md": "54f0be7748017297c1f2805001215643fbebb8f73028c00c6ea051f54bbb1ab7",
+      "docs/v1_4_1/measurement_contract_v0_2.md": "290744bd2060d9b6d85816e5a9723e230853f4f3d6fbe9543ae1501f259c6cad",
+      "docs/v1_4_1/n1_model_feasibility_closeout_v0_1.md": "7d5dc1bce9b609ec97a4d0c759dfb20fc52bda87ff6e08ac5f1cd3e8fe94646c",
+      "docs/v1_4_1/n1_model_wiring_v0_2.md": "91017fc1f0ccd156bbd42aa2aea2872ed6c7d6970f9058c69e1ee10b5b0deae5",
+      "docs/v1_4_1/n1_opaque_allocation_v0_1.md": "35e14847d0d3f9f08f4c82f06bc2bdc10f57e632ab88d834589012f290d2fbfa",
+      "docs/v1_4_1/n1_raw_provenance_allocation_v0_1.md": "58a2986fc7242d0d15a07e96078f7c11bd8b325c9a5d1eb14eaa459efd463711",
+      "exposedpath/__init__.py": "e8a755439f13533ab95b8e5c3475a0ed8852ad386d82130503b631b42acd7d62",
+      "exposedpath/__main__.py": "66a8a135835601199bf0e828888ac14ec1796690cecc3b63cfcb12d250ce3daa",
+      "exposedpath/cli.py": "a2e7ab2f21c08fc787cc86b5fd518d2e3a73cba0d8cdd6df9e2797bc8696e966",
+      "exposedpath/cross_pass_validator.py": "e7df0a6aba1c0adfbc9ac64b3e1f6633432d1035a597c653b9fa8e4af8cff598",
+      "exposedpath/formal_protocol.py": "03509d3cfea290bfbbcaedb27ef5b8bfd35f75699cff8712941274b33f495d98",
+      "exposedpath/gate10_workload.py": "01b1b981d38a28b554d6b28d58a92226581fbe7dbef893dbc641d7fc36f6ac41",
+      "exposedpath/gate11_pilot.py": "91a778f21ca7ab30dd6ce562f2a2c55ffed15232328759935dce2cd24bdc2066",
+      "exposedpath/gate11_warmup.py": "2985f4156a788942758007ad099f14cc91d36d32daab6c53c49ce30b9e61be5e",
+      "exposedpath/gate11_warmup_pair.py": "4efb7a4ed1b9810f9e9edc22c02673197f3496e3c8c8c72d62ae5f532f38a13d",
+      "exposedpath/gate8_boundary.py": "b3e2d8772bc08f58f58ec10199c5e6a47f779e9b0e4f171c66615338b8e0f156",
+      "exposedpath/gate8_diagnostic.py": "0bc5ad51c39bd6200f71f08d8bf8ba6e40981afa1d82b18b8cd763b6bf273fbe",
+      "exposedpath/gate8_drain.py": "827ead619dc3755f19e36e6accc4bd917ed123ba0695d2a24346ce530a6f2cdb",
+      "exposedpath/gate8_engineering_contract.py": "498a515e1590c19b9ba5382de4445de347d0fac85671fc2bb0064b797474cca6",
+      "exposedpath/gate8_identity.py": "6be57058f1d5ed7ff7d837c34ba271f19e79ed4ad9c6ffd5ce9322ab1907c028",
+      "exposedpath/gate8_isolated_preflight.py": "d3e387c7298b01cf31480fda8a07ade34ea7766a826ffc0c66438bc1ace8ed07",
+      "exposedpath/gate8_load_tasks.py": "f8aa80ab5373c05d2829f9ee95231c6ce97eb20235b9eda1a0091ac64e1a07b9",
+      "exposedpath/gate8_stages.py": "c83568ba3efd0fae8a726aee225bf691cb624bed00e8b0e2f9f90d5c731dcbb4",
+      "exposedpath/gate9_stream_bridge.py": "5e18fbe78d1d278001d5486242314ed5bd5b8300bcbdb14e4936b7acf4717c4c",
+      "exposedpath/ids.py": "2b40b9234f5b748e92aa13f1ce926941e5835a0ecfedc491c89f7004142ebe1f",
+      "exposedpath/manifest.py": "2bc51cd30cc2159734e43e09590dab5d6b0b78854519db30af82744817c7abff",
+      "exposedpath/n1_model.py": "cc36790857f2d81df11a18ee01aca335b0459b952dfe608054d400ff7d42cd4c",
+      "exposedpath/nvtx.py": "dc96d13b11ca343492d39e66560946c7aa6bbdaa707907897784810a30728319",
+      "exposedpath/platform_adapter.py": "509a3795fbbd02d7765f773018b6aadfe7e50f216573dbc3c7c9c27ce4d70a62",
+      "exposedpath/process_origin.py": "f3f3eb3d9bf38e5bef4f889c5d5cd7ba71d049f37c29a1c7463dc67b077d41e9",
+      "exposedpath/results.py": "06c05c4a16e56e2093baa1d6b5d07634829c06ee5dd1c16835ce688eb8ba4331",
+      "exposedpath/runner.py": "d3a4048b00fafe53e561bc07687a40feef83d5d7e06434e1df3c3dbd22085f2c",
+      "exposedpath/validation.py": "bde6d7fb68b671b41e9aa4440e62d257e73238fdda99f7990253d887d383a65f",
+      "exposedpath/workload.py": "a700481d040d37713d4b297a88f8015f31e82c931711428db0612892ac6857d1",
+      "exposedpath_v141/__init__.py": "76a27ade0d1819d3b5c541c9794fc217d043ade90b05b5739f3d0c63c236cee3",
+      "exposedpath_v141/__main__.py": "3d2438ae92f4746e9ffaa1f837b1fe803f6281091d1f31f8c95643716f257d9a",
+      "exposedpath_v141/a_accounting.py": "bb28fa3c93d33609021b6c4fb4209f0d9f2473fecc98a7afa6d259d6ed765725",
+      "exposedpath_v141/a_api_classification.py": "3e6688a54c4f6c6c97ba550eab9ec376cfeacc2fd6dd3164b00afc949792641f",
+      "exposedpath_v141/ab_bundle.py": "c750506b5cad338704470eb9069269ecde979fef6abf9ac1f8f38da402fddd51",
+      "exposedpath_v141/ab_inputs.py": "f17adc26457e1be634ed0096f4665f54928681de69d8f63e378013b7d17d31d4",
+      "exposedpath_v141/activity_baseline.py": "197e5edef37588e596454de050083437399dd5ff01cd8fa02c35ba5086c3c6a6",
+      "exposedpath_v141/allocation_semantics.py": "31e556905a20522166d394a6a0da65614aa37f7045a528775546361719b42a6f",
+      "exposedpath_v141/b_provenance.py": "5378dd6bf8dc50ca306a0c5b823163afcb4ec26bec0291459d1c02e885234db1",
+      "exposedpath_v141/canonical_raw.py": "1ee024143a1384477f66e478c2b92e6e1d5a978cdb95f60f2a2d5905f085187b",
+      "exposedpath_v141/cli.py": "7d614a433e5d01d370ca7478420e7390a2ea268d93534832bd0aa2e4d313c7ee",
+      "exposedpath_v141/contract.py": "f4733c7e7a3ad9cf12da7f8d1201ce52fb44e309f5d5101d37d0b189c3d863df",
+      "exposedpath_v141/derived.py": "620ad4bd9ad4bcfaae268296c9a89b9264a762e2d86a89b3755b985c4cd16205",
+      "exposedpath_v141/gate8_adapter.py": "9d68fc5bb3d3f2aff1aec5eebb237a95b0dd77de4ede530324d6bf424f7a57af",
+      "exposedpath_v141/gate8_analysis.py": "3c13c00272ca68749ca1e03deb2bf97076ce3071154eacab44e85973b2bdb2d6",
+      "exposedpath_v141/gate8_closed_prior.py": "f0e9bac5e5534f6f6b277e404a523ac7f9b135628b7337c0166726d0a48f3e0c",
+      "exposedpath_v141/gate8_controlled.py": "496c1bd2db6a8b6399e6e0fdc3f5a46c3837d177862ca00f0d307daf94db96d9",
+      "exposedpath_v141/gate8_controlled_cli.py": "14eff33925ce2083339abc1b60e66497a566d999ccd68688f0ad077dcf4bc69d",
+      "exposedpath_v141/gate8_controlled_diagnostics.py": "f7eae39a3cd750d35b69c5ac0b892cd894b33c0c4c37f4e496501a223c9353ac",
+      "exposedpath_v141/gate8_controlled_evidence.py": "7c7527ab879db6fd3eb3aef8958fd140bbcc9b1924d04ee6859c4ca4a05e72e4",
+      "exposedpath_v141/gate8_controlled_raw.py": "322c4c121d3e195f65b12a775f310ed3a01b869cf5f230b81c9fef5ba981ca88",
+      "exposedpath_v141/gate8_coverage.py": "9ac7d095ee62c90cb4d80a252348817da7d34702d3ca355ee04fc684ed059ba9",
+      "exposedpath_v141/gate8_diagnostic_scope.py": "3d0dde326075b323be8819fbd2150de2e9c69a3ec8b8bd54d4e993d7d2f47e94",
+      "exposedpath_v141/gate8_engineering_scope.py": "b822271a1b926aa2a4d5b22bf81798cfe40def6a6d182ab64be8cbedb995b45a",
+      "exposedpath_v141/gate8_files.py": "e2180bac235eac9f71226511e767b59915c2402a0b4eebf74515b9e70a286142",
+      "exposedpath_v141/gate8_integrity.py": "aaf68c454a73a6801a59d1e203a30a913cfefa4ca63eb65e0731de5da0aa52f2",
+      "exposedpath_v141/gate8_qualification.py": "ee93361fd16c52f8fcd430751911a7ebe81e97f85c78fd0a781b75d50c64c930",
+      "exposedpath_v141/gate8_qualification_oracle.py": "59bcb8d123b031545860ce7cfd38b29d072865fe70fca47897015952eae04e36",
+      "exposedpath_v141/gate8_request_scope.py": "ec197665c007f3316aba6f1721d920d2fb4cddb119f56033ae2d84ac8e26d0e1",
+      "exposedpath_v141/gate8_scope.py": "b2fc13d69061bc30ccda963b5ed3a038873b91594d333b8494350970a21ccc5b",
+      "exposedpath_v141/gate8_source_probe.py": "05d1350fdf7a9b5904fe4415d8f8f9e9fc2b7a7b72ea501498676be0f9a30553",
+      "exposedpath_v141/gate8_stage_scope.py": "0b4892b519498d1aa547c9d6e7ac785de9f078faaf3dd7f31304cfe8c82229fc",
+      "exposedpath_v141/gate8_target_python.py": "469d1f1c30c229c94b51813ee933b72436369e55f1e4e134299abfd80f827493",
+      "exposedpath_v141/gate8_target_quality.py": "8118c4e7b54443ee9b3c3126e51dfb948a386a227af2e01d95a7eca47c01b209",
+      "exposedpath_v141/gate8_warning_assumption.py": "f106a6c1075ba0637414a4b76a227e45e969734c1c47c13643df2cba142e8dc1",
+      "exposedpath_v141/gate9_bridge_oracle.py": "e9b80830b0511459b46eb294d47652de4942eb7affb29d638c9c6ea6fb1bdd90",
+      "exposedpath_v141/gate9_diagnostic_review.py": "601c3a0dea78aac1689e159e65dc4efa89f34ad3902037cc4efc629b1673036d",
+      "exposedpath_v141/gate9_domain.py": "528d1330a56b9694c65e10aefb2e6896ded4cda2c82a8b09de76dfa3ee77e38f",
+      "exposedpath_v141/gate9_n1.py": "d05841aef25a96b61defa3dfa60b2d1446e2a1c19523e7f494aaf0aed60c0984",
+      "exposedpath_v141/intervals.py": "db93d184415cd5ddf854c121894b21f2cdf6e10eb48c4aa97e13cae01f5a2afa",
+      "exposedpath_v141/n1_model_scope.py": "2e29d39fcdaf0a31b9a7a341dce4d043448bb9064dd7924cc82bd79ae8c298d0",
+      "exposedpath_v141/observation.py": "263338cdea39cbd529ab829ee2d3c995aeab713cc57bcccac0f154e4ad1a8a93",
+      "exposedpath_v141/opaque_allocation.py": "f7cdae8e63d22edecf31e4c1808af945fc67219e47aaecd2e9620bbb532a1ab8",
+      "exposedpath_v141/paired_statistics.py": "1b29ca66ba593a6e13b97e9cb782561823f59e2fe3315c3c7dc22e867bd9f487",
+      "exposedpath_v141/q0_collection.py": "c5bc7ec628a3cee0e9f1e5a751282d402d2946592569522cae1b90e57944e889",
+      "exposedpath_v141/q0_evaluator.py": "bb36ffef7047bebcf7428562460971bc159e4ab1d8a861046a93ed07d9faddf5",
+      "exposedpath_v141/q0_execution.py": "6421a34fd6197c5d7a7ad29a6cd03d04bde69da003ce68c3ac9ae3284410c063",
+      "exposedpath_v141/q0_faults.py": "f0f15f7dbb4a68e7acb8b1ac3e0a7812d79617cff098aae7a47d1e0e631aff74",
+      "exposedpath_v141/q0_gate.py": "4944dc916f142587407f74719b56a131ab1bb07fc05596ab926c1ce6cc404f55",
+      "exposedpath_v141/q0_kernel_memop_d2h_diagnostic.py": "52ffbe3eb3b4f835ac83c4fa3f8797480588024bff5db5120f93f60658c0064f",
+      "exposedpath_v141/q0_kernel_memop_d2h_warmup_diagnostic.py": "fba2e289b705c462f0261dfa984cd02744b8202b2f37308dbf6ab60e8987fc8a",
+      "exposedpath_v141/q0_kernel_memop_diagnostic.py": "f55e1369cdef1e3694116a3961360b5b2847ab88f1dcba57d3a3130414c1a21b",
+      "exposedpath_v141/q0_kernel_memop_h2d_warmup_diagnostic.py": "3e2ce929a88eac4f0befbd2e1d37bbc39336ec194d2368f9ff9987e7f08d5adc",
+      "exposedpath_v141/q0_oracle.py": "8baf590b8775396774a022e308ad8bcba6d1b18f10679d4aab29fbd19fef0269",
+      "exposedpath_v141/q0_real.py": "6573ba4185890ac17f300521636c1cf92ef359f7285b8c9bd1ecfe111cb4f04c",
+      "exposedpath_v141/q0_synthetic.py": "4e062d0b41e5ac9717fcef8f8b2dd67a9ed886163e02372e3e54bfdeeff2fd4b",
+      "exposedpath_v141/q0_wddm_diagnostic.py": "caae1c09c2c53ea9e5803959d743efcc7decce1c87b9cec61104cee6b4ffdcf5",
+      "exposedpath_v141/raw_sync_provenance.py": "ab3be55d47e7fc51624cb34169a574507ef68fc54ad4340f5219c75be273a613",
+      "exposedpath_v141/s_bundle.py": "298330cc327fb78da3207c17d012e5c1c11921d53505ae9692c7b8961e6bc46d",
+      "exposedpath_v141/sync_semantics.py": "39586c991f18d665596272b71fd7e4aa73360aff19b184503da964a983c3510e",
+      "exposedpath_v141/time_representation.py": "1f21ead4ea48d51db7524a349d66c50107a99a72a2ed60711afc8454062df05a",
+      "scripts/gate7_nsys_postprocess.py": "f20e4f90f9fd3d0ce503fddb30d297ba481a1985b7d3d9d892c6128a659c9cb6",
+      "scripts/gate7_smoke_validation.py": "4fff9ceefd3e85b90544de2673e7aa503c6d4422af9ecc72a591d786eeaf29ad",
+      "scripts/gate8_diagnostic_collect.py": "1c20185ead44fdf221ed505c17e338d02affa8ad49928e3ebd3f117efb57d670",
+      "scripts/gate8_pair.py": "30d76d14ffd0e48366787459eb61b993f8cf69cbe43ca2a21e24f11c809f1120"
+    },
+    "warmup_count": 3,
+    "blocks": 6,
+    "input_hashes": {
+      "G32": "4dffd0ddcbd3185c656ae4a27efaf5aab302febba6ead5df4d37d903a2091920",
+      "G512": "36c507c56d1c851bab0238c30dfd7645a5ea7eef646310c01988ae2aaffbdd0a"
+    },
+    "supported_domains": [
+      "G1_NATURAL_PROJECTED_A/0.1.0",
+      "N1_EXPLICIT_STREAM_AB/0.1.0"
+    ],
+    "claims": [
+      "P0_PERFORMANCE",
+      "P1_ACCOUNTING_AND_SINGLE_SYNC_B"
+    ],
+    "p0_composition_transfer": false,
+    "d_signature": false,
+    "execution_constraints": {
+      "model_inventory_sha256": "72465c906baeb0cfa4fd94d21ef6c69c1cd8046bb68c61a94c02a1580d2541f9",
+      "gpu": {
+        "physical_index": 3,
+        "logical_index": 0,
+        "uuid": "GPU-0d8fafe6-a1e9-33cc-25fb-632316736455",
+        "pci": "00000000:E1:00.0"
+      },
+      "software": {
+        "nvidia_driver_version": "555.99",
+        "cuda_version_used": "12.4",
+        "inference_framework_version": "torch2.6.0+cu124",
+        "runtime_version": "python3.11.16"
+      },
+      "collector_version": "2026.2.1.210"
+    }
+  },
+  "approval": {
+    "version": "exposedpath-protocol-approval/0.1.0",
+    "status": "SIGNED",
+    "protocol_sha256": "d9204a80bf15ce810093ec53c506d4bf3eadd2f1ad71db8844cff330f0c7448b",
+    "authority": "HUMAN_USER",
+    "signed_at": "2026-10-10T03:25:04Z",
+    "approval_id": "USER-20261010-G12-ROUTEA-011",
+    "scope": "LIMITED_ROUTE_A",
+    "budget_approved": true
+  },
+  "protocol_sha256": "d9204a80bf15ce810093ec53c506d4bf3eadd2f1ad71db8844cff330f0c7448b",
+  "candidate": {
+    "path": "docs/v1_4_1/gate12_freeze_candidate_v0_1_1.json",
+    "sha256": "22c644a5e1bad12fea62f8fcf48f50b926df1f743bbbd6156a666710b93d8566"
+  },
+  "authorization": {
+    "source": "CURRENT_HUMAN_USER_MESSAGE",
+    "statement": "沿用已批准的研究范围和六block预算，完成本次实现修复对应的0.1.1审查、签署及交付。",
+    "explicit_execution_commit": "99f3bae966f2fb794073ff4d7468233b6b8dd2ac",
+    "recording": "Assistant records explicit human authorization; not a cryptographic signature.",
+    "collection": "DELIVERY_PREPARATION_ONLY_COORDINATOR_A_REVIEW_AND_MANUAL_B_START_REQUIRED"
+  },
+  "schema_registry": {
+    "docs/v1_4_1/contracts/a_api_registry_v0_1.json": {
+      "version": "exposedpath-a-api-registry/0.1.0",
+      "sha256": "e3b9b87b71e02101690012fc322bb7f78e4e902c08ac10bd7130cd8ea0fbbe7b"
+    },
+    "docs/v1_4_1/contracts/a_api_registry_v0_2.json": {
+      "version": "exposedpath-a-api-registry/0.2.0",
+      "sha256": "915c5a1d09ee1f42e1fe331d0f7776e78b7ecfde3b9eee3f325950da3df880b4"
+    },
+    "docs/v1_4_1/contracts/ab_schema_v0_3.json": {
+      "version": "exposedpath-ab/0.3.0",
+      "sha256": "f774d922f5c0c1179b5bb0cd8d2c778c25e404c625e0a014a9a1321b6f3dc02c"
+    },
+    "docs/v1_4_1/contracts/ab_schema_v0_6.json": {
+      "version": "exposedpath-ab/0.6.0",
+      "sha256": "8073d7507472b267991b190ecc9b7ca4eaff267fb36cf7e787fd7cc8a33ec9c8"
+    },
+    "docs/v1_4_1/contracts/canonical_raw_schema_v0_2.json": {
+      "version": "exposedpath-canonical-raw/0.2.0",
+      "sha256": "b4bae25a617054c5cec12dc56cd2e4d11ed7486772ee8f2e0ae2d10dadb76c34"
+    },
+    "docs/v1_4_1/contracts/formal_envelope_schema_v0_1.json": {
+      "version": "exposedpath-formal-envelope/0.1.0",
+      "sha256": "d4fcc1e2af7787ddaa6886699fa488d9a8b54f09dc40969b608bd0b9ddd97371"
+    },
+    "docs/v1_4_1/contracts/gate8/coverage_reporting_schema_v0_1.json": {
+      "version": "https://exposedpath.dev/design/gate8/sync-call-coverage-0.1.0",
+      "sha256": "c7efe579ae9c6533618c1981f716866395ba3c3c562ed356d88dd241532a9a27"
+    },
+    "docs/v1_4_1/contracts/gate8/observation_boundary_schema_v0_1.json": {
+      "version": "https://exposedpath.dev/design/gate8/observation-boundary-0.1.0",
+      "sha256": "6081fad3f5460287090df6976d1002c9de7157f734eaecade1d0f7956935a5c0"
+    },
+    "docs/v1_4_1/contracts/measurement_contract_v0_2.json": {
+      "version": "exposedpath-sync-registry-0.2.0",
+      "sha256": "30aec3c8cca68ecfed2a9583d32840492ef35e92c4544f82fa8bcba807bfbc89"
+    },
+    "docs/v1_4_1/contracts/s_layer_schema_v0_4.json": {
+      "version": "exposedpath-s-layer/0.4.0",
+      "sha256": "e8648df1cb285ae631e0701fc49c8d3b97b1df3525cbca101aed047ad492a5e4"
+    },
+    "docs/v1_4_1/contracts/sync_semantics_registry_v0_2.json": {
+      "version": "exposedpath-sync-registry-0.2.0",
+      "sha256": "5d83971680593d6d24e4671cf885998600f4b52025848d5669cc6100d0b5dbd0"
+    },
+    "docs/v1_4_1/contracts/formal_envelope_schema_v0_1_1.json": {
+      "version": "exposedpath-formal-envelope/0.1.1",
+      "sha256": "5f6aaefb4a5cab9e8f272772a9703d6a994f84c34fdfc9184b653d8e52236372"
+    }
+  },
+  "qualification_reuse": {
+    "references": {
+      "measurement_contract_v0_2.md": "290744bd2060d9b6d85816e5a9723e230853f4f3d6fbe9543ae1501f259c6cad",
+      "gate8_observation_boundary_amendment_v0_1.md": "3cdb2beb678d0687702dc83c12143d83223a8919d3a30a2abe5f7e24bafeb8ff",
+      "gate8_coverage_reporting_amendment_v0_1.md": "f1601f6a755ed0f0ac1b9f77c18ff548030a0f4803d45b47f8c1dd8241bf547e",
+      "gate8_warning_evidence_review_v0_1.md": "a1ab2d8f9644f8937e8f000bf023e2f258fbab40f9e551d4ca47212459ca7602",
+      "gate9_closeout_v0_1.md": "450de86d26cf0e149623a9dbb45cb63498447a7649bf43d2486aad50a74ef31a",
+      "gate9_domain_qualification_contract_v0_1.md": "54f0be7748017297c1f2805001215643fbebb8f73028c00c6ea051f54bbb1ab7",
+      "n1_model_feasibility_closeout_v0_1.md": "7d5dc1bce9b609ec97a4d0c759dfb20fc52bda87ff6e08ac5f1cd3e8fe94646c",
+      "n1_model_wiring_v0_2.md": "91017fc1f0ccd156bbd42aa2aea2872ed6c7d6970f9058c69e1ee10b5b0deae5",
+      "n1_raw_provenance_allocation_v0_1.md": "58a2986fc7242d0d15a07e96078f7c11bd8b325c9a5d1eb14eaa459efd463711",
+      "n1_opaque_allocation_v0_1.md": "35e14847d0d3f9f08f4c82f06bc2bdc10f57e632ab88d834589012f290d2fbfa",
+      "gate8_bounded_qualification_review_v0_1.md": "99714753024d80d40d00d728f1b6c285ec1583ae29a6c9a39e4e43b8f3b4beaa",
+      "gate8_non_submit_api_review_v0_1.md": "9dc9821201e7f727bed47524213212096175f142c65e2b0c26688dfdd8694df0",
+      "gate11_policy_closeout_v0_1.md": "fd56b0196826eb22e6d33e9e04f93ae2b321f701708cf0c4d56463ed25981427",
+      "gate12_protocol_freeze_draft_v0_1.md": "73e496ccd3384d0a821aa94566ae821eff473df0fc7205e5d8a706ff1d4e3fa4",
+      "gate12_scientific_readiness_review_v0_1.md": "ff529f70993911185d27ca0c8f5bfd762e546850593387d2bd90da4dee42c019"
+    },
+    "permitted": [
+      "G1 natural projected A under per-request evidence gate",
+      "N1 dedicated nonblocking stream A and qualified per-sync B",
+      "RAW_PHYSICAL internal sync under existing provenance contract",
+      "narrow opaque cudaMalloc cost; internal waiting not decomposed"
+    ],
+    "denied": [
+      "global new Q0 qualification",
+      "G1 default-stream physical B",
+      "D/Signature",
+      "exact P1-to-P0 composition migration",
+      "statistical stability or information gain from Pilot"
+    ],
+    "incremental_evidence": "150 targeted deterministic CPU tests, 0 failed/0 skipped; real prepare/producer file chain; device/model/interpreter/Git doubles; NOT target-platform or Formal qualification"
+  },
+  "governance_sources": [
+    {
+      "path": "docs/current/ExposedPath_研究设计.docx",
+      "version": "v7.1",
+      "status": "USER_MODIFIED_LOCAL_REFERENCE_NOT_COMMITTED",
+      "sha256": "7e630e4afc19fc9253acf2f327918ed291fdbeaf0c8487afb4bded7ac7140e87"
+    },
+    {
+      "path": "docs/current/ExposedPath_实验协议.docx",
+      "version": "v2.1 Pre-Pilot",
+      "status": "NOT_PROTOCOL_FREEZE",
+      "sha256": "434d9c8c89ffe5353ee9130e933fb00d62f778b428b5a75356d9a2fc338f26a8"
+    }
+  ],
+  "historical_data_upgrade": false,
+  "measurement_validity": "NOT_ASSESSED",
+  "dropped_records_status": "UNKNOWN",
+  "formal_data_collected": false,
+  "budget": {
+    "blocks": 6,
+    "model_processes": 60,
+    "profiles": 30,
+    "warmup_count": 3,
+    "repeat_count": 1,
+    "automatic_retry": false,
+    "optional_extension": false,
+    "precision_guaranteed": false
+  },
+  "invalidation": "Material changes require a new signed protocol; affected prospective data cannot retain this qualification.",
+  "source_binding": {
+    "commit": "99f3bae966f2fb794073ff4d7468233b6b8dd2ac",
+    "representation": "GIT_BLOB_SHA256",
+    "runtime_bytes": "MUST_BE_SEALED_SEPARATELY; explicit LF/CRLF proof only",
+    "candidate_self_reference": false
+  },
+  "patch_scope": {
+    "reason": "Finalize copied-input byte hash before strict Formal validation",
+    "additional_fix": "Closed 0.1/0.1.1 formal-reference dispatch, exact cross-record binding retained",
+    "measurement_semantics_changed": false,
+    "inputs_changed": false,
+    "matrix_changed": false,
+    "historical_documentation_locks_changed": [
+      "docs/v1_4_1/gate12_protocol_freeze_draft_v0_1.md",
+      "docs/v1_4_1/gate12_scientific_readiness_review_v0_1.md"
+    ],
+    "approval_inherited": false,
+    "runtime_seal_inherited": false,
+    "old_failed_batch_status": "BLOCKED",
+    "server_action_authorized": false,
+    "human_reapproval_recorded": true
+  },
+  "supersedes": {
+    "protocol_version": "G12-ROUTEA/0.1",
+    "protocol_sha256": "389a28a17bec830e4f32bea72c259dce15ba279ce69fc20caebfdca88a1326e2",
+    "execution_commit": "e38fa91850b8f31e17cc0ee264987ef3c1313d7d",
+    "historical_release": "gate12_protocol_signed_v0_1.json",
+    "historical_status": "PRESERVED_NOT_REWRITTEN"
+  },
+  "original_failed_batch": {
+    "execution_commit": "e38fa91850b8f31e17cc0ee264987ef3c1313d7d",
+    "status": "BLOCKED",
+    "zip_sha256": "5279780d660f97668e3d7d73dde584a84a7d6ac5bc5524156656cac0a9b0faa0",
+    "model_started": false,
+    "collection_started": false,
+    "minimal_cuda_identity_queried": true,
+    "formal_measurement_samples": 0,
+    "report_rewritten": false
+  }
+}

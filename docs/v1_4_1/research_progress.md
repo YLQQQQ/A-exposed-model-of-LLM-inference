@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.126 Gate12 0.1.1精确重签及Gate13唯一新交付（2026-10-10）
+
+用户明确授权沿用已批准的研究范围和六block预算，审查后记录[0.1.1重签发布](gate12_protocol_signed_v0_1_1.json)/[收尾](gate12_closeout_v0_1_1.md)。**Gate12限定PASS，Gate13仍BLOCKED、Gate14 NOT_RUN。** approval ID USER-20261010-G12-ROUTEA-011，生效2026-10-10T03:25:04Z；是明确人类授权记录，不冒称密码学签名。协议内容hash **d9204a80bf15ce810093ec53c506d4bf3eadd2f1ad71db8844cff330f0c7448b**，发布文件hash **1378c89db04336102a9dc0ce53ef7b1ef17dd9c518320c060e74d39abaa5b669**，approval hash423852a31bd858a56255ca092bc370eb2349fc293ecab182c9fae7dbc562780e；原候选approval=null保持，旧0.1签署/seal/失败包/报告不改。
+
+执行/分析 **99f3bae966f2fb794073ff4d7468233b6b8dd2ac**；文档/签署提交不替代执行。126个Git source锁、12schema/registry及资格引用逐项核对；原输入/模型/software/GPU、w3/repeat1、五条件/六block/60进程/30profile、固定组序/pass序、成块统计及质量门与旧payload一致。只有3修复模块/新增reference schema及此前2状态文档锁变化，无研究语义修改。五交付helper取99f3bae，和c5fcb77完全同字节；服务器前置e38fa918，旧0.1.1待审bundle直接复用。
+
+实际链为binding/source/输入门→复制实际输入→finalize实字节hash/WMPC→严格Formal validate→保存manifest→verified入口重核。缺文件、原/副本变化、hash/config/身份冲突仍拒绝。兼容闭集仅G12-ROUTEA/0.1/0.1.1，reference仅protocol_version/protocol_sha256/approval_sha256；新schema源码必须在锁中，未知版本/混版本/未签署/旧角色升级或旧approval用于新内容仍拒绝。复用7.124最终**150 passed/0 failed/0 skipped/67.07s**原回执和负例，没有重跑测试/实验。此次仅生产validate_release、源blob/版本/hash、60计划槽位及交付检查；CPU替身成绩不冒称目标机或Formal样本。
+
+唯一新签署ZIP `gate13_99f3bae966f2_signed_delivery.zip` **106697 bytes / SHA256 c223b8b09710a02727449cc3962b1b675916e73ea78440447f96daf30401f677**；15文件/14清单、CRC/全覆盖/全部大小hash通过，清单ada313cfbb92a4e29718709b13af0aadeadae8ab22e6acd042e1620d17a6ae27。bundle63889 bytes/a33d7393b1f50194d9343c8d10a7a69922c1aad23ed4e95bb1bdb0493dfe275e，verify/list-heads通过；launcher26b88cada4be7537fe6bfb4300fe29476d978fe11304be91157c9dce4c6d6472，PS5.1只解析两脚本通过。私有路径与完整A/B命令在忽略的本地说明，不提交模型、Raw、环境私有位置或本机配置。
+
+最高优先级：协调窗口审查新包后，用户阶段A默认部署/CPU绑定检查，新的静态单ZIP审查通过才独立显式B；不用旧e38静态回执替代。不自动试采/重试/恢复/替补/扩预算，使用新输出目录；硬失败或固定预算完成即停。旧失败未启动模型/采集，仅最小CUDA身份查询、Formal测量样本0，不生成/升级样本。阶段B沿用200–240min粗估/90GB空间门，后处理/封包另计；完整batch仅STOP_FOR_REVIEW，不自动信息增益或Gate13 PASS。UNKNOWN/NOT_ASSESSED、G1投影A/N1单sync B/opaque等待不拆/D禁用保持。归档核验后再产准确可重建/重复文件清单及安全清理回执，当前不清理。本轮没有服务器、模型、CUDA/Nsight、追加Pilot/Q0或实验，用户DOCX原字节保持且不纳提交。7.125及更早待签署/旧阶段B为历史。
+
 ## 7.125 Gate13修复执行锁与未签署补丁候选绑定（2026-10-10）
 
 实现commit **99f3bae966f2fb794073ff4d7468233b6b8dd2ac**，parent **c443c105018606b6b7a7f9992c6ad574990e3e16**；本节/候选提交是后续文档身份，不代替执行/分析版本。[未签署补丁候选0.1.1](gate12_freeze_candidate_v0_1_1.json)协议内容SHA256 **d9204a80bf15ce810093ec53c506d4bf3eadd2f1ad71db8844cff330f0c7448b**；候选文件SHA256 **22c644a5e1bad12fea62f8fcf48f50b926df1f743bbbd6156a666710b93d8566**。126个Git blob锁/12个schema-registry引用逐项核验，无自引用。相对旧125锁，仅3个修复模块及2份此前已变更的状态说明文档不同；新增reference schema0.1.1。已只读对照两份旧文档差异，均为已完成实现、绑定/签署状态说明，不改变claim/输入/统计规则；候选透明记录，不静默当成零diff。
@@ -1067,14 +1079,14 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 7.34后续用户回传（原件待收）：0.2首次export PASS，audit因`RAW_TABLE_MISSING:CUPTI_ACTIVITY_KIND_MEMSET` BLOCKED，尚未本地核验实际schema。先据对应版本的按需表规则审计，不默认缺表为空、不重采/重export；若只需分析adapter修复，使用原输入新目录离线复验。Gate8/新Q0仍NOT_RUN。
 - 7.33后续用户回传（原件待收）：07625b7的0.2窄受控capture已结束，run `controlled_20260926T133649Z_8dd7210fc970474eb1b6358a9e91d8cd`，plan/REP生成、capture exit0；未export/analysis/模型。本窗口尚未取得完整目录，不能声称trace语义或文件身份链通过。下一步仅到件只读审计及新run绑定后处理草案；Gate8/新Q0仍NOT_RUN。
 - 7.32验证：37项受控定向通过；本地Python3.12.7 CPU-only全量1169 passed/5 skipped（nvcc编译项），compileall/合同37/37/Canonical7模块/oracle/diff-check通过。不是目标机新native编译或采集资格。
-- 最近更新：`2026-10-10`（7.125）
+- 最近更新：`2026-10-10`（7.126）
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
-- 当前执行依据：原DOCX v2.1仍为Pre-Pilot；未来限定Formal使用[签署G12-ROUTEA/0.1](gate12_protocol_signed_v0_1.json)及[收尾边界](gate12_closeout_v0_1.md)，不覆盖原文。
-- 当前研究阶段：Gate12旧0.1历史限定签署PASS；Gate13首槽prepare失败BLOCKED，无模型或测量样本。0.1.1修复候选已绑定99f3bae，待精确内容重新签署，旧角色保持。
+- 当前执行依据：原DOCX v2.1仍为Pre-Pilot；未来限定Formal使用[重签G12-ROUTEA/0.1.1](gate12_protocol_signed_v0_1_1.json)及[收尾边界](gate12_closeout_v0_1_1.md)，不覆盖原文；旧0.1签署保留。
+- 当前研究阶段：Gate12限定0.1.1重签PASS；Gate13旧首槽prepare失败BLOCKED，无模型或测量样本。新包先审查后由用户默认阶段A，静态回执审查通过才独立显式B，旧角色不升级。
 - 当前工作入口：根目录 `main`；目录约定见 `docs/repository_layout.md`。Gate7历史封存验收执行commit为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`。N1历史Engineering执行V0为c21d835、Vmarker/V16为d25b4d1；新Pilot首批执行221f46c；审查提交不是新执行身份。
 - 当前数据资格（7.122）：Gate6历史Engineering/Q0保持；[首批/暖机对照](gate11_warmup_policy_review_v0_1.md)及[共同w3 Pilot](gate11_policy_closeout_v0_1.md)仍只作政策依据、不混池/升级。累计90进程/30profile Pilot预算结束；签署仅准未来限定Formal声明，尚无Formal采集或合格结果。UNKNOWN/NOT_ASSESSED与旧资格边界保持。
-- 当前 Gate 状态（7.124）：Gate0～7历史PASS、Gate8限定Engineering PASS、Gate9分域PASS、[Gate10仅选定G1三点一次可行性PASS](gate10_closeout_v0_1.md)、[N1独立Engineering PASS](n1_model_feasibility_closeout_v0_1.md)、[Gate11限定Pilot政策PASS](gate11_policy_closeout_v0_1.md)、[Gate12旧0.1限定签署历史PASS](gate12_closeout_v0_1.md)；Gate13 BLOCKED、Gate14 NOT_RUN；0.1.1补丁待新精确内容签署。容量/精度/稳定性未授，旧报告/UNKNOWN/NOT_ASSESSED保持。
-- 当前最高优先级（7.125）：审查[prepare修复](gate13_prepare_repair_v0_1.md)及[已绑定的0.1.1候选](gate12_freeze_candidate_v0_1_1.json)，集中确认新精确内容hash并重新签署；不得沿用旧seal/approval或再次执行旧阶段B。服务器暂停，原批次不恢复。
+- 当前 Gate 状态（7.126）：Gate0～7历史PASS、Gate8限定Engineering PASS、Gate9分域PASS、[Gate10仅选定G1三点一次可行性PASS](gate10_closeout_v0_1.md)、[N1独立Engineering PASS](n1_model_feasibility_closeout_v0_1.md)、[Gate11限定Pilot政策PASS](gate11_policy_closeout_v0_1.md)、[Gate12限定0.1.1重签PASS](gate12_closeout_v0_1_1.md)；Gate13 BLOCKED、Gate14 NOT_RUN。容量/精度/稳定性未授，旧报告/UNKNOWN/NOT_ASSESSED保持。
+- 当前最高优先级（7.126）：审查新签署交付后用户执行默认阶段A；静态单ZIP审查通过才独立B，不沿用旧seal/approval/静态包，不再执行旧阶段B。原批次不恢复；本窗口不操作服务器。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -1488,7 +1500,7 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ## 7. 固定执行顺序与最近任务
 
-**7.125现行覆盖：** Gate13首槽prepare失败BLOCKED，模型/collector未启动；本地修复已验证，补丁候选已绑定99f3bae、待新精确内容签署，禁止旧阶段B重试/续采。Gate12旧签署历史PASS、Gate7～11及全部限制保持，下方旧“唯一下一步阶段B”为历史。
+**7.126现行覆盖：** Gate13首槽prepare失败BLOCKED，模型/collector未启动；0.1.1修复已重签绑定99f3bae，新签署包先交审查/默认阶段A，新的静态回执审查通过才独立显式B。禁止旧阶段B重试/续采。Gate12限定PASS及旧签署历史、Gate7～11和全部限制保持，下方旧“唯一下一步阶段B”为历史。
 
 **7.123现行覆盖：** Gate12限定签署PASS保持，阶段A原回执已本地核验通过；唯一下一步为用户显式阶段B，不重跑或包装。Gate13仍NOT_RUN，签署/静态成功不等于采集或信息增益；原报告/角色/UNKNOWN不改，完整归档和批次审查后才可清理准确名单中的重复中间文件。
 
