@@ -1,5 +1,7 @@
 # Gate12 限定路线A协议冻结草案 0.1
 
+> 2026-10-10：本页及旧0.1签署保留为历史。Gate13 prepare工程修复的[0.1.1候选](gate12_freeze_candidate_v0_1_1.json)已绑定99f3bae，未重新签署；新采集暂停，不能沿用旧approval/seal。研究范围/输入/测量/预算不变，见[修复审查](gate13_prepare_repair_v0_1.md)及进度7.125。候选source锁取实现commit中的本页快照，不以此文档状态提交替换执行身份。
+
 > 2026-10-09状态更新：本页作为已批准候选设计及其历史文字保留，当前生效身份见[签署发布](gate12_protocol_signed_v0_1.json)和[Gate12收尾](gate12_closeout_v0_1.md)。下文DRAFT/待确认是当时状态，不再是现行阻塞；固定payload/source快照未改，Gate13仍未执行。
 
 2026-10-02；`G12-ROUTEA-FREEZE-DRAFT/0.1`；Material Passport：ExposedPath / ARS experiment-agent plan；状态 **DRAFT / NOT_FROZEN / NOT_EXECUTABLE**。科学依据与待裁决见[适用性审查0.1](gate12_scientific_readiness_review_v0_1.md)。Gate12 NOT_RUN；本页不是预算批准、采集任务或Formal资格。研究设计v7.1和Pre-Pilot v2.1原件保留，不把草案签字推定为已完成。

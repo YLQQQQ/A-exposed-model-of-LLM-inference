@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.125 Gate13修复执行锁与未签署补丁候选绑定（2026-10-10）
+
+实现commit **99f3bae966f2fb794073ff4d7468233b6b8dd2ac**，parent **c443c105018606b6b7a7f9992c6ad574990e3e16**；本节/候选提交是后续文档身份，不代替执行/分析版本。[未签署补丁候选0.1.1](gate12_freeze_candidate_v0_1_1.json)协议内容SHA256 **d9204a80bf15ce810093ec53c506d4bf3eadd2f1ad71db8844cff330f0c7448b**；候选文件SHA256 **22c644a5e1bad12fea62f8fcf48f50b926df1f743bbbd6156a666710b93d8566**。126个Git blob锁/12个schema-registry引用逐项核验，无自引用。相对旧125锁，仅3个修复模块及2份此前已变更的状态说明文档不同；新增reference schema0.1.1。已只读对照两份旧文档差异，均为已完成实现、绑定/签署状态说明，不改变claim/输入/统计规则；候选透明记录，不静默当成零diff。
+
+未签署候选及旧0.1 approval均在当前严格release门被拒绝。输入/软件/模型声明、warmup3/repeat1、五条件/六block/60进程/30profile及全部测量/资格限制与原payload逐字段一致；旧签署和实际字节seal不能覆盖新内容。原Gate12历史限定PASS保留，**补丁尚未签署；Gate13 BLOCKED、Gate14 NOT_RUN**。人类需要集中确认新精确内容hash/执行锁，才可生成新签署发布并审查新批交付；不是重新选择研究目标或扩预算。
+
+唯一待审ZIP `gate13_99f3bae966f2_prepare_review.zip`：**89539 bytes / SHA256 71f817e9350f1d9367f4c393341558010ea28f5bcffec7dc97b2393d482fe953**；11文件/10清单、CRC/大小/hash/完整覆盖通过，清单SHA256 fdfa648dbf311e02129c77d35b74af765f2587add506b53bec62abbd29cc4838。增量bundle63889 bytes / a33d7393b1f50194d9343c8d10a7a69922c1aad23ed4e95bb1bdb0493dfe275e，prerequisite **e38fa91850b8f31e17cc0ee264987ef3c1313d7d**，verify/list-heads通过。包只含unsigned候选、bundle、验证/源码索引及原封存输入参考，没有signed release、有效approval或采集脚本，不能部署或执行。机器路径只保存在忽略的本地索引，原失败包未改；本地构建不冒称服务器动作。
+
+复用7.124最终150 passed/0 failed/0 skipped（67.07s），不重跑已完成检查；本次只检查候选字节/source锁/版本兼容拒绝、交付清单、公开内容/链接/diff及DOCX保全。最高优先级仅协调窗口审查补丁与集中重新签署，不执行旧阶段B、不续采/替补、不清理证据。
+
 ## 7.124 Gate13首槽prepare失败审查与最小接线修复（2026-10-10）
 
 **原批次BLOCKED，Gate13 BLOCKED；没有模型进程或测量样本。** [集中审查](gate13_prepare_repair_v0_1.md)直接核验封存失败包172716 bytes/SHA256 `5279780d660f97668e3d7d73dde584a84a7d6ac5bc5524156656cac0a9b0faa0`，39文件/38清单/完整覆盖/CRC/全部大小hash通过，清单`86aa6761a9e58eaaa7055726c1f6f28a8e375fe521e6e0b935277addb344ad49`。首槽b1/G32/P0 prepare报FORMAL_INPUT_HASH、其余59槽位NOT_RUN；包内只有prepared输入/模型清单副本，无manifest/producer/REP/SQLite。源码与控制器证明模型/collector尚未启动；prepare已做最小CUDA身份查询，不称零CUDA交互。原报告中的Gate13 NOT_RUN字段不改，当前汇总裁决记录BLOCKED。
@@ -1057,14 +1067,14 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 7.34后续用户回传（原件待收）：0.2首次export PASS，audit因`RAW_TABLE_MISSING:CUPTI_ACTIVITY_KIND_MEMSET` BLOCKED，尚未本地核验实际schema。先据对应版本的按需表规则审计，不默认缺表为空、不重采/重export；若只需分析adapter修复，使用原输入新目录离线复验。Gate8/新Q0仍NOT_RUN。
 - 7.33后续用户回传（原件待收）：07625b7的0.2窄受控capture已结束，run `controlled_20260926T133649Z_8dd7210fc970474eb1b6358a9e91d8cd`，plan/REP生成、capture exit0；未export/analysis/模型。本窗口尚未取得完整目录，不能声称trace语义或文件身份链通过。下一步仅到件只读审计及新run绑定后处理草案；Gate8/新Q0仍NOT_RUN。
 - 7.32验证：37项受控定向通过；本地Python3.12.7 CPU-only全量1169 passed/5 skipped（nvcc编译项），compileall/合同37/37/Canonical7模块/oracle/diff-check通过。不是目标机新native编译或采集资格。
-- 最近更新：`2026-10-10`（7.124）
+- 最近更新：`2026-10-10`（7.125）
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：原DOCX v2.1仍为Pre-Pilot；未来限定Formal使用[签署G12-ROUTEA/0.1](gate12_protocol_signed_v0_1.json)及[收尾边界](gate12_closeout_v0_1.md)，不覆盖原文。
-- 当前研究阶段：Gate12旧0.1历史限定签署PASS；Gate13首槽prepare失败BLOCKED，无模型或测量样本。0.1.1修复候选待精确绑定与重新签署，旧角色保持。
+- 当前研究阶段：Gate12旧0.1历史限定签署PASS；Gate13首槽prepare失败BLOCKED，无模型或测量样本。0.1.1修复候选已绑定99f3bae，待精确内容重新签署，旧角色保持。
 - 当前工作入口：根目录 `main`；目录约定见 `docs/repository_layout.md`。Gate7历史封存验收执行commit为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`。N1历史Engineering执行V0为c21d835、Vmarker/V16为d25b4d1；新Pilot首批执行221f46c；审查提交不是新执行身份。
 - 当前数据资格（7.122）：Gate6历史Engineering/Q0保持；[首批/暖机对照](gate11_warmup_policy_review_v0_1.md)及[共同w3 Pilot](gate11_policy_closeout_v0_1.md)仍只作政策依据、不混池/升级。累计90进程/30profile Pilot预算结束；签署仅准未来限定Formal声明，尚无Formal采集或合格结果。UNKNOWN/NOT_ASSESSED与旧资格边界保持。
 - 当前 Gate 状态（7.124）：Gate0～7历史PASS、Gate8限定Engineering PASS、Gate9分域PASS、[Gate10仅选定G1三点一次可行性PASS](gate10_closeout_v0_1.md)、[N1独立Engineering PASS](n1_model_feasibility_closeout_v0_1.md)、[Gate11限定Pilot政策PASS](gate11_policy_closeout_v0_1.md)、[Gate12旧0.1限定签署历史PASS](gate12_closeout_v0_1.md)；Gate13 BLOCKED、Gate14 NOT_RUN；0.1.1补丁待新精确内容签署。容量/精度/稳定性未授，旧报告/UNKNOWN/NOT_ASSESSED保持。
-- 当前最高优先级（7.124）：审查[prepare修复及冻结补丁](gate13_prepare_repair_v0_1.md)，先绑定新的执行/分析commit与候选hash并重新确认签署；不得沿用旧seal/approval或再次执行旧阶段B。服务器暂停，原批次不恢复。
+- 当前最高优先级（7.125）：审查[prepare修复](gate13_prepare_repair_v0_1.md)及[已绑定的0.1.1候选](gate12_freeze_candidate_v0_1_1.json)，集中确认新精确内容hash并重新签署；不得沿用旧seal/approval或再次执行旧阶段B。服务器暂停，原批次不恢复。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -1478,7 +1488,7 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ## 7. 固定执行顺序与最近任务
 
-**7.124现行覆盖：** Gate13首槽prepare失败BLOCKED，模型/collector未启动；已在本地修复并验证，补丁候选待精确版本绑定及重新签署，禁止旧阶段B重试/续采。Gate12旧签署历史PASS、Gate7～11及全部限制保持，下方旧“唯一下一步阶段B”为历史。
+**7.125现行覆盖：** Gate13首槽prepare失败BLOCKED，模型/collector未启动；本地修复已验证，补丁候选已绑定99f3bae、待新精确内容签署，禁止旧阶段B重试/续采。Gate12旧签署历史PASS、Gate7～11及全部限制保持，下方旧“唯一下一步阶段B”为历史。
 
 **7.123现行覆盖：** Gate12限定签署PASS保持，阶段A原回执已本地核验通过；唯一下一步为用户显式阶段B，不重跑或包装。Gate13仍NOT_RUN，签署/静态成功不等于采集或信息增益；原报告/角色/UNKNOWN不改，完整归档和批次审查后才可清理准确名单中的重复中间文件。
 

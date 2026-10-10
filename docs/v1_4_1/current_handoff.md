@@ -1,6 +1,10 @@
 # 当前公共交接
 
-当前唯一进度事实源：[research_progress 7.124](research_progress.md)。
+当前唯一进度事实源：[research_progress 7.125](research_progress.md)。
+
+**7.125现行：修复已提交，未签署候选与唯一待审包完成；服务器暂停。** 执行/分析固定99f3bae966f2fb794073ff4d7468233b6b8dd2ac（parent c443c105018606b6b7a7f9992c6ad574990e3e16）；本候选/交接文档提交不是执行身份。[0.1.1候选](gate12_freeze_candidate_v0_1_1.json)protocol hash d9204a80bf15ce810093ec53c506d4bf3eadd2f1ad71db8844cff330f0c7448b，approval=null；126源码锁/12schema、无自引用，旧approval拒绝。输入、测量/流/同步、五条件及原预算不变，需集中确认新精确锁后重新签署。
+
+唯一包gate13_99f3bae966f2_prepare_review.zip（89539 bytes / 71f817e9350f1d9367f4c393341558010ea28f5bcffec7dc97b2393d482fe953），前置e38fa918，11文件/10清单/CRC/hash/bundle verify通过。仅待审，无有效签署或启动采集入口；私有路径及使用说明见忽略的本地交付索引。150项最终相关CPU检查复用7.124，不重复执行。Gate12旧签署历史PASS、Gate13 BLOCKED、Gate14 NOT_RUN；旧现场/BLOCKED/UNKNOWN/NOT_ASSESSED及用户DOCX不改。以下均为历史，不再执行旧阶段B。
 
 **7.124现行：Gate13 BLOCKED，首槽prepare失败，无模型或测量样本。** [集中审查](gate13_prepare_repair_v0_1.md)核验原失败ZIP39文件/38清单/CRC/hash；原报告不改、59槽位未运行。冻结输入字节未变化，原代码在finalize填hash前校验，实际读到缺失/None；已最小顺序修复。最终相关CPU **150 passed/0 failed/0 skipped（67.07s）**，五条件/两pass/新旧版本真实文件链及冲突拒绝覆盖，非CUDA或Formal验证。
 

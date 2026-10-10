@@ -1,5 +1,7 @@
 # Gate12 科学适用性审查 0.1
 
+> 2026-10-10：有限P0/P1范围、负结果判据及原预算仍有效。Gate13 prepare工程修复需[0.1.1新精确候选](gate12_freeze_candidate_v0_1_1.json)重新签署，不重选claim或重新评估Pilot；没有新的测量语义或资格采集。旧0.1发布/失败证据保留，当前Gate13 BLOCKED；源码/文档锁与后续状态提交分开，见进度7.125。
+
 > 2026-10-09：用户已接受本页有限P0性能/P1观测机制、限定Formal适用和六block预算，已记录[签署与Gate12收尾](gate12_closeout_v0_1.md)。下文待裁决/NOT_RUN保留为历史，不重新要求确认；科学限制和负结果判据不变，尚无Formal采集或信息增益结论。
 
 2026-10-02；`G12-SCIENTIFIC-READINESS/0.1`；Material Passport：ExposedPath research protocol + ARS experiment-agent plan/validate；状态 **ANALYZED / 待裁决，不是Protocol Freeze**。Gate11仅限定Pilot政策审查PASS；Gate12 **NOT_RUN**，Formal未授权。推荐[冻结草案0.1](gate12_protocol_freeze_draft_v0_1.md)，本页不改研究设计DOCX、测量合同、历史数据角色或机器报告。
