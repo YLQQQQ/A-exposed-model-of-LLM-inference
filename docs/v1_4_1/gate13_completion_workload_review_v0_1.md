@@ -2,6 +2,8 @@
 
 2026-10-11；`G13-COMPLETION-WORKLOAD-EXPLANATION/0.1`。仅消费已有代码、Formal汇总、代表性Canonical及历史Prototype资料，不重新执行analyzer/模型/Nsight。Gate13保持[限定PASS](gate13_closeout_v0_1.json)，Gate14 NOT_RUN；研究合同、原Raw和BLOCKED/UNKNOWN历史均不改。
 
+**7.134实物再审更正**：[w11执行路径对照](gate13_w11_execution_comparison_v0_1.md)按新授权从REP副本离线导出，恢复原启动命令与应用日志；这份Raw实际是**RTX6000 Ada／torch2.5.1+cu121**，不是4090。下方4090旧汇总表仅属于另一同名平台结果，不代表本REP；无完整源码hash的历史边界仍保持。当前低wait与旧长device sync的具体实物顺序见新对照，不预设copy是主要原因，不改本批Formal。
+
 ## 1. 集中结论
 
 低`A_device_wait`成立的是**已恢复同步调用区间内，必要设备活动的可见重叠很小**，不是GPU没有约束Host或没有隐式阻塞。**7.133更正调用顺序**：`.cpu()`内部依次执行复制和stream sync，二者返回后才取得Host token；D2H提前完成不代表`.cpu()`已返回。[聚焦API证据及解释](gate13_cuda_api_storage_review_v0_1.md)保留1.874498ms复制包络中的未分离等待。旧脚本在argmax后显式device-wide synchronize，没有相同host读取路径；较长输入、较大batch和较长decode不能保证局部wait占比单调增加。
@@ -104,7 +106,7 @@ block1的框架内部同步分别恢复8个成员；G32/G512内部sync贡献wait
 | S/A | exposedpath-v2 `_query_wait_set`仅pending活动；空集合invalid，旧A部分缺口处理非当前规则 | 完整语义W含已完成前缀、严格ownership/terminal/validity、当前union/opaque预算 |
 | 数据角色 | Prototype及后续历史兼容性Engineering诊断 | 已签署限定Formal，不升级历史数据 |
 
-观察到旧sync明显拉长可以是真实设备尚未完成的现象；**旧结果不能直接按当前同口径定量对比，也不能简单判旧算法错误**。现有目录没有w11可消费SQLite/Canonical原件及必要新身份、completion/dependency证据；REP不是可直接当ZIP解析的格式。本轮不执行真实export、不补造字段，故不作v1.4.1科学复算。有关历史兼容性缺口已在[Prototype归档说明](../prototype_archive/README.md)与[Canonical历史回归](../../engineering_evidence/canonical_raw_v0_2/historical_regression.json)记录，identity仍AMBIGUOUS。
+观察到旧sync明显拉长可以是真实设备尚未完成的现象；**旧结果不能直接按当前同口径定量对比，也不能简单判旧算法错误**。7.132当时没有可消费SQLite且未获本轮离线export授权；7.134在独立副本新导出并完成两次同步的局部Raw解释，未授v1.4.1科学复算或修复历史资格。有关历史兼容性缺口仍在[Prototype归档说明](../prototype_archive/README.md)与[Canonical历史回归](../../engineering_evidence/canonical_raw_v0_2/historical_regression.json)保留，identity历史判定不回写；新取得的具体身份与时序见[集中对照](gate13_w11_execution_comparison_v0_1.md)。
 
 ## 5. 较重负载的最小差额与候选
 

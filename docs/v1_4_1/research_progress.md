@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.134 w11原执行路径与Formal G512有界实物对照（2026-10-11）
+
+**Gate13限定签署PASS保持，Gate14 NOT_RUN；没有业务、测量、统计或资格变更。** 用户调整优先级为旧w11执行/计算口径对照，暂不设计复制API内部等待类别。[集中对照0.1](gate13_w11_execution_comparison_v0_1.md)按新明确授权从已核验REP的字节相同副本离线export；本地Nsight2026.1.1.204，exit0、1.609s，新SQLite27336704 bytes/hash adee4a45…，原REP/副本前后hash均981db025…，原件未改。不是采集、GPU运行、服务器操作或完整analyzer复算。局部脚本独立读取Raw/已有Formal时序、保存历史Git源快照，不调用S/A/B；无测试/完整Q0重跑。
+
+重要更正：Raw应用日志StringIds18与目标PID57540的CUDA inventory映射证明，本REP实际**RTX6000 Ada、torch2.5.1+cu121、CUDA12.1、transformers5.13.0**，不是4090。启动/日志声明Qwen2.5-1.5B目录、synthetic512/b4/o16、w3/repeat5/streaming，5request及每request16device sync成立；kernel实际CUDA device0映射inventory GPU3，编号不同不矛盾。模型内容/revision、backend、输入digest、Host token值及当时源码hash仍缺。7.132的22.586%Prefill/3.768%Request只是4090另attempt同名汇总，不能代表本Raw；6000旧汇总为39.890%/12.044%/15.474%。五个Prefill/Decode实值均值与6000舍入值吻合，Request均值差0.0042756ms且旧报告无REP hash，仍不强绑定完整旧A结果。
+
+找到bench_eager、single/matrix launcher及v2 analyzer/汇总器；首Git3a64db2（7/17）晚于Raw7/8，Prototype tag abab013（9/2）及已有交付payload保全相同旧执行逻辑/原源文件，但不是精确当时源码身份。旧S按先提交且sync入口仍pending筛选，A为sync∩候选活动union，不是整个sync时长；旧matrix为逐次比例均值，与当前总预算比/完整W/ownership分开。无新写复原脚本冒充原始入口、无Prototype升级。
+
+实物request1 Prefill argmax提交结束93.763376ms→device sync93.804097～271.153139ms，最后ArgMax在271.050822ms完成；sync177.349042ms、旧规则观测候选交集112.633243ms、入口至terminal177.246725ms不混同。decode-step1 sync32.688596ms，候选交集16.157432ms。旧Prefill初段1-byte D2H/stream sync不是token末尾；对应decode-step无copy。当前G512 block1同样复用原记录：copy内部→D2H→stream sync，末尾同步入口前已完成，token0/1现有投影wait0。平台、输入、batch、输出及完成路径同时不同；未证copy或标记是主因，没有具体证据显示当前sync算法错误，不修改冻结结果。未来唯一实验问题仅是同平台/输入下device completion-before-copy与自然host-readable路径的局部暴露位置差异，需未来独立合同批准；本轮不实现/采集、不自动Gate14。
+
+服务器cleanup_receipt原件在已检查的transfer/server_receipts/当前交接入口尚未找到，同名测试替身不算；已非阻塞请求准确本地路径，实际删除数量/空间**待原件核验**，不把30候选/38.95GiB写成已释放。不再清理其他Gate或重扫服务器；原UNKNOWN/BLOCKED/Raw及用户DOCX保持。仅更新必要解释/进度/交接、局部完整性/算术/链接/diff检查，提交不替代执行99f3bae/分析e19。最高优先级为结果解释及取得已经存在的清理回执定位，无必须的新研究执行步骤。
+
 ## 7.133 Gate13服务器定向存储收口准备与复制API解释更正（2026-10-11）
 
 **Gate13限定签署PASS保持，Gate14 NOT_RUN；不改变冻结A/B或原Formal结论。** 用户授权仅准备服务器30个已归档domain副本的PowerShell5.1清理命令，不删除本地研究资料、不操作服务器、不重跑完整分析。[聚焦解释/存储入口](gate13_cuda_api_storage_review_v0_1.md)关联7.132时序与完整取证归档；当时30项合计41820242784 bytes=38.948136GiB。用户回传最新73.33GiB盘点，成功清理后约34.38GiB，满足50GB十进制长期预算的估算；仍有两条跳过/错误原记录未在本地取得，不能称已实审或精确完整空间已确认。脚本只读既有盘点目录两项问题、记录与候选相交关系，路径/格式/数量无法识别则删除前停止；不新扫YLQ或全机PID。
