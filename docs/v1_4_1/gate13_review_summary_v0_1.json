@@ -1,0 +1,99 @@
+{
+  "version": "G13-LOCAL-COMPLETE-REVIEW/0.1",
+  "review_date": "2026-10-11",
+  "gate13": "BLOCKED",
+  "remaining": [
+    "EXTERNAL_FORENSIC_RECEIPT_NOT_RECEIVED"
+  ],
+  "execution_commit": "99f3bae966f2fb794073ff4d7468233b6b8dd2ac",
+  "analysis_commit": "e19c308d1254feb0e643ae56429d5afd2ab6b4fd",
+  "protocol_version": "G12-ROUTEA/0.1.1",
+  "protocol_sha256": "d9204a80bf15ce810093ec53c506d4bf3eadd2f1ad71db8844cff330f0c7448b",
+  "offline_authorization_sha256": "520053f1ea3dfc7d63352c98c1e2ce65e81ff3838d0575cbb48ead6a66f7616d",
+  "archive_sha256": "a3f2e05bbfbdda8bbba025fd016bdc60c7652cd001b1dd54f5a0aec65435e6ef",
+  "manifest_sha256": "87f60c7841c1a71225a4ccffa297503fdfc63e193d9c4f99c2b9c1c8488d42fa",
+  "expected_external_receipt_sha256": "b4f5f8eef7cfbf1dec47be0285b0d39c12c3503b82e3e464b62227ea8dc46172",
+  "archive_members": {
+    "source_files": 3586,
+    "source_directories": 633,
+    "provenance_files": 5,
+    "manifest": 1,
+    "total": 4225
+  },
+  "accepted_local_checks": {
+    "executions": 60,
+    "pairs": 30,
+    "profiles": 30,
+    "a_windows": 90,
+    "n1_single_sync_b": 60,
+    "complete_blocks": 6,
+    "failures": 0,
+    "excluded": 0
+  },
+  "allocation": {
+    "records": 54,
+    "size_bytes": "UNKNOWN",
+    "internal_wait": "NOT_DECOMPOSED"
+  },
+  "formal_global_batch_acceptance": "PENDING_FORENSIC_TERMINAL_RECEIPT",
+  "raw_independent_crosscheck": "30_OF_30_EXACT",
+  "original_reports_rewritten": false,
+  "dropped_records_status": "UNKNOWN",
+  "measurement_validity": "NOT_ASSESSED",
+  "qualified_scope": "SIGNED_LIMITED_ROUTE_A_ONLY",
+  "full_q0_qualification": false,
+  "p0_composition_transfer": false,
+  "a_overhead_subtracted": false,
+  "b_cross_sync_aggregation": false,
+  "statistical_stability": "NOT_ESTABLISHED",
+  "bootstrap": {
+    "count": 10000,
+    "coverage_guaranteed": false,
+    "seed": 20261001,
+    "unit": "WHOLE_COMPLETE_BLOCK"
+  },
+  "all_comparisons_reported": true,
+  "artifacts": {
+    "gate13_a_baseline_v0_1.csv": {
+      "bytes": 29838,
+      "sha256": "f9923fa01254b26dfd8502e306bb77e5e0377983b62bd2082a61e87926d52b98",
+      "rows": 90
+    },
+    "gate13_single_sync_b_v0_1.csv": {
+      "bytes": 16487,
+      "sha256": "87a60193d6bc31181861434aceaf7915703767fa3b19a0cea75d2f4c01a91331",
+      "rows": 60
+    },
+    "gate13_information_cases_v0_1.csv": {
+      "bytes": 11975,
+      "sha256": "c6dd56e84a23d831520dc44cb35ade605fdd82c2da5a2a14fb8bbc60fea6620e",
+      "rows": 36
+    },
+    "gate13_allocation_v0_1.csv": {
+      "bytes": 10193,
+      "sha256": "82199c99533b2045fa9cf768d2f4d4343463f44b2b46aa111dfbf2aab295ca5c",
+      "rows": 54
+    },
+    "gate13_contrasts_v0_1.csv": {
+      "bytes": 21324,
+      "sha256": "637fdc0c510d2fa65560c60a86bc1b82222e63fd2b936db680efb7a35202e7e3",
+      "rows": 102
+    },
+    "gate13_host_durations_v0_1.csv": {
+      "bytes": 8387,
+      "sha256": "8388bddd70d3bf46b1a36f150b47d35ac0ac77a8e8a42e7385ff666ead2234cd",
+      "rows": 60
+    }
+  },
+  "integrity_scope": "LOCAL_ZIP_AND_ALL_CONTENT_VERIFIED_SOURCE_FINAL_SERVER_CHECK_NOT_YET_AUDITED",
+  "elapsed_seconds": 3319.893026699996,
+  "private_receipts": {
+    "archive_audit.json": "f425e82b5d83c68265179cdf6be3a6aaf3b3b9a91d4fe37074b0b87667d1ca35",
+    "authorization.json": "520053f1ea3dfc7d63352c98c1e2ce65e81ff3838d0575cbb48ead6a66f7616d",
+    "runtime_sources.json": "8e23513c0e49a82561b63a724aa7016ffbbcf0e6694b97c79f3f6fd724b96879",
+    "execution_review_v0_3.json": "911372fd099fbef9c465625ccd4d478693c1a5a3f4900be61af87fb8964c1412",
+    "raw_independent_final.json": "3768ba92fd21628a37b74451425c0629f98523311d1b43410931f19c113f474d",
+    "review_complete.json": "356c6285b3522a6204d380ac6f9eb180ab6baffcabdc9582699c4331236f46d9",
+    "statistics_compact.json": "7d3932e400f554a659d587277df539e824e825ae55a27495a9c5ebe838e8d1fd"
+  }
+}
