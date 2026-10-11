@@ -2,13 +2,16 @@
 
 2026-10-11；`G13-LOCAL-COMPLETE-REVIEW/0.1`。Material Passport：ExposedPath / ARS experiment-agent validate；统计解释 ANALYZED，实际文件链已重新核验，不是重新采集。
 
-**60次逐run执行合同检查、30条profile质量复核、90个A窗口、60条N1单sync B和六完整block统计已经完成，没有测量准入失败。Gate13仍BLOCKED：用户指定的外部`forensic_receipt.json`未在本地取得，服务器最终源集合复查及归档终态尚不能直接核验。** 这是一个具体取证收尾缺件，不是新增科学门槛、重新追索写者或要求重新采集。只需传回已存在的该文件，核对预定hash及其终态；本轮其余本地工作已经完成。
+**最终裁决（7.131，`G13-CLOSEOUT/0.1`）：Gate13 PASS，限于已签署`G12-ROUTEA/0.1.1`的单平台、单模型路线A。** 外部终态回执已直接读取，预定hash、归档/manifest/源集合及本次离线输入绑定一致，error=null，没有新增冲突。60次合格执行、30pair/30profile、90个A窗口、60条N1合格单sync B、六完整block及公平baseline/冻结统计审查全部闭合。这里是限定Formal执行与结果审查通过，不要求正向效应；不授予稳定收益、精度保证、完整新版Q0或Decision Gain。原超时、UNKNOWN、BLOCKED及Raw不改。
+
+[最终机器裁决](gate13_closeout_v0_1.json)取代此前“缺回执”的现行状态；[7.130机器汇总](gate13_review_summary_v0_1.json)原样保留为当时已完成分析、终态缺件的历史记录。下方统计和信息增益审查直接复用，没有重算。
 
 ## 1. 原件与分析授权
 
 - 封存ZIP：1381808437 bytes，SHA256 `a3f2e05bbfbdda8bbba025fd016bdc60c7652cd001b1dd54f5a0aec65435e6ef`。
 - 清单SHA256 `87f60c7841c1a71225a4ccffa297503fdfc63e193d9c4f99c2b9c1c8488d42fa`。全部成员读至EOF完成CRC、路径/大小写/Unicode别名安全、重复、大小/SHA256及完整覆盖核验；4225成员恰为3586源文件、633目录项、5取证附件、1清单自身。没有缺源文件或空目录遗漏。
-- 5附件为`instance_receipt.json`、原quiescence ZIP、取证工具、`source_before.json`、`copy_checkpoint.json`。源文件共42790896265 bytes。checkpoint明确复制后源一致、最终ZIP验证待完成，不能当作缺失外部终态回执。预期外部回执SHA256 `b4f5f8eef7cfbf1dec47be0285b0d39c12c3503b82e3e464b62227ea8dc46172`，尚未实测。
+- 5附件为`instance_receipt.json`、原quiescence ZIP、取证工具、`source_before.json`、`copy_checkpoint.json`。源文件共42790896265 bytes。checkpoint只是复制后源一致、最终ZIP验证待完成的中间记录，不单独当作终态。7.131补齐外部回执：1071 bytes，实测SHA256 `b4f5f8eef7cfbf1dec47be0285b0d39c12c3503b82e3e464b62227ea8dc46172`，与预定值完全一致；status=`FORENSIC_BYTE_COPY_VERIFIED_NOT_ACCEPTANCE`，error=null。
+- 回执ZIP/manifest/3586文件/42790896265字节/4225成员/空目录与已核验原件一致；源路径通过原run配置绑定，`source_before`摘要`1231d92c07764247e5b12e53dc731e1860fff94973eab890b3c9b8e6e68e8f11`与封存清单/checkpoint一致。归档工具字节SHA256 `eb37e0e14c345e36f040076fde50569e3563eb2c594117f0545b2b287b968618`对应既定工具；成功终态只能在ZIP完整验证、归档后`final == frozen`及无覆盖发布后生成。**末次源一致是这份绑定回执及工具控制流的执行证明，不声称直接取得未封入ZIP的`source_after_archive.json`，也不证明全时段无写者或原子快照。** 本地终态补审摘要`76e9a083610ef89db67b844ccd2491aab21b87074a6a8ecd62b96ae96bf8f212`，conflicts=[]。原外部回执的gate13=BLOCKED是取证时历史状态，原样保留，不将其改成接受报告。
 - 有限取证检查不证明不存在写者，也不是跨文件原子快照。原历史UNKNOWN、marker、BLOCKED及完整原件均保留；没有运行旧pack/finish-only或清理。
 - 签署协议`G12-ROUTEA/0.1.1`内容hash `d9204a80bf15ce810093ec53c506d4bf3eadd2f1ad71db8844cff330f0c7448b`；签署发布字节hash `1378c89db04336102a9dc0ce53ef7b1ef17dd9c518320c060e74d39abaa5b669`；approval内容hash `423852a31bd858a56255ca092bc370eb2349fc293ecab182c9fae7dbc562780e`。
 - 执行固定`99f3bae966f2fb794073ff4d7468233b6b8dd2ac`；新分析`e19c308d1254feb0e643ae56429d5afd2ab6b4fd`，parent `6e34959da44e5ede9f3f04241934194713144301`。本次审查/文档提交不代替任一执行身份。
@@ -30,7 +33,7 @@
 | N1单sync B | 60/60 B_VALID：N0/Nm每run3个，N16每run4个；内部RAW_PHYSICAL、两个token-ready、预定干预分开；完整W含已完成前缀 |
 | 诊断 | 既有四消息按冻结官方处置依据；原warning与来源保留，无新类型豁免；dropped UNKNOWN、measurement NOT_ASSESSED不变 |
 | 配对/统计 | 全部60原值、30pair、六完整block；102预定对比、signed差、固定seed联合成块bootstrap、留一及前/后三块全部保存；无排除/拼接/替补 |
-| 完整取证终态 | 本地ZIP内容通过；外部终态回执缺失，尚不能核验服务器归档后最后一次源集合/内容复查。这是当前唯一待补文件 |
+| 完整取证终态 | 7.131外部回执实际hash/终态/输入绑定通过；原ZIP内容全核验复用。有限字节一致取证，不是无写者认证；原取证/超时状态保留 |
 
 物理全会话S/B中的窗外INVALID不改写为有效，也不自动污染已经独立审查的目标窗。opaque记录54条（18个N1 P1各3次cudaMalloc），allocation大小未知、内部等待NOT_DECOMPOSED；各run总调用成本0.689340～1.790092ms，各组差异保留。不能把opaque cost说成非阻塞、全等待已恢复或全部E2E差由同步干预造成。
 
@@ -63,7 +66,7 @@ P1−P0 Request相对差本批为+2.1013%～+106.6759%；Prefill +0.5514%～+107
 
 因此不是“方法所有问题都有增益”：设备必要等待/单sync provenance有限支持；API嵌套和Host补集在本数据未显示非冗余增益；P0稳定收益及全输入域规律不支持。A守恒、unattributed=0仅是资格/记账事实，不替代上述判据。
 
-## 5. 实际验证、保留项与唯一下一步
+## 5. 实际验证、保留项与最终收口
 
 原ZIP流式全核验/展开115.036s；新e19逐run完整S/A/B+独立baseline+统计3319.893s。不同机器/完整度，不能以原7200s中断计算本批精确提速比例。逐run释放大对象，无全批S常驻cache；102对比均值/留一另行算术核对，Raw独立30/30，baseline各窗count/sum/union与Raw一致。
 
@@ -71,6 +74,8 @@ P1−P0 Request相对差本批为+2.1013%～+106.6759%；Prefill +0.5514%～+107
 
 ARS 11/11检查：条件/pass/block分层防Simpson；不由该运行序列推平台总体（生态）；支持域选择透明（Berkson）；不按结果筛选/控制碰撞变量（collider）；无诊断概率基率claim；非极值选样/追采（均值回归）；60全部保留（幸存者）；102预定对比全报（多处寻找）；冻结顺序/统计未改（分析分叉）；P1不迁移P0/局部sync不等因果净增量（相关因果）；时间关系证据不等全部混杂排除（反向因果）。小样本、共享平台/顺序漂移及扰动仍限制统计解释；不新增显著性测试。
 
-唯一下一步是**复制已存在的外部终态回执到本地**，无须操作模型/collector、部署、重采、追索PID或重算。核对其预定hash、成功终态、ZIP/manifest/source_before绑定和归档后源复查；若不一致只报告具体差距，不修改原件。未取得前Gate13 BLOCKED，批次正式收口待决；已经通过的逐run/逐窗检查和有限信息结论保存，无新样本任务。原执行99f3bae、新分析e19、原签署和旧BLOCKED均分别记录。
+7.131只补审1071字节回执、其已核验索引及小审查记录；没有重跑完整分析/测试/实验或全包扫描。实际hash与成功终态、归档和离线输入绑定无冲突，前述唯一缺件关闭，**Gate13限定PASS**。这是新审查裁决，不覆盖原采集控制层BLOCKED，也不继承失效旧analysis seal。支持本签署范围P1必要等待/单sync provenance的有限语义信息；Host/API附加信息在本数据未显示，N1稳定收益、10/5ms保证及P1精确迁移P0不受支持。负结果或不确定不会被改写为正向收益。
 
-本轮没有清理。Gate7～12限定PASS保持，Gate14不启动；[机器汇总](gate13_review_summary_v0_1.json)与[唯一进度](research_progress.md)一致。不授完整新版Q0、D/Signature、自然默认流B、Formal之外的平台/模型或Decision Gain。
+没有必须由用户执行的服务器步骤。下一阶段仅可复用现有表和完整来源进行论文结果/限制整理；不自动启动Gate14/G2、采样、部署或清理。本次只检查文档链接/裁决身份/保留项及diff，研究规则、实现、原件和用户DOCX未修改。
+
+本轮没有清理。Gate7～12限定PASS保持，Gate14不启动；[最终机器裁决](gate13_closeout_v0_1.json)与[唯一进度](research_progress.md)一致，历史机器汇总不改。不授完整新版Q0、D/Signature、自然默认流B、Formal之外的平台/模型或Decision Gain。
