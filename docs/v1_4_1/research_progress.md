@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.132 Gate13逐block展示、低wait路径解释与历史w11对照（2026-10-11）
+
+**Gate13限定签署PASS保持，Gate14 NOT_RUN；没有新采集、语义修订或资格变化。** 用户要求只读解释当前低Device wait、定位历史较重w11，并澄清空间压力指服务器。[集中解释0.1](gate13_completion_workload_review_v0_1.md)复用60Host原值、90A窗及六block冻结结果，保存三张全样本图、90窗逐次比例/75项分量预算汇总、六个token的原row/correlation时序。总预算比与逐次比例均保留；P0 Host性能与P1 trace投影A分母/clock不混用，不删除长值/负差，不重跑S/A/B或统计bootstrap。
+
+实际执行99f3bae的相关runner/NVTX/boundary/drain/N1/model入口与当前读取内容一致。block1 G32/G512/N16六个token：argmax提交返回→token-ready range开始2.725608～4.668297ms，包含多种Host工作，不能全算NVTX成本；D2H在后续stream sync入口前8.212～82.682µs完成，支持必要后缀内token-ready wait为0。完成后point准备延迟2.0358～3.9617ms不能归成同步前成本；实际marker调用包络10.9～99.4µs。当前cudaMemcpyAsync登记submit，Async不等于非阻塞，API内部可能包含设备等待但本合同不进一步拆分；**低A_device_wait不证明全部设备相关Host阻塞近零**。Host预算波动不等CPU busy或硬件因果，不能由本批精确迁移P0。实际无网络流式发送，核心T_model-request排除下游文本/网络/消费者，不预设其必须位于其他进程。
+
+唯一w11 Raw在`nsys_results/w11_p512_b4_o16.nsys-rep`，9677123 bytes/SHA256 **981db025cab3e4a43a099f11ae200d424d2f101186970490d9c33c2be5852e13**，与Prototype索引一致。对应旧4090汇总声明512/b4/o16、5 repeat：Prefill wait均值比例22.586%，Request 3.768%（不是整个request>20%）；旧汇总无REP摘要且来源日期与Raw历史日期不同，不把同名强绑定同一attempt。旧device-wide逐步同步没有当前host-token读取路径，legacy pending-only S/边界/软件、模型/设备身份不完整；无可消费SQLite及必需新证据，不导出或追认v1.4.1/Formal。batch4/output16的generic tensor能力不等支持域资格，EOS整批停止与每步token身份需另声明。仅提出未来512/b4/o2单轴Engineering候选，不执行或纳当前冻结方案，不以高wait选点。
+
+服务器存储仅从已验证取证manifest盘点：30展开domain.json **41820242784 bytes=38.95GiB**，占当时源树97.73%；REP/SQLite约0.22GiB，不能先删Raw。准确机器路径/预期hash/member仅保存忽略的本地索引，不提交私有目录。完整ZIP/清单/外部终态与本地最终结果都保留；服务器原finish/BLOCKED与writer UNKNOWN不修改，当前服务器文件hash/空闲未查询。该30项是清理候选而非删除回执，旧UNKNOWN清理门未被绕过；本轮**无任何本地或服务器删除**，不追索旧PID或新增监控。用户澄清后，先前本地空闲/副本数值不当作服务器当前占用。
+
+实际命令`python -X utf8 .local/gate13_completion_workload_review.py` exit0：60/90键全覆盖、顶层/API子类守恒、Request=Prefill+Decode、原时序唯一关联及归档30目标member长度通过；三图目视检查。bundled Python缺matplotlib，未安装包，采用现有Anaconda/matplotlib3.9.2/numpy1.26.4；只展示/算术复核，不是新GPU/目标平台资格测试，没有pytest/Q0/全量/完整分析或实验。用户DOCX修改与未跟踪原ZIP均保留，不纳提交；研究判定及旧报告不改。最高优先级是用户审阅解释与服务器可重建文件清单，无必须的研究采集/部署步骤；下一负载候选仅待未来另行决定。
+
 ## 7.131 Gate13外部取证终态补审与限定Formal最终裁决（2026-10-11）
 
 **Gate13 PASS，严格限于已签署G12-ROUTEA/0.1.1路线A；Gate14 NOT_RUN。** [集中收尾](gate13_local_review_v0_1.md)/[最终机器裁决](gate13_closeout_v0_1.json)关联既有7.130完整分析和本次终态补审。60次执行、30pair/30profile、90A窗口、60条合格N1单sync B、公平baseline及六完整block统计全部接受；无排除/测量准入失败。PASS表示签署范围的执行与证据审查闭合，不要求效应为正，不授稳定性能收益、10/5ms精度、完整新版Q0、自然默认流物理B或Decision Gain。

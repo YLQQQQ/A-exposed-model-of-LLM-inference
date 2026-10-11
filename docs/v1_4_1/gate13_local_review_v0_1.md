@@ -2,6 +2,8 @@
 
 2026-10-11；`G13-LOCAL-COMPLETE-REVIEW/0.1`。Material Passport：ExposedPath / ARS experiment-agent validate；统计解释 ANALYZED，实际文件链已重新核验，不是重新采集。
 
+7.132新增[全六block图、token读取时序与历史w11解释](gate13_completion_workload_review_v0_1.md)。这是已有结果展示与解释限制补充，不改本裁决/测量定义；服务器大文件仅有清理候选，未删除或解除历史UNKNOWN。
+
 **最终裁决（7.131，`G13-CLOSEOUT/0.1`）：Gate13 PASS，限于已签署`G12-ROUTEA/0.1.1`的单平台、单模型路线A。** 外部终态回执已直接读取，预定hash、归档/manifest/源集合及本次离线输入绑定一致，error=null，没有新增冲突。60次合格执行、30pair/30profile、90个A窗口、60条N1合格单sync B、六完整block及公平baseline/冻结统计审查全部闭合。这里是限定Formal执行与结果审查通过，不要求正向效应；不授予稳定收益、精度保证、完整新版Q0或Decision Gain。原超时、UNKNOWN、BLOCKED及Raw不改。
 
 [最终机器裁决](gate13_closeout_v0_1.json)取代此前“缺回执”的现行状态；[7.130机器汇总](gate13_review_summary_v0_1.json)原样保留为当时已完成分析、终态缺件的历史记录。下方统计和信息增益审查直接复用，没有重算。
