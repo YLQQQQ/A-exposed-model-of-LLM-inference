@@ -4,13 +4,13 @@
 
 ## 1. 集中结论
 
-低`A_device_wait`成立的是**已恢复同步调用区间内，必要设备活动的可见重叠很小**，不是GPU没有约束Host或没有隐式阻塞。当前先读取host token：`.cpu()`中的D2H复制调用在随后`cudaStreamSynchronize`进入前已完成；旧脚本则在argmax后显式device-wide synchronize，没有相同host读取路径。较长输入、较大batch和较长decode不能保证这一局部占比单调增加。
+低`A_device_wait`成立的是**已恢复同步调用区间内，必要设备活动的可见重叠很小**，不是GPU没有约束Host或没有隐式阻塞。**7.133更正调用顺序**：`.cpu()`内部依次执行复制和stream sync，二者返回后才取得Host token；D2H提前完成不代表`.cpu()`已返回。[聚焦API证据及解释](gate13_cuda_api_storage_review_v0_1.md)保留1.874498ms复制包络中的未分离等待。旧脚本在argmax后显式device-wide synchronize，没有相同host读取路径；较长输入、较大batch和较长decode不能保证局部wait占比单调增加。
 
 历史w11是`nsys_results/w11_p512_b4_o16.nsys-rep`，Prototype而非Formal。对应4090旧汇总的**Prefill** wait均值占比22.586%，**整个Request**为3.768%；两种分母不可混称“request超过20%”。旧汇总尚未以Raw hash绑定到这个具体REP，不把同名当成同一attempt证明。
 
 当前研究可作为模型侧流式输出的就绪基础，但没有实际网络发送。网络可由同进程其他线程、事件循环或独立进程执行，**不必然是另一个进程**；反分词、文本/网络/前端不是当前核心窗口，不能塞入Host补集。将来若下游队列回压改变模型侧推进，需要单独声明执行合同，不能以进程隔离自动证明无依赖。
 
-服务器归档时证据树的大头是30个已封存、可重建的展开`domain.json`（38.95GiB），不是REP/SQLite。本轮仅准备准确清理候选，没有操作服务器或本地删除；历史未知writer门不因Gate13结果审查PASS自动解除。
+服务器归档时证据树的大头是30个已封存、可重建的展开`domain.json`（38.95GiB），不是REP/SQLite。7.132仅形成候选；7.133依用户新授权准备[独立定向清理命令](gate13_cuda_api_storage_review_v0_1.md)，核对归档、当前字节及两条盘点异常后才删除，历史writer UNKNOWN不改，不调用旧retention门。尚未操作服务器或本地研究数据删除。
 
 ## 2. 全部六block展示与分母
 

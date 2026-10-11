@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.133 Gate13服务器定向存储收口准备与复制API解释更正（2026-10-11）
+
+**Gate13限定签署PASS保持，Gate14 NOT_RUN；不改变冻结A/B或原Formal结论。** 用户授权仅准备服务器30个已归档domain副本的PowerShell5.1清理命令，不删除本地研究资料、不操作服务器、不重跑完整分析。[聚焦解释/存储入口](gate13_cuda_api_storage_review_v0_1.md)关联7.132时序与完整取证归档；当时30项合计41820242784 bytes=38.948136GiB。用户回传最新73.33GiB盘点，成功清理后约34.38GiB，满足50GB十进制长期预算的估算；仍有两条跳过/错误原记录未在本地取得，不能称已实审或精确完整空间已确认。脚本只读既有盘点目录两项问题、记录与候选相交关系，路径/格式/数量无法识别则删除前停止；不新扫YLQ或全机PID。
+
+更正此前“.cpu()先完成再stream sync”的歧义：目标机2.6.0+cu124 CUDAFunctions.h（4027 bytes/hash343d0cd1…）与官方2.6 Copy.cu路径为复制helper内部cudaMemcpyAsync→cudaStreamSynchronize，之后才取得host token。直接核验block1/G512/P1 runtime37815/correlation197682 cudaMemcpyAsync_v3020总1.874498ms；D2H347仅0.544µs，提前sync入口82.682µs结束；sync runtime37816/correlation197683成功35.553µs，唯一physical354/context1/stream7。没有同线程已观测嵌套API，但driver表/栈未采集，不能证明无driver内部等待。现合同token-ready wait0成立于已恢复必要集合/同步包络，不是所有GPU相关Host阻塞为0；API预算非纯CPU，unattributed0不等全部内部机制解释，opaque等待不补造W/B。
+
+新增一个独立定向清理脚本，不接旧retention或实验入口、不改运行代码：固定清单/归档/manifest/外部回执四重字节绑定、明确30叶路径/reparse/当前长度hash、全项先锁读检查再删除、每项删除前复核、异常即停、源树外新回执及已删/未删/释放字节/ZIP恢复引用；默认只预检查，真实删除需操作者确认当前分析/采集已停止。原writer UNKNOWN/BLOCKED、marker/manifest保持；清理不证明不存在所有写者、不是Formal资格变化。保留REP/SQLite/Canonical、原始与失败报告、输入/身份、完整ZIP及最终结果，其他Gate/环境不动。全包已核验档保留，清理后展开源树不再完整，来源定位转由既有归档member+hash及新receipt承载，不重写旧清单。正式归档和已接受结果未变。
+
+实际只读命令`python -X utf8 .local/gate13_copy_api_evidence.py` exit0，生成全新本地解释诊断，没有运行S/A/B。最终定向`python -m pytest -q -p no:cacheprovider --basetemp=.local/c13k tests/test_gate13_archived_domain_cleanup.py`：**15 passed**，19.12s；含缺失/hash/来源/越界/重复、reparse、文件写占用、部分删除失败、未删清单完整性及两项盘点范围关联，均为Windows真实PowerShell临时fixture。先红测再实现；初始pytest默认Temp权限和长路径失败改用仓库内短basetemp，独立PowerShell缺Get-FileHash时改用标准.NET SHA256，无弱化检查。PS5.1解析及diff检查通过；不称服务器真实删除或已腾出空间。无全量/Q0/GPU/Nsight/模型/新样本。用户DOCX与未跟踪完整ZIP保持原字节，不纳提交；本地handoff及单次交付路径在忽略的.local。最高优先级仅是两条已有盘点异常原记录的定向核验/命令审阅，不新增研究采集任务。
+
 ## 7.132 Gate13逐block展示、低wait路径解释与历史w11对照（2026-10-11）
 
 **Gate13限定签署PASS保持，Gate14 NOT_RUN；没有新采集、语义修订或资格变化。** 用户要求只读解释当前低Device wait、定位历史较重w11，并澄清空间压力指服务器。[集中解释0.1](gate13_completion_workload_review_v0_1.md)复用60Host原值、90A窗及六block冻结结果，保存三张全样本图、90窗逐次比例/75项分量预算汇总、六个token的原row/correlation时序。总预算比与逐次比例均保留；P0 Host性能与P1 trace投影A分母/clock不混用，不删除长值/负差，不重跑S/A/B或统计bootstrap。
