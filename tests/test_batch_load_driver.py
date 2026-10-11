@@ -81,7 +81,7 @@ def test_delivery_default_does_not_collect_and_ps51_parses():
         assert result.returncode==0,result.stdout+result.stderr
 
 
-@pytest.mark.parametrize('fail_pair',[False,True])
+@pytest.mark.parametrize('fail_pair',[False,True,'profile_rejected'])
 def test_actual_controller_wiring_has_four_slots_and_stops_on_pair_failure(tmp_path,monkeypatch,fail_pair):
     from exposedpath import batch_load,platform_adapter,gate8_diagnostic
     from exposedpath.gate8_isolated_preflight import write_new,sha
@@ -107,7 +107,11 @@ def test_actual_controller_wiring_has_four_slots_and_stops_on_pair_failure(tmp_p
         assert '--execute-engineering-diagnostic' in argv and '--engineering-a-only' in argv
         assert 'direct-python' in argv and kw['timeout_seconds']==900
         out=__import__('pathlib').Path(argv[argv.index('--output')+1]);out.mkdir()
-        write_new(out/'collection_report.json',dict(status='A_SCOPE_ENGINEERING_ONLY',error=None))
+        rejected=fail_pair=='profile_rejected'
+        write_new(out/'collection_report.json',dict(status='DIAGNOSTIC_COLLECTED_NOT_QUALIFIED' if rejected else 'A_SCOPE_ENGINEERING_ONLY',
+            error='MODEL_A_SCOPE_BLOCKED' if rejected else None,
+            **({'analysis_rejection':dict(version='model-scope-rejection/0.1.0',requests=[dict(
+                reasons=['ENGINEERING_SCOPE_SUBMIT_MAPPING'])])} if rejected else {})))
         return dict(status='COMPLETE')
     monkeypatch.setattr(gate8_diagnostic_collect,'run_once',profile)
     def pair(*a):
@@ -120,6 +124,9 @@ def test_actual_controller_wiring_has_four_slots_and_stops_on_pair_failure(tmp_p
         assert observed==[('B1','pass0'),('B1','pass1')]
         assert result['status']=='BLOCKED' and result['runs'][2]['status']=='NOT_RUN'
         assert not (tmp_path/'out/comparison.json').exists()
+        if fail_pair=='profile_rejected':
+            assert 'ENGINEERING_SCOPE_SUBMIT_MAPPING' in result['runs'][1]['error']
+            assert 'MODEL_A_SCOPE_BLOCKED' in result['runs'][1]['error']
     else:
         assert observed==[('B1','pass0'),('B1','pass1'),('B4','pass0'),('B4','pass1')]
         assert result['status']=='BATCH_COMPLETE_STOP_FOR_REVIEW'

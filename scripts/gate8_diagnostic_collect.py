@@ -11,6 +11,29 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 
 
+class ModelScopeBlocked(ValueError):
+    """Preserve rejected analysis provenance without changing admission or Raw."""
+    def __init__(self, result, value):
+        from exposedpath.gate8_diagnostic import _sha
+        super().__init__('MODEL_A_SCOPE_BLOCKED')
+        self.details=dict(version='model-scope-rejection/0.1.0',
+            result_filename=Path(result).name,result_sha256=_sha(result),
+            status=value['status'],requests=[{k:r[k] for k in ('identity','status','reasons') if k in r}
+                for r in value['requests']])
+
+
+def check_model_admission(result, value, *, domain):
+    wanted='QUALITY_CHECK_PASSED_NOT_QUALIFICATION' if domain else 'A_SCOPE_ENGINEERING_ONLY'
+    if value['status']!=wanted or len(value['requests'])!=1:
+        raise ModelScopeBlocked(result,value)
+
+
+def record_analysis_error(report, exc):
+    report['error']=str(exc)
+    if isinstance(exc,ModelScopeBlocked):
+        report['analysis_rejection']=exc.details
+
+
 def run_once(argv, output, *, timeout_seconds=300, progress=False):
     output=Path(output); output.mkdir(parents=True,exist_ok=False)
     report=dict(argv=list(argv),attempt_count=1,status='BLOCKED',timed_out=False,
@@ -179,9 +202,7 @@ def analyze_model(output,prepared,collector_version):
         sqlite=output/'capture.sqlite',export_report=output/'postprocess_report.json',
         **{k:root/v for k,v in names.items()}))
     result,value=analyze_receipt(manifest,receipt,root/'engineering_execution.json',output/'analyzed')
-    wanted='QUALITY_CHECK_PASSED_NOT_QUALIFICATION' if 'domain_qualification' in manifest else 'A_SCOPE_ENGINEERING_ONLY'
-    if value['status']!=wanted or len(value['requests'])!=1:
-        raise ValueError('MODEL_A_SCOPE_BLOCKED')
+    check_model_admission(result,value,domain='domain_qualification' in manifest)
     return result
 
 
@@ -275,7 +296,7 @@ def main():
             if args.signed_formal_protocol:
                 report.update(status='FORMAL_RUN_COMPLETE_PENDING_REVIEW',schema_version='gate12-formal-collection/0.1.0')
     except (ValueError,OSError,KeyError) as exc:
-        report['error']=str(exc)
+        record_analysis_error(report,exc)
     (output/'collection_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(report['status'])
     return 0 if report['status'] in ('DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW','FORMAL_RUN_COMPLETE_PENDING_REVIEW') else 1

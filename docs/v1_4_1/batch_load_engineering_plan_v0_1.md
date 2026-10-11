@@ -1,6 +1,6 @@
 # 同完成路径 batch 负载 Engineering 对照 0.1
 
-状态：本地接线／待审交付，不是新 Formal 协议、Pilot 或 Gate14。Gate13 已有限定 PASS 及执行99f3bae／分析e19的结果保持。依据用户明确授权、当前研究设计 v7.1 中 batched invocation 的整体 ownership、已批准自然 G1 投影 A 和 Host-readable completion；没有扩大同步语义或默认流物理 B 资格。
+状态：用户已执行固定四槽；[封存失败审查0.1](batch_load_failure_review_v0_1.md)确认模型4/4、profile2/2完成，B1 A通过、B4缺submit映射而BLOCKED。原合同不变，本页旧交付步骤不授权重试／续跑。不是新Formal协议、Pilot或Gate14。Gate13已有的限定PASS及执行99f3bae／分析e19结果保持。依据用户明确授权、当前研究设计v7.1中batched invocation的整体ownership、已批准自然G1投影A和Host-readable completion；没有扩大同步语义或默认流物理B资格。
 
 ## 固定问题与批次
 

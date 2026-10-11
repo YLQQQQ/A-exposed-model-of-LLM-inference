@@ -10,6 +10,16 @@ from exposedpath import batch_load as contract
 from exposedpath.gate8_isolated_preflight import read,sha,write_new
 
 
+def check_profile_admission(result):
+    if (result['status']=='A_SCOPE_ENGINEERING_ONLY' and result.get('error') is None
+            and 'analysis_rejection' not in result):
+        return
+    # Keep the failure type and upstream reason instead of reducing a completed
+    # capture / rejected request to the outer generic PROFILE_ADMISSION label.
+    details={k:result[k] for k in ('status','error','analysis_rejection') if k in result}
+    raise ValueError('BATCH_LOAD_PROFILE_ADMISSION:'+json.dumps(details,sort_keys=True))
+
+
 def sync_evidence(records,proof):
     """Report an already admitted G1 suffix proof, not a physical B assertion."""
     from exposedpath_v141.activity_baseline import union
@@ -115,7 +125,7 @@ def run(config,output,*,execute=False):
             process=run_once(argv,folder/'driver',timeout_seconds=900,progress=True)
             contract.require(process['status']=='COMPLETE','PROFILE_DRIVER')
             result=read(output/'collection_report.json')
-            contract.require(result['status']=='A_SCOPE_ENGINEERING_ONLY' and result.get('error') is None,'PROFILE_ADMISSION')
+            check_profile_admission(result)
             print(f"[stage] pair_and_observation {b['condition']}",flush=True)
             pair=summarize(pairs[b['condition']],output);write_new(folder/'pair.json',pair)
             observation=report_profile(output);write_new(folder/'observation.json',observation)

@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.136 Batch-load失败实物审查、离线续算及拒绝诊断传递（2026-10-11）
+
+**Gate13限定PASS、Gate14 NOT_RUN保持；batch-load整体BLOCKED，B1投影A通过、B4投影A拒绝。** [集中审查0.1](batch_load_failure_review_v0_1.md)独立核验103907198-byte原ZIP（b290a96f…）、CRC、安全路径及258项清单（157ff327…）：259文件/零遗漏，包含静态原件副本。执行2af14b11dd99的四个模型入口均exit0/producer COMPLETE，两个profile/export成功；264源码实字节及显式Git/LF-CRLF表示、身份/隔离预检/模型输入引用、实际512×1/4、每样本2token及warmup3通过。模型本体未本地重算。
+
+最早实际拒绝B4 Decode的84次成功cudaMemsetAsync缺同进程/correlation activity，首runtime38606/corr201238；不是08_batch、模型异常或类别注册遗漏。114次memset中84次缺映射，总API墙钟50717ns，不据小比例宣称局部影响；Raw没有count或runtime→driver桥接，邻近cuLaunchKernel/corr201239的成员不能借用。零提交/替代路径/丢失均未被证明，不改为non-submit/Host/opaque，不补零。
+
+新派生目录复用原Canonical/投影，每run复核一次实际S/A/B并释放大型对象；原两份约3.38GiB domain只流式核验不另展开。B1三窗口与原A一致，互斥/子类守恒与阶段拆分通过；B4仍SUBMIT_MAPPING/A空。已观察子集两模式成员/边/terminal及全部API尾部独立检查无新冲突，但缺提交效果仍阻止完整W/可信A。自然默认流完整物理B不授予；同类官方warning按旧规则，原UNKNOWN/NOT_ASSESSED与Raw/BLOCKED不改。两组新pair仅性能/逐样本token观察，非验收；GPU已观察union约71.678→138.485ms不能作Device wait。
+
+tests-first最小修复仅控制层丢失叶原因：显式model-scope-rejection/0.1绑定结果SHA、request身份/原reasons，实际collector→batch拒绝上下文接通；严格门、退出含义、parser/registry/runner/S/A/B/baseline/冻结统计未改。初次5项失败后5 passed；扩大回归1 failed/81 passed为CPU替身漏目录，未弱化反例。最终`python -X utf8 -m pytest -q -p no:cacheprovider --basetemp=.local/batch_failure_release tests/test_batch_load_scope_failure.py tests/test_batch_load_driver.py tests/test_batch_load_diagnostic.py tests/test_gate8_diagnostic_collect.py tests/test_gate9_domain.py`：**83 passed/0 failed/0 skipped，50.93s**；修改文件compileall/diff通过。正例显式MEMSET、缺映射/近邻driver负例及真实报告→batch拒绝CPU接线不冒充平台资格。
+
+最高优先级仅特定memset提交效果证据；4/4模型和2/2profile已全执行，无续跑槽位。先判断现存REP/调用资料能否给出真实成员或可核验的零提交依据；不交付盲目重采/部署包，不按文档HEAD重新部署。7.135采集指令转历史；本轮无服务器/GPU/Nsight、删除或新研究裁决。用户DOCX和未跟踪原取证ZIP保留不stage。
+
 ## 7.135 同完成路径512/batch1与batch4 Engineering本地准备（2026-10-11）
 
 **Gate13限定PASS保持，Gate14 NOT_RUN；本轮仅实现／CPU验证／待审交付，未操作服务器、模型、CUDA、Nsight或采集。** 用户明确批准固定4模型进程/2profile、512输入/b1与四份相同输入b4/每样本输出2、warmup3/repeat1、FP16/eager/SDPA/自然Host-readable路径；[最小合同与计划0.1](batch_load_engineering_plan_v0_1.md)限定整体batched request，不扩为并发用户研究，不追认旧w11或重开Formal。Device wait/API预算/S/A/B公式、原官方warning处置及UNKNOWN/NOT_ASSESSED保持，不添加API内部wait拆分。
