@@ -1,5 +1,19 @@
 # ExposedPath 科研进度清单
 
+## 7.135 同完成路径512/batch1与batch4 Engineering本地准备（2026-10-11）
+
+**Gate13限定PASS保持，Gate14 NOT_RUN；本轮仅实现／CPU验证／待审交付，未操作服务器、模型、CUDA、Nsight或采集。** 用户明确批准固定4模型进程/2profile、512输入/b1与四份相同输入b4/每样本输出2、warmup3/repeat1、FP16/eager/SDPA/自然Host-readable路径；[最小合同与计划0.1](batch_load_engineering_plan_v0_1.md)限定整体batched request，不扩为并发用户研究，不追认旧w11或重开Formal。Device wait/API预算/S/A/B公式、原官方warning处置及UNKNOWN/NOT_ASSESSED保持，不添加API内部wait拆分。
+
+tests-first补闭集batch binding、真实prepare→seal→profile调用边界、runner暖机/全batch Host向量→逐样本token文件→配对消费者→合成Raw/Canonical/投影/S/A文件链及独立手算。复用现有入口和消费者，新ledger0.5/token与execution0.1/独立batch-input-receipt0.1显式关联；先暴露旧收据不接受token产物，再将其纳入完整artifact/hash集合。runner只增加已读向量长度验证；没有新增Tensor读取、同步或更改正常完成边界。EOS、错role/version/配置/input/token、缺correlation/drain、错误线程/流、未知API/依赖/warning仍拒绝。CPU fixture的OS/模型/CUDA均为明确替身，不授目标机batch4资格。
+
+新批次固定B1P0→B1P1→B4P0→B4P1；失败立即停并保留NOT_RUN，无自动重试/替换。报告保留P0/P1三窗口、signed差、A绝对量/占比、activity union、API/copy/D2H及sync入口/返回/最后必要完成和原始point/引用；投影suffix不冒充物理B。缺Driver表保留UNKNOWN。默认交付仅部署和CPU检查，协调回执审查后才显式采集；预算/空间及归档后定向清理见计划，当前不删任何文件。
+
+实际相关回归命令：`python -m pytest -q -p no:cacheprovider --basetemp=.local/bld_final tests/test_batch_load_diagnostic.py tests/test_batch_load_driver.py tests/test_gate8_pair.py tests/test_gate8_identity.py tests/test_gate11_warmup.py tests/test_gate11_pilot_files.py tests/test_gate12_formal.py tests/test_gate13_prepare_identity.py tests/test_n1_model_domain.py tests/test_runner_token_ready.py tests/test_n1_preprofile_identity.py`，**287 passed/0 failed/0 skipped，138.48s**。末次版本门补充后，`python -m pytest -q -p no:cacheprovider --basetemp=.local/bld_release3 tests/test_batch_load_diagnostic.py tests/test_batch_load_driver.py`：**52 passed/0 failed/0 skipped，29.66s**；两次覆盖有重叠，不相加为独立样本。`python -m compileall -q exposedpath analysis exposedpath_v141 scripts/batch_load_diagnostic.py`、PS5.1仅语法解析及diff检查通过；未运行无关全量、Q0、真实CUDA或模型。
+
+早期测试失败包括缺新模块、旧artifact集合不含token，以及CPU fixture的导入替身/模型inventory/native设备替身作用范围，均有原输出留在本地；报告D2H字段初稿误读顶层改为Canonical attributes.copy_kind、缺Driver保持unknown；PS5.1调用传参问题修为环境传入只解析。最后实际producer报告未知版本负例先失败（未拒绝），再为batch配对消费者补显式版本门，通过最终52项。交付自审另将CPU故障fixture移出静态回传树，避免伪process/UNKNOWN污染真实writer检查，保留JUnit/原CPU日志；交付定向`python -m pytest -q -p no:cacheprovider --basetemp=.local/bld_delivery_finish tests/test_batch_load_driver.py`：**9 passed/0 failed/0 skipped，11.35s**。没有修改测试预期以削弱生产拒绝门。
+
+实际服务器cleanup_receipt原件仍未定位，删除数量与释放空间待核验，不能从30候选推断实际。旧w11平台更正与历史报告保持，DOCX用户SHA7e630e4a…及未跟踪原取证ZIP保留不stage。当前最高优先级仅协调审阅本次固定Engineering交付；服务器模型采集尚未由本窗口执行，不自动启动Gate14、Pilot、Formal或第二轮同步干预。
+
 ## 7.134 w11原执行路径与Formal G512有界实物对照（2026-10-11）
 
 **Gate13限定签署PASS保持，Gate14 NOT_RUN；没有业务、测量、统计或资格变更。** 用户调整优先级为旧w11执行/计算口径对照，暂不设计复制API内部等待类别。[集中对照0.1](gate13_w11_execution_comparison_v0_1.md)按新明确授权从已核验REP的字节相同副本离线export；本地Nsight2026.1.1.204，exit0、1.609s，新SQLite27336704 bytes/hash adee4a45…，原REP/副本前后hash均981db025…，原件未改。不是采集、GPU运行、服务器操作或完整analyzer复算。局部脚本独立读取Raw/已有Formal时序、保存历史Git源快照，不调用S/A/B；无测试/完整Q0重跑。
@@ -1173,14 +1187,14 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 7.34后续用户回传（原件待收）：0.2首次export PASS，audit因`RAW_TABLE_MISSING:CUPTI_ACTIVITY_KIND_MEMSET` BLOCKED，尚未本地核验实际schema。先据对应版本的按需表规则审计，不默认缺表为空、不重采/重export；若只需分析adapter修复，使用原输入新目录离线复验。Gate8/新Q0仍NOT_RUN。
 - 7.33后续用户回传（原件待收）：07625b7的0.2窄受控capture已结束，run `controlled_20260926T133649Z_8dd7210fc970474eb1b6358a9e91d8cd`，plan/REP生成、capture exit0；未export/analysis/模型。本窗口尚未取得完整目录，不能声称trace语义或文件身份链通过。下一步仅到件只读审计及新run绑定后处理草案；Gate8/新Q0仍NOT_RUN。
 - 7.32验证：37项受控定向通过；本地Python3.12.7 CPU-only全量1169 passed/5 skipped（nvcc编译项），compileall/合同37/37/Canonical7模块/oracle/diff-check通过。不是目标机新native编译或采集资格。
-- 最近更新：`2026-10-11`（7.131）
+- 最近更新：`2026-10-11`（7.135）
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：原DOCX v2.1仍为Pre-Pilot；未来限定Formal使用[重签G12-ROUTEA/0.1.1](gate12_protocol_signed_v0_1_1.json)及[收尾边界](gate12_closeout_v0_1_1.md)，不覆盖原文；旧0.1签署保留。
 - 当前研究阶段：Gate13签署0.1.1限定Formal最终审查PASS；60run/30profile、新e19完整质量和六block统计及外部取证终态补审闭合。原后处理超时BLOCKED保持，不恢复旧入口、不新增样本；Gate14未启动。
 - 当前工作入口：根目录 `main`；目录约定见 `docs/repository_layout.md`。Gate7历史封存验收执行commit为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`。N1历史Engineering执行V0为c21d835、Vmarker/V16为d25b4d1；新Pilot首批执行221f46c；审查提交不是新执行身份。
 - 当前数据资格（7.131）：Gate6历史Engineering/Q0保持；[首批/暖机对照](gate11_warmup_policy_review_v0_1.md)及[共同w3 Pilot](gate11_policy_closeout_v0_1.md)仍只作政策依据、不混池/升级。已签署限定Formal60次执行/30条P1质量、归档终态及冻结统计全部接受，见[完整审查](gate13_local_review_v0_1.md)/[最终裁决](gate13_closeout_v0_1.json)；不是普遍测量有效性或完整新Q0认证。UNKNOWN/NOT_ASSESSED与旧资格边界保持。
 - 当前 Gate 状态（7.131）：Gate0～7历史PASS、Gate8限定Engineering PASS、Gate9分域PASS、[Gate10仅选定G1三点一次可行性PASS](gate10_closeout_v0_1.md)、[N1独立Engineering PASS](n1_model_feasibility_closeout_v0_1.md)、[Gate11限定Pilot政策PASS](gate11_policy_closeout_v0_1.md)、[Gate12限定0.1.1重签PASS](gate12_closeout_v0_1_1.md)；[Gate13签署路线A限定PASS](gate13_closeout_v0_1.json)、Gate14 NOT_RUN。容量/精度/稳定性未授，旧报告/UNKNOWN/NOT_ASSESSED保持。
-- 当前最高优先级（7.131）：基于全部已保存结果整理有限信息结论、负结果和论文限制；无必需服务器操作。不重算、不重采/部署/追索进程或清理，不恢复原入口，不自动开展G2。
+- 当前最高优先级（7.135）：协调审阅固定512/b1与b4同完成路径Engineering交付，阶段A部署/CPU回执审查后才显式B；不恢复旧Formal入口或追认Prototype，不自动G2/第二轮干预，不操作服务器或清理。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -1643,6 +1657,8 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 **Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
 ## 8. 计划调整记录
+
+7.135（2026-10-11）：用户批准同自然completion路径的512/b1与512/b4/o2、固定4进程/2profile Engineering单轴对照。只增加闭集批量身份、已读Host向量/逐样本token和文件链接线、报告及有界交付；不新增API内部等待拆分，不要求Device wait升高，不改变S/A/B或旧Formal冻结语义/资格。默认A部署CPU、回执审阅后显式B，失败不续采；本轮无服务器/模型/CUDA/Nsight/删除。Gate13限定PASS、Gate14 NOT_RUN；旧w11/失败报告/UNKNOWN原样保留。
 
 7.131（2026-10-11）：指定外部取证终态原件hash/归档/manifest/源集合及已完成离线输入绑定通过，关闭唯一缺件，另作Gate13签署路线A限定PASS裁决。执行99f3bae、分析e19及协议0.1.1不变；无研究语义、统计、排除或样本变更，不修改历史BLOCKED/UNKNOWN或升级旧角色，不重算/重采/清理。有限解释增益与负结果/不确定并存，不自动启动Gate14或任何服务器任务。
 

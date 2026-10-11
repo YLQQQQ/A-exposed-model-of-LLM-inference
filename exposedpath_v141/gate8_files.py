@@ -17,6 +17,7 @@ DRAIN_RECEIPT_VERSION = 'exposedpath-gate8-input-receipt/0.2.0'
 STAGE_RECEIPT_VERSION = 'exposedpath-gate8-input-receipt/0.3.0'
 PILOT_RECEIPT_VERSION = 'exposedpath-pilot-input-receipt/0.1.0'
 FORMAL_RECEIPT_VERSION = 'exposedpath-formal-input-receipt/0.1.0'
+BATCH_RECEIPT_VERSION = 'exposedpath-batch-load-input-receipt/0.1.0'
 STAGE_RESULT_VERSION = 'exposedpath-gate8-file-chain/0.5.0'
 CLOSED_RESULT_VERSION = 'exposedpath-gate8-file-chain/0.4.0'
 RESULT_VERSION = 'exposedpath-gate8-file-chain/0.1.0'
@@ -90,6 +91,11 @@ def _identities(paths):
                 or producer.get('data_role')!='Formal' or producer.get('formal_reference')!=reference(binding)):
             raise ValueError('FORMAL_PRODUCER_BINDING')
         producer_version=PRODUCER_VERSION
+    if 'batch_load' in manifest or 'batch_tokens' in paths:
+        from exposedpath.batch_load import validate,validate_actual_requests
+        validate(manifest);validate_actual_requests(manifest,ledger)
+        if not with_stages or 'batch_tokens' not in paths:
+            raise ValueError('BATCH_PRODUCER_BINDING')
     if (producer.get('schema_version') != producer_version
             or any(producer.get(k) != ledger[k] for k in ('run_id','pass_id','attempt_id'))
             or producer.get('gate8_verdict') != 'NOT_RUN'
@@ -146,7 +152,7 @@ def write_input_receipt(output_path, *, artifacts, collector_version, capture_se
     output_path = Path(output_path).resolve()
     if output_path.exists():
         raise FileExistsError(output_path)
-    if set(artifacts) not in (ARTIFACTS, ARTIFACTS | {'drain_ledger'}, ARTIFACTS | {'drain_ledger','stage_ledger'}, ARTIFACTS | {'drain_ledger','stage_ledger','pilot_tokens'},ARTIFACTS | {'drain_ledger','stage_ledger','formal_tokens'}):
+    if set(artifacts) not in (ARTIFACTS, ARTIFACTS | {'drain_ledger'}, ARTIFACTS | {'drain_ledger','stage_ledger'}, ARTIFACTS | {'drain_ledger','stage_ledger','pilot_tokens'},ARTIFACTS | {'drain_ledger','stage_ledger','formal_tokens'},ARTIFACTS | {'drain_ledger','stage_ledger','batch_tokens'}):
         raise ValueError('INPUT_ARTIFACT_SET_INVALID')
     if not isinstance(collector_version,str) or not collector_version or not isinstance(capture_session_id,str) or not capture_session_id:
         raise ValueError('COLLECTOR_SESSION_IDENTITY_MISSING')
@@ -161,6 +167,8 @@ def write_input_receipt(output_path, *, artifacts, collector_version, capture_se
         version=PILOT_RECEIPT_VERSION
     elif identity['run_role']=='FORMAL':
         version=FORMAL_RECEIPT_VERSION
+    elif 'batch_tokens' in artifacts:
+        version=BATCH_RECEIPT_VERSION
     elif 'pilot_tokens' in artifacts:
         raise ValueError('PILOT_ARTIFACT_ROLE_CONFLICT')
     _write(output_path, dict(schema_version=version, identity=identity, artifacts=entries,
@@ -178,8 +186,10 @@ def load_input_receipt(path):
         expected_artifacts=ARTIFACTS | {'drain_ledger','stage_ledger','pilot_tokens'}
     if value.get('schema_version')==FORMAL_RECEIPT_VERSION:
         expected_artifacts=ARTIFACTS | {'drain_ledger','stage_ledger','formal_tokens'}
+    if value.get('schema_version')==BATCH_RECEIPT_VERSION:
+        expected_artifacts=ARTIFACTS | {'drain_ledger','stage_ledger','batch_tokens'}
     if (set(value) != {'schema_version','identity','artifacts','collector_version','capture_session_id'}
-            or value['schema_version'] not in (RECEIPT_VERSION,DRAIN_RECEIPT_VERSION,STAGE_RECEIPT_VERSION,PILOT_RECEIPT_VERSION,FORMAL_RECEIPT_VERSION) or set(value['artifacts']) != expected_artifacts):
+            or value['schema_version'] not in (RECEIPT_VERSION,DRAIN_RECEIPT_VERSION,STAGE_RECEIPT_VERSION,PILOT_RECEIPT_VERSION,FORMAL_RECEIPT_VERSION,BATCH_RECEIPT_VERSION) or set(value['artifacts']) != expected_artifacts):
         raise ValueError('INPUT_RECEIPT_VERSION_OR_SHAPE_INVALID')
     paths = {k:_resolve(path.parent,e) for k,e in value['artifacts'].items()}
     if value['identity'] != _identities(paths):

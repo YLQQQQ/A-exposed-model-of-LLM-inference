@@ -65,7 +65,7 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
                        prompt_path, prompt_sha256, expected_commit, physical_gpu,
                        engineering_attention_backend=None, target_python=None, site_root=None,
                        pair_id=None, pair_pass=None, gate10_input_tokens=None, n1_variant=None,
-                       pilot_binding=None, formal_binding=None):
+                       pilot_binding=None, formal_binding=None, batch_binding=None):
     """Explicit preflight: hashes and minimal CUDA identity, no model load."""
     from exposedpath import platform_adapter
     from exposedpath.manifest import create_manifest, finalize_manifest
@@ -73,6 +73,12 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     from exposedpath_v141.gate8_source_probe import TorchBackend
     root = Path(__file__).resolve().parents[1]
     output = Path(output_dir).resolve()
+    if batch_binding is not None:
+        from .batch_load import validate_binding
+        validate_binding(batch_binding)
+        if (any(x is not None for x in (pilot_binding,formal_binding,pair_id,pair_pass,n1_variant,gate10_input_tokens))
+                or engineering_attention_backend!='sdpa' or not target_python or not site_root):
+            raise ValueError('BATCH_LOAD_PREPARE_PROFILE')
     if formal_binding is not None:
         from . import formal_protocol as formal
         formal.validate_binding(formal_binding)  # BEFORE probes, filesystem creation or CUDA.
@@ -112,7 +118,7 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
         raise ValueError('N1_PREPARE_PROFILE')
     content = verify_model_inventory(model_path, inventory_path, inventory_sha256, rehash=True)
     prompt = load_prompt_tokens(Path(prompt_path))
-    length=32 if gate10_input_tokens is None else gate10_input_tokens
+    length=512 if batch_binding is not None else 32 if gate10_input_tokens is None else gate10_input_tokens
     if prompt['fixed_input_tokens'] != length or _sha(prompt_path) != prompt_sha256.lower():
         raise ValueError('DIAGNOSTIC_PROMPT_IDENTITY')
     if gate10_input_tokens is not None:
@@ -120,6 +126,9 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
         if engineering_attention_backend!='sdpa' or target is None or pair_id is not None or pair_pass is not None:
             raise ValueError('GATE10_EXECUTION_PROFILE')
         validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')),length)
+    if batch_binding is not None:
+        from .batch_load import validate_input
+        validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')),batch_binding['batch_size'])
     observed = TorchBackend().identity()
     preflight = dict(physical_gpu_index=physical_gpu, logical_gpu_index=0,
                      gpu_uuid=observed['gpu_uuid'], gpu_pci_bus_id=observed['pci_bus_id'])
@@ -129,8 +138,8 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
             handle.write(Path(source).read_bytes())
     manifest = create_manifest(experiment_id='gate8-qwen-diagnostic',run_role='ENGINEERING',
         data_role='Engineering',model_path=str(Path(model_path).resolve()),
-        prompt_tokens_file=str(output/'prompt.json'),batch_size=1,fixed_output_tokens=2,
-        warmup_count=1,repeat_count=1,gpu=physical_gpu,gpu_index_physical=physical_gpu,
+        prompt_tokens_file=str(output/'prompt.json'),batch_size=batch_binding['batch_size'] if batch_binding else 1,fixed_output_tokens=2,
+        warmup_count=3 if batch_binding else 1,repeat_count=1,gpu=physical_gpu,gpu_index_physical=physical_gpu,
         gpu_index_logical=0,gpu_uuid=observed['gpu_uuid'],gpu_pci_bus_id=observed['pci_bus_id'],
         gpu_name='IDENTITY_BOUND_BY_UUID',require_git_identity=True,git_worktree=root)
     manifest.update(attention_backend='UNKNOWN_NOT_LOADED',
@@ -166,12 +175,18 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     if formal_binding is not None:
         manifest.pop('gate10_workload',None)
         manifest.update(formal.minimal_fields(formal_binding))
+    if batch_binding is not None:
+        from .batch_load import minimal_fields
+        manifest.update(minimal_fields(batch_binding))
     manifest = finalize_manifest(manifest,prompt,prompt_tokens_path=output/'prompt.json')
     if formal_binding is not None:
         # Validate the final producer object: create_manifest deliberately leaves
         # input hash / WMPC unfinished. Never substitute the declared expectation
         # for the SHA256 recomputed from the actual copied input bytes.
         formal.validate(manifest)
+    if batch_binding is not None:
+        from .batch_load import validate
+        validate(manifest)
     for name, value in (('manifest.json',manifest),('preflight.json',preflight)):
         with (output/name).open('x',encoding='utf-8') as handle:
             json.dump(value,handle,indent=2,sort_keys=True)
@@ -195,6 +210,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     from .formal_protocol import control
     pilot=control(manifest)
     formal='formal' in manifest
+    batch='batch_load' in manifest
     if formal:
         import platform
         # Already imported framework / interpreter facts, no auxiliary commands
@@ -243,9 +259,14 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     from exposedpath.gate10_workload import input_length,validate_input
     length=input_length(manifest)
     if 'gate10_workload' in manifest or (pilot is not None and length==512):
-        validate_input(json.loads(prompt_path.read_text(encoding='utf-8')),
-            json.loads((Path(manifest['model_id'])/'config.json').read_text(encoding='utf-8')),length)
-    expected = dict(fixed_input_tokens=length, fixed_output_tokens=2, batch_size=1,
+        if batch:
+            from .batch_load import validate_input as batch_input
+            batch_input(json.loads(prompt_path.read_text(encoding='utf-8')),
+                json.loads((Path(manifest['model_id'])/'config.json').read_text(encoding='utf-8')),manifest['batch_size'])
+        else:
+            validate_input(json.loads(prompt_path.read_text(encoding='utf-8')),
+                json.loads((Path(manifest['model_id'])/'config.json').read_text(encoding='utf-8')),length)
+    expected = dict(fixed_input_tokens=length, fixed_output_tokens=2, batch_size=pilot['batch_size'] if batch else 1,
                     warmup_count=pilot.get('warmup_count',1) if pilot is not None else 1,
                     repeat_count=1, execution_mode='eager',
                     **role,
@@ -261,7 +282,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     fields.update(pid=os.getpid(), pass_id=pass_id, attempt_id='diagnostic-1',
                   wmpc_manifest_sha256=_sha(manifest_path), prompt_sha256=_sha(prompt_path))
     if pilot is not None:
-        fields.update(**role,**{('formal' if formal else 'pilot'):pilot})
+        fields.update(**role,**{('batch_load' if batch else 'formal' if formal else 'pilot'):pilot})
     output_dir.mkdir(parents=True, exist_ok=False)
     if claim is not None:
         isolated_gate.write_new(output_dir/'isolated_preflight_target.json',claim)
@@ -303,7 +324,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
             handle.write(source.read_bytes())
     loaded_config = {}
     def observe_setup(model):
-        if n1 is not None and (str(model.dtype)!='torch.float16' or model.training is not False):
+        if (n1 is not None or batch) and (str(model.dtype)!='torch.float16' or model.training is not False):
             raise ValueError('N1_ACTUAL_DTYPE_OR_TRAINING')
         config = getattr(model, 'config', None)
         loaded_config.update(
@@ -324,8 +345,12 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         if pilot is not None:
             # Already host-readable values, after final completion and measured
             # ranges. No Tensor operation, D2H or synchronization here.
-            observed_tokens.append(dict(identity=identity,
-                token_ids=[list(b.host_token_ids) for b in result['token_ready_boundaries']]))
+            if batch:
+                from .batch_load import observation
+                observed_tokens.append(observation(identity,result,manifest['batch_size']))
+            else:
+                observed_tokens.append(dict(identity=identity,
+                    token_ids=[list(b.host_token_ids) for b in result['token_ready_boundaries']]))
     plan=warmup_plan(pilot) if warmup_control(pilot) else [
         dict(request_id='warmup-0',repeat_id='warmup-0',request_role='warmup'),
         dict(request_id='request-0',repeat_id='0',request_role='measured')]
@@ -337,14 +362,15 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         n1_controller=n1,
         invocation_observer=observe_invocation if 'gate10_workload' in manifest or pilot is not None else None,
         model_setup=dict(model_path=manifest['model_id'], prompt_path=output_dir/'prompt.json',
-                         physical_gpu_index=manifest['gpu_index_physical'], batch_size=1,
+                         physical_gpu_index=manifest['gpu_index_physical'], batch_size=manifest['batch_size'] if batch else 1,
                          manifest_path=output_dir/'manifest.json'),
         request_plan=plan)
     producer = json.loads(path.read_text(encoding='utf-8'))
     if pilot is not None:
-        with (output_dir/('formal_tokens.json' if formal else 'pilot_tokens.json')).open('x',encoding='utf-8') as handle:
+        with (output_dir/('batch_tokens.json' if batch else 'formal_tokens.json' if formal else 'pilot_tokens.json')).open('x',encoding='utf-8') as handle:
             from .formal_protocol import TOKEN_VERSION
-            json.dump(dict(schema_version=TOKEN_VERSION if formal else 'exposedpath-pilot-tokens/0.1.0',**{('formal' if formal else 'pilot'):pilot},
+            from .batch_load import TOKEN_VERSION as batch_token_version
+            json.dump(dict(schema_version=batch_token_version if batch else TOKEN_VERSION if formal else 'exposedpath-pilot-tokens/0.1.0',**{('batch_load' if batch else 'formal' if formal else 'pilot'):pilot},
                 manifest_sha256=_sha(manifest_path),producer_receipt_sha256=_sha(path),
                 requests=observed_tokens),handle,indent=2,sort_keys=True)
     if n1 is not None:
@@ -368,7 +394,10 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         if n1 is not None:
             execution['n1_model_calls_sha256']=_sha(output_dir/'n1_model_calls.json')
         if pilot is not None:
-            if formal:
+            if batch:
+                from .batch_load import EXECUTION_VERSION as batch_execution
+                execution.update(schema_version=batch_execution,batch_load=pilot,batch_tokens_sha256=_sha(output_dir/'batch_tokens.json'))
+            elif formal:
                 from .formal_protocol import EXECUTION_VERSION as formal_version
                 execution.update(schema_version=formal_version,**role,formal=pilot,
                     formal_tokens_sha256=_sha(output_dir/'formal_tokens.json'))
@@ -387,13 +416,16 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
                   native_attention_backend='UNKNOWN',
                   producer_receipt_sha256=_sha(path), manifest_sha256=_sha(output_dir/'manifest.json'),
                   prompt_sha256=_sha(output_dir/'prompt.json'), run_id=manifest['run_id'])
-    if pilot is not None and not formal:
+    if pilot is not None and not formal and not batch:
         result.update(schema_version='gate11-pilot-diagnostic/0.2.0' if warmup_control(pilot) else 'gate11-pilot-diagnostic/0.1.0',**role,pilot=pilot,
             pilot_tokens_sha256=_sha(output_dir/'pilot_tokens.json'),gate11_verdict='BLOCKED' if warmup_control(pilot) else 'NOT_RUN')
     if formal:
         from .formal_protocol import reference
         result.update(schema_version='exposedpath-formal-execution-report/0.1.0',**role,formal=pilot,
             formal_reference=reference(pilot),formal_tokens_sha256=_sha(output_dir/'formal_tokens.json'))
+    if batch:
+        result.update(schema_version='batch-load-diagnostic/0.1.0',batch_load=pilot,
+            batch_tokens_sha256=_sha(output_dir/'batch_tokens.json'))
     report = output_dir/'diagnostic_report.json'
     with report.open('x', encoding='utf-8') as handle:
         json.dump(result, handle, indent=2, sort_keys=True)

@@ -41,7 +41,11 @@ def _inputs(receipt_path, execution_path):
     extension=set(); expected_version=EXECUTION_VERSION
     if not controlled:
         from exposedpath.gate11_pilot import execution_extension
-        extension,expected_version=execution_extension(manifest,ledger,execution,execution_path,paths['wmpc_manifest'],paths['producer_receipt'],token_path=paths.get('formal_tokens',paths.get('pilot_tokens')))
+        if 'batch_load' in manifest:
+            from exposedpath.batch_load import execution_extension
+            extension,expected_version=execution_extension(manifest,ledger,execution,execution_path,paths['wmpc_manifest'],paths['producer_receipt'],paths.get('batch_tokens'))
+        else:
+            extension,expected_version=execution_extension(manifest,ledger,execution,execution_path,paths['wmpc_manifest'],paths['producer_receipt'],token_path=paths.get('formal_tokens',paths.get('pilot_tokens')))
     require(set(execution)=={'schema_version','manifest_sha256','producer_receipt_sha256',
             'identity','declaration','observed_configuration','status'} | extension
         and execution['schema_version']==(CONTROLLED_EXECUTION_VERSION if controlled else expected_version)
@@ -58,7 +62,9 @@ def _inputs(receipt_path, execution_path):
     from exposedpath.gate11_warmup import active
     from exposedpath.formal_protocol import control
     if active(control(manifest)):
-        if 'formal' in manifest:
+        if 'batch_load' in manifest:
+            from exposedpath.batch_load import validate_actual_requests
+        elif 'formal' in manifest:
             from exposedpath.formal_protocol import validate_actual_requests
         else:
             from exposedpath.gate11_pilot import validate_actual_requests

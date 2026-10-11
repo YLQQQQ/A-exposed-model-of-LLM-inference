@@ -112,7 +112,7 @@ def active(value):
 
 def control(value):
     """Select a role's execution plan, never infer role from a filename."""
-    return value.get('formal',value.get('pilot'))
+    return value.get('formal',value.get('pilot',value.get('batch_load')))
 
 
 def validate_binding(value):

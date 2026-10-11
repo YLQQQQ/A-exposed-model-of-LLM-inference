@@ -20,6 +20,10 @@ def declaration(length):
 
 
 def input_length(manifest):
+    if 'batch_load' in manifest:
+        from .batch_load import validate
+        validate(manifest)
+        return 512
     if 'formal' in manifest:
         from .formal_protocol import validate
         validate(manifest)

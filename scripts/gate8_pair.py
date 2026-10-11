@@ -177,6 +177,12 @@ def inspect_execution(output,expected_pass):
         else:
             from exposedpath.gate11_pilot import validate_tokens
             tokens=validate_tokens(root/'pilot_tokens.json',manifest,ledger,execution,root/'manifest.json',root/'producer/producer_receipt.json')
+    if 'batch_load' in manifest:
+        from exposedpath.batch_load import validate_tokens
+        tokens=validate_tokens(root/'batch_tokens.json',manifest,ledger,execution,root/'manifest.json',root/'producer/producer_receipt.json')
+        require(report.get('schema_version')=='batch-load-diagnostic/0.1.0'
+            and report.get('batch_load')==manifest['batch_load']
+            and report.get('batch_tokens_sha256')==sha(root/'batch_tokens.json'), 'BATCH_REPORT')
     if 'pilot' in manifest:
         require(producer.get('pilot')==manifest['pilot'] and producer.get('run_role')=='PILOT'
             and producer.get('data_role')=='Pilot' and producer['schema_version']==
@@ -207,6 +213,7 @@ def inspect_execution(output,expected_pass):
                         for c,r in zip(calls['requests'][:-1],requests[:-1]))
                     and calls['requests'][-1]['anchor'] is not None,'WARMUP_N1_STREAM_LIFECYCLE')
     return dict(manifest=manifest,pid=ledger['pid'],timing_ns=durations,
+        **(dict(token_ids=tokens,batch_load=manifest['batch_load']) if 'batch_load' in manifest else {}),
         **(dict(token_ids=tokens,pilot=manifest['pilot']) if 'pilot' in manifest else {}),
         **(dict(token_ids=tokens,formal=manifest['formal']) if 'formal' in manifest else {}),
         loaded_configuration=execution['observed_configuration'],cuda_probe=probe,
@@ -233,11 +240,20 @@ def summarize(pass0,pass1):
     collection=read(Path(pass1)/'collection_report.json')
     require(collection['collection']['status']=='COMPLETE' and collection['export_status']=='PASS','PROFILE_STATUS')
     require(collection.get('error') in (None,'MODEL_A_SCOPE_BLOCKED'),'PROFILE_ERROR')
+    batch_parity=None
+    if 'batch_load' in ma or 'batch_load' in mb:
+        from exposedpath.batch_load import validate
+        ba,bb=validate(ma),validate(mb)
+        require({k:v for k,v in ba.items() if k not in ('pass_id','run_id')}==
+            {k:v for k,v in bb.items() if k not in ('pass_id','run_id')},'BATCH_PAIR_BINDING')
+        require(a['token_ids']==b['token_ids'],'BATCH_TOKEN_PARITY')
+        batch_parity=dict(status='PER_SAMPLE_VALUES_EQUAL',batch_size=ma['batch_size'],token_ids=a['token_ids'])
     return dict(schema_version='gate8-pair-observation/0.1',status='PAIR_OBSERVED_NOT_ACCEPTANCE',gate8_verdict='NOT_RUN',
+        **(dict(batch_token_parity=batch_parity) if batch_parity is not None else {}),
         pair_id=ma['engineering_pair']['pair_id'],clock='PYTHON_PERF_COUNTER_NS',order=['pass0','pass1'],
         timing='host_observed request start to host-readable token completion; no cross-process timestamp subtraction',
         overhead=overhead(a['timing_ns'],b['timing_ns']),pass0=a,pass1=b,
-        statistical_stability='NOT_ASSESSED',output_token_value_parity='NOT_RECORDED_COUNT_ONLY',
+        statistical_stability='NOT_ASSESSED',output_token_value_parity='PER_SAMPLE_VALUES_EQUAL' if batch_parity is not None else 'NOT_RECORDED_COUNT_ONLY',
         includes='profiler and instrumentation perturbation plus uncontrolled single-pair run variation',
         excludes='load, warmup, drain, cleanup, process launch and export')
 

@@ -72,6 +72,18 @@ def validate_shape(kind, value):
                 'then':deepcopy(warmup_schema['$defs']['warmup_observations']),
                 'else':{'properties':{k:_SCHEMA['$defs']['request_entry']['properties'][k]
                                      for k in ('actual_output_tokens','early_eos')}}}]
+    if kind=='pass_identity' and 'batch_load' in value:
+        from .batch_load import validate_binding,PASS_VERSION
+        validate_binding(value['batch_load'])
+        if pilot_role(value) or formal_role(value):
+            raise ValueError('IDENTITY_CONFLICT: batch diagnostic mixed role')
+        schema=deepcopy(_SCHEMA)
+        definition=schema['$defs']['pass_identity']
+        definition['properties'].update(schema_version={'const':PASS_VERSION},batch_load={'type':'object'})
+        definition['required'].append('batch_load')
+        entry=schema['$defs']['request_entry']
+        for key in ('actual_output_tokens','early_eos'):
+            entry['properties'][key]={'anyOf':[deepcopy(entry['properties'][key]),{'type':'null'}]}
     try:
         Draft202012Validator({"$defs": schema["$defs"], "$ref": f"#/$defs/{kind}"}).validate(value)
     except ValidationError as exc:
@@ -81,6 +93,18 @@ def validate_shape(kind, value):
 def validate_pass_identity(value, *, finalized=False):
     validate_shape("pass_identity", value)
     from . import formal_protocol as formal
+    if 'batch_load' in value:
+        from .batch_load import validate_binding,request_plan
+        b=validate_binding(value['batch_load'])
+        if value['run_role']!='ENGINEERING' or any(value[k]!=b[k] for k in ('run_id','pass_id')):
+            raise ValueError('BATCH_LOAD_LEDGER_BINDING')
+        actual=[dict(request_id=r['identity']['request_id'],repeat_id=r['identity']['repeat_id'],request_role=r['request_role']) for r in value['requests']]
+        if actual!=request_plan(b):raise ValueError('BATCH_LOAD_ACTUAL_PLAN')
+        for r in value['requests']:
+            if r['request_role']=='warmup' and (r['actual_output_tokens'] is not None or r['early_eos'] is not None):
+                raise ValueError('BATCH_LOAD_WARMUP_UNOBSERVED')
+            if r['request_role']=='measured' and (type(r['actual_output_tokens']) is not int or type(r['early_eos']) is not bool):
+                raise ValueError('BATCH_LOAD_MEASURED_OBSERVATION')
     if value['run_role']=='FORMAL':
         b=formal.validate_binding(value['formal'])
         if value['run_id']!=b['run_id'] or value['pass_id']!=b['pass_id'] or value['runner_git_commit']!=b['protocol']['execution_commit'] or value['runner_git_dirty'] is not False:
@@ -161,6 +185,11 @@ def make_gate8_pass_identity(*, requests, **pass_fields):
         "planned_request_ids": [r["request_id"] for r in requests],
         "requests": [], "raw_artifact_sha256": None, "device_mapping_sha256": None,
     }
+    if 'batch_load' in pass_fields:
+        from .batch_load import validate_binding,PASS_VERSION
+        validate_binding(pass_fields['batch_load'])
+        if pilot is not None or formal_binding is not None:raise ValueError('BATCH_LOAD_MIXED_ROLE')
+        result['schema_version']=PASS_VERSION
     for source in requests:
         entry = deepcopy(source)
         identity = {k: result[k] for k in PASS_FIELDS}

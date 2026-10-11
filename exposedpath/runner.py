@@ -322,6 +322,8 @@ def run_one_invocation(
         eos_token_id is not None
         and eos_token_id in token_ready_boundaries[0].host_token_ids
     )
+    if len(token_ready_boundaries[0].host_token_ids) != batch_size:
+        raise ValueError('TOKEN_READY_BATCH_SHAPE_CONFLICT')
 
     for step_i in range(1, output_len):
         if early_eos:
@@ -342,6 +344,8 @@ def run_one_invocation(
             emit_nvtx=bool(nvtx_invocation_label),
             gate8_recorder=gate8_recorder,
         )
+        if len(boundary.host_token_ids) != batch_size:
+            raise ValueError('TOKEN_READY_BATCH_SHAPE_CONFLICT')
         token_ready_boundaries.append(boundary)
 
         # Check for early EOS

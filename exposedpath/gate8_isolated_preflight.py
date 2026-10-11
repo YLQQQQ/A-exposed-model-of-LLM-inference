@@ -131,6 +131,9 @@ def seal(prepared,output,root):
         or manifest.get('study_mode')=='N1_INTERVENTION'
         or manifest.get('domain_qualification',{}).get('profile')=='N1_EXPLICIT_STREAM_AB/0.1.0')
     contract={'execution_contract':'N1-VERIFIED-MODEL/0.1'} if n1_intent else {}
+    if 'batch_load' in manifest:
+        from .batch_load import validate
+        contract={'execution_contract':validate(manifest)['version']}
     if 'formal' in manifest or manifest.get('run_role')=='FORMAL' or manifest.get('data_role')=='Formal':
         from .formal_protocol import validate
         contract={'execution_contract':validate(manifest)['version']}

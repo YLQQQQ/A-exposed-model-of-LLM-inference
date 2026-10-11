@@ -26,6 +26,10 @@ def validate_declaration(manifest):
         return value
     from .gate11_pilot import roles
     roles(manifest)
+    if 'batch_load' in manifest:
+        from .batch_load import validate
+        validate(manifest)
+        return value
     if (not isinstance(value, dict) or value != declaration(value.get('attention_backend'))
             or manifest.get('execution_mode') != 'eager'
             or type(manifest.get('batch_size')) is not int or manifest['batch_size'] != 1

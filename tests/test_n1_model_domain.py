@@ -14,8 +14,10 @@ from test_gate8_identity import UUID, sha, write_json
 
 
 def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, queries=False,
-           default_prefix=False, allocations=False, vm_bits=False, pilot_binding=None,formal_binding=None,driver_apis=False):
+           default_prefix=False, allocations=False, vm_bits=False, pilot_binding=None,formal_binding=None,driver_apis=False,batch_binding=None):
     queries=queries or damage=='unknown_query'
+    if batch_binding is not None:
+        from exposedpath.batch_load import minimal_fields as batch_fields  # before OS probe doubles
     from exposedpath import runner
     def execute(Backend, clock, db, plan):
         entry,args,state,events=entry_source(tmp_path,monkeypatch,variant)
@@ -44,6 +46,16 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
             if pilot_binding['variant'] is None:
                 manifest.pop('n1_model'); manifest.pop('n1_model_execution')
             manifest.update(minimal_fields(pilot_binding))
+        if batch_binding is not None:
+            manifest.pop('n1_model');manifest.pop('n1_model_execution')
+            manifest.update(batch_fields(batch_binding))
+            model=tmp_path/'batch-model';model.mkdir()
+            write_json(model/'config.json',dict(model_type='qwen2',vocab_size=100,max_position_embeddings=4096))
+            prompt=dict(schema_version='exposedpath-prompt-tokens/1',tokenizer_id='synthetic',fixed_input_tokens=512,
+                samples=[dict(sample_index=i,input_ids=[7]*512,attention_mask=[1]*512)
+                         for i in range(batch_binding['batch_size'])])
+            write_json(args['prompt_path'],prompt)
+            manifest.update(model_id=str(model),prompt_tokens_sha256=sha(args['prompt_path']))
         manifest.update(gpu_uuid=UUID,gpu_pci_bus_id='0000:E1:00.0')
         write_json(args['manifest_path'],manifest)
         write_json(args['preflight_path'],dict(physical_gpu_index=3,logical_gpu_index=0,
@@ -54,7 +66,7 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=1')
         db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=2')
         db.execute('INSERT INTO TARGET_INFO_CUDA_STREAM SELECT 3,hwId,vmId,processId,contextId,priority,2 FROM TARGET_INFO_CUDA_STREAM')
-        if (pilot_binding is not None and pilot_binding['variant'] is None) or (formal_binding is not None and formal_binding['variant'] is None):
+        if batch_binding is not None or (pilot_binding is not None and pilot_binding['variant'] is None) or (formal_binding is not None and formal_binding['variant'] is None):
             db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=3')
             db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=3 WHERE streamId=3')
         native_streams={123:2,456:3,0:3}
@@ -95,6 +107,7 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         from test_runner_token_ready import _FakeToken
         cpu=_FakeToken.cpu
         def read(token):
+            if batch_binding is not None: token._token_ids=token._token_ids*batch_binding['batch_size']
             a,b,c=backend.api('cudaMemcpyAsync_v3020')
             db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_MEMCPY VALUES (?,?,0,1,NULL,?,?,?,4,2,2,1,NULL)',
                 (b,b+2,stream_id(),c,os.getpid()<<24))
@@ -178,6 +191,7 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         drain_ledger='producer/drain_ledger.json',stage_ledger='producer/stage_ledger.json')
     if pilot_binding is not None: names['pilot_tokens']='pilot_tokens.json'
     if formal_binding is not None: names['formal_tokens']='formal_tokens.json'
+    if batch_binding is not None: names['batch_tokens']='batch_tokens.json'
     receipt=write_input_receipt(tmp_path/'input.json',collector_version='2026.2.1.210',capture_session_id='CPU',
         artifacts=dict(raw=rep,sqlite=sqlite,export_report=export,**{k:root/v for k,v in names.items()}))
     return receipt,root/'engineering_execution.json',root/'n1_model_calls.json'

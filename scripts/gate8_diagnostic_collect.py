@@ -172,6 +172,8 @@ def analyze_model(output,prepared,collector_version):
         names['pilot_tokens']='pilot_tokens.json'
     if 'formal' in manifest:
         names['formal_tokens']='formal_tokens.json'
+    if 'batch_load' in manifest:
+        names['batch_tokens']='batch_tokens.json'
     receipt=write_input_receipt(output/'input_receipt.json',collector_version=collector_version,
         capture_session_id=manifest['run_id'],artifacts=dict(raw=output/'capture.nsys-rep',
         sqlite=output/'capture.sqlite',export_report=output/'postprocess_report.json',

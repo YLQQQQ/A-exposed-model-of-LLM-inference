@@ -140,6 +140,9 @@ def validate_pre_model_identity(manifest_path: Path, preflight_path: Path, proje
         elif execution_contract == 'N1-VERIFIED-MODEL/0.1':
             from exposedpath.n1_model import validate_prepared
             validate_prepared(manifest, manifest_path.parent, project_root)
+        elif execution_contract=='BATCH-LOAD-ENGINEERING/0.1':
+            from exposedpath.batch_load import validate_prepared
+            validate_prepared(manifest,manifest_path.parent,project_root)
         elif execution_contract=='G12-FORMAL-ENVELOPE/0.1':
             from exposedpath.formal_protocol import validate_prepared
             validate_prepared(manifest,manifest_path.parent,project_root)
