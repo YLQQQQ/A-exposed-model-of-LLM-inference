@@ -182,6 +182,21 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
             else:db.execute('UPDATE CUPTI_ACTIVITY_KIND_RUNTIME SET returnValue=1 WHERE correlationId=?',(corr,))
         if completion_binding is not None and damage=='mode_prefix':
             db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET streamId=2 WHERE rowid<=6')
+        if completion_binding is not None and damage in ('closed_worker_prefix','pending_worker_prefix','worker_prefix_overlap'):
+            # Loading/warmup workers share the trace FIFO but are NOT measured
+            # request owners. All their observed work precedes the real drain.
+            drain_end=db.execute('SELECT MAX(end) FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION WHERE syncType=2').fetchone()[0]
+            drain_start=db.execute('SELECT MAX(start) FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE correlationId IN (SELECT correlationId FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION WHERE syncType=2)').fetchone()[0]
+            correlations=db.execute('SELECT r.correlationId FROM CUPTI_ACTIVITY_KIND_RUNTIME r JOIN CUPTI_ACTIVITY_KIND_KERNEL k ON k.correlationId=r.correlationId WHERE r.end<=? ORDER BY r.start',(drain_start,)).fetchall()
+            for index,(correlation,) in enumerate(correlations):
+                actual_tid=db.execute('SELECT globalTid FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE correlationId=?',(correlation,)).fetchone()[0]
+                worker_tid=actual_tid-actual_tid%2**24+(actual_tid%2**24+1+index%4)%2**24
+                db.execute('UPDATE CUPTI_ACTIVITY_KIND_RUNTIME SET globalTid=? WHERE correlationId=?',(worker_tid,correlation))
+            if damage=='pending_worker_prefix':
+                db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET end=? WHERE correlationId=?',(drain_end+1,correlations[0][0]))
+            if damage=='worker_prefix_overlap':
+                second_start=db.execute('SELECT start FROM CUPTI_ACTIVITY_KIND_KERNEL WHERE correlationId=?',(correlations[1][0],)).fetchone()[0]
+                db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET end=? WHERE correlationId=?',(second_start+1,correlations[0][0]))
         if damage=='unmarked_token':
             db.execute("DELETE FROM NVTX_EVENTS WHERE text LIKE '%natural_token_ready%'")
         if damage=='unmarked_intervention':

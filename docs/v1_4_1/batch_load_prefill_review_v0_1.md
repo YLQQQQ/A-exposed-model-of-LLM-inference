@@ -135,7 +135,7 @@ CPU独立预期：已完成前缀[1,5)、K1[10,30)、K2[30,40)，均在预同步
 
 交付源码/配置/输入/hash及prerequisite由实际实现commit锁定，机器路径/包SHA仅在忽略的本地交接索引维护，不制造自引用hash。阶段A默认部署及相关83项CPU，完成回执须协调审查；B另行显式启用，预计15～25分钟、至少12GiB临时空闲（估计），最多两个P1、不含P0，不自动retry/续采。单ZIP保留静态副本、真实入口/异常/退出、完整Raw/REP/SQLite与局部派生/diagnostics/comparison/清单，不含模型权重；UNKNOWN writer时沿原门拒绝强封包。当前仅待协调审查交付，不默认执行、不清理数据、Gate14不启动。
 
-## 7.142 成功报告接口修复与封存C0复用（当前）
+## 7.142 成功报告接口修复与封存C0复用（历史；当前见7.143）
 
 原C0模型/采集/export成功且局部结果已生成，driver对成功对象缺省error抛KeyError，原batch BLOCKED/Cpre NOT_RUN。`gate8-qwen-engineering-collection/0.1.0`成功对象允许error缺省/null，其他版本、状态、非科学资格、collector/exit/timeout、export和产物/hash门全部保留；显式错误或缺证不能靠fallback通过。
 
@@ -146,3 +146,52 @@ CPU独立预期：已完成前缀[1,5)、K1[10,30)、K2[30,40)，均在预同步
 新包以前置19f7部署，默认A为55项相关CPU/源码/C0引用复核，无CUDA/model/collector；协调回执审查后显式B一次Cpre P1，固定512/b4/o2/w3/r1，预计8～15分钟、沿原12GiB临时空间检查（估计），原超时/硬失败停止不变。新batch/回执与单ZIP保留静态、旧C0引用和新Cpre完整证据，不恢复原入口、retry或替补。仅局部Prefill准入；API差不是原内部等待，保留零等待或总时长增加。Gate13限定PASS、Gate14 NOT_RUN、原B4/旧BLOCKED和UNKNOWN/NOT_ASSESSED保持。
 
 引用展开仅在独立diagnostics，不能进入新run的静止检查树；回传仍含完整旧ZIP/绑定元数据/新复核回执，避免历史PID被当作当前writer。原归档门不放宽，不删旧PID/报告，不在采集时清理。位置红例3项→driver12项通过，PS5.1解析/compile/diff通过；真实C0引用CPU入口已核验，不宣称目标机新采集验证。
+
+## 7.143 Cpre闭合历史前缀修复与最终局部对照
+
+**2026-10-12，Engineering局部离线审查完成；不是新采集、原attempt改判或Formal增量。** Cpre原ZIP12,169,554 bytes/SHA256 `71ee4b6d618bf12acf937acac75673c06453236531af4d25eab2da765b14fd19`，主清单`2054367978a6d584fb72b45f2a07a3d211ed8580a2d16127af890689d41b3c42`；111文件/110主清单及21静态子清单CRC/路径/全覆盖hash通过。C0执行19f7c6020abf，Cpre执行401ed4209454；先前源码兼容引用、同模型/输入/512×4/o2/w3/r1与两个四样本实测token逐值相同。原Cpre采集/export成功，分析0.1.0因`PRE_SYNC_PREFIX_SCOPE`停止；原collection和batch仍BLOCKED。
+
+### 合同判断与修复边界
+
+[G9合同§2.2、2.5](gate9_domain_qualification_contract_v0_1.md)允许成功device/context drain将已观测历史与request主线程后缀分离：历史完成时间≤drain completion≤window start≤sync entry，因此对本窗sync的交集为空；这不是补零历史时长或认定历史owner。[closed-prior合同](gate8_closed_prior_amendment_v0_1.md)关于完整物理W/来源的义务仍保留，**本局部入口不借其名发布物理B**。
+
+Cpre实际10491条历史中338条来自4个enqueue TID（79/78/77/104），同目标进程59636、device0/context1/trace stream7/trace clock；全部在drain physical352返回`29027620553ns`前结束。worker历史最后结束`26549992264ns`；drain runtime36760成功返回`29027621004ns`，Prefill start=`29027966390ns`。完整前缀同流观测顺序无冲突。0.1.0新增的“历史也必须与当前sync同线程”不由上述局部A合同推出，属于工程过约束；§7.141的同线程措辞应限定到request后缀，不能要求加载/暖机历史伪装为本request。
+
+**局部结果schema0.1.1**仅修这一实现限制，并记录`drained_raw_prefix_thread_activity_ids`；旧0.1.0显式reader仍重算原规则、未知版本拒绝。不改变执行封套0.1、Canonical/projection、物理S/A/B schema/公式、registry、warning或签署Formal协议。历史列表、当前后缀、完整物理W三者继续分开：报告中`request_wait_set_activity_ids`是A后缀证明，不是删去历史的W；`all_observed_preceding_activity_ids`是Raw观测清单，不是已资格物理集合。pending/错流/缺drain、clock/身份/correlation/依赖冲突、前缀order及默认模式歧义仍拒绝。
+
+### 后续准入及独立Raw复核
+
+新版本派生复用原Canonical/projection并严格重新消费receipt/producer/输入/执行/产物hash；没有重新export或覆盖原partial。Cpre预同步request后缀1820成员/1820边，唯一terminal为ArgMax kernel11846；LEGACY/PTDS成员、边和terminal一致。后提交copy runtime38584/corr200928及D2H347不在预同步集合，属于随后helper的1821成员集合。全10491历史记录及其原TID另列，未伪造request/callsite/hidden/B。两组各84个首ready之后Decode效果缺口仍拒绝，Request/Decode=`NOT_ACCEPTED_LOCAL_REVIEW_ONLY`。
+
+直接read-only/immutable SQLite按实际PID/correlation/线程/context/stream和API提交时序，独立枚举request后缀并计算半开区间交集，逐项复现下面五个同步；不调用S/A生成这个复核的预期。它仍依赖已声明的窄域FIFO/无未记录incoming支持条件，不证明全capture完整。原C0 A/时间线逐字段相同；原Raw/报告与封存输入前后hash不变。
+
+| Prefill，ms | C0 | Cpre |
+|---|---:|---:|
+| T | 249.447084 | 235.969299 |
+| Host path | 53.371575 | 98.868381 |
+| CUDA API | 194.976979 | 49.054879 |
+| └ submit / non-submit | 193.452450 / 1.524529 | 46.581704 / 2.473175 |
+| Device wait | 0.026304（0.010545%） | 38.971918（16.515673%） |
+| sync residual | 1.072226 | 49.074121 |
+| unattributed | 0 | 0 |
+| GPU activity union，非A | 105.585714 | 94.752606 |
+| 首token复制API | 148.126383 | 0.725352 |
+
+五类互斥/守恒、子类守恒及窗口范围检查通过；不是仅凭零unattributed判正确。
+
+| 原sync / runtime / correlation | sync墙钟ms | 支持后缀交集wait ms | residual ms | 后缀数/最后完成ns |
+|---|---:|---:|---:|---|
+| C0 internal353 / 36770 / 172191 | 1.064780 | 0.026304 | 1.038476 | 8 / 27638832054 |
+| C0 token-ready354 / 38584 / 200925 | 0.033750 | 0 | 0.033750 | 1821 / 27885410188 |
+| Cpre internal353 / 36770 / 172191 | 0.393137 | 0.025344 | 0.367793 | 8 / 29029978100 |
+| Cpre Engineering预同步354 / 38583 / 200922 | 87.646953 | 38.946574 | 48.700379 | 1820 / 29261747457 |
+| Cpre token-ready355 / 38585 / 200929 | 0.005949 | 0 | 0.005949 | 1821 / 29262863259 |
+
+C0 copy=`27737321968..27885448351`，D2H=`27885409484..27885410188`，helper sync=`27885452678..27885486428`，Host-ready point=`27886211581ns`。
+Cpre预同步=`29174142522..29261789475`，最后必要ArgMax完成`29261747457`；之后copy=`29262146358..29262871710`，D2H=`29262862619..29262863259`，helper sync=`29262872572..29262878521`，Host-ready point=`29263935689ns`。新增sync返回不是completion，原Host-readable边界没移动。D2H均在helper同步入口前完成，helper wait=0不等于此前没有GPU推进或API内部阻塞。
+
+本个案与“完成路径能改变已观察预算落点”一致：Cpre有显式sync内的必要活动暴露、copy包络缩短。**copy差147.401031ms不是原内部等待的精确估计，Prefill差−13.477785ms不是稳定收益或纯同步因果贡献**；Host、residual和GPU活动也不同，各条件仅一次且非同次同期配对重复。CUDA API不是纯CPU成本，submit/non-submit不等于阻塞/非阻塞；仍不拆API内部等待。
+
+本地相关集成129 passed；最终闭合前缀/旧版本/hash/order/身份等15项回归全通过（覆盖重叠，不相加），具体命令见[科研进度7.143](research_progress.md)。C0计算/严格reader49.346/51.247s，Cpre55.956/53.975s；CPU替身不是新Q0，Raw抽核不是新的Formal证据。派生结果与实际分析源码身份在忽略的本地诊断索引保存，原执行commit不变。
+
+**当前停点：已有C0/Cpre局部对照完成，不需要部署、重采或新交付包。** 原ZIP/Raw/旧BLOCKED、UNKNOWN/NOT_ASSESSED和用户DOCX保持，Request/Decode/完整物理B/Formal/D/Signature不升级；Gate13限定PASS、Gate14 NOT_RUN，停止CUPTI/84次旧参数追索和后续自动实验。

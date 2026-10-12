@@ -12,10 +12,12 @@ from .sync_semantics import load_canonical_bundle,build_semantic_inventory,recov
 from .time_representation import SIGNED,time_representation
 from .gate8_scope import load_projected_ownership,build_projected_ab_inputs
 
-VERSION='exposedpath-completion-path-prefill/0.1.0'
+LEGACY_VERSION='exposedpath-completion-path-prefill/0.1.0'
+VERSION='exposedpath-completion-path-prefill/0.1.1'
 
 
-def _calculate(root,receipt_path,execution_path):
+def _calculate(root,receipt_path,execution_path,*,result_version=VERSION):
+    contract.require(result_version in (LEGACY_VERSION,VERSION),'RESULT_VERSION')
     receipt,paths,declared,execution=base._inputs(receipt_path,execution_path)
     manifest=_json(paths['wmpc_manifest']);binding=contract.validate(manifest)
     ledger=_json(paths['pass_identity']);call=contract.validate_calls(manifest,ledger,execution)
@@ -64,7 +66,7 @@ def _calculate(root,receipt_path,execution_path):
         original=build_projected_ab_inputs(canonical,scope)
         result=base._request(canonical,scope,paths,bundle,ownership,p,original,stage,declared,effective,
             domain_proof=True,selected_phase='prefill')
-    report=dict(schema_version=VERSION,status='BLOCKED',binding=binding,identity=receipt['identity'],
+    report=dict(schema_version=result_version,status='BLOCKED',binding=binding,identity=receipt['identity'],
         input_receipt_sha256=digest(Path(receipt_path)),execution_receipt_sha256=digest(Path(execution_path)),
         prefill=result,requests=[result],request_status='NOT_ACCEPTED_LOCAL_REVIEW_ONLY',
         decode_status='NOT_ACCEPTED_LOCAL_REVIEW_ONLY',diagnostic_dispositions=dispositions,
@@ -113,11 +115,14 @@ def _calculate(root,receipt_path,execution_path):
         contract.require(len(sync)==1,'PRE_SYNC_PHYSICAL_MAPPING');s=sync[0]
         contract.require((s['device_id'],s['context_id'],s['stream_id'])==trace_scope,'PRE_SYNC_WRONG_STREAM')
         # The window projection is NOT physical B. Keep the complete drained
-        # Raw FIFO prefix separately, without fabricating request ownership for
-        # setup/warmup records which the physical S reader may reject.
+        # Raw history separately, without fabricating request ownership for
+        # setup/warmup records which the physical S reader may reject. _request
+        # has already proved every prefix member completed by the successful
+        # device/context drain; only the request suffix requires its main TID.
         prefix=[a for a in inventory['activities'] if a['record_id'] in facts['prefix_activity_ids']]
         contract.require(all((a['device_id'],a['context_id'],a['stream_id'])==trace_scope
-            and a['enqueue_global_tid']==s['runtime_global_tid'] for a in prefix),'PRE_SYNC_PREFIX_SCOPE')
+            and (result_version!=LEGACY_VERSION or a['enqueue_global_tid']==s['runtime_global_tid'])
+            for a in prefix),'PRE_SYNC_PREFIX_SCOPE')
         full_prefix=sorted(prefix,key=lambda a:(a['start_ns'],a['end_ns'],a['record_id']))
         contract.require(all(a['end_ns']<=b['start_ns'] for a,b in zip(full_prefix,full_prefix[1:])),
             'PRE_SYNC_PREFIX_ORDER')
@@ -132,11 +137,17 @@ def _calculate(root,receipt_path,execution_path):
             contract.require(len(selected)==len(ids) and all(a['end_ns']<=s['host_end_ns'] for a in selected)
                 and (not ids or len(_semantic_frontier(ids,edges))==1),'PRE_SYNC_TERMINAL')
             contract.require(not {a['record_id'] for a in d2h}&set(ids),'LATER_COPY_IN_PRE_SYNC')
-            full.append(dict(request_wait_set_activity_ids=ids,dependency_edges=edges,
+            proof=dict(request_wait_set_activity_ids=ids,dependency_edges=edges,
                 terminal_activity_ids=sorted(_semantic_frontier(ids,edges)),
                 drained_raw_prefix_activity_ids=[a['record_id'] for a in full_prefix],
                 all_observed_preceding_activity_ids=[a['record_id'] for a in full_prefix]+ids,
-                scope='DRAIN_CLOSED_RAW_FIFO_PREFIX_PLUS_COMPLETE_REQUEST_SUFFIX_NOT_PHYSICAL_B'))
+                scope='DRAIN_CLOSED_RAW_FIFO_PREFIX_PLUS_COMPLETE_REQUEST_SUFFIX_NOT_PHYSICAL_B')
+            if result_version==VERSION:
+                proof['scope']='DRAIN_CLOSED_RAW_HISTORY_PLUS_COMPLETE_REQUEST_SUFFIX_NOT_PHYSICAL_B'
+                proof['drained_raw_prefix_thread_activity_ids']={str(tid):[
+                    a['record_id'] for a in full_prefix if a['enqueue_global_tid']==tid]
+                    for tid in sorted({a['enqueue_global_tid'] for a in full_prefix})}
+            full.append(proof)
         contract.require(full[0]==full[1],'PRE_SYNC_DEFAULT_AMBIGUOUS')
     submit=[a for a in records['cuda_api'] if a['record_id'] in owned and base.re.sub(r'_v\d+$','',a['api_name']) in base.SUBMIT_APIS
         and a['end_ns']<=marker['start_ns']]
@@ -188,8 +199,9 @@ def process(receipt_path,execution_path,output_dir):
 
 def load(path,receipt_path,execution_path):
     path=Path(path);value=_json(path)
-    contract.require(value.get('schema_version')==VERSION,'RESULT_VERSION')
+    contract.require(value.get('schema_version') in (LEGACY_VERSION,VERSION),'RESULT_VERSION')
     files=[_resolve(path.parent,f) for f in value['files']]
     contract.require(len(files)==len(set(files)) and set(files)=={p.resolve() for p in path.parent.rglob('*') if p.is_file() and p!=path},'RESULT_FILES')
-    contract.require({k:v for k,v in value.items() if k!='files'}==_calculate(path.parent,receipt_path,execution_path),'RESULT_CHANGED')
+    contract.require({k:v for k,v in value.items() if k!='files'}==_calculate(path.parent,receipt_path,execution_path,
+        result_version=value['schema_version']),'RESULT_CHANGED')
     return value

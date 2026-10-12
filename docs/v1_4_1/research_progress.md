@@ -1,6 +1,20 @@
 # ExposedPath 科研进度清单
 
-## 7.142 成功报告消费修复、C0复核与Cpre-only交付（2026-10-12）
+## 7.143 Cpre闭合异线程历史前缀修复与C0/Cpre局部离线收口（2026-10-12）
+
+**C0/Cpre Prefill局部Engineering离线审查完成；原batch/collection BLOCKED不改，Request/Decode仍不准入。Gate13限定PASS、Gate14 NOT_RUN保持。** [当前审查7.143](batch_load_prefill_review_v0_1.md#7143-cpre闭合历史前缀修复与最终局部对照)复核12,169,554-byte ZIP/SHA256 `71ee4b6d618bf12acf937acac75673c06453236531af4d25eab2da765b14fd19`：CRC/安全路径/无重复、111文件、110项主清单与21项静态子清单全部匹配；主清单SHA256 `2054367978a6d584fb72b45f2a07a3d211ed8580a2d16127af890689d41b3c42`。原C0 ZIP嵌入副本与已核验c181d834…原件相同。Cpre执行401ed4209454，目标PID59636 exit0、producer COMPLETE、collector38.625s/exit0/export PASS；旧错误52.027s真实复现为`COMPLETION_PATH_PRE_SYNC_PREFIX_SCOPE`，不是模型/采集失败。
+
+10,491个窗前活动包含338个异线程提交（4个TID分别提交79/78/77/104条），全部同PID/device/context/trace stream/clock、在成功device drain实际返回前完成，FIFO观测顺序无冲突。G9分域合同§2.2/2.5已将历史隔离与request后缀单主线程分开；额外要求全部历史TID等于新增sync TID属于局部消费者实现过约束。仅新局部结果schema `exposedpath-completion-path-prefill/0.1.1`按已核验drain接受这类历史，保留逐线程Raw ID引用；旧0.1.0重读仍执行原规则。pending、错scope/流、缺drain/映射/依赖、后缀异线程/身份冲突及两模式歧义门不改。历史清单不是当前request的W，不构造完整物理W/hidden/B；S/A/B公式、runner/completion/流/同步、registry、冻结协议与Formal结果零diff，无新研究语义裁决。
+
+新独立派生目录复用已保存Canonical/projection，复核完整输入/执行/结果hash文件链。Cpre后缀1,820成员、1,820依赖边、唯一ArgMax terminal，两模式成员/边/terminal一致；后提交D2H排除于预同步，进入随后helper的1,821成员集合。C0结果与旧保存值逐字段相同；两组共同配置/输入/模型快照/runner字节及8个实际token一致（29184×4、6556×4），非early EOS，w3/r1。C0计算/严格reader为49.346/51.247s，Cpre55.956/53.975s；直接Raw唯一correlation联结与独立半开区间并集再次复现5个同步交集和守恒，未调用S/A作为此Raw审查的oracle。读取的原封存文件计算前后hash不变，无export/完整Q0/采集。
+
+Prefill单位ms，C0：T249.447084，Host53.371575/API194.976979/wait0.026304/residual1.072226/unattributed0，GPU活动union105.585714；Cpre：T235.969299，Host98.868381/API49.054879/wait38.971918/residual49.074121/unattributed0，GPU union94.752606。新增预同步墙钟87.646953=wait38.946574+residual48.700379ms；copy148.126383→0.725352ms，helper sync wait两组均0。只支持此Engineering个案中completion位置改变已观察预算落点，不把API差当精确内部等待、不把单次总差当稳定收益或纯因果效应。两组各84项首ready之后Decode提交效果缺口保留，UNKNOWN/NOT_ASSESSED不改，physical B/Formal/D/Signature不授。
+
+tests-first原文件链1 failed/8 passed（同叶拒绝），版本兼容红例1 failed/13 deselected；最小修复后14 passed。相关集成命令`python -X utf8 -m pytest -q -p no:cacheprovider tests/test_completion_path_closed_prefix.py tests/test_completion_path.py tests/test_completion_path_report.py tests/test_completion_path_reference.py tests/test_completion_path_driver.py tests/test_gate8_engineering_scope.py --tb=short --junitxml=.local/diagnostics/completion_prefix_review_v0_1/release.xml`：**129 passed/0 failed/0 skipped，135.33s**。补prefix order反例及夹具确保四个TID确实异于main后，最终`python -X utf8 -m pytest -q -p no:cacheprovider tests/test_completion_path_closed_prefix.py --tb=short --junitxml=.local/diagnostics/completion_prefix_review_v0_1/final.xml`：**15 passed/0 failed/0 skipped，41.63s**（与129项重叠，不相加）。包括旧版本行为、源/hash/版本篡改、pending/错drain/流/依赖拒绝及真实producer→合成Raw→文件reader；CPU不是目标资格。修改文件compileall、diff与闭集代码自审通过；未委派外部审查，不冒称独立review。
+
+本轮只完成现有证据的离线结论；无需服务器操作/重采/新交付包。旧7.142 Cpre待执行指令转历史。用户DOCX及未跟踪大型原件保留不stage，不清理；准确派生/源码/输入hash及实际分析commit在忽略的handoff索引绑定，不用文档HEAD替换19f7/401执行身份。
+
+## 7.142 成功报告消费修复、C0复核与Cpre-only交付（2026-10-12；历史，当前见7.143）
 
 **本地接口/CPU验证和C0局部复核完成；Cpre NOT_RUN，原batch BLOCKED不改。Gate13限定PASS、Gate14 NOT_RUN保持。** 原ZIP4,303,788 bytes/SHA256 `c181d83490ed13fd17eb6377f23eda76f95d793fc892f7fe022ab0feec4b4435`，清单SHA256 `1f61502caf07e209c687d5bc1ba3be55550530cda719f94dc3e7cadb1a6379cd`；直接核验CRC/安全路径/无重复/104文件与103项全覆盖哈希，静态子清单15项也匹配。仅展开新诊断目录，原ZIP/Raw/报告不改。
 
