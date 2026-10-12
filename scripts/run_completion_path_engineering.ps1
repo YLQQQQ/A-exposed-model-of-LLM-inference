@@ -5,7 +5,9 @@ Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Utility\Microsoft
 Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Management\Microsoft.PowerShell.Management.psd1') -ErrorAction Stop
 $ConfigPath=Join-Path $PSScriptRoot 'delivery.json'
 $C=Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
-if ($C.schema_version -ne 'completion-path-delivery/0.1' -or $C.model_process_budget -ne 2 -or $C.profile_budget -ne 2) {throw 'Closed Engineering delivery conflict'}
+$Remaining=$C.schema_version -eq 'completion-path-remaining-delivery/0.1'
+$Budget=if ($Remaining) {1} else {2}
+if ($C.schema_version -notin @('completion-path-delivery/0.1','completion-path-remaining-delivery/0.1') -or $C.model_process_budget -ne $Budget -or $C.profile_budget -ne $Budget) {throw 'Closed Engineering delivery conflict'}
 function Hash([string]$P) {
     $S=[IO.File]::OpenRead($P);$H=[Security.Cryptography.SHA256]::Create()
     try {return ([BitConverter]::ToString($H.ComputeHash($S))).Replace('-','').ToLowerInvariant()}
@@ -35,6 +37,9 @@ function Manifest([string]$Root) {
     if ($Count -ne $Rows.Count) {throw 'Unlisted artifacts'}
 }
 Manifest $PSScriptRoot
+if ($Remaining) {
+    $C | Add-Member -NotePropertyName c0_reference -NotePropertyValue (Safe $PSScriptRoot $C.c0_reference_filename)
+}
 $Code=$C.code_root;$Target=$C.commit;$Python=Join-Path $Code '.venv\Scripts\python.exe'
 $Static=Join-Path $C.server_root ('logs\completion_path_'+$Target.Substring(0,12)+'_static')
 $Kind=if ($CollectReviewedEngineering) {'engineering'} else {'static'}
@@ -91,10 +96,16 @@ try {
         # Keep synthetic process/UNKNOWN negative fixtures outside the real receipt tree.
         $CpuTemp=Join-Path $C.server_root ('diagnostics\completion_path_'+$Target.Substring(0,12)+'_cpu_tmp')
         if (Test-Path -LiteralPath $CpuTemp) {throw 'CPU fixture directory exists; no overwrite'}
-        Run $Python @('-X','utf8','-m','pytest','-q','-p','no:cacheprovider','--basetemp',$CpuTemp,
-            '--junitxml',(Join-Path $Out 'cpu_results.xml'),
-            'tests/test_completion_path.py','tests/test_completion_path_driver.py','tests/test_batch_load_diagnostic.py') '04_cpu'
+        $Tests=if ($Remaining) {@('tests/test_completion_path_report.py','tests/test_completion_path_reference.py','tests/test_completion_path_driver.py')} else {@('tests/test_completion_path.py','tests/test_completion_path_driver.py','tests/test_batch_load_diagnostic.py')}
+        $CpuArgs=@('-X','utf8','-m','pytest','-q','-p','no:cacheprovider','--basetemp',$CpuTemp,
+            '--junitxml',(Join-Path $Out 'cpu_results.xml'))+$Tests
+        Run $Python $CpuArgs '04_cpu'
         Run $Python @('-X','utf8','-m','compileall','-q','exposedpath','exposedpath_v141','scripts/completion_path_diagnostic.py') '05_compile'
+        if ($Remaining) {
+            $ReferenceConfig=Join-Path $Out 'reference_config.json';$C | ConvertTo-Json -Depth 16 | Set-Content -LiteralPath $ReferenceConfig -Encoding utf8
+            Run $Python @('-X','utf8','-u','scripts/completion_path_diagnostic.py','--config',$ReferenceConfig,
+                '--output',(Join-Path $Out 'c0_reference'),'--review-c0-reference') '06_reference_cpu'
+        }
         Tree $Target;$Status='STATIC_READY_FOR_COORDINATOR_REVIEW'
     } else {
         Tree $Target;Manifest $Static
@@ -128,13 +139,17 @@ print(json.dumps(dict(python=sys.version,executable=sys.executable,torch=torch._
             '--output',(Join-Path $Out 'experiment'),'--execute-reviewed-completion-path') '08_batch'}
         finally {Remove-Item -LiteralPath $Lock}
         $BR=Get-Content -LiteralPath (Join-Path $Out 'experiment\batch\batch_report.json') -Raw | ConvertFrom-Json
-        if ($BR.status -ne 'BATCH_COMPLETE_STOP_FOR_REVIEW' -or $BR.runs.Count -ne 2) {throw 'Machine report incomplete'}
+        if ($Remaining) {
+            if ($BR.status -ne 'BATCH_COMPLETE_STOP_FOR_REVIEW' -or $BR.runs.Count -ne 1 -or $BR.runs[0].binding.variant -ne 'Cpre') {throw 'Cpre-only machine report incomplete'}
+        } else {
+            if ($BR.status -ne 'BATCH_COMPLETE_STOP_FOR_REVIEW' -or $BR.runs.Count -ne 2) {throw 'Machine report incomplete'}
+        }
         Tree $Target;$Status='BATCH_COMPLETE_STOP_FOR_REVIEW'
     }
 } catch {$Failure=$_.ToString();Write-Host ('STOP: '+$Failure)}
 finally {
     [ordered]@{status=$Status;error=$Failure;execution_commit=$Target;analysis_commit=$Target;delivery_sha256=(Hash $ConfigPath);
-        role='Engineering';automatic_retry=$false;model_process_budget=2;profile_budget=2;measurement_validity='NOT_ASSESSED';dropped_records_status='UNKNOWN'} |
+        role='Engineering';automatic_retry=$false;model_process_budget=$Budget;profile_budget=$Budget;measurement_validity='NOT_ASSESSED';dropped_records_status='UNKNOWN'} |
         ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Out 'receipt.json') -Encoding utf8
     Stop-Transcript | Out-Null
 }

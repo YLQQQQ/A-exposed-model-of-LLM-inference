@@ -134,3 +134,13 @@ CPU独立预期：已完成前缀[1,5)、K1[10,30)、K2[30,40)，均在预同步
 交付自审再加device/token布尔值不得冒充整数：先2 failed再最小强化新execution类型门。最终与部署相同的三个相关文件83 passed/0 failed/0 skipped，53.12s，和241项覆盖重叠不相加；修改文件compileall/diff再次通过。
 
 交付源码/配置/输入/hash及prerequisite由实际实现commit锁定，机器路径/包SHA仅在忽略的本地交接索引维护，不制造自引用hash。阶段A默认部署及相关83项CPU，完成回执须协调审查；B另行显式启用，预计15～25分钟、至少12GiB临时空闲（估计），最多两个P1、不含P0，不自动retry/续采。单ZIP保留静态副本、真实入口/异常/退出、完整Raw/REP/SQLite与局部派生/diagnostics/comparison/清单，不含模型权重；UNKNOWN writer时沿原门拒绝强封包。当前仅待协调审查交付，不默认执行、不清理数据、Gate14不启动。
+
+## 7.142 成功报告接口修复与封存C0复用（当前）
+
+原C0模型/采集/export成功且局部结果已生成，driver对成功对象缺省error抛KeyError，原batch BLOCKED/Cpre NOT_RUN。`gate8-qwen-engineering-collection/0.1.0`成功对象允许error缺省/null，其他版本、状态、非科学资格、collector/exit/timeout、export和产物/hash门全部保留；显式错误或缺证不能靠fallback通过。
+
+完整原件CRC/103项清单与静态15项核验后，仅在新本地目录使用正式loader复核：C0 Prefill249.447084ms（Host53.371575/API194.976979/wait0.026304/residual1.072226/unknown0），token29184×4、6556×4。边界/drain/身份/必要集合/两模式/S/A证据闭合；84项完成后Decode效果缺口仍保留，不追认整request或原失败报告。相关100项CPU及语法/diff通过，详见[科研进度7.142](research_progress.md)。
+
+新`completion-path-remaining-delivery/0.1`只有一个全新Cpre槽，C0作为原19f7不可变工程引用，不是新模型执行。完整原ZIP/清单绑定preflight/claim/final、测量代码/schema/registry旧新Git内容和原目标实际字节；当前实文件严检已声明LF/CRLF形式。新prepare要求模型/输入/config/软件设备/runner字节及token逐值相同，否则停止。producer/插桩/流/completion/S/A/B/registry/质量门不变，故不重采C0；不同执行时点仅作Engineering个案，不赋统计可比性。
+
+新包以前置19f7部署，默认A为55项相关CPU/源码/C0引用复核，无CUDA/model/collector；协调回执审查后显式B一次Cpre P1，固定512/b4/o2/w3/r1，预计8～15分钟、沿原12GiB临时空间检查（估计），原超时/硬失败停止不变。新batch/回执与单ZIP保留静态、旧C0引用和新Cpre完整证据，不恢复原入口、retry或替补。仅局部Prefill准入；API差不是原内部等待，保留零等待或总时长增加。Gate13限定PASS、Gate14 NOT_RUN、原B4/旧BLOCKED和UNKNOWN/NOT_ASSESSED保持。

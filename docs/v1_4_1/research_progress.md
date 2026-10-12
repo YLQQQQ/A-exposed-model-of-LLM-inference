@@ -1,6 +1,18 @@
 # ExposedPath 科研进度清单
 
-## 7.141 完成路径窄域Engineering实现与待审交付（2026-10-12）
+## 7.142 成功报告消费修复、C0复核与Cpre-only交付（2026-10-12）
+
+**本地接口/CPU验证和C0局部复核完成；Cpre NOT_RUN，原batch BLOCKED不改。Gate13限定PASS、Gate14 NOT_RUN保持。** 原ZIP4,303,788 bytes/SHA256 `c181d83490ed13fd17eb6377f23eda76f95d793fc892f7fe022ab0feec4b4435`，清单SHA256 `1f61502caf07e209c687d5bc1ba3be55550530cda719f94dc3e7cadb1a6379cd`；直接核验CRC/安全路径/无重复/104文件与103项全覆盖哈希，静态子清单15项也匹配。仅展开新诊断目录，原ZIP/Raw/报告不改。
+
+最早失败是未profile的driver强读成功报告不存在的error，不是模型/collector/export错误。C0执行`19f7c6020abf5b607bdb59eb10deee50593c26a9`，目标PID64776 exit0，collector36.859s exit0、单次export PASS；`gate8-qwen-engineering-collection/0.1.0`成功对象合法省略error。仅该明确成功版本允许缺省/null，显式错误、错版本/status/qualification、采集失败、缺结果及result/manifest/runtime/launch哈希冲突仍拒绝。CPU替身不再无条件添error:null；后续loader、run/commit/clean、token lineage和逐值配对保留。
+
+新独立回执使用原`completion_path_scope.load`复核保存值与完整来源/准入，51.049s。C0 Prefill249.447084ms：Host53.371575/API194.976979/wait0.026304/residual1.072226/unattributed0ms；API submit193.452450/non-submit1.524529ms，互斥守恒成立。四样本token为29184×4、6556×4。84项同线程/clock且首completion之后的Decode提交效果缺口保留；Request/Decode=`NOT_ACCEPTED_LOCAL_REVIEW_ONLY`，不授物理B/科学有效性/零丢失，不追认原batch。
+
+tests-first旧成功分支复现KeyError（初轮29 failed/1 passed，含新helper缺实现）；单Cpre预算红例3 failed。文件链测试发现夹具receipt命名不同、其11起的token序列经三次两token暖机后应为17/18；对齐夹具/独立手算预期，未改研究门。旧PS预算文本断言改为单双槽核对并补实际PS5.1错预算早拒绝。最终命令：`python -m pytest -q -p no:cacheprovider tests/test_completion_path_report.py tests/test_completion_path_reference.py tests/test_completion_path_driver.py tests/test_completion_path.py tests/test_gate8_diagnostic_collect.py --junitxml=.local/diagnostics/completion_report_repair_v0_1/release.xml --tb=short`，**100 passed/0 failed/0 skipped，65.07s**；部署三个report/reference/driver文件55项为其子集，不相加。修改脚本compileall、PS5.1解析及diff通过；CPU producer→合成Raw→Canonical/S/A→consumer不是CUDA资格。未跑全量/Q0/GPU/Nsight。
+
+当前`completion-path-remaining-delivery/0.1`只含一个新Cpre模型进程/一条P1，绑定原完整C0 ZIP/清单、preflight/claim/final、原执行字节及旧/新Git内容兼容证明。既有production Python和schema/registry内容不变，仅未profile的控制层消费者/launcher与CPU引用检查变化。当前实字节仍严检明确Git/LF→CRLF形式，不任意更新旧期望或归一化。默认A仅部署/55项CPU/C0引用复核，回执审查后才显式B；新prepare核对模型内容/输入/config/设备/runner hash与逐值token。新batch/目录/回执，不恢复旧入口、不重采C0，不因commit不同泛化失效。固定512/b4/o2/w3/r1、FP16/eager/SDPA、mask3、实际流/completion/S/A/warning门不变；失败/单槽结束即停，无retry/替补。comparison明确旧/新执行与工程角色，API差不是原内部等待。机器路径及提交/交付SHA仅在忽略的handoff索引维护。用户DOCX和未跟踪大型原件保留。
+
+## 7.141 完成路径窄域Engineering实现与待审交付（2026-10-12；历史，当前见7.142）
 
 **用户已批准7.140的本地实现；实现/确定性CPU文件链已收口，目标机新采集NOT_RUN。Gate13限定PASS、Gate14 NOT_RUN，旧B4 Request/Decode/attempt BLOCKED保持。** [现行审查末节](batch_load_prefill_review_v0_1.md)新增`COMPLETION-PATH-ENGINEERING/0.1`，仅未来两个新P1、C0→Cpre、512×4/每样本2输出/warmup3/repeat1。C0同诊断包装不同步；Cpre仅测量Prefill token0 Host复制前对持有的实际current-stream同步一次。不切流，不改Decode/暖机/Host-readable completion，不新采P0、不改冻结A/B、API分类、warning或Formal产物。
 
