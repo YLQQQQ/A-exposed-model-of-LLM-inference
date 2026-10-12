@@ -65,11 +65,14 @@ def run(config,output,*,execute=False):
     reference_manifest=None
     if remaining:
         from scripts.completion_path_reference import review_reference
-        prior,prior_tokens,reference_manifest,prior_target=review_reference(config,out/'c0_reference',ROOT)
+        reference_output=Path(config['reference_output']).resolve()
+        contract.require(not reference_output.is_relative_to(out.resolve())
+            and not out.resolve().is_relative_to(reference_output),'HISTORICAL_REFERENCE_INSIDE_LIVE_TREE')
+        prior,prior_tokens,reference_manifest,prior_target=review_reference(config,reference_output,ROOT)
         tokens.append(prior_tokens)
         observations.append(dict(variant='C0',execution_commit=reference_manifest['runner_git_commit'],
             result_sha256=sha(prior_target/'analyzed/prefill.json'),
-            result_reference='c0_reference/experiment/batch/C0/collection/analyzed/prefill.json',
+            result_reference='c0_sealed_original.zip!/experiment/batch/C0/collection/analyzed/prefill.json',
             prefill=prior['prefill'],timeline=prior['timeline'],full_pre_sync_dependencies=prior['full_pre_sync_dependencies'],
             decode_unresolved_effects=prior['decode_unresolved_effects']))
     def collect(b,folder):

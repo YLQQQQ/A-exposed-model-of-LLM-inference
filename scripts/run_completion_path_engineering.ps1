@@ -81,6 +81,12 @@ function Sources {
         if (!$Match.Count) {throw ('Source byte conflict: '+$F.Name)}
     }
 }
+function ReferenceArtifacts {
+    # Archive members describe historical processes, not writers of this run.
+    foreach ($Name in @('c0_reference.json','c0_sealed_original.zip')) {
+        Copy-Item -LiteralPath (Safe $PSScriptRoot $Name) -Destination (Join-Path $Out $Name)
+    }
+}
 try {
     Set-Location -LiteralPath $Code
     $env:CUDA_DEVICE_ORDER='PCI_BUS_ID';$env:CUDA_VISIBLE_DEVICES='-1';$env:PYTHONDONTWRITEBYTECODE='1'
@@ -102,9 +108,12 @@ try {
         Run $Python $CpuArgs '04_cpu'
         Run $Python @('-X','utf8','-m','compileall','-q','exposedpath','exposedpath_v141','scripts/completion_path_diagnostic.py') '05_compile'
         if ($Remaining) {
+            ReferenceArtifacts
             $ReferenceConfig=Join-Path $Out 'reference_config.json';$C | ConvertTo-Json -Depth 16 | Set-Content -LiteralPath $ReferenceConfig -Encoding utf8
+            $ReferenceOut=Join-Path $C.server_root ('diagnostics\completion_path_'+$Target.Substring(0,12)+'_c0_static')
             Run $Python @('-X','utf8','-u','scripts/completion_path_diagnostic.py','--config',$ReferenceConfig,
-                '--output',(Join-Path $Out 'c0_reference'),'--review-c0-reference') '06_reference_cpu'
+                '--output',$ReferenceOut,'--review-c0-reference') '06_reference_cpu'
+            Copy-Item -LiteralPath ($ReferenceOut+'.review.json') -Destination (Join-Path $Out 'c0_reference_review.json')
         }
         Tree $Target;$Status='STATIC_READY_FOR_COORDINATOR_REVIEW'
     } else {
@@ -131,6 +140,10 @@ print(json.dumps(dict(python=sys.version,executable=sys.executable,torch=torch._
         $G=@($Gpu[0].Split(',') | ForEach-Object {$_.Trim()})
         if ($G[0] -ne '3' -or $G[1] -ne $C.gpu_uuid -or $G[2] -ine $C.gpu_pci_bus_id -or $G[4] -ne '555.99') {throw 'GPU/driver conflict'}
         foreach ($Name in @('prompt_512.json','model_sha256.csv')) {Copy-Item -LiteralPath (Join-Path $PSScriptRoot $Name) -Destination (Join-Path $Out $Name)}
+        if ($Remaining) {
+            ReferenceArtifacts
+            $C | Add-Member -NotePropertyName reference_output -NotePropertyValue (Join-Path $C.server_root ('diagnostics\completion_path_'+$Target.Substring(0,12)+'_c0_engineering'))
+        }
         $C | Add-Member -NotePropertyName seed_input -NotePropertyValue (Join-Path $Out 'prompt_512.json')
         $C | Add-Member -NotePropertyName inventory -NotePropertyValue (Join-Path $Out 'model_sha256.csv')
         $RunConfig=Join-Path $Out 'run_config.json';$C | ConvertTo-Json -Depth 16 | Set-Content -LiteralPath $RunConfig -Encoding utf8
@@ -138,6 +151,7 @@ print(json.dumps(dict(python=sys.version,executable=sys.executable,torch=torch._
         try {Run $Python @('-X','utf8','-u','scripts/completion_path_diagnostic.py','--config',$RunConfig,
             '--output',(Join-Path $Out 'experiment'),'--execute-reviewed-completion-path') '08_batch'}
         finally {Remove-Item -LiteralPath $Lock}
+        if ($Remaining) {Copy-Item -LiteralPath ($C.reference_output+'.review.json') -Destination (Join-Path $Out 'c0_reference_review.json')}
         $BR=Get-Content -LiteralPath (Join-Path $Out 'experiment\batch\batch_report.json') -Raw | ConvertFrom-Json
         if ($Remaining) {
             if ($BR.status -ne 'BATCH_COMPLETE_STOP_FOR_REVIEW' -or $BR.runs.Count -ne 1 -or $BR.runs[0].binding.variant -ne 'Cpre') {throw 'Cpre-only machine report incomplete'}

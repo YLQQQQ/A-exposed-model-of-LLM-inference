@@ -67,7 +67,7 @@ def review_reference(config,output,code_root):
     metadata=read(reference)
     contract.require(metadata['schema_version']==VERSION and metadata['compatible_commit']==config['commit'],'REFERENCE_VERSION')
     archive=reference.parent/metadata['archive_filename']
-    contract.require(Path(metadata['archive_filename']).name==metadata['archive_filename']
+    contract.require(metadata['archive_filename']=='c0_sealed_original.zip'
         and archive.resolve().parent==reference.parent.resolve(),'REFERENCE_ARCHIVE_PATH')
     root=extract_reference(archive,metadata,output)
     target=root/'experiment/batch/C0/collection'

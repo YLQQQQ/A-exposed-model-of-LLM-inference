@@ -144,3 +144,5 @@ CPU独立预期：已完成前缀[1,5)、K1[10,30)、K2[30,40)，均在预同步
 新`completion-path-remaining-delivery/0.1`只有一个全新Cpre槽，C0作为原19f7不可变工程引用，不是新模型执行。完整原ZIP/清单绑定preflight/claim/final、测量代码/schema/registry旧新Git内容和原目标实际字节；当前实文件严检已声明LF/CRLF形式。新prepare要求模型/输入/config/软件设备/runner字节及token逐值相同，否则停止。producer/插桩/流/completion/S/A/B/registry/质量门不变，故不重采C0；不同执行时点仅作Engineering个案，不赋统计可比性。
 
 新包以前置19f7部署，默认A为55项相关CPU/源码/C0引用复核，无CUDA/model/collector；协调回执审查后显式B一次Cpre P1，固定512/b4/o2/w3/r1，预计8～15分钟、沿原12GiB临时空间检查（估计），原超时/硬失败停止不变。新batch/回执与单ZIP保留静态、旧C0引用和新Cpre完整证据，不恢复原入口、retry或替补。仅局部Prefill准入；API差不是原内部等待，保留零等待或总时长增加。Gate13限定PASS、Gate14 NOT_RUN、原B4/旧BLOCKED和UNKNOWN/NOT_ASSESSED保持。
+
+引用展开仅在独立diagnostics，不能进入新run的静止检查树；回传仍含完整旧ZIP/绑定元数据/新复核回执，避免历史PID被当作当前writer。原归档门不放宽，不删旧PID/报告，不在采集时清理。位置红例3项→driver12项通过，PS5.1解析/compile/diff通过；真实C0引用CPU入口已核验，不宣称目标机新采集验证。

@@ -12,6 +12,8 @@ tests-first旧成功分支复现KeyError（初轮29 failed/1 passed，含新help
 
 当前`completion-path-remaining-delivery/0.1`只含一个新Cpre模型进程/一条P1，绑定原完整C0 ZIP/清单、preflight/claim/final、原执行字节及旧/新Git内容兼容证明。既有production Python和schema/registry内容不变，仅未profile的控制层消费者/launcher与CPU引用检查变化。当前实字节仍严检明确Git/LF→CRLF形式，不任意更新旧期望或归一化。默认A仅部署/55项CPU/C0引用复核，回执审查后才显式B；新prepare核对模型内容/输入/config/设备/runner hash与逐值token。新batch/目录/回执，不恢复旧入口、不重采C0，不因commit不同泛化失效。固定512/b4/o2/w3/r1、FP16/eager/SDPA、mask3、实际流/completion/S/A/warning门不变；失败/单槽结束即停，无retry/替补。comparison明确旧/新执行与工程角色，API差不是原内部等待。机器路径及提交/交付SHA仅在忽略的handoff索引维护。用户DOCX和未跟踪大型原件保留。
 
+交付自审补充：旧C0展开若嵌入新静止树，会将历史`process.json`的PID误当成当前writer/PID复用风险。先补三项位置红例，再将引用展开限制到独立diagnostics，不嵌入新采集/归档树；回传保留完整C0 ZIP、绑定元数据及复核回执，旧PID记录仍在封存ZIP内。原静止门和新采集writer检查不改。修改后的driver12项通过（3.99s，属于上述100项中的受影响子集），脚本compileall/PS5.1解析/diff再次通过。完整实际引用入口CPU复核在原位置版本52.039s通过；后续仅引用位置/归档接线改变，不重复S/A重算。最终待审包以当前实际提交锁定，先前本地预打包版不作为服务器入口。
+
 ## 7.141 完成路径窄域Engineering实现与待审交付（2026-10-12；历史，当前见7.142）
 
 **用户已批准7.140的本地实现；实现/确定性CPU文件链已收口，目标机新采集NOT_RUN。Gate13限定PASS、Gate14 NOT_RUN，旧B4 Request/Decode/attempt BLOCKED保持。** [现行审查末节](batch_load_prefill_review_v0_1.md)新增`COMPLETION-PATH-ENGINEERING/0.1`，仅未来两个新P1、C0→Cpre、512×4/每样本2输出/warmup3/repeat1。C0同诊断包装不同步；Cpre仅测量Prefill token0 Host复制前对持有的实际current-stream同步一次。不切流，不改Decode/暖机/Host-readable completion，不新采P0、不改冻结A/B、API分类、warning或Formal产物。

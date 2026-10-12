@@ -28,10 +28,13 @@ def test_real_two_slot_driver_stops_without_retry(tmp_path,monkeypatch,fail,rema
         return dict(common,**c.minimal_fields(b),gpu_uuid=config['gpu_uuid'],gpu_pci_bus_id=config['gpu_pci_bus_id'],
             runner_git_commit='d'*40,runner_git_dirty=False)
     if remaining:
-        config.update(schema_version='completion-path-remaining-delivery/0.1',model_process_budget=1,profile_budget=1)
+        config.update(schema_version='completion-path-remaining-delivery/0.1',model_process_budget=1,profile_budget=1,
+            reference_output=str(tmp_path/'historical_reference'))
         old=c.schedule('cpu-original')[0]
         def reference(config,output,code_root):
             assert code_root==m.ROOT
+            # Historical process.json must not enter the new live writer tree.
+            assert output==tmp_path/'historical_reference'
             target=tmp_path/'old';(target/'analyzed').mkdir(parents=True);write_new(target/'analyzed/prefill.json',{'cpu':'old'})
             return dict(binding=old,prefill={'a_records':[a]},timeline={},full_pre_sync_dependencies=[],decode_unresolved_effects=[]),[[13]*4,[14]*4],fake_manifest(old),target
         monkeypatch.setattr(completion_path_reference,'review_reference',reference)
@@ -89,7 +92,8 @@ def test_bad_c0_reference_stops_before_any_prepare_or_profile(tmp_path,monkeypat
         fixed_input_tokens=512,samples=[dict(sample_index=0,input_ids=[7]*512,attention_mask=[1]*512)]))
     nsys=tmp_path/'collector';nsys.write_bytes(b'CPU STAND-IN')
     config=dict(schema_version='completion-path-remaining-delivery/0.1',model_process_budget=1,profile_budget=1,
-        commit='d'*40,seed_input=str(seed),prompt_512_sha256=sha(seed),nsys=str(nsys),nsys_sha256=sha(nsys))
+        commit='d'*40,seed_input=str(seed),prompt_512_sha256=sha(seed),nsys=str(nsys),nsys_sha256=sha(nsys),
+        reference_output=str(tmp_path/'historical_reference'))
     monkeypatch.setattr(platform_adapter,'git',lambda args:'d'*40 if 'rev-parse' in args else '')
     def rejected(*args):raise ValueError('REFERENCE_SOURCE_BINDING')
     def forbidden(**kw):pytest.fail('Reference rejection must precede model prepare')
