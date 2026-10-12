@@ -65,7 +65,7 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
                        prompt_path, prompt_sha256, expected_commit, physical_gpu,
                        engineering_attention_backend=None, target_python=None, site_root=None,
                        pair_id=None, pair_pass=None, gate10_input_tokens=None, n1_variant=None,
-                       pilot_binding=None, formal_binding=None, batch_binding=None):
+                       pilot_binding=None, formal_binding=None, batch_binding=None, completion_binding=None):
     """Explicit preflight: hashes and minimal CUDA identity, no model load."""
     from exposedpath import platform_adapter
     from exposedpath.manifest import create_manifest, finalize_manifest
@@ -73,6 +73,10 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     from exposedpath_v141.gate8_source_probe import TorchBackend
     root = Path(__file__).resolve().parents[1]
     output = Path(output_dir).resolve()
+    if completion_binding is not None:
+        from .completion_path import batch_binding as expected_batch
+        if expected_batch(completion_binding)!=batch_binding:
+            raise ValueError('COMPLETION_PATH_PREPARE_BINDING')
     if batch_binding is not None:
         from .batch_load import validate_binding
         validate_binding(batch_binding)
@@ -178,6 +182,9 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     if batch_binding is not None:
         from .batch_load import minimal_fields
         manifest.update(minimal_fields(batch_binding))
+    if completion_binding is not None:
+        from .completion_path import minimal_fields
+        manifest.update(minimal_fields(completion_binding))
     manifest = finalize_manifest(manifest,prompt,prompt_tokens_path=output/'prompt.json')
     if formal_binding is not None:
         # Validate the final producer object: create_manifest deliberately leaves
@@ -224,10 +231,14 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     from exposedpath.gate8_engineering_contract import validate_declaration, EXECUTION_VERSION
     declared = validate_declaration(manifest) if 'engineering_scope' in manifest else None
     n1 = None
+    completion=None
+    if 'completion_path' in manifest:
+        from .completion_path import Execution,validate
+        completion=Execution(validate(manifest),runner.torch.cuda)
     if 'n1_model' in manifest:
         from exposedpath.n1_model import Execution, validate_manifest
         n1 = Execution(validate_manifest(manifest), runner.torch.cuda,warmup_tokens_unknown=warmup_control(pilot))
-    elif manifest.get('study_mode') != 'G1_NATURAL' or manifest.get('n1_intervention') is not None:
+    elif completion is None and (manifest.get('study_mode') != 'G1_NATURAL' or manifest.get('n1_intervention') is not None):
         raise ValueError('DIAGNOSTIC_MODE_CONFLICT')
     isolated='isolated_preflight_version' in manifest
     claim=None
@@ -283,6 +294,8 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
                   wmpc_manifest_sha256=_sha(manifest_path), prompt_sha256=_sha(prompt_path))
     if pilot is not None:
         fields.update(**role,**{('batch_load' if batch else 'formal' if formal else 'pilot'):pilot})
+    if completion is not None:
+        fields['completion_path']=manifest['completion_path']
     output_dir.mkdir(parents=True, exist_ok=False)
     if claim is not None:
         isolated_gate.write_new(output_dir/'isolated_preflight_target.json',claim)
@@ -360,6 +373,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         record_drains=True, record_stages=True, setup_observer=observe_setup,
         allow_load_fallback=False,
         n1_controller=n1,
+        completion_controller=completion,
         invocation_observer=observe_invocation if 'gate10_workload' in manifest or pilot is not None else None,
         model_setup=dict(model_path=manifest['model_id'], prompt_path=output_dir/'prompt.json',
                          physical_gpu_index=manifest['gpu_index_physical'], batch_size=manifest['batch_size'] if batch else 1,
@@ -397,6 +411,10 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
             if batch:
                 from .batch_load import EXECUTION_VERSION as batch_execution
                 execution.update(schema_version=batch_execution,batch_load=pilot,batch_tokens_sha256=_sha(output_dir/'batch_tokens.json'))
+                if completion is not None:
+                    from .completion_path import EXECUTION_VERSION as completion_version
+                    execution.update(schema_version=completion_version,completion_path=manifest['completion_path'],
+                        completion_calls=completion.calls)
             elif formal:
                 from .formal_protocol import EXECUTION_VERSION as formal_version
                 execution.update(schema_version=formal_version,**role,formal=pilot,

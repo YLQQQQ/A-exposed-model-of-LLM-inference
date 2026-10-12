@@ -81,6 +81,11 @@ def validate_shape(kind, value):
         definition=schema['$defs']['pass_identity']
         definition['properties'].update(schema_version={'const':PASS_VERSION},batch_load={'type':'object'})
         definition['required'].append('batch_load')
+        if 'completion_path' in value:
+            from .completion_path import validate_binding,PASS_VERSION as completion_pass
+            validate_binding(value['completion_path'])
+            definition['properties'].update(schema_version={'const':completion_pass},completion_path={'type':'object'})
+            definition['required'].append('completion_path')
         entry=schema['$defs']['request_entry']
         for key in ('actual_output_tokens','early_eos'):
             entry['properties'][key]={'anyOf':[deepcopy(entry['properties'][key]),{'type':'null'}]}
@@ -96,6 +101,9 @@ def validate_pass_identity(value, *, finalized=False):
     if 'batch_load' in value:
         from .batch_load import validate_binding,request_plan
         b=validate_binding(value['batch_load'])
+        if 'completion_path' in value:
+            from .completion_path import batch_binding
+            if batch_binding(value['completion_path'])!=b:raise ValueError('COMPLETION_PATH_LEDGER_BINDING')
         if value['run_role']!='ENGINEERING' or any(value[k]!=b[k] for k in ('run_id','pass_id')):
             raise ValueError('BATCH_LOAD_LEDGER_BINDING')
         actual=[dict(request_id=r['identity']['request_id'],repeat_id=r['identity']['repeat_id'],request_role=r['request_role']) for r in value['requests']]
@@ -190,6 +198,10 @@ def make_gate8_pass_identity(*, requests, **pass_fields):
         validate_binding(pass_fields['batch_load'])
         if pilot is not None or formal_binding is not None:raise ValueError('BATCH_LOAD_MIXED_ROLE')
         result['schema_version']=PASS_VERSION
+        if 'completion_path' in pass_fields:
+            from .completion_path import validate_binding,PASS_VERSION as completion_pass
+            validate_binding(pass_fields['completion_path'])
+            result['schema_version']=completion_pass
     for source in requests:
         entry = deepcopy(source)
         identity = {k: result[k] for k in PASS_FIELDS}

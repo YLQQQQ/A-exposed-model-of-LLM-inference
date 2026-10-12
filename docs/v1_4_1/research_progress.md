@@ -1,5 +1,39 @@
 # ExposedPath 科研进度清单
 
+## 7.141 完成路径窄域Engineering实现与待审交付（2026-10-12）
+
+**用户已批准7.140的本地实现；实现/确定性CPU文件链已收口，目标机新采集NOT_RUN。Gate13限定PASS、Gate14 NOT_RUN，旧B4 Request/Decode/attempt BLOCKED保持。** [现行审查末节](batch_load_prefill_review_v0_1.md)新增`COMPLETION-PATH-ENGINEERING/0.1`，仅未来两个新P1、C0→Cpre、512×4/每样本2输出/warmup3/repeat1。C0同诊断包装不同步；Cpre仅测量Prefill token0 Host复制前对持有的实际current-stream同步一次。不切流，不改Decode/暖机/Host-readable completion，不新采P0、不改冻结A/B、API分类、warning或Formal产物。
+
+复用verified模型入口、Git二进制源码seal/直接解释器/native设备/内容身份、逐样本token和Canonical/projection；新pass ledger0.6、execution0.1及独立prefill-result0.1显式绑定闭集variant/实际PID/TID/native流/同步次数。旧自然domain reader拒绝该新role；独立局部入口保留完整Raw，Request/Decode明确NOT_ACCEPTED_LOCAL_REVIEW_ONLY，不能冒充成功domain。只有同线程/clock且实际始于首ready后的提交效果缺口可隔离；影响不明、边界/映射/实际流/诊断冲突仍硬拒绝并停止后续组。
+
+新增同步的当前request必要集合复用原S，包含已完成工作、不包含后提交D2H；完整drain前Raw FIFO前缀另行核验/引用，不为setup/warmup伪造request ownership。两模式必要成员/边/唯一terminal必须相同，前缀实际流/线程冲突拒绝；不回填全局默认模式，不借N1资格发布自然默认流完整物理B。时间线保留last-submit、公共hook、copy/D2H、新旧sync及Host completion；sync墙钟、必要交集、residual、API预算和Prefill A分列，API差值不是原内部等待。UNKNOWN/NOT_ASSESSED与未记录依赖的既有支持假设保留。
+
+tests-first初始19项缺模块红例；局部回归暴露独立手算fixture缺correlation、真实暖机前缀计数遗漏，以及core消费者导入launcher时捕获CPU替身造成旧batch路径污染。手算预期未改变，补独立来源映射/真实次数，纯sync-observation报告下沉到core、旧入口委托同函数，恢复旧路径而非改测试追绿。中间7 failed/166 passed不是终态；修正后相关48 passed。最终命令：`python -m pytest -q -p no:cacheprovider --basetemp=.local/completion_release --junitxml=.local/diagnostics/completion_path_release/cpu_results.xml tests/test_completion_path.py tests/test_completion_path_driver.py tests/test_batch_load_diagnostic.py tests/test_batch_load_driver.py tests/test_gate8_diagnostic_entry.py tests/test_runner_token_ready.py tests/test_gate8_identity.py tests/test_gate8_engineering_scope.py tests/test_n1_model_domain.py tests/test_n1_preprofile_identity.py tests/test_gate8_diagnostic_collect.py`，**241 passed/0 failed/0 skipped，124.35s**；没有全量/Q0/CUDA/目标模型资格复验。`python -m compileall -q exposedpath analysis exposedpath_v141 scripts/completion_path_diagnostic.py scripts/gate8_diagnostic_collect.py`、PS5.1只解析及diff检查通过。CPU真实producer→合成SQLite→Canonical/S/A与seal→profile调用边界均为替身验证，不冒称目标机采集。
+
+交付自审新增两个布尔值冒充device/token整数反例：先2 failed/33 deselected，再强化闭集execution实际字段类型，未放宽身份。最终部署同组命令`python -m pytest -q -p no:cacheprovider --basetemp=.local/completion_delivery_final --junitxml=.local/diagnostics/completion_path_release/delivery_cpu_results.xml tests/test_completion_path.py tests/test_completion_path_driver.py tests/test_batch_load_diagnostic.py`：**83 passed/0 failed/0 skipped，53.12s**；与241项覆盖重叠，不能相加。修改文件compileall/diff再次通过。
+
+交付前置固定服务器`2af14b11dd990d159ff0b3204d26a1527244079c`，新执行/分析commit由同次提交绑定。默认A仅部署/源码实字节/相关83项CPU/compile，mask=-1不初始化CUDA；静态回执协调审查后才可显式B。B最多两模型进程/两profile，既有Nsight duration120s/collector壁钟300s、export180s、外层driver900s；预计15～25分钟、至少12GiB临时空间（估计，长期50GB政策不变），硬失败/固定两槽结束即停，无自动retry/续采。每阶段单ZIP保留输入/身份、Raw/REP/SQLite、producer/partial、独立Prefill结果/全部诊断与清单；UNKNOWN writer仍拒绝强行封包。本轮不操作服务器、不清理、不推进CUPTI/84追索。用户DOCX及未跟踪大型原件保留不stage；handoff和含机器路径的交付索引仅本地忽略。
+
+## 7.140 同负载完成路径聚焦复核与待审设计（2026-10-12）
+
+**Gate13限定PASS、Gate14 NOT_RUN，原B4 Request/Decode/attempt BLOCKED保持；仅完成本地证据解释和待审方案。** [7.139审查补充的完成路径方案](batch_load_prefill_review_v0_1.md)不新增实现/合同、部署包或采集入口；暂停CUPTI及旧84调用追索，不扩大batch/output，不重算整批A/B、pytest或实验。
+
+原SQLite只读查询独立复现协调回传：成功copy runtime38583/corr200922为43.854908ms；同目标context1/trace stream7的516 kernel在API区间内的裁剪并集30.867774ms，全部唯一成功launch在copy入口前返回。最后ArgMax kernel11846/corr200916在copy入口后43.723446ms结束；32-byte D2H347随后完成，比token-ready sync入口早131.723µs，因此该sync既有合格投影wait=0。SQLite SHA569b6907…前后不变，无同线程嵌套runtime/driver记录可分离API内等待；重叠及其余区间不反推Host等待/纯CPU预算。复制整体维持CUDA API，原局部Prefill A不重算/改写。
+
+唯一待审设计`COMPLETION-PATH-ENGINEERING-DRAFT/0.1`：同512/b4/每样本2、warmup3/repeat1、现有自然实际流/Host-readable completion，最多两次P1、C0→Cpre；只在测量Prefill token0 Host复制前增加一次已核验实际流同步，Decode不改。Raw以argmax/copy/API/physical sync的唯一correlation/context/流/lifetime核对实际流，必要集合保留完整先行工作、不含后提交D2H；默认模式不回填，沿原两模式后缀成员/边/terminal投影义务。当前自然消费者拒绝干预，未来须获准窄域身份/分派及独立反例，不能冒充G1自然路径或借N1授default-stream物理B。
+
+预先接受非零/零wait、copy不缩短及其他不支持解释的结果；同步包络不全部记wait，不按结果改负载或重试。身份/边界/drain/映射/依赖及新诊断冲突仍拒绝，84后续效果缺口不借本方案解决。局部数字和手算只为Engineering设计/接线预期，不授科学资格/Pilot/Formal，不改变冻结协议。原ZIP/Raw/BLOCKED、UNKNOWN/NOT_ASSESSED及用户DOCX保留；当前只有方案审查，无需用户服务器操作。
+
+## 7.139 Batch4 Prefill局部证据闭合审查（2026-10-12）
+
+**Gate13限定PASS、Gate14 NOT_RUN保持；B4 Request/Decode及原attempt仍BLOCKED，但Prefill可独立作局部Engineering投影A审查。暂停7.138的CUPTI native后续，不再追索旧84实参。** [审查0.1](batch_load_prefill_review_v0_1.md)复用已封存归档/身份/映射核验，实际读取原Canonical、source-bound execution和projection，复核成功drain到首ready的全部前缀；没有服务器、模型/CUDA/Nsight/export或整批重算，不修改生产代码/合同/旧报告。
+
+依据G9分域合同§2的受影响窗口失败传播，不按Decode标签排除：首未知runtime38606/corr201238发生在原首ready23694390270ns之后4,879,492ns。B4 Prefill的1,821活动（1790 kernel/2 copy/29 memset）、4,810 API均有合法scope/ownership/实际映射；10,491已观察前缀在成功drain前完成。两个同步的后缀成员8/1821、唯一frontier、返回前完成及LEGACY/PER_THREAD必要成员/依赖边相同；旧整request图取Prefill诱导子图的1820边与本次一致，未删除物理S/B或回填mode。未记录incoming依赖仍是原支持假设，UNKNOWN/NOT_ASSESSED保持，非完整物理W/B资格。
+
+在新本地派生目录仅选择原Prefill窗口、复用原A互斥计算；B1结果与既有observation逐字段一致，B4五类A为Host69.544101/CUDA API82.895299/Device wait0.025024/residual0.123167/unattributed0ms，T152.587591ms；B1为45.683467/53.771358/0.525502/0.136086/0ms，T100.116413ms。Device wait占比0.016400%对0.524891%，GPU活动union104.121389对52.541659ms，不能将GPU工作量等同暴露或由一次结果推稳定趋势。B4首token同步投影wait0，内部sync贡献25024ns；copy API43.854908ms保留API预算，不拆内部等待，zero unattributed不代表全机制已解释。
+
+局部检查/计算为本地CPU、两条件各约4.7/4.8s，不是pytest、完整Q0或新目标资格；读取源文件集合计算前后hash不变。实际分析代码dc78fc88，执行仍2af14b11；runner/S/A/Engineering scope/G9 domain相对执行源码零diff。本报告只记录现行合同的局部审查，当前domain入口仍按request统一拒绝，没有新增partial-phase reader/schema、没有改判旧attempt或将小汇总作成功domain。新摘要在忽略的诊断目录；用户DOCX/原ZIP保留。当前Prefill负载问题已有可解释个案，无必要服务器步骤；完整B4 Request/Decode仍缺提交效果证据，不为此自动实现CUPTI或重采。
+
 ## 7.138 Batch4 memset参数取证本地可行性及CPU原型（2026-10-12）
 
 **Gate13限定PASS、Gate14 NOT_RUN保持；旧B4仍BLOCKED，新B4/目标CUPTI验证NOT_RUN。** [可行性审查0.1](memset_parameter_feasibility_v0_1.md)不再追索旧84次实例。当前Nsight安装说明/已采表未提供实际count/native参数的肯定入口；不宣称工具永不支持。匹配CUDA12.4.1 Windows官方redistributable已按元数据校验：CUPTI12.4.127/API22、cudart12.4.127及nvcc12.4.131仅供CRT头文件；未安装或运行CUDA/Nsight/DLL。候选cupti64_2024.1.1.dll hash560a3659…不是目标Nsight私有cupti64_129.dll hash47b244aa…；实际目标加载/API/订阅仍未知。匹配12.4文档也明确单subscriber及Nsight冲突，不能借较新版本能力或并行订阅。

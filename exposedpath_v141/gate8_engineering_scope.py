@@ -104,7 +104,7 @@ def _diagnostics(diagnostic):
                     else 'IMPACT_UNBOUNDED') for r in diagnostic['records']]
 
 
-def _request(canonical, scope, paths, bundle, ownership, projection, original, stage, declared, diagnostics, *, domain_proof=False):
+def _request(canonical, scope, paths, bundle, ownership, projection, original, stage, declared, diagnostics, *, domain_proof=False, selected_phase=None):
     identity=projection['identity']
     output=dict(identity=identity, status='REJECTED', reasons=[], a_records=[],
                 assumptions=declared['assumptions'], local_gaps=[], facts={},
@@ -118,9 +118,19 @@ def _request(canonical, scope, paths, bundle, ownership, projection, original, s
         global_pid=drain_api['global_tid']-drain_api['global_tid']%2**24
         require(drain['global_pid']==global_pid,'DRAIN_GLOBAL_PROCESS')
         start,end,clock=projection['start_ns'],projection['end_ns'],projection['clock_domain_id']
+        require(selected_phase in (None,'prefill') and (selected_phase is None or projection['phase']=='prefill'), 'LOCAL_PHASE')
         stages=[r for r in stage['stages'] if r['payload']['request_identity']==identity]
+        unresolved=stages[0]['unresolved_submissions'] if len(stages)==1 else []
+        if selected_phase is not None:
+            # Only a proven, same-clock future API is outside this completed
+            # prefix. Unknown/crossing/earlier/foreign-thread effects still block.
+            for ref in unresolved:
+                rows=[a for a in bundle['records']['cuda_api'] if a['record_id']==ref['api_ref']['record_id']]
+                require(len(rows)==1 and rows[0]['clock_domain_id']==clock
+                    and rows[0]['start_ns']>=end and rows[0]['global_tid']==drain_api['global_tid'], 'LOCAL_IMPACT_UNBOUNDED')
+            unresolved=[]
         require(len(stages)==1 and stages[0]['trace_start_ns']<=drain_api['start_ns']
-                and stages[0]['trace_end_ns']>=end and not stages[0]['unresolved_submissions'], 'STAGE_SCOPE')
+                and stages[0]['trace_end_ns']>=end and not unresolved, 'STAGE_SCOPE')
         observed_stages=_json(paths['stage_ledger'])
         setup=[r for r in stage['stages'] if r['payload']['stage_role']=='setup']
         require(len(setup)==1 and setup[0]['trace_end_ns']<=drain_api['start_ns'], 'SETUP_ORDER')
@@ -212,14 +222,15 @@ def _request(canonical, scope, paths, bundle, ownership, projection, original, s
                     validity='VALID_NONEMPTY' if ids else 'VALID_EMPTY',primary_reason=None,
                     secondary_reasons=[],a_intersection_only=True))
             calculations.append(calculate_a_windows(replace(original,s_records=semantics,
-                windows=tuple(w for w in original.windows if w.request_id==identity['request_id']))))
+                windows=tuple(w for w in original.windows if w.request_id==identity['request_id']
+                    and (selected_phase is None or w.phase==selected_phase)))))
             proofs.append(dict(mode=mode,syncs=[dict(sync_id=s['sync_id'],
                 suffix_activity_ids=s['wait_set_activity_ids'],
                 **({'dependency_edges':dependencies[s['sync_id']]} if domain_proof else {}),
                 scope='A_INTERSECTION_ONLY_NOT_PHYSICAL_W') for s in semantics]))
         if domain_proof:
             require(proofs[0]['syncs']==proofs[1]['syncs'], 'DEFAULT_MEMBERSHIP_NOT_EQUIVALENT')
-        require(len(calculations[0])==3 and calculations[0]==calculations[1], 'DEFAULT_NOT_EQUIVALENT')
+        require(len(calculations[0])==(3 if selected_phase is None else 1) and calculations[0]==calculations[1], 'DEFAULT_NOT_EQUIVALENT')
         require(all(r['primary_reason'] in (None,'CUDA_API_SEMANTICS_UNRESOLVED')
                     and not r['secondary_reasons'] for r in calculations[0]), 'UNBOUNDED_ACCOUNTING_REASON')
         output.update(status='A_SCOPE_ENGINEERING_ONLY',a_records=list(calculations[0]),
@@ -235,6 +246,7 @@ def _request(canonical, scope, paths, bundle, ownership, projection, original, s
 
 def _calculate(root, receipt_path, execution_path, *, warning_assumption=None):
     receipt,paths,declared,execution=_inputs(receipt_path,execution_path)
+    require('completion_path' not in _json(paths['wmpc_manifest']), 'LOCAL_COMPLETION_ENTRY_REQUIRED')
     canonical=root/'canonical/canonical_manifest.json'
     scope=root/'projection/scope.json'
     diagnostic=load_diagnostic_scope(root/'diagnostics.json',paths['sqlite'],paths['pass_identity'])

@@ -53,8 +53,12 @@ def minimal_fields(binding):
 def validate(manifest):
     b=validate_binding(manifest.get('batch_load'))
     require(not any(k in manifest for k in ('pilot','formal','n1_model','n1_model_execution','gate10_workload')),'ROLE_OR_DOMAIN')
-    require(all(type(manifest.get(k)) is type(v) and manifest[k]==v
-        for k,v in minimal_fields(b).items()),'DECLARATION')
+    if 'completion_path' in manifest:
+        from .completion_path import validate as completion_validate
+        completion_validate(manifest)
+    else:
+        require(all(type(manifest.get(k)) is type(v) and manifest[k]==v
+            for k,v in minimal_fields(b).items()),'DECLARATION')
     return b
 
 
@@ -103,7 +107,9 @@ def observation(identity,result,batch):
 
 def validate_actual_requests(manifest,ledger):
     b=validate(manifest)
-    require(ledger.get('batch_load')==b and ledger['schema_version']==PASS_VERSION
+    from .completion_path import PASS_VERSION as completion_pass
+    version=completion_pass if 'completion_path' in manifest else PASS_VERSION
+    require(ledger.get('batch_load')==b and ledger['schema_version']==version
         and ledger['run_role']=='ENGINEERING' and ledger['data_role']=='Engineering','LEDGER')
     require([dict(request_id=r['identity']['request_id'],repeat_id=r['identity']['repeat_id'],request_role=r['request_role'])
         for r in ledger['requests']]==request_plan(b),'ACTUAL_PLAN')
@@ -114,7 +120,9 @@ def validate_actual_requests(manifest,ledger):
 
 def validate_tokens(path,manifest,ledger,execution,manifest_path,producer_path):
     b=validate(manifest);validate_actual_requests(manifest,ledger)
-    require(execution.get('schema_version')==EXECUTION_VERSION and execution.get('batch_load')==b
+    from .completion_path import EXECUTION_VERSION as completion_execution
+    version=completion_execution if 'completion_path' in manifest else EXECUTION_VERSION
+    require(execution.get('schema_version')==version and execution.get('batch_load')==b
         and execution.get('batch_tokens_sha256')==sha(path),'EXECUTION_TOKEN_HASH')
     value=read(path)
     require(set(value)=={'schema_version','batch_load','manifest_sha256','producer_receipt_sha256','requests'}
@@ -137,6 +145,10 @@ def execution_extension(manifest,ledger,execution,execution_path,manifest_path,p
     require(token_path is not None and Path(token_path).resolve()==Path(execution_path).resolve().parent/'batch_tokens.json','TOKEN_PATH')
     path=Path(token_path)
     validate_tokens(path,manifest,ledger,execution,manifest_path,producer_path)
+    if 'completion_path' in manifest:
+        from .completion_path import validate_calls,EXECUTION_VERSION as completion_version
+        validate_calls(manifest,ledger,execution)
+        return {'batch_load','batch_tokens_sha256','completion_path','completion_calls'},completion_version
     return {'batch_load','batch_tokens_sha256'},EXECUTION_VERSION
 
 

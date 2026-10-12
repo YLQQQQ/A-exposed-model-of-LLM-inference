@@ -88,6 +88,7 @@ def observe_token_ready_boundary(
     clock_ns: Callable[[], int] = time.perf_counter_ns,
     emit_nvtx: bool,
     gate8_recorder=None,
+    completion_controller=None,
 ) -> TokenReadyBoundary:
     """Block until token IDs are Host-readable, then timestamp completion."""
     identity = make_natural_token_ready_identity(
@@ -98,6 +99,8 @@ def observe_token_ready_boundary(
         sync_ordinal=token_index,
         token_ready_mechanism=TOKEN_READY_MECHANISM,
     )
+    if completion_controller is not None:
+        completion_controller.before_copy(identity_base,token_index,phase)
     if emit_nvtx:
         torch.cuda.nvtx.range_push(make_structured_nvtx_label(identity))
     try:
@@ -254,6 +257,7 @@ def run_one_invocation(
     clock_ns: Callable[[], int] = time.perf_counter_ns,
     gate8_recorder=None,
     drain_recorder=None,
+    completion_controller=None,
 ) -> Dict:
     """Execute a single inference invocation with NVTX annotation.
 
@@ -308,6 +312,7 @@ def run_one_invocation(
             clock_ns=clock_ns,
             emit_nvtx=bool(nvtx_invocation_label),
             gate8_recorder=gate8_recorder,
+            completion_controller=completion_controller,
         )
     ]
     t_first_token_ns = token_ready_boundaries[0].completed_ns
@@ -404,7 +409,7 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                        clock_ns=time.perf_counter_ns, record_drains=False,
                        record_stages=False, model_setup=None, record_load_tasks=False,
                        setup_observer=None, allow_load_fallback=True, invocation_observer=None,
-                       n1_controller=None):
+                       n1_controller=None, completion_controller=None):
     """Explicit local Gate8 producer API over already-resident inputs.
 
     Not enabled by the legacy CLI/launcher. The caller supplies preflight-bound
@@ -419,6 +424,9 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
 
     if pass_fields.get("pid") != os.getpid():
         raise ValueError("IDENTITY_CONFLICT: producer PID must be current process")
+    if completion_controller is not None and (n1_controller is not None or model_setup is None
+            or not record_stages or not record_drains or record_load_tasks or pass_fields['pass_id']!='pass1'):
+        raise ValueError('COMPLETION_PATH_VERIFIED_SETUP_REQUIRED')
     if n1_controller is not None and (model_setup is None or not record_stages or not record_drains
                                      or record_load_tasks or (pass_fields['pass_id']!='pass1'
                                          and pass_fields.get('run_role') not in ('PILOT','FORMAL'))):
@@ -515,6 +523,11 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
             if validate_manifest(manifest) != n1_controller.policy:
                 raise ValueError('N1_CONTROLLER_DECLARATION_CONFLICT')
             expected.update(study_mode='N1_INTERVENTION', n1_intervention=manifest['n1_intervention'])
+        if completion_controller is not None:
+            from exposedpath.completion_path import validate
+            if validate(manifest)!=completion_controller.binding:
+                raise ValueError('COMPLETION_PATH_CONTROLLER_CONFLICT')
+            expected.update(study_mode='COMPLETION_PATH_ENGINEERING')
         if (any(k not in manifest or type(manifest[k]) is not type(v) or manifest[k]!=v
                 for k,v in expected.items())
                 or ledger['runner_git_dirty'] is not False):
@@ -589,6 +602,7 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                 token_ready_identity_base=entry["identity"], clock_ns=clock_ns,
                 gate8_recorder=recorder,
                 drain_recorder=drain_recorder,
+                completion_controller=completion_controller,
             )
             invocation = lambda:invoke_model(model) if n1_controller is None else n1_controller.run(
                 model,entry['identity'],invoke_model)

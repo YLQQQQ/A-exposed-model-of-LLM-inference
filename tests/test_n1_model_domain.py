@@ -14,7 +14,7 @@ from test_gate8_identity import UUID, sha, write_json
 
 
 def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, queries=False,
-           default_prefix=False, allocations=False, vm_bits=False, pilot_binding=None,formal_binding=None,driver_apis=False,batch_binding=None):
+           default_prefix=False, allocations=False, vm_bits=False, pilot_binding=None,formal_binding=None,driver_apis=False,batch_binding=None,completion_binding=None):
     queries=queries or damage=='unknown_query'
     if batch_binding is not None:
         from exposedpath.batch_load import minimal_fields as batch_fields  # before OS probe doubles
@@ -49,6 +49,9 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         if batch_binding is not None:
             manifest.pop('n1_model');manifest.pop('n1_model_execution')
             manifest.update(batch_fields(batch_binding))
+            if completion_binding is not None:
+                from exposedpath.completion_path import minimal_fields
+                manifest.update(minimal_fields(completion_binding))
             model=tmp_path/'batch-model';model.mkdir()
             write_json(model/'config.json',dict(model_type='qwen2',vocab_size=100,max_position_embeddings=4096))
             prompt=dict(schema_version='exposedpath-prompt-tokens/1',tokenizer_id='synthetic',fixed_input_tokens=512,
@@ -92,6 +95,11 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         def stream(**kw):
             value=create(**kw); value.synchronize=sync; return value
         monkeypatch.setattr(cuda,'Stream',stream)
+        if completion_binding is not None:
+            current=cuda.current_stream
+            def actual_stream(device):
+                value=current(device);value.synchronize=sync;return value
+            monkeypatch.setattr(cuda,'current_stream',actual_stream)
         monkeypatch.setattr(cuda,'synchronize',backend.prepare)
         def push(label):
             backend.push(label)
@@ -158,6 +166,22 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         if damage=='graph': db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET graphId=7')
         if damage=='blocking_flag': db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=1 WHERE streamId=3')
         if damage=='null_measured': db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=3')
+        if completion_binding is not None and damage in ('future_gap','prefill_gap'):
+            points=db.execute('SELECT start FROM NVTX_EVENTS WHERE eventType=34 ORDER BY start').fetchall()
+            low,high=(points[1][0],points[2][0]) if damage=='future_gap' else (points[0][0],points[1][0])
+            corr=db.execute('SELECT correlationId FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE start>=? AND end<=? AND nameId IN (SELECT id FROM StringIds WHERE value=?) ORDER BY start LIMIT 1',
+                (low,high,'cudaLaunchKernel_v7000')).fetchone()[0]
+            db.execute("INSERT INTO StringIds VALUES (990001,'cudaMemsetAsync_v3020')")
+            db.execute('UPDATE CUPTI_ACTIVITY_KIND_RUNTIME SET nameId=990001 WHERE correlationId=?',(corr,))
+            db.execute('DELETE FROM CUPTI_ACTIVITY_KIND_KERNEL WHERE correlationId=?',(corr,))
+        if completion_binding is not None and damage in ('pre_stream','pre_failure'):
+            a,b=db.execute("SELECT start,end FROM NVTX_EVENTS WHERE text LIKE 'EXPOSEDPATH_COMPLETION_PATH_V1:%'").fetchone()
+            corr=db.execute('SELECT correlationId FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE start>=? AND end<=? AND nameId IN (SELECT id FROM StringIds WHERE value=?)',
+                (a,b,'cudaStreamSynchronize_v3020')).fetchone()[0]
+            if damage=='pre_stream':db.execute('UPDATE CUPTI_ACTIVITY_KIND_SYNCHRONIZATION SET streamId=2 WHERE correlationId=?',(corr,))
+            else:db.execute('UPDATE CUPTI_ACTIVITY_KIND_RUNTIME SET returnValue=1 WHERE correlationId=?',(corr,))
+        if completion_binding is not None and damage=='mode_prefix':
+            db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET streamId=2 WHERE rowid<=6')
         if damage=='unmarked_token':
             db.execute("DELETE FROM NVTX_EVENTS WHERE text LIKE '%natural_token_ready%'")
         if damage=='unmarked_intervention':

@@ -140,7 +140,11 @@ def profile_argv(nsys,python,prepared,output,root=ROOT):
 
 
 def analyze_receipt(manifest,receipt,execution,output):
-    if 'domain_qualification' in manifest:
+    if 'completion_path' in manifest:
+        from exposedpath_v141.completion_path_scope import process,load
+        result=process(receipt,execution,output)
+        value=load(result,receipt,execution)
+    elif 'domain_qualification' in manifest:
         from exposedpath_v141.gate9_domain import process_domain,load_domain,declaration,G1,N1
         options={}
         if 'n1_model' in manifest:
@@ -202,7 +206,9 @@ def analyze_model(output,prepared,collector_version):
         sqlite=output/'capture.sqlite',export_report=output/'postprocess_report.json',
         **{k:root/v for k,v in names.items()}))
     result,value=analyze_receipt(manifest,receipt,root/'engineering_execution.json',output/'analyzed')
-    check_model_admission(result,value,domain='domain_qualification' in manifest)
+    if 'completion_path' in manifest:
+        if value['status']!='PREFILL_LOCAL_ENGINEERING_ONLY':raise ModelScopeBlocked(result,value)
+    else:check_model_admission(result,value,domain='domain_qualification' in manifest)
     return result
 
 
@@ -283,7 +289,8 @@ def main():
         if args.engineering_a_only:
             from exposedpath.gate8_diagnostic import _sha
             result=analyze_model(output,args.prepared,'2026.2.1.210')
-            status='N1_MODEL_ENGINEERING_ONLY' if 'n1_model' in manifest else 'A_SCOPE_ENGINEERING_ONLY'
+            status=('PREFILL_LOCAL_ENGINEERING_ONLY' if 'completion_path' in manifest else
+                'N1_MODEL_ENGINEERING_ONLY' if 'n1_model' in manifest else 'A_SCOPE_ENGINEERING_ONLY')
             report.update(status=status,result_sha256=_sha(result),
                 result_filename=result.name,
                 schema_version='gate8-qwen-engineering-collection/0.1.0',
@@ -299,7 +306,7 @@ def main():
         record_analysis_error(report,exc)
     (output/'collection_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(report['status'])
-    return 0 if report['status'] in ('DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW','FORMAL_RUN_COMPLETE_PENDING_REVIEW') else 1
+    return 0 if report['status'] in ('PREFILL_LOCAL_ENGINEERING_ONLY','DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW','FORMAL_RUN_COMPLETE_PENDING_REVIEW') else 1
 
 
 if __name__=='__main__': raise SystemExit(main())
