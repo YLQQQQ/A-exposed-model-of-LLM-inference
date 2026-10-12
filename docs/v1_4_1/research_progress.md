@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.138 Batch4 memset参数取证本地可行性及CPU原型（2026-10-12）
+
+**Gate13限定PASS、Gate14 NOT_RUN保持；旧B4仍BLOCKED，新B4/目标CUPTI验证NOT_RUN。** [可行性审查0.1](memset_parameter_feasibility_v0_1.md)不再追索旧84次实例。当前Nsight安装说明/已采表未提供实际count/native参数的肯定入口；不宣称工具永不支持。匹配CUDA12.4.1 Windows官方redistributable已按元数据校验：CUPTI12.4.127/API22、cudart12.4.127及nvcc12.4.131仅供CRT头文件；未安装或运行CUDA/Nsight/DLL。候选cupti64_2024.1.1.dll hash560a3659…不是目标Nsight私有cupti64_129.dll hash47b244aa…；实际目标加载/API/订阅仍未知。匹配12.4文档也明确单subscriber及Nsight冲突，不能借较新版本能力或并行订阅。
+
+新增仅隔离CPU证据原型0.1.0与native结构体复制EXE，不接科学消费者或runner、不生成采集/部署入口。实际SDK字段支持ENTRY复制count/value/stream、EXIT return；MEMSET correlation绑定driver而不是runtime。CPU原型保留零长度参数事实、明确非零MEMSET映射、非零缺效果/冲突三种状态；参数/身份/桥接/流生命周期未知、跨线程native0借用、correlation复用、零零未知时间及多活动bytes求和均拒绝。UNKNOWN/NOT_ASSESSED不变，A/B/schema/registry/冻协议未改；CPU合成数据不授目标资格。
+
+tests-first初始3 failed/32 deselected（缺实现），身份负例2 failed→2 passed、映射负例3 failed→3 passed；native编译初稿出现SDK依赖/编码/无关activity头padding错误，补匹配CRT、UTF-8及最小callback头文件，不改vendor字段或屏蔽错误。最终显式配置匹配SDK/MSVC19.44 x64后：`python -X utf8 -m pytest -q -p no:cacheprovider --basetemp=.local/memset_proto_final --junitxml=.local/diagnostics/memset_parameter_feasibility_v0_1/cpu_tests_final.xml tests/test_memset_parameter_prototype.py`：**40 passed/0 failed/0 skipped，1.09s**（34纯Python及6 native CPU）；只证明本地CPU，非服务器MSVC19.38资格。修改文件compileall、PE imports、源码无动态加载/vendor调用、来源/hash/文档链接/用户DOCX保全及diff检查通过；没有完整Q0/全量/旧Raw重算。审计5922 bytes/SHA256 `59d24cbc2d991edfd355b99bf33887a82bf143ceb49cf13041e53eaef216e4aa`，存忽略的本地诊断目录。
+
+唯一下一候选：先审查独立CUPTI加载/订阅握手＋一个zero/64-byte tiny CUDA验证，全部通过才考虑最多一次同路径512×4/每样本2输出/w3/r1的新B4参数诊断。建议总15min/2GiB、最多两个进程（tiny120s＋模型300s），预算和运行部分尚待审，失败不重试、不fallback、不扩设施。零参数不自动证明无依赖，非零缺效果保持拒绝；新实例不能补旧84次，新增插桩时延不是自然性能，独立provider不自动获得现Nsight Canonical/A资格。当前没有安全可直接执行的重采包/服务器命令，不要求用户现在操作服务器。7.137旧实例收口保持；本轮原ZIP/Raw/报告、用户DOCX及未跟踪大型归档不动、不stage、无清理。
+
 ## 7.137 Batch4 memset提交效果有界审查收口（2026-10-12）
 
 **Gate13限定PASS、Gate14 NOT_RUN保持；B4投影A仍BLOCKED，停止旧84次调用追索。** [审查0.1](batch_load_memset_effect_review_v0_1.md)在前次已核验原包/来源链上检查46表、六个correlation列及Raw→Canonical实字段：KERNEL13408、MEMCPY348、MEMSET120、runtime/driver40769记录全部一致，无过滤/桥接遗漏。84个corr除API自身外无命中，同线程实际嵌套driver也为空，callchain均null。114成功memset中另30次有28×1536及2×16 bytes活动，但不能补推84次的count或效果；全部缺口在Decode、API累计50717ns。未知零提交/替代路径/观测缺失未被解决，不改为non-submit/Host，不按小比例放行。
