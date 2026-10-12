@@ -2,6 +2,8 @@
 
 2026-10-11；[执行合同0.1](batch_load_engineering_plan_v0_1.md)。本次仅本地CPU核验与离线续算，无服务器、模型、CUDA、Nsight或新样本。Gate13限定PASS、Gate14 NOT_RUN保持。
 
+2026-10-12后续有界审查已收口：[memset提交效果审查0.1](batch_load_memset_effect_review_v0_1.md)。Raw/Canonical及全部已采关联表未发现实现遗漏，旧84次调用缺参数/效果证明，停止旧实例追索；本文末尾“先查现存REP/调用资料”的下一步现为历史。只提出窄域参数取证待审设计，不安排同配置重采，不改本文原始失败结论。
+
 ## 结论及封存身份
 
 **四个模型进程均完成；B1自然投影A通过；B4的A仍BLOCKED。** 最早具体失败是 `ENGINEERING_SCOPE_SUBMIT_MAPPING`，不是外层 `08_batch failed`、模型崩溃、采集超时或export失败。原批次/Raw/报告不改判。

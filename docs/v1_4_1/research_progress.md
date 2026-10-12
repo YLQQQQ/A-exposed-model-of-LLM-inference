@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.137 Batch4 memset提交效果有界审查收口（2026-10-12）
+
+**Gate13限定PASS、Gate14 NOT_RUN保持；B4投影A仍BLOCKED，停止旧84次调用追索。** [审查0.1](batch_load_memset_effect_review_v0_1.md)在前次已核验原包/来源链上检查46表、六个correlation列及Raw→Canonical实字段：KERNEL13408、MEMCPY348、MEMSET120、runtime/driver40769记录全部一致，无过滤/桥接遗漏。84个corr除API自身外无命中，同线程实际嵌套driver也为空，callchain均null。114成功memset中另30次有28×1536及2×16 bytes活动，但不能补推84次的count或效果；全部缺口在Decode、API累计50717ns。未知零提交/替代路径/观测缺失未被解决，不改为non-submit/Host，不按小比例放行。
+
+SQLite/REP/Canonical/投影hash与原manifest一致，read-only/immutable查询前后不变；新cross_table_audit（179218 bytes/SHA f97cbfb6…）及evidence_binding_and_results（9530 bytes/SHA f05ddf44…）独立保存。官方Qwen5.17源码hash与已有目标机快照一致；PyTorch2.6 GEMM/Fill路径只能缩小可能来源，不能证明旧实例参数/调用栈。现有可读接口不足不等于工具永不支持，原Raw/ZIP/BLOCKED、UNKNOWN/NOT_ASSESSED均不改。
+
+已准入B1 A及两组P0可复用：P0 Request分别141.544300/231.408800ms；B1 P1三窗口Device wait0.525502/0.525502/0ms，原生trace占比0.293920%/0.524891%/0%，互斥/子类守恒及阶段拆分沿用已核验结果。B4已观察GPU union138.484709ms、实际token/边界成功仅为观测事实，不发布B4 A/wait占比，不用活动量或未恢复映射当零。四槽和两profile全已执行，无续跑槽位。
+
+唯一下一方向为待审的同次native参数＋activity窄域取证，不是盲目再跑Nsight：实际count/return/context/native stream及明确correlation/生命周期。CUPTI12.9.1不支持与现Nsight subscriber并行，目标SDK/ABI未核验，因此只提出独立诊断设计、模型前不支持即停；无新增collector实现/部署包/服务器命令，新实例不能追认旧84次。7.136的REP追索停点转历史。此轮只完成本地审计来源/算术/链接/隐私/diff检查及文档提交，不重复完整测试/Q0/analyzer或采集；用户DOCX和未跟踪原取证ZIP保留不stage，无文件清理。
+
 ## 7.136 Batch-load失败实物审查、离线续算及拒绝诊断传递（2026-10-11）
 
 **Gate13限定PASS、Gate14 NOT_RUN保持；batch-load整体BLOCKED，B1投影A通过、B4投影A拒绝。** [集中审查0.1](batch_load_failure_review_v0_1.md)独立核验103907198-byte原ZIP（b290a96f…）、CRC、安全路径及258项清单（157ff327…）：259文件/零遗漏，包含静态原件副本。执行2af14b11dd99的四个模型入口均exit0/producer COMPLETE，两个profile/export成功；264源码实字节及显式Git/LF-CRLF表示、身份/隔离预检/模型输入引用、实际512×1/4、每样本2token及warmup3通过。模型本体未本地重算。
