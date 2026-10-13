@@ -1,5 +1,21 @@
 # ExposedPath 科研进度清单
 
+## 7.147 Windows llama.cpp候选native最小接线与CPU文件链（2026-10-13）
+
+**当前是候选Engineering本地实现，不是新引擎资格/采集授权。** [native窗口/接线0.1](native_llama_window_and_adapter_v0_1.md)为本项入口；保留7.146的操作性Device Exposure口径、PyTorch自然baseline、Cpre受控角色。Gate13限定PASS、Gate14 NOT_RUN及旧Formal/Engineering/Raw/BLOCKED/UNKNOWN/NOT_ASSESSED不变；用户DOCX和scripts未跟踪大ZIP保留、不纳入提交。没有服务器操作、模型/CUDA/Nsight执行、旧分析重算或完整Q0。
+
+`LLAMA-NATIVE-WINDOW/0.1.0`显式候选起点在首次处理固定输入前，含自然batch准备/H2D；首/末实际Host token返回后为锚点，文本/持久化窗外，共用三个半开窗口公式。它不冒充旧GPU-resident起点、不改签署0.1.1或授新Formal。固定d81235049384534c167caea52b85a694f6103d14、32/2/batch1/warmup3/repeat1、CPU greedy/no backend sampler、无graph；HF→GGUF F16允许非量化F32张量并保持revision未知、实际token逐值配对，不授HF数值/时延等价。
+
+已实现独立native prepare/producer消费合同、共享C++编排与实际SDK入口、固定CMake及CPU文件CLI；spec/输入/binary/GGUF/build/conversion/执行commit与PID/TID/实际token贯通，角色仅Engineering，缺文件/变化/错角色配置、重封违规、EOS/partial/失败拒绝。五个真实backend/buffer同步点按固定源码字节patch成新的编译输入，保留调用数/顺序与参数、不修改vendor原件、不增加同步；记录真实native handle/设备/线程/调用序号及source callsite，未继承frame的工作线程保持未知。
+
+新Raw→Canonical native适配复用现有设备UUID/PCI四namespace映射、官方四消息规则及S/A；共同trace point保留原引用/hash/clock，投影不提供依赖，必要已完成前缀保留/后提交排除。完整S两模式条件等价不是A数字相等，模式仍UNKNOWN；缺提交效果、错流/request/mapping、失败同步、未知依赖/诊断拒绝。native不泛用旧N1 RAW_PHYSICAL/opaque cudaMalloc例外；输出仅ADAPTER_CALCULATION_ONLY_NOT_QUALIFICATION，物理B未资格、D/Signature禁用。
+
+固定官方原始SDK头/少量构建文本只读取得于忽略目录（不是安装）。真实头的`llama_process`参数为batch_ext指针，已用host语法负例发现上一页接口简写不能编译，最小入口改为该版本标准`llama_decode(ctx,batch)`并通过真实头检查；公式/旧结果不变。实际CUDA backend/目标VS14.38编译、转换后真实tensor事实、native scope资格仍未执行。
+
+具体剩余差额是native窗前drain为scheduler/backend scope，不是旧device-wide；暖机历史闭合不能直接继承旧声明，现代码保留完整物理前缀并拒绝未知ownership。只在后续同backend桥接证明实际stream/event闭包后，才能决定必要的native局部closed-prior支持条款；不裁前缀或猜所有工作都属主线程。下一目标方案先仅构建/转换/身份回执，审查后最多1个受控backend桥接；闭合后才一对自然P0/P1，当前不交自动采集包或重跑V0/旧Q0。
+
+验证使用编译的真实producer core＋CPU替身与合成SQLite、独立手算W/terminal/三窗口A；不是目标GPU证据。实际最终命令为`python -m pytest -q -p no:cacheprovider tests/test_native_llama.py tests/test_native_llama_scope.py tests/test_gate8_identity.py tests/test_gate8_boundaries.py tests/test_gate8_signed_time.py tests/test_v141_sync_semantics.py tests/test_gate9_diagnostic_review.py`（独立本地basetemp、CUDA_VISIBLE_DEVICES=-1），**200 passed、0 failed、0 skipped，54.12s**。仅新增三个Python文件compileall、Canonical boundary（7模块）和oracle独立性静态检查均exit0；不运行无关全量。原SDK/JSON header可选字节审查缺缓存时显式skip，不自动联网安装；本机已取得固定原件，CPU host语法检查使用真实SDK头＋声明-only CUDA/NVTX替身，本次无skip。代码审查补齐了缺submit效果、重封角色/量化、实际输入值及派生sidecar缺失等fail-closed；用户DOCX hash保持，旧测量代码/签署/registry零修改。
+
 ## 7.146 Device Exposure操作性口径与Windows首引擎源码核对（2026-10-13）
 
 **用户已收敛范围：保留冻结A_device_wait交集/union定义，取消“完整GPU相关Host等待可识别性”前置；Windows/4090是当前唯一环境。** [现行0.2入口](device_exposure_scope_and_windows_engine_v0_2.md)统一论文提纲、解释与本地handoff；PyTorch自然路径是执行baseline，同窗常规活动/完整timeline是信息增益参照，Cpre保持受控机制Engineering角色。四对追加Pilot仍暂停，Linux/WSL/升级/换服务器未获授权；vLLM只保留为未来候选。Gate13限定PASS、Gate14 NOT_RUN、Raw/历史报告/BLOCKED/UNKNOWN/NOT_ASSESSED及全部数据角色不变。

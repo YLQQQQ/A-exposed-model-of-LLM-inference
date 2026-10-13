@@ -5,6 +5,10 @@
 优先级和Linux前提；原审查/数据角色/失败判定保留。Gate13限定PASS、Gate14 NOT_RUN。
 四对C0/Cpre追加Pilot暂停；不安装、部署、采集、重算旧结果或修改用户DOCX。
 
+> 本地接线与固定SDK接口校正现见[native候选0.1](native_llama_window_and_adapter_v0_1.md)。
+> 固定头文件的普通batch入口为`llama_decode`；本页先前`llama_process`为接口简写，不能
+> 直接用于编译。原指标/证据结论不变，target native资格与新窗口仍未授予。
+
 ## 1. 核心指标、假设与不变的拒绝规则
 
 `A_device_wait = 合格同步区间 ∩ 根据完成语义恢复的必要GPU活动区间并集`的区间长度，
