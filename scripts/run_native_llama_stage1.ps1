@@ -68,7 +68,9 @@ try {
     & $Config.base_python -I $Bootstrap deploy --config $ConfigPath --package $PackageRoot --root $Root
     if ($LASTEXITCODE -ne 0) { throw 'Deployment failed; STOP' }
     Write-Host '[stage] deploy COMPLETE; CPU dependencies/build/conversion next; no native execution'
-    & $Config.base_python -I $Bootstrap run --config $ConfigPath --package $PackageRoot --root $Root
+    # Controller reuses the verified repository JSON/schema dependencies.
+    # Conversion still uses the separate CPU-only environment created inside run.
+    & $Config.test_python -I $Bootstrap run --config $ConfigPath --package $PackageRoot --root $Root
     if ($LASTEXITCODE -ne 0) { throw 'Stage1 failed; no retry; preserve outputs' }
 } catch {
     $Failed = $true

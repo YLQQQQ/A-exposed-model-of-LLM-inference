@@ -10,6 +10,8 @@
 
 回传一个小metadata ZIP，含原始日志/退出、Git/toolchain/CPU回执、实际cache/probe原件、GGUF tensor表和build/conversion身份；不重复传送大GGUF/build/env。预留20GiB临时、45–120分钟估计，临时空间可超过长期50GB；长期必要新增约4–5GiB仅为估计，审查归档后再另列可重建副本清理，本轮没有删除。阶段1成功只能STAGE1_COMPLETE_NOT_QUALIFICATION，实际CUDA/native适用性仍NOT_RUN。
 
+提交后最终调用链核查补齐控制解释器依赖：run固定使用已验证repo venv的jsonschema/pytest，Conda base仅stdlib bootstrap/部署和创建CPU环境，不能假设base已安装研究schema依赖。原推理venv不改包；9009db4生成的本地未分发候选ZIP被最终修正版取代，不是目标机部署或新attempt，不使旧数据/资格失效。末次交付相关回归25 passed、0 failed/skip，2.90s；PS5.1 parse及diff-check通过，未重复其余未变化的35项native回归。
+
 阶段2独立预期已收敛到同scheduler/backend的确定性加法及自然Host读回：检查完整暖机/drain前缀、真实stream/event/correlation和ownership、已完成成员与后提交排除；只有成功drain与依赖闭包证据俱全才可讨论局部投影。源码调用名/时间先后不替代依赖；必要native closed-prior若涉及新适用性条款须另审。不借用旧device-wide声明、不自动启动自然模型。
 
 tests-first实际RED包括交付模块缺失、HF原manifest未绑定、离线依赖检查缺接线、literal SHA不能导出bundle引用等；修复后最终命令`python -m pytest -q -p no:cacheprovider tests/test_native_stage1.py tests/test_native_llama.py tests/test_native_llama_scope.py`（mask=-1、独立basetemp）为**60 passed、0 failed、0 skipped，29.58s**。其中阶段1实际文件链以CPU工具替身替换compile/convert，不声称目标构建；真实Git小fixture bundle、实际私有CMake函数、真实PowerShell错误角色入口和原始stderr/失败回执通过。仅新增Python compileall、PowerShell5.1 parser和diff-check通过；未跑全量/完整Q0/旧分析。没有修改runner/completion/流/同步、S/A/B/registry或签署语义。普通工程交付无研究裁决；真实构建及native桥接的资格仍待后续实物，不包装为已通过。

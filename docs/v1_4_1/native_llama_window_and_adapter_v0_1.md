@@ -165,6 +165,8 @@ GGUF转换写新目录；读取实际GGUFReader tensor表与F16/F32计数，不�
 依赖现有VS2022 BuildTools/x64 MSVC14.38.33130及Windows SDK、nvcc12.4.131和CUDA12.4
 runtime DLL、Git及Python3.11/已有pytest。包内不再分发MSVC/Toolkit/driver；缺件即停，
 不自动安装。cl/nvcc实际版本、路径/hash及三项CUDA runtime DLL文件身份纳入回执。
+控制入口固定使用已验证的仓库venv（jsonschema/pytest），不假设Conda base拥有这些包；
+base仅做stdlib bootstrap/部署和创建私有CPU转换venv。旧推理venv不安装或改包。
 
 转换用新私有CPU环境：torch 2.11.0+cpu（固定引擎转换requirements要求）、transformers
 4.57.6、numpy2.2.6等；不修改原torch2.6+cu124推理venv。它只读取/变换权重，不运行
