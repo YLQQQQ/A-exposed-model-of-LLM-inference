@@ -1,6 +1,22 @@
 # ExposedPath 科研进度清单
 
+## 7.145 自然完成支持范围裁决与首引擎适用性收敛（2026-10-13）
+
+**优先级调整已执行：四对C0/Cpre追加Pilot暂停；当前只审查自然推理支持范围并准备首引擎方案。** [唯一新入口0.1](natural_completion_engine_applicability_v0_1.md)复用7.143/7.144、B4局部Prefill及Formal审查，不重追w11、84个memset或旧UNKNOWN。Gate13限定PASS、Gate14 NOT_RUN、全部原数据角色/失败报告及UNKNOWN/NOT_ASSESSED保持；不安装引擎、不改业务/合同、不运行测试/分析/实验、不交付采集包。
+
+自然复制裁决为**C：当前实例证据不能可靠拆分内部等待，保留已批准API预算，不制造W/B**。重新对照研究设计v7.1物理blocking条款、Pre-Pilot协议v2.1、MC0.2 §6/§10、签署G12-ROUTEA/0.1.1及两registry：明确正文要求参数依赖blocking识别，而现registry没有异步copy参数到completion scope的恢复规则。A registry的显式submit处理及“Async不保证非阻塞”是有限处理，不等于完整blocking覆盖。此项解释/证据缺口修正7.144可能过强的“未发现违例”读法：尚未证明某实例被遗漏为unsupported，但也不能保证全部参数依赖阻塞已覆盖。若将来证实unsupported completion，仍须fail closed，不能用本页豁免；新增内部等待/opaque-copy政策需另裁决。
+
+实际只消费已保存block1/G512引用：runtime37815/corr197682，copy1.874498ms、8-byte D2H/Host类型未确定、后成功stream sync35.553µs；不由82.682µs先完成或`.cpu()`整体Host-readable推断copy内部等待。Cpre预算迁移与自然内部等待可观测性、实现正确性分别记录，不将零unattributed/守恒/Gate PASS说成完整解释。旧Formal限定结果/原件不改，不发布新的科学有效性或全部GPU阻塞claim。
+
+仅比较固定vLLM v0.20.0与llama.cpp v0.6.0官方平台/模型/源码；推荐前者的Linux、单GPU/UniProc、eager/非async、单请求HF Qwen2配置子域。固定源码自然路径为pinned token copy→event record/synchronize→Host列表，非插入Cpre；已有S/event公式复用，但新平台、event生命周期/实际流与设备、request/token桥接须增量验证，Windows资格不自动继承。llama.cpp虽可Windows构建，仍需GGUF/数值及native路径资格，不默认替补。vLLM自然input preparation位于执行步骤内，与旧“输入已驻留GPU后首次forward”起点不同；新引擎窗口建议含自然preparation，须独立边界版本批准，不能为套旧窗口额外drain。
+
+集中待决仅为Linux新栈及该引擎窗口子域，不需用户选择底层文件组织。批准后最小本地adapter/独立event正反例，未来提议一次受控桥接加一对32/2 P0/P1（1受控进程/1profile、2模型进程/1profile）；30～60min/12GiB临时数据为未批准估算、安装/环境大小未知。无相关服务器环境目标，当前无需查询原Windows或操作服务器；不新增长期副本/监控/Q0全重跑。后续按工作量/资源选点，不以wait比例挑选，公平保留同窗baseline、零变化/API主导/无增益或不确定结果。四对旧计划保留暂停说明；用户DOCX/未跟踪大型原件保留，不stage、不清理。
+
+本轮验证仅文档：新报告及历史计划的21个相对文件链接有效，公共新报告私有路径/凭证检查通过；runner/analyzer/tests/scripts、contracts及签署0.1.1零diff，用户DOCX hash保持`7e630e4a…`。未运行pytest、模型或离线计算；不是新资格证据。fetch只核对远端，不变更执行/分析身份。
+
 ## 7.144 完成路径科学边界、residual区间审查及四对Pilot待审方案（2026-10-13）
+
+> 历史待审计划；四对追加Pilot已由7.145暂停，以下当时“最高优先级”不再是执行指令。
 
 **Gate13限定PASS、Gate14 NOT_RUN；现有C0/Cpre仅Engineering局部证据，未来Pilot NOT_RUN。** [现行解释与计划0.1](completion_path_scientific_review_and_pilot_plan_v0_1.md)对应研究设计v7.1/Pre-Pilot协议v2.1、已签署G12-ROUTEA/0.1.1及分域/opaque批准边界。G32/G512、N0/Nmarker/N16原Formal结论不变；B1/B4与C0/Cpre不升级，旧w11仍Prototype。统一的是Host-readable completion，Cpre只是同端点下的显式干预，不能因wait变大而替换自然C0/G1或声称恢复全部GPU阻塞；vLLM只可讨论语义端点可移植，具体多进程/调度/流与ownership需以后适用性资格，不按同步位置强制统一。
 
