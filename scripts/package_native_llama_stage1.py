@@ -1,0 +1,116 @@
+"""Build the offline delivery locally, never run toolchain or model programs."""
+import argparse
+import csv
+from email.parser import Parser
+import hashlib
+import io
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import zipfile
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from exposedpath import native_stage1 as stage, native_llama as native
+
+
+def git(*args):return subprocess.check_output(['git',*map(str,args)])
+
+
+def create_execution_bundle(repo,commit,prerequisite,bundle):
+    stage.require(git('-C',repo,'rev-parse','HEAD').decode().strip()==commit,'BUNDLE_HEAD')
+    git('-C',repo,'merge-base','--is-ancestor',prerequisite,commit)
+    git('-C',repo,'bundle','create',bundle,'HEAD','^'+prerequisite)
+    stage.require(git('bundle','list-heads',bundle).decode().strip()==commit+' HEAD','BUNDLE_ADVERTISED_IDENTITY')
+
+
+def index(root):
+    root=Path(root)
+    return [dict(path=p.relative_to(root).as_posix(),size_bytes=p.stat().st_size,sha256=stage.digest(p))
+        for p in sorted(root.rglob('*')) if p.is_file()]
+
+
+def zip_tree(root,archive,*,subset=None):
+    root=Path(root);rows=index(root) if subset is None else subset
+    with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED,allowZip64=True) as z:
+        for r in rows:z.write(stage.checked(root,r['path']),r['path'])
+    return rows
+
+
+def assemble(destination,*,commit,prerequisite,engine_source,nvtx_source,wheels,hf_evidence,server):
+    destination=Path(destination).resolve()
+    if destination.exists():raise FileExistsError(destination)
+    stage.require(git('rev-parse',commit).decode().strip()==commit,'COMMIT')
+    stage.require(git('-C',engine_source,'rev-parse','HEAD').decode().strip()==native.ENGINE_COMMIT,'ENGINE_COMMIT')
+    stage.require(not git('-C',engine_source,'status','--porcelain').strip(),'ENGINE_DIRTY')
+    stage.require(stage.digest(Path(engine_source)/'ggml/src/ggml-cuda/ggml-cuda.cu')==native.BACKEND_SHA256,'ENGINE_BYTES')
+    nvtx_commit='6230bdf710bc94f44d433acceba735aaa9090ba5'
+    stage.require(git('-C',nvtx_source,'rev-parse','HEAD').decode().strip()==nvtx_commit,'NVTX_COMMIT')
+    destination.mkdir(parents=True)
+    # Local fixed source snapshot contains its shallow Git object/identity, but
+    # no checkout of the research repo and no third-party code is pushed to ours.
+    rows=zip_tree(engine_source,destination/'llama_source.zip')
+    stage.write(destination/'llama_source_manifest.json',dict(engine_commit=native.ENGINE_COMMIT,files=rows))
+    nvtx_root=Path(nvtx_source)/'c'
+    nvtx_rows=index(nvtx_root/'include')
+    with zipfile.ZipFile(destination/'nvtx_headers.zip','x',zipfile.ZIP_DEFLATED) as z:
+        for r in nvtx_rows:z.write(nvtx_root/'include'/r['path'],'include/'+r['path'])
+        z.write(Path(nvtx_source)/'LICENSE.txt','LICENSE.txt')
+    bundle=destination/'execution.bundle'
+    create_execution_bundle('.',commit,prerequisite,bundle)
+    # HEAD is inside this sealed bundle and checked against commit before/after
+    # creation and fetch; it is NOT a remote floating main reference.
+    wheelroot=destination/'wheels';wheelroot.mkdir()
+    lock=[];packages=[];probe_sha=None
+    for p in sorted(Path(wheels).glob('*.whl')):
+        with zipfile.ZipFile(p) as z:
+            metadata=Parser().parsestr(z.read(next(n for n in z.namelist() if n.endswith('.dist-info/METADATA'))).decode())
+            if metadata['Name']=='cmake':
+                name=next(n for n in z.namelist() if n.endswith('/Internal/CMakeCUDAArchitecturesNative.cmake'))
+                probe_sha=hashlib.sha256(z.read(name)).hexdigest()
+        checksum=stage.digest(p);shutil.copyfile(p,wheelroot/p.name)
+        lock.append(metadata['Name']+'=='+metadata['Version']+' --hash=sha256:'+checksum)
+        packages.append(dict(name=metadata['Name'],version=metadata['Version'],filename=p.name,sha256=checksum))
+    stage.require(probe_sha is not None and any(r['name']=='torch' and r['version']=='2.11.0+cpu' for r in packages),'CPU_WHEELS')
+    (destination/'requirements.lock').write_text('\n'.join(lock)+'\n',encoding='utf-8')
+    stage.write(destination/'dependencies.json',dict(engine_commit=native.ENGINE_COMMIT,nvtx_commit=nvtx_commit,
+        python='3.11 Windows x64',packages=packages,gguf='fixed engine gguf-py (not PyPI)',
+        sources=['https://github.com/ggml-org/llama.cpp','https://github.com/NVIDIA/NVTX',
+                 'https://pypi.org/simple','https://download.pytorch.org/whl/cpu']))
+    stage.require(stage.digest(hf_evidence)=='71ee4b6d618bf12acf937acac75673c06453236531af4d25eab2da765b14fd19','HF_SOURCE_ARCHIVE_IDENTITY')
+    with zipfile.ZipFile(hf_evidence) as z:data=z.read('model_sha256.csv')
+    checksum=hashlib.sha256(data).hexdigest()
+    stage.require(checksum=='72465c906baeb0cfa4fd94d21ef6c69c1cd8046bb68c61a94c02a1580d2541f9','HF_MANIFEST_IDENTITY')
+    (destination/'model_sha256.csv').write_bytes(data)
+    facts=[dict(path=r['RelativePath'].replace('\\','/'),size_bytes=int(r['Bytes']),sha256=r['SHA256'].lower())
+        for r in csv.DictReader(io.StringIO(data.decode('utf-8-sig'),newline=''))]
+    stage.write(destination/'hf_reference.json',dict(source_manifest_sha256=checksum,files=facts,
+        evidence_zip_sha256=stage.digest(hf_evidence),source_member='model_sha256.csv',
+        role='Historical model-content snapshot, not new runtime or qualification evidence'))
+    for source,target in [('exposedpath/native_stage1.py','native_stage1.py'),('scripts/run_native_llama_stage1.ps1','run_native_llama_stage1.ps1')]:
+        (destination/target).write_bytes(git('show',commit+':'+source))
+    cfg=dict(server,schema_version=stage.VERSION,execution_commit=commit,prerequisite=prerequisite,
+        bundle_ref='HEAD',engine_commit=native.ENGINE_COMMIT,cmake_probe_sha256=probe_sha,
+        hf_manifest_sha256=checksum,model_process_budget=0,profile_budget=0,
+        native_source_paths=['native/llama_cpp/'+n for n in ('main.cpp','observer.cpp','observer.hpp','producer_core.hpp','CMakeLists.txt')])
+    stage.write(destination/'config.json',cfg)
+    stage.write(destination/'package_manifest.json',dict(schema_version=stage.VERSION,execution_commit=commit,files=index(destination)))
+    archive=destination.with_suffix('.zip');zip_tree(destination,archive)
+    with zipfile.ZipFile(archive) as z:stage.require(z.testzip() is None,'FINAL_ZIP_CRC')
+    return dict(path=str(archive),size_bytes=archive.stat().st_size,sha256=stage.digest(archive),
+        execution_commit=commit,prerequisite=prerequisite,launcher_sha256=stage.digest(destination/'run_native_llama_stage1.ps1'),
+        manifest_sha256=stage.digest(destination/'package_manifest.json'))
+
+
+def main():
+    p=argparse.ArgumentParser()
+    for name in ('destination','commit','prerequisite','engine-source','nvtx-source','wheels','hf-evidence','server-config'):
+        p.add_argument('--'+name,required=True)
+    a=p.parse_args()
+    result=assemble(a.destination,commit=a.commit,prerequisite=a.prerequisite,engine_source=a.engine_source,
+        nvtx_source=a.nvtx_source,wheels=a.wheels,hf_evidence=a.hf_evidence,server=stage.read(a.server_config))
+    stage.write(Path(a.destination).with_suffix('.identity.json'),result);print(json.dumps(result,indent=2))
+
+
+if __name__=='__main__':main()

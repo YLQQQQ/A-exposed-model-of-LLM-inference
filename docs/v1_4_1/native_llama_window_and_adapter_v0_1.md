@@ -150,5 +150,76 @@ manifest/spec及producer/entry；若采集获批，再含REP/SQLite/export、Can
 成本，不要求wait增大，不授Formal或引擎排名。原件不变；审查与完整归档核验后才另列可恢复
 副本的精确清理清单，本轮不清理。
 
-当前唯一可进入的目标步骤是阶段1，且须另经协调审查/用户执行；本轮没有部署ZIP或默认
-可运行的采集脚本。实际target构建、GGUF事实、native drain/ownership/依赖资格仍未取得。
+实际target构建、GGUF事实、native drain/ownership/依赖资格仍未取得。下面的阶段1交付
+替代此前“未制包”状态；当前唯一可进入的目标步骤仍是阶段1，须协调审查/用户执行。
+
+## 6. 阶段1固定离线交付（7.148；仅本地准备）
+
+`scripts/run_native_llama_stage1.ps1`与`exposedpath/native_stage1.py`是唯一阶段1入口：
+固定增量bundle、固定llama浅Git源码快照、NVTX 3.1.1头文件（commit
+`6230bdf710bc94f44d433acceba735aaa9090ba5`）、Windows/Python3.11完整wheel清单及SHA256
+锁文件均放在同一个忽略的部署ZIP中。目标机不下载源码/依赖、不升级CUDA/driver、不运行
+native-llama、CUDA身份查询、模型forward或collector。原HF位置保持，只读核验原23项清单。
+GGUF转换写新目录；读取实际GGUFReader tensor表与F16/F32计数，不能用`--outtype f16`
+冒充实际全部tensor为F16。缓存辅助文件仍按原清单保留身份，不宣称它们都是模型输入。
+依赖现有VS2022 BuildTools/x64 MSVC14.38.33130及Windows SDK、nvcc12.4.131和CUDA12.4
+runtime DLL、Git及Python3.11/已有pytest。包内不再分发MSVC/Toolkit/driver；缺件即停，
+不自动安装。cl/nvcc实际版本、路径/hash及三项CUDA runtime DLL文件身份纳入回执。
+
+转换用新私有CPU环境：torch 2.11.0+cpu（固定引擎转换requirements要求）、transformers
+4.57.6、numpy2.2.6等；不修改原torch2.6+cu124推理venv。它只读取/变换权重，不运行
+模型；转换后的表示/数值仍不授HF推理等价。revision继续未知。build/conversion回执记录
+原HF清单hash、原始converter/source hash、实际编译参数/cache/toolchain/binary/GGUF
+身份；不能把期望值复制成“实测GPU”字段。
+
+**配置的CUDA副作用已显式处理**：固定CMake3.31.10的`CMakeTestCUDACompiler`在ABI
+编译成功后调用`cmake_cuda_architectures_native`运行CUDA ABI程序，单设sm89仍不足以
+满足本轮禁止初始化CUDA。交付只在新私有CMake环境中、核对原模块SHA256
+`f0958609e1886fd10deb71ba2554d77dde7289608dcd3c54d5b0cd0a19d88145`后，将该函数替换为
+记录“设备探测禁用、native架构未知”的CPU-only函数。原模块另存回执；不修改系统CMake，
+不设`COMPILER_FORCED`/伪造编译成功，正常编译/链接检查仍保留。固定sm89、GGML_NATIVE=OFF、
+禁用FetchContent联网；固定源码中Windows/x64/MSVC所选分支没有另一CUDA程序运行路径。
+[官方检测调用](https://github.com/Kitware/CMake/blob/v3.31.10/Modules/CMakeTestCUDACompiler.cmake)
+与[设备探测模块](https://github.com/Kitware/CMake/blob/v3.31.10/Modules/Internal/CMakeCUDAArchitecturesNative.cmake)。
+
+编译允许调用现有cl/nvcc CPU编译工具；版本检查不是GPU初始化。CPU回归只覆盖交付文件链、
+safe ZIP、来源/内容绑定、工具调用顺序、故障保留和私有CMake函数行为，不授MSVC/CUDA实编译
+通过。目标构建失败即停、不安装替代工具链。构建上限90分钟、转换30分钟；超时只终止该
+直接工具PID，不杀同名进程，后代仍未知则保留状态。回传仅完成的日志和metadata；不证明
+所有后代不存在，也不自动运行下一阶段。
+
+预留20GiB临时磁盘、45–120分钟估计；暂存可以超过长期50GB目标。长期新增应只保留
+必要binary/runtime依赖、GGUF约3.1GB、回执/来源与封存交付，约4–5GiB估计。构建中间件、
+独立CPU转换环境、vendor展开副本可重建，但只能在批次审查/完整归档核验后另列准确清单
+清理；本脚本不清理。若现有长期量加必要保留量超过50GB，应先裁定可恢复副本，不能删除
+HF/Raw/旧证据腾空间。
+
+回传一个metadata ZIP，含完整大小/hash清单、日志、Git/toolchain/CPU原始回执、CMake cache
+与probe原件/patch、GGUF tensor表、build/conversion receipt、失败/退出状态。GGUF和build
+tree不再复制进回传ZIP；实际内容hash钉在回执中，服务器原新目录保留。阶段1成功仅
+`STAGE1_COMPLETE_NOT_QUALIFICATION`；GPU/native资格NOT_RUN，旧Gate13限定PASS不变。
+
+### 阶段2独立预期与停点（仅设计，不附执行入口）
+
+同SDK scheduler/backend调用的受控图：已标注暖机H2D→确定性加法→自然D2H；调用实际
+`ggml_backend_sched_synchronize`（对应`llama_synchronize`下游），返回后才开始测量。
+输入向量`[1,2]+[3,4]`，Host输出必须`[4,6]`，预先固定，不调用S/A自产oracle。首个
+measured图同样加法，随后自然Host读取；第二图只能在首Host token返回后提交。记录实际
+warmup/measured/后提交身份，不假设`n_threads=1`能覆盖native worker。
+
+1. **drain命题**：实际scheduler使用的所有backend/stream/events必须由原API、correlation
+   和调用顺序恢复；drain物理W包含所有语义前驱（已完成成员也保留），必要terminal不晚于
+   成功drain返回。只看到活动end早于返回，或只看到调用名成功，不足以证明闭包。CPU
+   backend无CUDA事件时需其实际完成scope，不把未记录backend推断不存在。
+2. **同步命题**：首sync W必须包含同scope已完成暖机前缀及本轮先行H2D/kernel/D2H；按
+   实际自然调用顺序分别确定，不能把后提交D2H塞入前sync，也不能只选pending活动。用
+   映射实际设备/context/stream和event边验证；native handle不是trace ID、特殊handle不
+   决定LEGACY/PTDS。两模式若依赖集合/terminal不同则INCONCLUSIVE，不用A相等替代。
+3. **局部A命题**：成功drain之后没有未关闭必要前驱/未知跨流边，request/phase与Host
+   token锚点同trace时钟。warmup身份属真实窗外角色，完整物理W仍保留；只有现有合同可
+   支持的局部投影才能不给其预算。若模型实物缺少该ownership、需要native closed-prior
+   增量条款，单独裁决，不凭受控例自动推及模型所有线程/allocator。
+4. **判别/停止**：实际数值错、sync失败、缺mapping/event边、错线程/stream、闭包或
+   ownership无法确定即拒绝；活动交集为零可合法成立，不以较大wait为成功。正例只证明
+   该同调用子域，不能证明全部native模型或B资格。最多1受控进程/1profile待另审，
+   drain/ownership未闭合时不得启动自然P0/P1；本阶段1包没有该程序或自动续采路径。

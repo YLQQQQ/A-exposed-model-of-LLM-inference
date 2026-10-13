@@ -1,5 +1,19 @@
 # ExposedPath 科研进度清单
 
+## 7.148 Windows native阶段1离线固定交付（2026-10-13）
+
+**本项只完成本地交付与CPU验证；目标机阶段1尚未执行，不授GPU资格。** 延续7.147的候选窗口/支持范围，[唯一native入口§6](native_llama_window_and_adapter_v0_1.md)记录固定源码、构建/转换身份和下一阶段独立预期。用户授权单一ZIP、构建/转换/身份检查；不运行服务器、模型/CUDA初始化/Nsight，不自动续至受控桥接或自然P0/P1。Gate13限定PASS、Gate14 NOT_RUN，旧Formal/Raw/BLOCKED/UNKNOWN/NOT_ASSESSED保持；用户DOCX与原件未修改、不stage。
+
+新增`native_stage1.py`、阶段1PowerShell入口及本地packager：固定增量bundle以前次目标机401ed420945472c9612d84b21f6a477abe3c4671为前置，固定llama d81235049384534c167caea52b85a694f6103d14浅源码/Git快照、NVTX3.1.1、CMake3.31.10、Windows/Python3.11 CPU转换完整wheels和SHA256锁。服务器不临时下载、不改变原推理venv/Toolkit/driver；读取原HF快照CSV及其23项字节身份，原manifesthash与源归档引用绑定，转换F16 GGUF另存，实际tensor类型/shape/offset与F16/F32计数来自GGUFReader，revision仍未知。
+
+固定CMake实物中发现ABI编译成功后会运行CUDA架构检测二进制（即使sm89已设），因此仅在全新私有CMake内按原模块hash替换运行探测函数、保留原件与patch回执；不伪造compiler works或跳过编译/链接。构建仍调用已有cl/nvcc CPU工具，且图/native自动探测关闭、FetchContent离线。阶段1命令清单仅部署/CPU依赖检查/compile/convert/inspect，不能启动native-llama或collector。超时保留直接工具与后代UNKNOWN，不杀同名进程/重试/清理。
+
+回传一个小metadata ZIP，含原始日志/退出、Git/toolchain/CPU回执、实际cache/probe原件、GGUF tensor表和build/conversion身份；不重复传送大GGUF/build/env。预留20GiB临时、45–120分钟估计，临时空间可超过长期50GB；长期必要新增约4–5GiB仅为估计，审查归档后再另列可重建副本清理，本轮没有删除。阶段1成功只能STAGE1_COMPLETE_NOT_QUALIFICATION，实际CUDA/native适用性仍NOT_RUN。
+
+阶段2独立预期已收敛到同scheduler/backend的确定性加法及自然Host读回：检查完整暖机/drain前缀、真实stream/event/correlation和ownership、已完成成员与后提交排除；只有成功drain与依赖闭包证据俱全才可讨论局部投影。源码调用名/时间先后不替代依赖；必要native closed-prior若涉及新适用性条款须另审。不借用旧device-wide声明、不自动启动自然模型。
+
+tests-first实际RED包括交付模块缺失、HF原manifest未绑定、离线依赖检查缺接线、literal SHA不能导出bundle引用等；修复后最终命令`python -m pytest -q -p no:cacheprovider tests/test_native_stage1.py tests/test_native_llama.py tests/test_native_llama_scope.py`（mask=-1、独立basetemp）为**60 passed、0 failed、0 skipped，29.58s**。其中阶段1实际文件链以CPU工具替身替换compile/convert，不声称目标构建；真实Git小fixture bundle、实际私有CMake函数、真实PowerShell错误角色入口和原始stderr/失败回执通过。仅新增Python compileall、PowerShell5.1 parser和diff-check通过；未跑全量/完整Q0/旧分析。没有修改runner/completion/流/同步、S/A/B/registry或签署语义。普通工程交付无研究裁决；真实构建及native桥接的资格仍待后续实物，不包装为已通过。
+
 ## 7.147 Windows llama.cpp候选native最小接线与CPU文件链（2026-10-13）
 
 **当前是候选Engineering本地实现，不是新引擎资格/采集授权。** [native窗口/接线0.1](native_llama_window_and_adapter_v0_1.md)为本项入口；保留7.146的操作性Device Exposure口径、PyTorch自然baseline、Cpre受控角色。Gate13限定PASS、Gate14 NOT_RUN及旧Formal/Engineering/Raw/BLOCKED/UNKNOWN/NOT_ASSESSED不变；用户DOCX和scripts未跟踪大ZIP保留、不纳入提交。没有服务器操作、模型/CUDA/Nsight执行、旧分析重算或完整Q0。

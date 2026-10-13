@@ -1,0 +1,338 @@
+"""Offline stage1: compile/convert/file inspection; never execute native binaries.
+
+Safe to use as the byte-bound bootstrap copy in a delivery package. Conversion
+uses a NEW CPU-only environment. No CUDA/Nsight/device-probe imports or commands.
+"""
+import argparse
+import csv
+from collections import Counter
+import hashlib
+import io
+import json
+import os
+from pathlib import Path, PurePosixPath
+import shutil
+import stat
+import subprocess
+import sys
+import time
+import zipfile
+
+VERSION='exposedpath-native-stage1/0.1.0'
+CMAKE_VERSION='3.31.10'
+
+
+def require(ok,reason):
+    if not ok:raise ValueError('NATIVE_STAGE1_'+reason)
+
+
+def digest(path):
+    h=hashlib.sha256()
+    with Path(path).open('rb') as stream:
+        for block in iter(lambda:stream.read(1024*1024),b''):h.update(block)
+    return h.hexdigest()
+
+
+def read(path):return json.loads(Path(path).read_text(encoding='utf-8-sig'))
+
+
+def write(path,value):
+    with Path(path).open('x',encoding='utf-8',newline='\n') as stream:
+        json.dump(value,stream,ensure_ascii=False,sort_keys=True,indent=2);stream.write('\n')
+
+
+def relative(name):
+    require(isinstance(name,str) and name and '\\' not in name and ':' not in name,'PATH')
+    p=PurePosixPath(name)
+    require(not p.is_absolute() and all(t not in ('','.','..') for t in name.split('/')),'PATH')
+    require(all(not t.endswith((' ','.')) and t.split('.')[0].upper() not in
+        {'CON','PRN','AUX','NUL',*(f'COM{i}' for i in range(1,10)),*(f'LPT{i}' for i in range(1,10))} for t in p.parts),'PATH')
+    return p
+
+
+def checked(root,name):
+    root=Path(root).absolute();p=root.joinpath(*relative(name).parts)
+    require(p.resolve().is_relative_to(root.resolve()),'PATH_ESCAPE')
+    for part in (p,*p.parents):
+        if part.exists():require(not part.is_symlink() and not getattr(part.lstat(),'st_file_attributes',0)&0x400,'REPARSE_POINT')
+    return p
+
+
+def extract(archive,output):
+    output=Path(output)
+    if output.exists():raise FileExistsError(output)
+    with zipfile.ZipFile(archive) as z:
+        seen=set()
+        for r in z.infolist():
+            name=r.filename.rstrip('/') if r.is_dir() else r.filename
+            relative(name);require(name.casefold() not in seen,'ZIP_DUPLICATE');seen.add(name.casefold())
+            require(not stat.S_ISLNK(r.external_attr>>16),'ZIP_SYMLINK')
+        require(z.testzip() is None,'ZIP_CRC')
+        output.mkdir(parents=True)
+        for r in z.infolist():
+            p=checked(output,r.filename.rstrip('/'))
+            if r.is_dir():p.mkdir(parents=True,exist_ok=True)
+            else:
+                p.parent.mkdir(parents=True,exist_ok=True)
+                with z.open(r) as src,p.open('xb') as dst:shutil.copyfileobj(src,dst)
+
+
+def verify_files(root,expected):
+    require(isinstance(expected,list) and expected,'EMPTY_FILE_SET')
+    seen=set();issues=[]
+    for r in expected:
+        name=r['path'];p=checked(root,name)
+        require(name.casefold() not in seen,'DUPLICATE');seen.add(name.casefold())
+        if not p.is_file():issues.append(dict(path=name,reason='FILE_MISSING'));continue
+        size=p.stat().st_size;actual=digest(p)
+        if size!=r['size_bytes'] or actual!=r['sha256']:
+            issues.append(dict(path=name,reason='CONTENT_CONFLICT',expected_size_bytes=r['size_bytes'],
+                actual_size_bytes=size,expected_sha256=r['sha256'],actual_sha256=actual))
+    return issues
+
+
+def verify_hf(root,expected):
+    issues=verify_files(root,expected);require(not issues,'HF_CONTENT_CONFLICT:'+json.dumps(issues))
+    config=read(checked(root,'config.json'))
+    require(config.get('model_type')=='qwen2' and config.get('architectures') in (None,['Qwen2ForCausalLM']),'HF_ARCHITECTURE')
+    return expected
+
+
+def bound_hf_reference(package,expected_sha):
+    package=Path(package);source=package/'model_sha256.csv';ref=read(package/'hf_reference.json')
+    require(digest(source)==expected_sha==ref.get('source_manifest_sha256'),'HF_MANIFEST_BINDING')
+    rows=list(csv.DictReader(io.StringIO(source.read_text(encoding='utf-8-sig'),newline='')))
+    facts=[dict(path=r['RelativePath'].replace('\\','/'),size_bytes=int(r['Bytes']),sha256=r['SHA256'].lower()) for r in rows]
+    require(facts and facts==ref['files'],'HF_REFERENCE_CONTENT')
+    return facts
+
+
+PROBE_SHIM='''# Stage1 CPU-only configuration; original saved and SHA256 bound.
+function(cmake_cuda_architectures_native lang)
+  message(STATUS "EXPOSEDPATH_STAGE1_CUDA_DEVICE_PROBE_DISABLED")
+  set(CMAKE_${lang}_ARCHITECTURES_NATIVE "" PARENT_SCOPE)
+endfunction()
+'''
+
+
+def disable_cuda_probe(module,expected_sha,original_copy):
+    module=Path(module);require(digest(module)==expected_sha,'CMAKE_PROBE_SOURCE_CONFLICT')
+    with Path(original_copy).open('xb') as stream:stream.write(module.read_bytes())
+    module.write_bytes(PROBE_SHIM.encode('utf-8')) # private, new environment, not system CMake
+    return dict(original_sha256=expected_sha,patched_sha256=digest(module),
+        purpose='DISABLE_RUN_OF_CUDA_ABI_PROBE_ONLY',compile_and_link_checks_retained=True)
+
+
+def inspect_gguf(path,*,reader_factory=None):
+    if reader_factory is None:
+        from gguf import GGUFReader
+        reader_factory=lambda p:GGUFReader(p,mode='r')
+    r=reader_factory(str(path));architecture=r.fields['general.architecture'].contents()
+    require(architecture=='qwen2','GGUF_ARCHITECTURE')
+    types=Counter();tensors=[];names=set()
+    for t in r.tensors:
+        typ=t.tensor_type.name;require(typ in ('F16','F32'),'GGUF_QUANTIZED_OR_UNKNOWN_TYPE')
+        require(t.name not in names and int(t.n_bytes)>0,'GGUF_TENSOR_CONFLICT');names.add(t.name)
+        types[typ]+=1
+        tensors.append(dict(name=t.name,type=typ,shape=[int(x) for x in t.shape],
+            size_bytes=int(t.n_bytes),data_offset=int(t.data_offset)))
+    require(types['F16']>0,'GGUF_NO_F16')
+    return dict(architecture=architecture,tensor_types=dict(types),tensors=tensors)
+
+
+def command_plan(code,engine,root,hf,nvtx,cuda):
+    code,engine,root,hf,nvtx,cuda=map(Path,(code,engine,root,hf,nvtx,cuda))
+    return [dict(name='configure',arguments=['-S',str(code/'native/llama_cpp'),'-B',str(root/'build'),
+        '-G','Visual Studio 17 2022','-A','x64','-T','version=14.38.33130',
+        '-DLLAMA_SOURCE_ROOT='+str(engine),'-DNATIVE_PATCHED_BACKEND='+str(root/'backend.cu'),
+        '-DNVTX_INCLUDE_ROOT='+str(nvtx),'-DCUDAToolkit_ROOT='+str(cuda),
+        '-DCMAKE_CUDA_ARCHITECTURES=89','-DFETCHCONTENT_FULLY_DISCONNECTED=ON',
+        '-DGGML_CCACHE=OFF','-DGGML_CPU_KLEIDIAI=OFF','-DGGML_CUDA_CCCL_VERSION=',
+        '-DGGML_OPENMP_FETCH=OFF','-DGGML_CUDA_NCCL=OFF',
+        '-DLLAMA_BUILD_COMMON=OFF','-DLLAMA_BUILD_APP=OFF','-DLLAMA_BUILD_SERVER=OFF']),
+        dict(name='build',arguments=['--build',str(root/'build'),'--config','Release','--target','native-llama',
+            '--parallel','2','--','/nodeReuse:false']),
+        dict(name='convert',arguments=[str(engine/'convert_hf_to_gguf.py'),str(hf),'--outfile',str(root/'model-f16.gguf'),'--outtype','f16']),
+        dict(name='inspect',arguments=['inspect','--model',str(root/'model-f16.gguf'),'--engine',str(engine),'--output',str(root/'gguf_inspection.json')])]
+
+
+class Runner:
+    def __init__(self,root):self.root=Path(root);self.records=[]
+    def run(self,name,argv,*,env=None,timeout=120,cwd=None):
+        logs=self.root/'logs';logs.mkdir(exist_ok=True)
+        start=time.monotonic();rec=dict(name=name,argv=[str(x) for x in argv],exit_code=None,
+            timed_out=False,started_utc=time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime()))
+        try:
+            with (logs/(name+'.stdout.txt')).open('xb') as out,(logs/(name+'.stderr.txt')).open('xb') as err:
+                p=subprocess.Popen(rec['argv'],stdout=out,stderr=err,env=env,cwd=cwd,shell=False)
+                rec['pid']=p.pid
+                try:
+                    while True:
+                        remaining=timeout-(time.monotonic()-start)
+                        if remaining<=0:raise subprocess.TimeoutExpired(rec['argv'],timeout)
+                        try:rec['exit_code']=p.wait(timeout=min(20,remaining));break
+                        except subprocess.TimeoutExpired:
+                            print(f'[progress] {name} pid={p.pid} elapsed={time.monotonic()-start:.1f}s',flush=True)
+                except subprocess.TimeoutExpired:
+                    rec['timed_out']=True;p.kill();rec['exit_code']=p.wait(timeout=10)
+                    rec['descendant_exit_status']='UNKNOWN_STOP_AND_INSPECT_NO_RETRY'
+                    raise RuntimeError('STAGE1_TIMEOUT_NO_RETRY:'+name)
+            require(rec['exit_code']==0,'STEP_EXIT:'+name)
+            return (logs/(name+'.stdout.txt')).read_bytes()
+        except BaseException as error:rec['error']=str(error);raise
+        finally:
+            rec['elapsed_seconds']=time.monotonic()-start;self.records.append(rec)
+            write(logs/(name+'.json'),rec)
+
+
+def execute(config,package,root,*,runner=None):
+    """Root already created by PS with its transcript; no retries or resume."""
+    cfg=read(config);package=Path(package);root=Path(root);code=Path(cfg['code_root'])
+    require(cfg['schema_version']==VERSION and cfg['model_process_budget']==cfg['profile_budget']==0,'ROLE_OR_BUDGET')
+    require(root.resolve().is_relative_to(Path(cfg['server_root']).resolve()/'diagnostics'),'OUTPUT_SCOPE')
+    runner=runner or Runner(root)
+    receipt=dict(schema_version=VERSION,status='BLOCKED',error=None,execution_commit=cfg['execution_commit'],
+        gpu_qualification='NOT_RUN',model_executed=False,cuda_initialization_program_invoked=False,collector_executed=False,
+        measurement_validity='NOT_ASSESSED',dropped_records_status='UNKNOWN',automatic_retry=False)
+    env=dict(os.environ,CUDA_VISIBLE_DEVICES='-1',HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',
+        HF_HOME=str(root/'hf-cache'),PYTHONNOUSERSITE='1',PYTHONUTF8='1',PIP_NO_INDEX='1',PIP_DISABLE_PIP_VERSION_CHECK='1')
+    try:
+        issues=verify_files(package,read(package/'package_manifest.json')['files']);require(not issues,'PACKAGE_CONFLICT:'+json.dumps(issues))
+        head=runner.run('git_head',[cfg['git'],'-C',code,'rev-parse','HEAD']).decode('ascii').strip()
+        dirty=runner.run('git_clean',[cfg['git'],'-C',code,'status','--porcelain']).strip()
+        require(head==cfg['execution_commit'] and not dirty,'CHECKOUT_IDENTITY')
+        expected=bound_hf_reference(package,cfg['hf_manifest_sha256']);verify_hf(cfg['model_root'],expected)
+        write(root/'hf_input_check.json',dict(source_manifest_sha256=cfg['hf_manifest_sha256'],files=expected))
+        engine=root/'engine';extract(package/'llama_source.zip',engine)
+        require(not verify_files(engine,read(package/'llama_source_manifest.json')['files']),'ENGINE_SOURCE_CONFLICT')
+        ehead=runner.run('engine_head',[cfg['git'],'-C',engine,'rev-parse','HEAD']).decode('ascii').strip()
+        require(ehead==cfg['engine_commit'] and not runner.run('engine_clean',[cfg['git'],'-C',engine,'status','--porcelain']).strip(),'ENGINE_COMMIT_OR_DIRTY')
+        nvtx=root/'nvtx';extract(package/'nvtx_headers.zip',nvtx)
+        runner.run('python_identity',[cfg['base_python'],'-I','-c',
+            'import sys,json; assert sys.version_info[:2]==(3,11); print(json.dumps({"executable":sys.executable,"version":sys.version}))'])
+        runner.run('create_cpu_environment',[cfg['base_python'],'-I','-m','venv',root/'converter'],env=env)
+        py=root/'converter/Scripts/python.exe'
+        runner.run('offline_dependencies',[py,'-I','-m','pip','install','--no-index','--no-deps','--require-hashes',
+            '--find-links',package/'wheels','-r',package/'requirements.lock'],env=env,timeout=600)
+        runner.run('dependency_check',[py,'-I','-m','pip','check'],env=env)
+        cmake=root/'converter/Lib/site-packages/cmake/data/bin/cmake.exe'
+        module=root/'converter/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CMakeCUDAArchitecturesNative.cmake'
+        write(root/'cmake_probe_patch.json',disable_cuda_probe(module,cfg['cmake_probe_sha256'],root/'CMakeCUDAArchitecturesNative.original.cmake'))
+        cv=runner.run('cmake_version',[cmake,'--version']).decode('utf-8')
+        require(cv.splitlines()[0]=='cmake version '+CMAKE_VERSION,'CMAKE_VERSION')
+        sys.path.insert(0,str(code))
+        from exposedpath import native_llama as native
+        native.instrument_backend(engine/'ggml/src/ggml-cuda/ggml-cuda.cu',root/'backend.cu')
+        env['PYTHONPATH']=str(engine/'gguf-py')
+        runner.run('cpu_dependencies',[py,'-c',
+            'import torch,transformers,numpy,json; assert torch.__version__=="2.11.0+cpu" and torch.version.cuda is None; '
+            'assert transformers.__version__=="4.57.6" and numpy.__version__=="2.2.6"; '
+            'print(json.dumps({"torch":torch.__version__,"cuda_build":torch.version.cuda,"transformers":transformers.__version__,"numpy":numpy.__version__}))'],env=env)
+        # Target-related tests use existing pytest, not the conversion dependency
+        # environment. Explicit CMake is the already patched private CPU tool.
+        test_env=dict(env,EXPOSEDPATH_TEST_CMAKE=str(cmake))
+        if 'test_python' in cfg:
+            runner.run('cpu_regression',[cfg['test_python'],'-X','utf8','-m','pytest','-q','-p','no:cacheprovider',
+                'tests/test_native_stage1.py','--basetemp',root/'cpu-tests'],env=test_env,cwd=code,timeout=300)
+        plan=command_plan(code,engine,root,cfg['model_root'],nvtx/'include',cfg['cuda_root'])
+        for s in plan:
+            print('[stage] '+s['name']+' START',flush=True)
+            exe=cmake if s['name'] in ('configure','build') else py
+            args=s['arguments'] if s['name']!='inspect' else [str(package/'native_stage1.py'),*s['arguments']]
+            runner.run(s['name'],[exe,*args],env=env,timeout=5400 if s['name']=='build' else 1800)
+            print('[stage] '+s['name']+' COMPLETE',flush=True)
+        cache=read_cache(root/'build/CMakeCache.txt')
+        require(cache.get('CMAKE_CUDA_ARCHITECTURES')=='89' and cache.get('GGML_CUDA_GRAPHS')=='OFF'
+            and cache.get('GGML_NATIVE')=='OFF' and cache.get('FETCHCONTENT_FULLY_DISCONNECTED')=='ON','CMAKE_CACHE_CONFLICT')
+        shutil.copyfile(root/'build/CMakeCache.txt',root/'CMakeCache.review.txt')
+        binary=root/'build/bin/Release/native-llama.exe'
+        require(binary.is_file(),'BINARY_MISSING')
+        inspections=read(root/'gguf_inspection.json')
+        build=dict(schema_version=native.BUILD_VERSION,engine_commit=cfg['engine_commit'],execution_commit=head,dirty=False,
+            binary=native._ref(binary),configuration=native.build_configuration(),
+            backend_original_sha256=native.BACKEND_SHA256,backend_instrumented_sha256=digest(root/'backend.cu'),
+            native_source_sha256=hashlib.sha256(json.dumps({p:digest(code/p) for p in cfg['native_source_paths']},sort_keys=True).encode()).hexdigest(),
+            actual_cache=cache,toolchain=read(root/'toolchain.json'),cmake_probe_patch=read(root/'cmake_probe_patch.json'))
+        conversion=dict(schema_version=native.CONVERSION_VERSION,engine_commit=cfg['engine_commit'],
+            hf_snapshot_manifest_sha256=cfg['hf_manifest_sha256'],converter_source_sha256=digest(engine/'convert_hf_to_gguf.py'),
+            conversion_arguments=['--outtype','f16'],model=native._ref(root/'model-f16.gguf'),architecture=inspections['architecture'],
+            tensor_types=inspections['tensor_types'],revision=None,actual_tensor_inspection_sha256=digest(root/'gguf_inspection.json'))
+        native._validate_receipts(build,conversion)
+        verify_hf(cfg['model_root'],expected)
+        write(root/'build_receipt.json',build);write(root/'conversion_receipt.json',conversion)
+        receipt.update(status='STAGE1_COMPLETE_NOT_QUALIFICATION',source_model_unchanged=True,
+            build_receipt_sha256=digest(root/'build_receipt.json'),conversion_receipt_sha256=digest(root/'conversion_receipt.json'))
+    except BaseException as error:receipt['error']=str(error);raise
+    finally:
+        receipt['steps']=runner.records;write(root/'receipt.json',receipt)
+
+
+def deploy(config,package,root):
+    cfg=read(config);package=Path(package);root=Path(root);runner=Runner(root)
+    value=dict(status='BLOCKED',error=None,execution_commit=cfg['execution_commit'])
+    try:
+        code=Path(cfg['code_root']);git=cfg['git']
+        head=runner.run('deploy_head',[git,'-C',code,'rev-parse','HEAD']).decode('ascii').strip()
+        require(head==cfg['prerequisite'],'DEPLOY_PREREQUISITE')
+        require(not runner.run('deploy_clean',[git,'-C',code,'status','--porcelain']).strip(),'DEPLOY_DIRTY')
+        runner.run('bundle_verify',[git,'-C',code,'bundle','verify',package/'execution.bundle'])
+        runner.run('bundle_fetch',[git,'-C',code,'fetch',package/'execution.bundle',cfg['bundle_ref']])
+        fetched=runner.run('bundle_head',[git,'-C',code,'rev-parse','FETCH_HEAD']).decode('ascii').strip()
+        require(fetched==cfg['execution_commit'],'BUNDLE_COMMIT')
+        runner.run('checkout',[git,'-C',code,'checkout','--detach',cfg['execution_commit']])
+        require(not runner.run('deployed_clean',[git,'-C',code,'status','--porcelain']).strip(),'DEPLOY_FINAL_DIRTY')
+        value['status']='DEPLOYED_NOT_QUALIFICATION'
+    except BaseException as error:value['error']=str(error);raise
+    finally:value['steps']=runner.records;write(root/'deploy_receipt.json',value)
+
+
+def read_cache(path):
+    out={}
+    for line in Path(path).read_text(encoding='utf-8').splitlines():
+        if not line or line.startswith(('#','//')) or ':' not in line or '=' not in line:continue
+        key,rest=line.split(':',1);out[key]=rest.split('=',1)[1]
+    return out
+
+
+def pack_review(root,archive):
+    root=Path(root).resolve();archive=Path(archive).resolve()
+    require(not archive.exists() and not archive.is_relative_to(root),'RETURN_OVERWRITE_OR_SCOPE')
+    # Explicit review products, NOT model, environment, source or build artifacts.
+    files=sorted([p for p in root.glob('*.json') if p.is_file()]+[p for p in (root/'logs').glob('*') if p.is_file()])
+    for name in ('transcript.txt','CMakeCUDAArchitecturesNative.original.cmake','CMakeCache.review.txt'):
+        p=root/name
+        if p.is_file():files.append(p)
+    refs=[dict(path=p.relative_to(root).as_posix(),size_bytes=p.stat().st_size,sha256=digest(p)) for p in files]
+    require(refs,'RETURN_EMPTY')
+    with zipfile.ZipFile(archive,'x',compression=zipfile.ZIP_DEFLATED,allowZip64=True) as z:
+        for p,r in zip(files,refs):z.write(p,r['path'])
+        z.writestr('artifact_manifest.json',json.dumps(dict(schema_version=VERSION,files=refs),sort_keys=True,indent=2)+'\n')
+    require(not verify_files(root,refs),'RETURN_SOURCE_CHANGED')
+    with zipfile.ZipFile(archive) as z:
+        require(z.testzip() is None and len(z.namelist())==len(refs)+1,'RETURN_CRC_OR_COVERAGE')
+        for r in refs:require(hashlib.sha256(z.read(r['path'])).hexdigest()==r['sha256'],'RETURN_CONTENT')
+    return dict(path=str(archive),size_bytes=archive.stat().st_size,sha256=digest(archive),files=len(refs))
+
+
+def main():
+    p=argparse.ArgumentParser();s=p.add_subparsers(dest='action',required=True)
+    r=s.add_parser('run');r.add_argument('--config',required=True);r.add_argument('--package',required=True);r.add_argument('--root',required=True)
+    r=s.add_parser('deploy');r.add_argument('--config',required=True);r.add_argument('--package',required=True);r.add_argument('--root',required=True)
+    r=s.add_parser('inspect');r.add_argument('--model',required=True);r.add_argument('--engine',required=True);r.add_argument('--output',required=True)
+    r=s.add_parser('pack');r.add_argument('--root',required=True);r.add_argument('--archive',required=True)
+    r=s.add_parser('verify-package');r.add_argument('--package',required=True)
+    a=p.parse_args()
+    if a.action=='run':execute(a.config,a.package,a.root)
+    elif a.action=='deploy':deploy(a.config,a.package,a.root)
+    elif a.action=='inspect':
+        sys.path.insert(0,str(Path(a.engine)/'gguf-py'));write(a.output,inspect_gguf(a.model))
+    elif a.action=='pack':print(json.dumps(pack_review(a.root,a.archive)))
+    else:
+        manifest=read(Path(a.package)/'package_manifest.json');issues=verify_files(a.package,manifest['files'])
+        actual={p.relative_to(a.package).as_posix() for p in Path(a.package).rglob('*') if p.is_file()}
+        require(actual=={r['path'] for r in manifest['files']}|{'package_manifest.json'},'PACKAGE_COVERAGE')
+        require(not issues,'PACKAGE_HASH_CONFLICT:'+json.dumps(issues))
+    return 0
+
+
+if __name__=='__main__':raise SystemExit(main())
