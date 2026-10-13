@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.144 完成路径科学边界、residual区间审查及四对Pilot待审方案（2026-10-13）
+
+**Gate13限定PASS、Gate14 NOT_RUN；现有C0/Cpre仅Engineering局部证据，未来Pilot NOT_RUN。** [现行解释与计划0.1](completion_path_scientific_review_and_pilot_plan_v0_1.md)对应研究设计v7.1/Pre-Pilot协议v2.1、已签署G12-ROUTEA/0.1.1及分域/opaque批准边界。G32/G512、N0/Nmarker/N16原Formal结论不变；B1/B4与C0/Cpre不升级，旧w11仍Prototype。统一的是Host-readable completion，Cpre只是同端点下的显式干预，不能因wait变大而替换自然C0/G1或声称恢复全部GPU阻塞；vLLM只可讨论语义端点可移植，具体多进程/调度/流与ownership需以后适用性资格，不按同步位置强制统一。
+
+复用7.143原输入/结果/分析绑定，仅执行5.416s局部Raw引用与独立半开区间算术，不重跑S/A/analyzer或实验。Cpre runtime38583/corr200922、physical354：Host包络87.646953ms，1820个已证明request后缀裁剪为709个union区间，wait38.946574；710个补集共48.700379ms。其中**48.658361ms在最后必要ArgMax完成之前，0.042018ms在其后**。完整Raw/table/rowid/correlation/提交引用及所有区间另存新忽略诊断目录；摘要SHA256 `1995babc7f1c31d4ac3dcb0ef16768e70f2b21da32ab4995657de51fb335ee14`，SQLite/pair hash前后不变。不能把残余全称返回/CPU/硬件/profiler开销，未构造物理W/B；CUDA API不是纯CPU、submit/non-submit不等阻塞/非阻塞、unattributed=0不是完整机制解释。当前未发现由这些记录证明的分类合同违例；若目标要求全部GPU相关Host阻塞，现证据能力不足不能文字掩盖。
+
+论文提纲公平保留同窗常规baseline与无增益/反向/不确定结果、P0性能/P1观测分开；不迁移P1精确组成或把copy差解释为内部等待。拟同期4个完整配对block、C0→Cpre与反向各两次，共8个新P1进程/8profile、0P0；固定512×4/o2/w3/r1与现自然实际流/Host边界，仅Prefill局部资格。方向/次数/记录/比较/硬停已在待审计划锁定，无试跑、重试、替补、自动扩预算；真实Pilot角色/八槽顺序接线仍是将来最小实现，不能改旧Engineering名称。依据两旧driver192.687/261.610s、有限目录字节，预算估计45～60分钟/临时5GiB；长期50GB十进制政策不变，实际服务器总量/清理回执未取得，不称已清理。补充Formal须另版本协议和未来新采，现Formal不改。
+
+本轮只更新一份审查/计划、当前索引与进度/handoff；未改runner/测量/分类/schema/合同、未生成可采集入口、部署包或清理命令，不跑pytest/完整Q0/CUDA/Nsight/模型。文档链接、残余源绑定/独立算术、隐私/diff和用户DOCX不变检查为实际验证；官方资料仅用于解释现合同及未来引擎架构，不新增宽泛调查。最高优先级：协调审查本四对Pilot范围/预算后，再决定本地最小角色接线与交付；当前无服务器操作。用户DOCX和未跟踪原ZIP保留不stage，原Raw/BLOCKED/UNKNOWN/NOT_ASSESSED不改。
+
 ## 7.143 Cpre闭合异线程历史前缀修复与C0/Cpre局部离线收口（2026-10-12）
 
 **C0/Cpre Prefill局部Engineering离线审查完成；原batch/collection BLOCKED不改，Request/Decode仍不准入。Gate13限定PASS、Gate14 NOT_RUN保持。** [当前审查7.143](batch_load_prefill_review_v0_1.md#7143-cpre闭合历史前缀修复与最终局部对照)复核12,169,554-byte ZIP/SHA256 `71ee4b6d618bf12acf937acac75673c06453236531af4d25eab2da765b14fd19`：CRC/安全路径/无重复、111文件、110项主清单与21项静态子清单全部匹配；主清单SHA256 `2054367978a6d584fb72b45f2a07a3d211ed8580a2d16127af890689d41b3c42`。原C0 ZIP嵌入副本与已核验c181d834…原件相同。Cpre执行401ed4209454，目标PID59636 exit0、producer COMPLETE、collector38.625s/exit0/export PASS；旧错误52.027s真实复现为`COMPLETION_PATH_PRE_SYNC_PREFIX_SCOPE`，不是模型/采集失败。

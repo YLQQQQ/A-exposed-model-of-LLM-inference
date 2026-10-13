@@ -149,6 +149,8 @@ CPU独立预期：已完成前缀[1,5)、K1[10,30)、K2[30,40)，均在预同步
 
 ## 7.143 Cpre闭合历史前缀修复与最终局部对照
 
+当前科学解释、跨引擎边界及尚未执行的四对重复计划见[7.144审查与计划](completion_path_scientific_review_and_pilot_plan_v0_1.md)。下述Engineering实物结论保持；新计划不是Pilot采集授权或Formal升级。
+
 **2026-10-12，Engineering局部离线审查完成；不是新采集、原attempt改判或Formal增量。** Cpre原ZIP12,169,554 bytes/SHA256 `71ee4b6d618bf12acf937acac75673c06453236531af4d25eab2da765b14fd19`，主清单`2054367978a6d584fb72b45f2a07a3d211ed8580a2d16127af890689d41b3c42`；111文件/110主清单及21静态子清单CRC/路径/全覆盖hash通过。C0执行19f7c6020abf，Cpre执行401ed4209454；先前源码兼容引用、同模型/输入/512×4/o2/w3/r1与两个四样本实测token逐值相同。原Cpre采集/export成功，分析0.1.0因`PRE_SYNC_PREFIX_SCOPE`停止；原collection和batch仍BLOCKED。
 
 ### 合同判断与修复边界
