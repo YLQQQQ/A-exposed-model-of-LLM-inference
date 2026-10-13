@@ -155,6 +155,10 @@ manifest/spec及producer/entry；若采集获批，再含REP/SQLite/export、Can
 
 ## 6. 阶段1固定离线交付（7.148；仅本地准备）
 
+> 7.149：首次cc9b595阶段1已在源码Git身份检查处BLOCKED，尚未建立CPU转换环境、编译或
+> 转换。文件专用ZIP遗漏空`.git/refs`导致Git exit128；下述目录保全修复仅供全新attempt，
+> 不恢复原入口或更改旧失败状态。固定源码/依赖/构建参数、GPU预算0及资格边界保持。
+
 `scripts/run_native_llama_stage1.ps1`与`exposedpath/native_stage1.py`是唯一阶段1入口：
 固定增量bundle、固定llama浅Git源码快照、NVTX 3.1.1头文件（commit
 `6230bdf710bc94f44d433acceba735aaa9090ba5`）、Windows/Python3.11完整wheel清单及SHA256
@@ -225,3 +229,19 @@ warmup/measured/后提交身份，不假设`n_threads=1`能覆盖native worker�
    ownership无法确定即拒绝；活动交集为零可合法成立，不以较大wait为成功。正例只证明
    该同调用子域，不能证明全部native模型或B资格。最多1受控进程/1profile待另审，
    drain/ownership未闭合时不得启动自然P0/P1；本阶段1包没有该程序或自动续采路径。
+
+### 7.149 目录保全修复与依赖复用
+
+新源码归档显式写入目录成员，含空Git refs/objects/info；对于已封存旧文件专用ZIP，
+只按`exposedpath-native-source-layout/0.1.0`的哈希绑定目录清单恢复到新目录。清单来自
+原producer快照，其3712个文件与旧归档文件清单逐字节一致；不是在失败现场猜测补目录。
+源码ZIP仍保持原字节，新增目录不改变任何文件，恢复后再次核验文件/目录集合。
+
+Git查询与CMake都显式指定源码自己的`--git-dir`/`--work-tree`；核对绝对Git目录、顶层、
+固定HEAD及clean，结构缺失/父仓库/错误HEAD不能通过。身份查询禁用可选锁刷新，防止
+只读`git status`改变封存index字节；原source/hash/commit要求不放宽。
+
+修复交付以前置cc9b595为基线，只含增量bundle、控制脚本、目录清单与新配置。已传完整
+离线包作为只读资产根，原manifest SHA256与全部40项当前文件/覆盖严格核验；缺失、
+变化、reparse或错来源即停。旧package/失败树不写入，不复用旧展开engine或转换环境；
+在全新root重新完成阶段1，没有模型/GPU探测/Nsight入口。回传仍一个metadata ZIP。

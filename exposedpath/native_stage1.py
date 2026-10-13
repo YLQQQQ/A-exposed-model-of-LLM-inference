@@ -77,6 +77,38 @@ def extract(archive,output):
                 with z.open(r) as src,p.open('xb') as dst:shutil.copyfileobj(src,dst)
 
 
+def restore_source(archive,output,files,layout=None):
+    if layout is not None:
+        require(layout.get('schema_version')=='exposedpath-native-source-layout/0.1.0','SOURCE_LAYOUT_VERSION')
+        require(digest(archive)==layout['source_archive_sha256'],'SOURCE_LAYOUT_ARCHIVE')
+        names=layout['directories'];require(isinstance(names,list) and names,'SOURCE_LAYOUT_EMPTY')
+        require(len(names)==len(set(n.casefold() for n in names)),'SOURCE_LAYOUT_DUPLICATE')
+        for name in names:relative(name)
+    extract(archive,output)
+    if layout is not None:
+        for name in names:checked(output,name).mkdir(parents=True,exist_ok=True)
+        actual={p.relative_to(output).as_posix() for p in Path(output).rglob('*') if p.is_dir()}
+        require(actual==set(names),'SOURCE_DIRECTORY_SET')
+    require(not verify_files(output,files),'ENGINE_SOURCE_CONFLICT')
+
+
+def inspect_repository(root,expected_commit,git,runner):
+    root=Path(root).resolve()
+    require(checked(root,'.git').is_dir() and checked(root,'.git/HEAD').is_file()
+        and checked(root,'.git/objects').is_dir() and checked(root,'.git/refs').is_dir()
+        and not (root/'.git/commondir').exists(),'GIT_STRUCTURE')
+    env={k:v for k,v in os.environ.items() if not k.startswith('GIT_')}
+    env['GIT_OPTIONAL_LOCKS']='0' # read-only identity queries must not refresh index bytes
+    prefix=[git,'--git-dir='+str(root/'.git'),'--work-tree='+str(root),'-C',root]
+    gdir=runner.run('engine_gitdir',[*prefix,'rev-parse','--absolute-git-dir'],env=env).decode('utf-8').strip()
+    top=runner.run('engine_toplevel',[*prefix,'rev-parse','--show-toplevel'],env=env).decode('utf-8').strip()
+    require(Path(gdir).resolve()==root/'.git' and Path(top).resolve()==root,'ENGINE_REPOSITORY_SCOPE')
+    head=runner.run('engine_head',[*prefix,'rev-parse','HEAD'],env=env).decode('ascii').strip()
+    require(head==expected_commit,'ENGINE_COMMIT')
+    require(not runner.run('engine_clean',[*prefix,'status','--porcelain'],env=env).strip(),'ENGINE_DIRTY')
+    return dict(git_directory=str(Path(gdir).resolve()),work_tree=str(Path(top).resolve()),commit=head,dirty=False)
+
+
 def verify_files(root,expected):
     require(isinstance(expected,list) and expected,'EMPTY_FILE_SET')
     seen=set();issues=[]
@@ -89,6 +121,21 @@ def verify_files(root,expected):
             issues.append(dict(path=name,reason='CONTENT_CONFLICT',expected_size_bytes=r['size_bytes'],
                 actual_size_bytes=size,expected_sha256=r['sha256'],actual_sha256=actual))
     return issues
+
+
+def resolve_assets(package,cfg):
+    package=Path(package).resolve()
+    if 'reuse_dependency_root' not in cfg:
+        require('reuse_manifest_sha256' not in cfg,'REUSED_ROOT_MISSING');return package
+    raw_root=Path(cfg['reuse_dependency_root']).absolute()
+    checked(raw_root,'package_manifest.json') # reject redirected/reparse roots before resolving
+    root=raw_root.resolve()
+    require(digest(root/'package_manifest.json')==cfg['reuse_manifest_sha256'],'REUSED_MANIFEST')
+    expected=read(root/'package_manifest.json')['files']
+    require(not verify_files(root,expected),'REUSED_ASSET_CONTENT')
+    actual={p.relative_to(root).as_posix() for p in root.rglob('*') if p.is_file()}
+    require(actual=={r['path'] for r in expected}|{'package_manifest.json'},'REUSED_ASSET_COVERAGE')
+    return root
 
 
 def verify_hf(root,expected):
@@ -194,26 +241,33 @@ def execute(config,package,root,*,runner=None):
     receipt=dict(schema_version=VERSION,status='BLOCKED',error=None,execution_commit=cfg['execution_commit'],
         gpu_qualification='NOT_RUN',model_executed=False,cuda_initialization_program_invoked=False,collector_executed=False,
         measurement_validity='NOT_ASSESSED',dropped_records_status='UNKNOWN',automatic_retry=False)
-    env=dict(os.environ,CUDA_VISIBLE_DEVICES='-1',HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',
+    env=dict({k:v for k,v in os.environ.items() if not k.startswith('GIT_')},GIT_OPTIONAL_LOCKS='0',CUDA_VISIBLE_DEVICES='-1',HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',
         HF_HOME=str(root/'hf-cache'),PYTHONNOUSERSITE='1',PYTHONUTF8='1',PIP_NO_INDEX='1',PIP_DISABLE_PIP_VERSION_CHECK='1')
     try:
         issues=verify_files(package,read(package/'package_manifest.json')['files']);require(not issues,'PACKAGE_CONFLICT:'+json.dumps(issues))
+        assets=resolve_assets(package,cfg)
+        if assets!=package:write(root/'dependency_reuse.json',dict(root=str(assets),manifest_sha256=cfg['reuse_manifest_sha256'],status='BYTE_VALIDATED_NOT_EXECUTED'))
         head=runner.run('git_head',[cfg['git'],'-C',code,'rev-parse','HEAD']).decode('ascii').strip()
         dirty=runner.run('git_clean',[cfg['git'],'-C',code,'status','--porcelain']).strip()
         require(head==cfg['execution_commit'] and not dirty,'CHECKOUT_IDENTITY')
-        expected=bound_hf_reference(package,cfg['hf_manifest_sha256']);verify_hf(cfg['model_root'],expected)
+        expected=bound_hf_reference(assets,cfg['hf_manifest_sha256']);verify_hf(cfg['model_root'],expected)
         write(root/'hf_input_check.json',dict(source_manifest_sha256=cfg['hf_manifest_sha256'],files=expected))
-        engine=root/'engine';extract(package/'llama_source.zip',engine)
-        require(not verify_files(engine,read(package/'llama_source_manifest.json')['files']),'ENGINE_SOURCE_CONFLICT')
-        ehead=runner.run('engine_head',[cfg['git'],'-C',engine,'rev-parse','HEAD']).decode('ascii').strip()
-        require(ehead==cfg['engine_commit'] and not runner.run('engine_clean',[cfg['git'],'-C',engine,'status','--porcelain']).strip(),'ENGINE_COMMIT_OR_DIRTY')
-        nvtx=root/'nvtx';extract(package/'nvtx_headers.zip',nvtx)
+        engine=root/'engine'
+        layout_path=package/'llama_source_layout.json'
+        layout=read(layout_path) if layout_path.is_file() else None
+        if layout is not None:
+            if 'files_manifest_sha256' in layout:
+                require(layout['files_manifest_sha256']==digest(assets/'llama_source_manifest.json'),'SOURCE_LAYOUT_FILE_BINDING')
+            if 'engine_commit' in layout:require(layout['engine_commit']==cfg['engine_commit'],'SOURCE_LAYOUT_COMMIT')
+        restore_source(assets/'llama_source.zip',engine,read(assets/'llama_source_manifest.json')['files'],layout)
+        write(root/'engine_repository_identity.json',inspect_repository(engine,cfg['engine_commit'],cfg['git'],runner))
+        nvtx=root/'nvtx';extract(assets/'nvtx_headers.zip',nvtx)
         runner.run('python_identity',[cfg['base_python'],'-I','-c',
             'import sys,json; assert sys.version_info[:2]==(3,11); print(json.dumps({"executable":sys.executable,"version":sys.version}))'])
         runner.run('create_cpu_environment',[cfg['base_python'],'-I','-m','venv',root/'converter'],env=env)
         py=root/'converter/Scripts/python.exe'
         runner.run('offline_dependencies',[py,'-I','-m','pip','install','--no-index','--no-deps','--require-hashes',
-            '--find-links',package/'wheels','-r',package/'requirements.lock'],env=env,timeout=600)
+            '--find-links',assets/'wheels','-r',assets/'requirements.lock'],env=env,timeout=600)
         runner.run('dependency_check',[py,'-I','-m','pip','check'],env=env)
         cmake=root/'converter/Lib/site-packages/cmake/data/bin/cmake.exe'
         module=root/'converter/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CMakeCUDAArchitecturesNative.cmake'
@@ -332,6 +386,7 @@ def main():
         actual={p.relative_to(a.package).as_posix() for p in Path(a.package).rglob('*') if p.is_file()}
         require(actual=={r['path'] for r in manifest['files']}|{'package_manifest.json'},'PACKAGE_COVERAGE')
         require(not issues,'PACKAGE_HASH_CONFLICT:'+json.dumps(issues))
+        if (Path(a.package)/'config.json').is_file():resolve_assets(a.package,read(Path(a.package)/'config.json'))
     return 0
 
 

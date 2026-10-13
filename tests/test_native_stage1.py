@@ -132,7 +132,7 @@ def test_missing_file_is_not_empty_set_success(tmp_path):
     assert failures[0]['reason']=='FILE_MISSING'
 
 
-def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_path,monkeypatch):
+def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_path,monkeypatch,reuse_assets=False):
     a=api(); from exposedpath import native_llama
     package=tmp_path/'package';package.mkdir(); root=tmp_path/'diagnostics'/'new';root.mkdir(parents=True)
     hf=tmp_path/'hf';hf.mkdir();(hf/'config.json').write_bytes(b'{"model_type":"qwen2"}')
@@ -142,7 +142,10 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
     a.write(package/'hf_reference.json',dict(source_manifest_sha256=sha(csv_data),files=expected))
     engine_archive=package/'llama_source.zip'
     with zipfile.ZipFile(engine_archive,'w') as z:z.writestr('convert_hf_to_gguf.py',b'# CPU fixture')
-    a.write(package/'llama_source_manifest.json',dict(files=[dict(path='convert_hf_to_gguf.py',size_bytes=13,sha256=sha(b'# CPU fixture'))]))
+    with zipfile.ZipFile(engine_archive,'a') as z:
+        z.writestr('.git/objects/',b'');z.writestr('.git/refs/',b'');z.writestr('.git/HEAD',b'CPU fixture HEAD')
+    a.write(package/'llama_source_manifest.json',dict(files=[dict(path='convert_hf_to_gguf.py',size_bytes=13,sha256=sha(b'# CPU fixture')),
+        dict(path='.git/HEAD',size_bytes=16,sha256=sha(b'CPU fixture HEAD'))]))
     with zipfile.ZipFile(package/'nvtx_headers.zip','w') as z:z.writestr('include/nvtx3/nvToolsExt.h',b'fixture')
     (package/'requirements.lock').write_text('cpu fixture')
     original=b'function(cmake_cuda_architectures_native lang)\nendfunction()\n'
@@ -155,6 +158,11 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
     a.write(package/'config.json',cfg)
     files=[dict(path=p.name,size_bytes=p.stat().st_size,sha256=a.digest(p)) for p in package.iterdir()]
     a.write(package/'package_manifest.json',dict(files=files))
+    if reuse_assets:
+        old=package;package=tmp_path/'repair';package.mkdir()
+        cfg.update(reuse_dependency_root=str(old),reuse_manifest_sha256=a.digest(old/'package_manifest.json'))
+        a.write(package/'config.json',cfg)
+        a.write(package/'package_manifest.json',dict(files=[dict(path='config.json',size_bytes=(package/'config.json').stat().st_size,sha256=a.digest(package/'config.json'))]))
     # Only replace compilation/conversion external dependency; keep file gates,
     # source verification, orchestration and receipt creation real.
     monkeypatch.setattr(native_llama,'instrument_backend',lambda src,out:Path(out).write_bytes(b'compiled hook'))
@@ -164,6 +172,8 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
             self.records.append(dict(name=name,exit_code=0,argv=[str(x) for x in argv]))
             if name=='git_head':return b'a'*40+b'\n'
             if name=='engine_head':return native_llama.ENGINE_COMMIT.encode()+b'\n'
+            if name=='engine_gitdir':return str(root/'engine/.git').encode()+b'\n'
+            if name=='engine_toplevel':return str(root/'engine').encode()+b'\n'
             if name=='create_cpu_environment':
                 p=root/'converter/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CMakeCUDAArchitecturesNative.cmake'
                 p.parent.mkdir(parents=True);p.write_bytes(original)
@@ -261,3 +271,93 @@ def test_changed_return_source_is_not_valid_archive(tmp_path,monkeypatch):
     monkeypatch.setattr(zipfile.ZipFile,'write',mutate)
     with pytest.raises(ValueError,match='RETURN_SOURCE_CHANGED'):a.pack_review(root,tmp_path/'failed.zip')
     assert (tmp_path/'failed.zip').exists() # preserve failed copy, never label valid
+
+
+def tiny_repository(path):
+    path.mkdir(parents=True)
+    def git(*args):return subprocess.check_output(['git','-C',str(path),*args],stderr=subprocess.PIPE)
+    git('init');git('config','user.name','CPU fixture');git('config','user.email','test@example.invalid')
+    (path/'file').write_bytes(b'fixed git file\r\n')
+    git('add','file');git('commit','-m','fixed source');git('pack-refs','--all')
+    return git('rev-parse','HEAD').decode().strip()
+
+
+def test_real_git_roundtrip_preserves_empty_required_directories(tmp_path):
+    from scripts import package_native_llama_stage1 as delivery
+    source=tmp_path/'source';expected=tiny_repository(source)
+    assert (source/'.git/refs').is_dir() and not any(p.is_file() for p in (source/'.git/refs').rglob('*'))
+    archive=tmp_path/'source.zip';delivery.zip_tree(source,archive)
+    restored=tmp_path/'independent';api().extract(archive,restored)
+    assert (restored/'.git/refs').is_dir()
+    # Explicit git-dir, real Git, no interpreter/engine_head substitutes.
+    result=subprocess.run(['git','--git-dir='+str(restored/'.git'),'--work-tree='+str(restored),'rev-parse','HEAD'],capture_output=True)
+    assert result.returncode==0,result.stderr
+    assert result.stdout.decode().strip()==expected
+    assert (restored/'file').read_bytes()==(source/'file').read_bytes()
+
+
+@pytest.mark.parametrize('nested',[False,True])
+def test_real_git_identity_is_own_repository_not_parent(tmp_path,nested):
+    parent=tmp_path/'parent'
+    if nested:tiny_repository(parent)
+    else:parent.mkdir()
+    source=parent/'source';expected=tiny_repository(source)
+    from scripts import package_native_llama_stage1 as delivery
+    archive=tmp_path/'source.zip';delivery.zip_tree(source,archive)
+    output=parent/'restored';api().extract(archive,output)
+    runner=api().Runner(tmp_path)
+    record=api().inspect_repository(output,expected,'git',runner)
+    assert Path(record['git_directory'])==output/'.git'
+    assert Path(record['work_tree'])==output
+    assert record['commit']==expected
+    (tmp_path/'bad').mkdir()
+    with pytest.raises(ValueError,match='ENGINE_COMMIT'):
+        api().inspect_repository(output,'a'*40,'git',api().Runner(tmp_path/'bad'))
+
+
+def test_missing_refs_cannot_fall_back_to_parent_repository(tmp_path):
+    parent=tmp_path/'parent';parent_commit=tiny_repository(parent)
+    bad=parent/'bad';bad.mkdir();(bad/'.git').mkdir();(bad/'.git/objects').mkdir()
+    (bad/'.git/HEAD').write_text(parent_commit+'\n')
+    with pytest.raises(ValueError,match='GIT_STRUCTURE'):
+        api().inspect_repository(bad,parent_commit,'git',api().Runner(tmp_path))
+
+
+def test_legacy_source_archive_restores_only_bound_directory_layout(tmp_path):
+    from scripts import package_native_llama_stage1 as delivery
+    source=tmp_path/'source';expected=tiny_repository(source)
+    archive=tmp_path/'old.zip'
+    with zipfile.ZipFile(archive,'w') as z:
+        for p in source.rglob('*'):
+            if p.is_file():z.write(p,p.relative_to(source).as_posix())
+    files=delivery.index(source)
+    layout=dict(schema_version='exposedpath-native-source-layout/0.1.0',source_archive_sha256=api().digest(archive),
+        directories=delivery.directories(source))
+    output=tmp_path/'new';api().restore_source(archive,output,files,layout)
+    result=api().inspect_repository(output,expected,'git',api().Runner(tmp_path))
+    assert result['commit']==expected
+    assert api().verify_files(output,files)==[] # identity query must not rewrite .git/index
+    assert (output/'file').read_bytes()==b'fixed git file\r\n'
+    layout['source_archive_sha256']='a'*64
+    with pytest.raises(ValueError,match='SOURCE_LAYOUT_ARCHIVE'):
+        api().restore_source(archive,tmp_path/'wrong',files,layout)
+    assert not (tmp_path/'wrong').exists()
+
+
+def test_dependency_reuse_requires_original_manifest_and_current_bytes(tmp_path):
+    old=tmp_path/'old';old.mkdir();(old/'wheel.whl').write_bytes(b'fixed dependency')
+    m=old/'package_manifest.json';api().write(m,dict(files=[dict(path='wheel.whl',size_bytes=16,sha256=sha(b'fixed dependency'))]))
+    cfg=dict(reuse_dependency_root=str(old),reuse_manifest_sha256=api().digest(m))
+    package=tmp_path/'repair';package.mkdir()
+    assert api().resolve_assets(package,cfg)==old.resolve()
+    (old/'wheel.whl').write_bytes(b'tampered')
+    with pytest.raises(ValueError,match='REUSED_ASSET'):api().resolve_assets(package,cfg)
+    cfg['reuse_manifest_sha256']='a'*64
+    with pytest.raises(ValueError,match='REUSED_MANIFEST'):api().resolve_assets(package,cfg)
+
+
+def test_repair_actual_file_consumer_binds_reused_assets_and_new_output(tmp_path,monkeypatch):
+    test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_path,monkeypatch,reuse_assets=True)
+    result=api().read(tmp_path/'diagnostics/new/dependency_reuse.json')
+    assert result['status']=='BYTE_VALIDATED_NOT_EXECUTED'
+    assert result['manifest_sha256']==api().digest(tmp_path/'package/package_manifest.json')

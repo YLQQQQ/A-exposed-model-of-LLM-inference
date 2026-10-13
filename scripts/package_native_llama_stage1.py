@@ -31,11 +31,52 @@ def index(root):
         for p in sorted(root.rglob('*')) if p.is_file()]
 
 
+def directories(root):
+    root=Path(root)
+    names=[p.relative_to(root).as_posix() for p in sorted(root.rglob('*')) if p.is_dir()]
+    for name in names:stage.require(stage.checked(root,name).is_dir(),'ARCHIVE_DIRECTORY')
+    return names
+
+
 def zip_tree(root,archive,*,subset=None):
     root=Path(root);rows=index(root) if subset is None else subset
     with zipfile.ZipFile(archive,'x',zipfile.ZIP_DEFLATED,allowZip64=True) as z:
+        for name in directories(root):z.write(stage.checked(root,name),name+'/')
         for r in rows:z.write(stage.checked(root,r['path']),r['path'])
     return rows
+
+
+def assemble_repair(destination,*,commit,prerequisite,reuse_delivery,engine_source,server):
+    """Small repair; reuse ONLY byte-verified original offline dependency assets."""
+    old=Path(reuse_delivery).resolve();destination=Path(destination).resolve()
+    if destination.exists():raise FileExistsError(destination)
+    old_manifest_sha='408c63b0ff6e3ebf01012190240d8dd075943daf76b259608a62bb4ec07a6a53'
+    stage.resolve_assets(destination,dict(reuse_dependency_root=str(old),reuse_manifest_sha256=old_manifest_sha))
+    old_cfg=stage.read(old/'config.json')
+    stage.require(prerequisite==old_cfg['execution_commit']=='cc9b595a42a39ff5d6524274a4dda4c03717dc16','REPAIR_PREREQUISITE')
+    for k in ('code_root','model_root','base_python','test_python','git','cuda_root','vs_root'):
+        stage.require(server[k]==old_cfg[k],'REPAIR_EXECUTION_CONFIG')
+    source_manifest=stage.read(old/'llama_source_manifest.json')
+    stage.require(not stage.verify_files(engine_source,source_manifest['files']),'REPAIR_ORIGINAL_SOURCE_BYTES')
+    stage.require(git('-C',engine_source,'rev-parse','HEAD').decode().strip()==native.ENGINE_COMMIT,'REPAIR_SOURCE_COMMIT')
+    destination.mkdir(parents=True)
+    create_execution_bundle('.',commit,prerequisite,destination/'execution.bundle')
+    for source,target in [('exposedpath/native_stage1.py','native_stage1.py'),('scripts/run_native_llama_stage1.ps1','run_native_llama_stage1.ps1')]:
+        (destination/target).write_bytes(git('show',commit+':'+source))
+    stage.write(destination/'llama_source_layout.json',dict(schema_version='exposedpath-native-source-layout/0.1.0',
+        source_archive_sha256=stage.digest(old/'llama_source.zip'),directories=directories(engine_source),
+        engine_commit=native.ENGINE_COMMIT,files_manifest_sha256=stage.digest(old/'llama_source_manifest.json'),
+        basis='Original producer directory snapshot; all source files byte-matched to sealed file manifest'))
+    cfg=dict(old_cfg,**server)
+    cfg.update(execution_commit=commit,prerequisite=prerequisite,bundle_ref='HEAD',
+        reuse_dependency_root=server['reuse_dependency_root'],reuse_manifest_sha256=old_manifest_sha)
+    stage.write(destination/'config.json',cfg)
+    stage.write(destination/'package_manifest.json',dict(schema_version=stage.VERSION,execution_commit=commit,files=index(destination)))
+    archive=destination.with_suffix('.zip');zip_tree(destination,archive)
+    with zipfile.ZipFile(archive) as z:stage.require(z.testzip() is None,'REPAIR_ZIP_CRC')
+    return dict(path=str(archive),size_bytes=archive.stat().st_size,sha256=stage.digest(archive),execution_commit=commit,
+        prerequisite=prerequisite,launcher_sha256=stage.digest(destination/'run_native_llama_stage1.ps1'),
+        manifest_sha256=stage.digest(destination/'package_manifest.json'),reused_manifest_sha256=old_manifest_sha)
 
 
 def assemble(destination,*,commit,prerequisite,engine_source,nvtx_source,wheels,hf_evidence,server):
@@ -52,6 +93,8 @@ def assemble(destination,*,commit,prerequisite,engine_source,nvtx_source,wheels,
     # no checkout of the research repo and no third-party code is pushed to ours.
     rows=zip_tree(engine_source,destination/'llama_source.zip')
     stage.write(destination/'llama_source_manifest.json',dict(engine_commit=native.ENGINE_COMMIT,files=rows))
+    stage.write(destination/'llama_source_layout.json',dict(schema_version='exposedpath-native-source-layout/0.1.0',
+        source_archive_sha256=stage.digest(destination/'llama_source.zip'),directories=directories(engine_source)))
     nvtx_root=Path(nvtx_source)/'c'
     nvtx_rows=index(nvtx_root/'include')
     with zipfile.ZipFile(destination/'nvtx_headers.zip','x',zipfile.ZIP_DEFLATED) as z:
@@ -107,9 +150,14 @@ def main():
     p=argparse.ArgumentParser()
     for name in ('destination','commit','prerequisite','engine-source','nvtx-source','wheels','hf-evidence','server-config'):
         p.add_argument('--'+name,required=True)
+    p.add_argument('--reuse-delivery')
     a=p.parse_args()
-    result=assemble(a.destination,commit=a.commit,prerequisite=a.prerequisite,engine_source=a.engine_source,
-        nvtx_source=a.nvtx_source,wheels=a.wheels,hf_evidence=a.hf_evidence,server=stage.read(a.server_config))
+    if a.reuse_delivery:
+        result=assemble_repair(a.destination,commit=a.commit,prerequisite=a.prerequisite,reuse_delivery=a.reuse_delivery,
+            engine_source=a.engine_source,server=stage.read(a.server_config))
+    else:
+        result=assemble(a.destination,commit=a.commit,prerequisite=a.prerequisite,engine_source=a.engine_source,
+            nvtx_source=a.nvtx_source,wheels=a.wheels,hf_evidence=a.hf_evidence,server=stage.read(a.server_config))
     stage.write(Path(a.destination).with_suffix('.identity.json'),result);print(json.dumps(result,indent=2))
 
 

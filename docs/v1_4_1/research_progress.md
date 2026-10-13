@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.149 阶段1源码归档空目录与Git作用域最小修复（2026-10-13）
+
+**首次cc9b595阶段1保持BLOCKED，不是GPU/模型失败。** 本地直接核验回传ZIP17365 bytes，SHA256 `eff229f2165bc200bef7d80dc2bd343eaf9c49e141e3502e0aa13e7b507c2918`，39文件/38项清单及CRC/全部hash通过。原receipt前三步Git checkout身份成功后engine_head exit128/无超时，stderr为not a git repository；没有创建CPU转换venv、编译、转换、模型/CUDA初始化或collector步骤。旧包/报告不改，GPU资格NOT_RUN、Gate13限定PASS/Gate14 NOT_RUN保持。
+
+根因为packager只写文件、遗漏空`.git/refs`等目录；真实Git独立/嵌套父仓库回归复现，不用engine_head替身作为证明。新归档保全目录；旧源码ZIP只由绑定archive SHA和原目录快照的layout恢复到全新目录，文件字节不变。worker/CMake显式Git目录与工作树，验证实际top-level/HEAD/clean，缺结构、错commit或父仓库身份拒绝；清除继承Git路径变量并禁用可选index刷新（独立RED证明status会修改index）。原固定源码、构建/转换参数、A/B与测量合同不变。
+
+真实封存源码副本已本地恢复：3712文件、386目录，真实HEAD=d81235049384534c167caea52b85a694f6103d14、clean，Git检查后全部文件仍与原清单一致。证据位于忽略的`.local/diagnostics/native_stage1_refs_repair_v0_1`；CPU替身文件链另验证严格资产复用、阶段步骤与新回执，不等目标机编译/转换通过。修复以前置cc9b595a42a39ff5d6524274a4dda4c03717dc16交付，仅增量bundle/脚本/layout/config；已传40项固定资产按旧manifest与当前字节完整核验后只读复用，不重传全部wheels、不写旧失败目录、不恢复旧入口。
+
+最终命令`python -m pytest -q -p no:cacheprovider tests/test_native_stage1.py`（mask=-1、独立basetemp）为**32 passed、0 failed、0 skipped，9.84s**；新增真实Git回归包含独立/父仓库、缺refs、错HEAD、index字节保全及封存legacy ZIP恢复，另覆盖严格复用依赖的实际CPU文件消费链。相关compileall、diff及PS5.1语法通过；未重复未变化的native S/A测试。本轮未操作服务器/模型/CUDA/Nsight，未重跑完整Q0或旧分析；没有研究语义裁决、新资格或原状态升级。下一步仅协调审查全新阶段1修复包，成功后仍先审查实际build/GGUF身份，不自动进入阶段2。
+
 ## 7.148 Windows native阶段1离线固定交付（2026-10-13）
 
 **本项只完成本地交付与CPU验证；目标机阶段1尚未执行，不授GPU资格。** 延续7.147的候选窗口/支持范围，[唯一native入口§6](native_llama_window_and_adapter_v0_1.md)记录固定源码、构建/转换身份和下一阶段独立预期。用户授权单一ZIP、构建/转换/身份检查；不运行服务器、模型/CUDA初始化/Nsight，不自动续至受控桥接或自然P0/P1。Gate13限定PASS、Gate14 NOT_RUN，旧Formal/Raw/BLOCKED/UNKNOWN/NOT_ASSESSED保持；用户DOCX与原件未修改、不stage。
