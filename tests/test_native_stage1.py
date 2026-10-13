@@ -132,7 +132,7 @@ def test_missing_file_is_not_empty_set_success(tmp_path):
     assert failures[0]['reason']=='FILE_MISSING'
 
 
-def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_path,monkeypatch,reuse_assets=False):
+def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_path,monkeypatch,reuse_assets=False,ninja=False):
     a=api(); from exposedpath import native_llama
     package=tmp_path/'package';package.mkdir(); root=tmp_path/'diagnostics'/'new';root.mkdir(parents=True)
     hf=tmp_path/'hf';hf.mkdir();(hf/'config.json').write_bytes(b'{"model_type":"qwen2"}')
@@ -155,6 +155,19 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
         code_root=str(tmp_path/'code'),server_root=str(tmp_path),model_root=str(hf),cuda_root=str(tmp_path/'cuda'),
         git='git',base_python='python',execution_commit='a'*40,engine_commit=native_llama.ENGINE_COMMIT,
         cmake_probe_sha256=sha(original),hf_manifest_sha256=sha(csv_data),native_source_paths=['native/llama_cpp/main.cpp'])
+    if ninja:
+        from exposedpath import native_ninja as n
+        from tests.test_native_ninja import tools
+        nt=tools(tmp_path);nt['python']=str(tmp_path/'old-cpu/python.exe')
+        cfg['schema_version']=n.VERSION
+        monkeypatch.setattr(n,'bind_tools',lambda *args,**kw:(nt,{}))
+        monkeypatch.setattr(n,'build_environment',lambda cfg,tools,env:dict(env))
+        def reuse(tools,root,runner,env):
+            runner.run('dependency_check',['CPU substitute'])
+            runner.run('cmake_version',['CPU substitute'])
+            return Path(tools['python']),Path(tools['cmake'])
+        monkeypatch.setattr(n,'reuse_cpu',reuse)
+        a.write(root/'cmake_probe_patch.json',dict(patched_sha256='a'*64,reused_read_only=True))
     a.write(package/'config.json',cfg)
     files=[dict(path=p.name,size_bytes=p.stat().st_size,sha256=a.digest(p)) for p in package.iterdir()]
     a.write(package/'package_manifest.json',dict(files=files))
@@ -179,8 +192,21 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
                 p.parent.mkdir(parents=True);p.write_bytes(original)
             if name=='cmake_version':return b'cmake version 3.31.10\n'
             if name=='build':
-                p=root/'build/bin/Release/native-llama.exe';p.parent.mkdir(parents=True);p.write_bytes(b'not executable')
-                (root/'build/CMakeCache.txt').write_text('CMAKE_CUDA_ARCHITECTURES:STRING=89\nGGML_CUDA_GRAPHS:BOOL=OFF\nGGML_NATIVE:BOOL=OFF\nFETCHCONTENT_FULLY_DISCONNECTED:BOOL=ON\n')
+                p=root/('build/bin/native-llama.exe' if ninja else 'build/bin/Release/native-llama.exe')
+                p.parent.mkdir(parents=True);p.write_bytes(b'not executable')
+                if ninja:
+                    from tests.test_native_ninja import write_build
+                    import shutil
+                    built,_=write_build(root,nt,'cuda');shutil.copytree(built,root/'build',dirs_exist_ok=True)
+                with (root/'build/CMakeCache.txt').open('a' if ninja else 'w') as f:
+                    f.write('CMAKE_CUDA_ARCHITECTURES:STRING=89\nGGML_CUDA_GRAPHS:BOOL=OFF\nGGML_NATIVE:BOOL=OFF\nFETCHCONTENT_FULLY_DISCONNECTED:BOOL=ON\n')
+            if ninja and name in ('cxx_compile_link','cuda_compile_link'):
+                from tests.test_native_ninja import write_build
+                import shutil
+                kind=name.split('_')[0];b,exe=write_build(root,nt,kind)
+                shutil.move(str(b),str(root/(kind+'-precheck')))
+            if ninja and name in ('cxx_configure','cuda_configure'):
+                assert argv[argv.index('-G')+1]=='Ninja'
             if name=='convert':(root/'model-f16.gguf').write_bytes(b'CPU GGUF substitute')
             if name=='inspect':a.write(root/'gguf_inspection.json',dict(architecture='qwen2',tensor_types={'F16':1,'F32':1}))
             return b''
@@ -192,6 +218,11 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
     assert a.read(root/'conversion_receipt.json')['tensor_types']=={'F16':1,'F32':1}
     assert 'dependency_check' in [r['name'] for r in runner.records]
     assert [r['name'] for r in runner.records][-4:]==['configure','build','convert','inspect']
+    if ninja:
+        names=[r['name'] for r in runner.records]
+        assert names[-8:]==['cxx_configure','cxx_compile_link','cuda_configure','cuda_compile_link','configure','build','convert','inspect']
+        assert 'create_cpu_environment' not in names and 'offline_dependencies' not in names
+        assert a.read(root/'build_receipt.json')['schema_version']==native_llama.BUILD_NINJA_VERSION
 
 
 def test_hf_reference_cannot_borrow_unbound_manifest_hash(tmp_path):

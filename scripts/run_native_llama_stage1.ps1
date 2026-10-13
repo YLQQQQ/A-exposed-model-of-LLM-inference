@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $ConfigPath = Join-Path $PackageRoot 'config.json'
 $Config = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
-if ($Config.schema_version -ne 'exposedpath-native-stage1/0.1.0' -or
+if ($Config.schema_version -notin @('exposedpath-native-stage1/0.1.0','exposedpath-native-stage1/0.2.0') -or
     $Config.model_process_budget -ne 0 -or $Config.profile_budget -ne 0) { throw 'Stage1 contract conflict' }
 $Root = $Config.output_root
 $Archive = $Config.return_zip
@@ -29,6 +29,7 @@ try {
     $env:PYTHONUTF8 = '1'
     $env:HF_HUB_OFFLINE = '1'
     $env:TRANSFORMERS_OFFLINE = '1'
+    if ($Config.schema_version -eq 'exposedpath-native-stage1/0.1.0') {
     $DevModule = Join-Path $Config.vs_root 'Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
     if (-not (Test-Path -LiteralPath $DevModule)) { throw 'Existing VS2022 DevShell missing; no installation' }
     Import-Module $DevModule
@@ -64,12 +65,17 @@ try {
         VCToolsVersion=$env:VCToolsVersion; device_query_invoked=$false; runtime_files=$RuntimeFiles }
     $Encoding = New-Object Text.UTF8Encoding($false)
     [IO.File]::WriteAllText((Join-Path $Root 'toolchain.json'),($Toolchain | ConvertTo-Json -Depth 8),$Encoding)
+    } else {
+        # Ninja adapter binds absolute tools/SDK and its own clean compile env.
+        # Do not repair VS registration/default files or import a guessed toolset.
+        Write-Host '[stage] explicit Ninja/MSVC14.38/SDK route; no VS metadata changes'
+    }
     Write-Host '[stage] deploy START'
     & $Config.base_python -I $Bootstrap deploy --config $ConfigPath --package $PackageRoot --root $Root
     if ($LASTEXITCODE -ne 0) { throw 'Deployment failed; STOP' }
     Write-Host '[stage] deploy COMPLETE; CPU dependencies/build/conversion next; no native execution'
     # Controller reuses the verified repository JSON/schema dependencies.
-    # Conversion still uses the separate CPU-only environment created inside run.
+    # 0.1 creates a private CPU env; 0.2 byte-binds the prior CPU env read-only.
     & $Config.test_python -I $Bootstrap run --config $ConfigPath --package $PackageRoot --root $Root
     if ($LASTEXITCODE -ne 0) { throw 'Stage1 failed; no retry; preserve outputs' }
 } catch {

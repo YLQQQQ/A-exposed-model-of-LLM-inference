@@ -19,6 +19,7 @@ import time
 import zipfile
 
 VERSION='exposedpath-native-stage1/0.1.0'
+NINJA_VERSION='exposedpath-native-stage1/0.2.0'
 CMAKE_VERSION='3.31.10'
 
 
@@ -187,18 +188,23 @@ def inspect_gguf(path,*,reader_factory=None):
     return dict(architecture=architecture,tensor_types=dict(types),tensors=tensors)
 
 
-def command_plan(code,engine,root,hf,nvtx,cuda):
+def command_plan(code,engine,root,hf,nvtx,cuda,*,tools=None):
     code,engine,root,hf,nvtx,cuda=map(Path,(code,engine,root,hf,nvtx,cuda))
-    return [dict(name='configure',arguments=['-S',str(code/'native/llama_cpp'),'-B',str(root/'build'),
-        '-G','Visual Studio 17 2022','-A','x64','-T','version=14.38.33130',
+    prefix=['-S',str(code/'native/llama_cpp'),'-B',str(root/'build'),
+        '-G','Visual Studio 17 2022','-A','x64','-T','version=14.38.33130']
+    build=['--build',str(root/'build'),'--config','Release','--target','native-llama','--parallel','2','--','/nodeReuse:false']
+    if tools is not None:
+        from exposedpath import native_ninja
+        prefix=native_ninja.configure_arguments(code/'native/llama_cpp',root/'build',tools)
+        build=['--build',str(root/'build'),'--target','native-llama','--parallel','2','--verbose']
+    return [dict(name='configure',arguments=[*prefix,
         '-DLLAMA_SOURCE_ROOT='+str(engine),'-DNATIVE_PATCHED_BACKEND='+str(root/'backend.cu'),
         '-DNVTX_INCLUDE_ROOT='+str(nvtx),'-DCUDAToolkit_ROOT='+str(cuda),
         '-DCMAKE_CUDA_ARCHITECTURES=89','-DFETCHCONTENT_FULLY_DISCONNECTED=ON',
         '-DGGML_CCACHE=OFF','-DGGML_CPU_KLEIDIAI=OFF','-DGGML_CUDA_CCCL_VERSION=',
         '-DGGML_OPENMP_FETCH=OFF','-DGGML_CUDA_NCCL=OFF',
         '-DLLAMA_BUILD_COMMON=OFF','-DLLAMA_BUILD_APP=OFF','-DLLAMA_BUILD_SERVER=OFF']),
-        dict(name='build',arguments=['--build',str(root/'build'),'--config','Release','--target','native-llama',
-            '--parallel','2','--','/nodeReuse:false']),
+        dict(name='build',arguments=build),
         dict(name='convert',arguments=[str(engine/'convert_hf_to_gguf.py'),str(hf),'--outfile',str(root/'model-f16.gguf'),'--outtype','f16']),
         dict(name='inspect',arguments=['inspect','--model',str(root/'model-f16.gguf'),'--engine',str(engine),'--output',str(root/'gguf_inspection.json')])]
 
@@ -235,14 +241,16 @@ class Runner:
 def execute(config,package,root,*,runner=None):
     """Root already created by PS with its transcript; no retries or resume."""
     cfg=read(config);package=Path(package);root=Path(root);code=Path(cfg['code_root'])
-    require(cfg['schema_version']==VERSION and cfg['model_process_budget']==cfg['profile_budget']==0,'ROLE_OR_BUDGET')
+    require(cfg['schema_version'] in (VERSION,NINJA_VERSION) and cfg['model_process_budget']==cfg['profile_budget']==0,'ROLE_OR_BUDGET')
+    use_ninja=cfg['schema_version']==NINJA_VERSION
     require(root.resolve().is_relative_to(Path(cfg['server_root']).resolve()/'diagnostics'),'OUTPUT_SCOPE')
     runner=runner or Runner(root)
-    receipt=dict(schema_version=VERSION,status='BLOCKED',error=None,execution_commit=cfg['execution_commit'],
+    receipt=dict(schema_version=cfg['schema_version'],status='BLOCKED',error=None,execution_commit=cfg['execution_commit'],
         gpu_qualification='NOT_RUN',model_executed=False,cuda_initialization_program_invoked=False,collector_executed=False,
         measurement_validity='NOT_ASSESSED',dropped_records_status='UNKNOWN',automatic_retry=False)
     env=dict({k:v for k,v in os.environ.items() if not k.startswith('GIT_')},GIT_OPTIONAL_LOCKS='0',CUDA_VISIBLE_DEVICES='-1',HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',
-        HF_HOME=str(root/'hf-cache'),PYTHONNOUSERSITE='1',PYTHONUTF8='1',PIP_NO_INDEX='1',PIP_DISABLE_PIP_VERSION_CHECK='1')
+        HF_HOME=str(root/'hf-cache'),PYTHONNOUSERSITE='1',PYTHONUTF8='1',PIP_NO_INDEX='1',PIP_DISABLE_PIP_VERSION_CHECK='1',PYTHONDONTWRITEBYTECODE='1')
+    tools=None;compile_checks=None
     try:
         issues=verify_files(package,read(package/'package_manifest.json')['files']);require(not issues,'PACKAGE_CONFLICT:'+json.dumps(issues))
         assets=resolve_assets(package,cfg)
@@ -250,6 +258,10 @@ def execute(config,package,root,*,runner=None):
         head=runner.run('git_head',[cfg['git'],'-C',code,'rev-parse','HEAD']).decode('ascii').strip()
         dirty=runner.run('git_clean',[cfg['git'],'-C',code,'status','--porcelain']).strip()
         require(head==cfg['execution_commit'] and not dirty,'CHECKOUT_IDENTITY')
+        sys.path.insert(0,str(code))
+        if use_ninja:
+            from exposedpath import native_ninja
+            tools,_=native_ninja.bind_tools(cfg,package,root,runner)
         expected=bound_hf_reference(assets,cfg['hf_manifest_sha256']);verify_hf(cfg['model_root'],expected)
         write(root/'hf_input_check.json',dict(source_manifest_sha256=cfg['hf_manifest_sha256'],files=expected))
         engine=root/'engine'
@@ -264,17 +276,19 @@ def execute(config,package,root,*,runner=None):
         nvtx=root/'nvtx';extract(assets/'nvtx_headers.zip',nvtx)
         runner.run('python_identity',[cfg['base_python'],'-I','-c',
             'import sys,json; assert sys.version_info[:2]==(3,11); print(json.dumps({"executable":sys.executable,"version":sys.version}))'])
-        runner.run('create_cpu_environment',[cfg['base_python'],'-I','-m','venv',root/'converter'],env=env)
-        py=root/'converter/Scripts/python.exe'
-        runner.run('offline_dependencies',[py,'-I','-m','pip','install','--no-index','--no-deps','--require-hashes',
-            '--find-links',assets/'wheels','-r',assets/'requirements.lock'],env=env,timeout=600)
-        runner.run('dependency_check',[py,'-I','-m','pip','check'],env=env)
-        cmake=root/'converter/Lib/site-packages/cmake/data/bin/cmake.exe'
-        module=root/'converter/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CMakeCUDAArchitecturesNative.cmake'
-        write(root/'cmake_probe_patch.json',disable_cuda_probe(module,cfg['cmake_probe_sha256'],root/'CMakeCUDAArchitecturesNative.original.cmake'))
-        cv=runner.run('cmake_version',[cmake,'--version']).decode('utf-8')
-        require(cv.splitlines()[0]=='cmake version '+CMAKE_VERSION,'CMAKE_VERSION')
-        sys.path.insert(0,str(code))
+        if use_ninja:
+            py,cmake=native_ninja.reuse_cpu(tools,root,runner,env)
+        else:
+            runner.run('create_cpu_environment',[cfg['base_python'],'-I','-m','venv',root/'converter'],env=env)
+            py=root/'converter/Scripts/python.exe'
+            runner.run('offline_dependencies',[py,'-I','-m','pip','install','--no-index','--no-deps','--require-hashes',
+                '--find-links',assets/'wheels','-r',assets/'requirements.lock'],env=env,timeout=600)
+            runner.run('dependency_check',[py,'-I','-m','pip','check'],env=env)
+            cmake=root/'converter/Lib/site-packages/cmake/data/bin/cmake.exe'
+            module=root/'converter/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CMakeCUDAArchitecturesNative.cmake'
+            write(root/'cmake_probe_patch.json',disable_cuda_probe(module,cfg['cmake_probe_sha256'],root/'CMakeCUDAArchitecturesNative.original.cmake'))
+            cv=runner.run('cmake_version',[cmake,'--version']).decode('utf-8')
+            require(cv.splitlines()[0]=='cmake version '+CMAKE_VERSION,'CMAKE_VERSION')
         from exposedpath import native_llama as native
         native.instrument_backend(engine/'ggml/src/ggml-cuda/ggml-cuda.cu',root/'backend.cu')
         env['PYTHONPATH']=str(engine/'gguf-py')
@@ -286,27 +300,36 @@ def execute(config,package,root,*,runner=None):
         # environment. Explicit CMake is the already patched private CPU tool.
         test_env=dict(env,EXPOSEDPATH_TEST_CMAKE=str(cmake))
         if 'test_python' in cfg:
+            tests=['tests/test_native_stage1.py']
+            if use_ninja:tests+=['tests/test_native_ninja.py','tests/test_native_llama.py']
             runner.run('cpu_regression',[cfg['test_python'],'-X','utf8','-m','pytest','-q','-p','no:cacheprovider',
-                'tests/test_native_stage1.py','--basetemp',root/'cpu-tests'],env=test_env,cwd=code,timeout=300)
-        plan=command_plan(code,engine,root,cfg['model_root'],nvtx/'include',cfg['cuda_root'])
+                *tests,'--basetemp',root/'cpu-tests'],env=test_env,cwd=code,timeout=300)
+        build_env=env
+        if use_ninja:
+            build_env=native_ninja.build_environment(cfg,tools,env)
+            compile_checks=native_ninja.run_prechecks(code,root,tools,runner,build_env)
+        plan=command_plan(code,engine,root,cfg['model_root'],nvtx/'include',cfg['cuda_root'],tools=tools)
         for s in plan:
             print('[stage] '+s['name']+' START',flush=True)
             exe=cmake if s['name'] in ('configure','build') else py
             args=s['arguments'] if s['name']!='inspect' else [str(package/'native_stage1.py'),*s['arguments']]
-            runner.run(s['name'],[exe,*args],env=env,timeout=5400 if s['name']=='build' else 1800)
+            runner.run(s['name'],[exe,*args],env=build_env if s['name'] in ('configure','build') else env,timeout=5400 if s['name']=='build' else 1800)
+            if use_ninja and s['name']=='build':
+                write(root/'native_compile_link.json',native_ninja.validate_build(root/'build',tools,'cuda',root/'build/bin/native-llama.exe'))
             print('[stage] '+s['name']+' COMPLETE',flush=True)
         cache=read_cache(root/'build/CMakeCache.txt')
         require(cache.get('CMAKE_CUDA_ARCHITECTURES')=='89' and cache.get('GGML_CUDA_GRAPHS')=='OFF'
             and cache.get('GGML_NATIVE')=='OFF' and cache.get('FETCHCONTENT_FULLY_DISCONNECTED')=='ON','CMAKE_CACHE_CONFLICT')
         shutil.copyfile(root/'build/CMakeCache.txt',root/'CMakeCache.review.txt')
-        binary=root/'build/bin/Release/native-llama.exe'
+        binary=root/('build/bin/native-llama.exe' if use_ninja else 'build/bin/Release/native-llama.exe')
         require(binary.is_file(),'BINARY_MISSING')
         inspections=read(root/'gguf_inspection.json')
-        build=dict(schema_version=native.BUILD_VERSION,engine_commit=cfg['engine_commit'],execution_commit=head,dirty=False,
-            binary=native._ref(binary),configuration=native.build_configuration(),
+        build=dict(schema_version=native.BUILD_NINJA_VERSION if use_ninja else native.BUILD_VERSION,engine_commit=cfg['engine_commit'],execution_commit=head,dirty=False,
+            binary=native._ref(binary),configuration=native.build_configuration('ninja' if use_ninja else 'vs2022'),
             backend_original_sha256=native.BACKEND_SHA256,backend_instrumented_sha256=digest(root/'backend.cu'),
             native_source_sha256=hashlib.sha256(json.dumps({p:digest(code/p) for p in cfg['native_source_paths']},sort_keys=True).encode()).hexdigest(),
             actual_cache=cache,toolchain=read(root/'toolchain.json'),cmake_probe_patch=read(root/'cmake_probe_patch.json'))
+        if use_ninja:build['compile_link_prechecks']=compile_checks
         conversion=dict(schema_version=native.CONVERSION_VERSION,engine_commit=cfg['engine_commit'],
             hf_snapshot_manifest_sha256=cfg['hf_manifest_sha256'],converter_source_sha256=digest(engine/'convert_hf_to_gguf.py'),
             conversion_arguments=['--outtype','f16'],model=native._ref(root/'model-f16.gguf'),architecture=inspections['architecture'],
@@ -356,11 +379,21 @@ def pack_review(root,archive):
     for name in ('transcript.txt','CMakeCUDAArchitecturesNative.original.cmake','CMakeCache.review.txt'):
         p=root/name
         if p.is_file():files.append(p)
+    # New compile-only checks retain compiler/cache facts without shipping build
+    # intermediates. Reference ZIPs remain separately immutable delivery inputs.
+    for directory in ('cxx-precheck','cuda-precheck','build'):
+        base=root/directory
+        for p in [base/'CMakeCache.txt',base/'CMakeFiles/CMakeConfigureLog.yaml',
+            *(base/'CMakeFiles/3.31.10'/('CMake'+lang+'Compiler.cmake') for lang in ('C','CXX','CUDA'))]:
+            if p.is_file():files.append(p)
     refs=[dict(path=p.relative_to(root).as_posix(),size_bytes=p.stat().st_size,sha256=digest(p)) for p in files]
     require(refs,'RETURN_EMPTY')
+    manifest_version=VERSION
+    if (root/'receipt.json').is_file() and read(root/'receipt.json').get('schema_version')==NINJA_VERSION:
+        manifest_version=NINJA_VERSION
     with zipfile.ZipFile(archive,'x',compression=zipfile.ZIP_DEFLATED,allowZip64=True) as z:
         for p,r in zip(files,refs):z.write(p,r['path'])
-        z.writestr('artifact_manifest.json',json.dumps(dict(schema_version=VERSION,files=refs),sort_keys=True,indent=2)+'\n')
+        z.writestr('artifact_manifest.json',json.dumps(dict(schema_version=manifest_version,files=refs),sort_keys=True,indent=2)+'\n')
     require(not verify_files(root,refs),'RETURN_SOURCE_CHANGED')
     with zipfile.ZipFile(archive) as z:
         require(z.testzip() is None and len(z.namelist())==len(refs)+1,'RETURN_CRC_OR_COVERAGE')

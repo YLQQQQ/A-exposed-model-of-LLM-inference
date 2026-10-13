@@ -276,3 +276,39 @@ Git查询与CMake都显式指定源码自己的`--git-dir`/`--work-tree`；核�
 优先严格只读引用已通过的固定CPU工具/资产，避免每次重复pip安装；新build与新回执，
 不得修改旧converter或失败cache。实际CUDA编译/转换仍须随后单独通过，CPU预检不授
 GPU/native资格，不改变旧Gate13限定PASS或Gate14 NOT_RUN。
+
+### 7.151 固定Ninja构建路线
+
+7.150目标事实已经完整回传：VS/MSBuild存在，但VC组件谓词为空、默认VCTools声明和
+VS CUDA12.4 props/targets缺失。原VS发现失败不靠指定实例位置追绿；该旧路线/失败cache
+保留，不创建系统默认文件、改注册表、安装组件或升级现有栈。
+
+用户批准stage1/build schema **0.2.0**使用[固定Ninja1.12.1官方资产](https://github.com/ninja-build/ninja/releases/tag/v1.12.1)
+（单exe SHA256 `68865c3276d449d746cea5065fdec2baf755d7813e161ab04205b0907b2629b8`），
+MSVC14.38.33130/cl19.38.33135、nvcc12.4.131、已观测SDK10.0.20348.0。旧0.1.0只支持
+原VS声明，新版本精确匹配Ninja、Release、SDK及实际编译预检，未知版本/错路径或
+重封不合格预检拒绝。producer/window/转换与S/A/B版本不变；不授native GPU资格。
+
+`native_ninja`按绝对路径锁定cl/link/lib/nvcc/rc/mt/Ninja/CMake，设置具体SDK头/库和
+编译PATH，去除继承的CUDAHOSTCXX/CUDACXX/CL/LINK等覆盖。不用VS Installer和CUDA
+MSBuild扩展，不将缺注册解释为实际编译器不可用；实际文件/版本和随后真正编译才决定。
+[CMake CUDA host compiler说明](https://cmake.org/cmake/help/v3.31/envvar/CUDAHOSTCXX.html)
+规定其环境优先级，故新路线移除该覆盖并显式传入现有cl。所有必需缺件一次集中列出。
+
+同一入口顺序固定：身份/现存依赖与原件绑定 → 相关CPU回归 → 新目录C/C++编译链接 →
+新目录CUDA编译链接 → native构建 → GGUF转换/tensor身份。所有生成exe均不运行；
+真实cache与CMake生成的编译器字段、输出字节验证成功才前进。CUDA预检含sm89 kernel
+和runtime链接，只证明能编译链接，不证明GPU可用；ABI运行架构探测维持已有禁用patch，
+没有COMPILER_FORCED或手填WORKS。构建检查在转换前完成，失败停止、不重试/替代。
+
+严格只读复用598运行的CPU转换环境/CMake：原receipt/toolchain/probe patch与两份封存
+输入精确hash关联，当前cl/nvcc/CMake/SDK字节核对；pip check及CPU版本核对，不再
+pip install或修改旧环境。设置禁pyc和新HF/cache目录；固定源码、目录layout及NVTX
+资产继续从旧manifest全覆盖核验，展开到新root；原HF/旧失败/旧cache不写。其他工具
+按预定目录与实际版本/hash记录，不把任意新哈希替代已有期望。
+
+回传新增C/C++/CUDA预检JSON、cache、compiler files及configure raw log；native实际
+编译信息、build/转换/tensor身份及完整阶段退出仍在同一小metadata ZIP，不重复传GGUF、
+源码树/CPU环境或大型build中间件。预留20GiB临时、45–120分钟估计；长期50GB政策
+与归档后精确清理条件保持，无自动清理。目标步骤交协调审查后由用户执行；即使全部
+stage1成功，仍先审查构建/模型身份，再另行审查受控桥接，不能自动跑自然P0/P1。

@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.151 阶段1固定Ninja路线修复与编译预检（2026-10-13）
+
+**VS事实检查已完成，原VS生成器路线不能仅靠实例路径续跑；Ninja仅完成本地接线，目标编译/转换仍NOT_RUN。** 已直接核验事实ZIP12840 bytes，SHA256 `e1dad7999c2d4e0780c23e9664bb807e9e5f55d06483d7e884430bc05709d34d`；23成员/22项清单、CRC、安全路径/hash/完整覆盖通过，manifest SHA `ba3ba6a5b16a69cbab10029891265539050b63d3075935442d9c5588bf1758a6`，facts SHA `4d59db2bcb836f4634fe8773515f27b9db3aaaf4ec89cc160f66858ae3031037`。598 checkout clean；VS17.8.34525.116/MSBuild存在，VC与qualified查询为空；默认VCTools文件、CUDA12.4 VS props/targets缺失，三版SDK指定头/库存在。CMake固定源码要求默认工具声明，不能用cl可执行替代该事实。旧现场/报告保留；不修VS安装/注册表/marker、不升级Toolkit/driver、不转Linux。
+
+用户批准改用固定Ninja 1.12.1驱动现有MSVC14.38.33130（实际cl19.38.33135）/nvcc12.4.131。使用已观测SDK10.0.20348.0；明确指定cl/link/lib/rc/mt/nvcc/CMake/Ninja，编译环境的PATH/INCLUDE/LIB固定，删除继承编译器覆盖选项，不依赖VS实例或CUDA MSBuild扩展，也不自动fallback。先一次列出所有真实编译依赖缺件，再通过C/C++和CUDA的实际configure/compile/link及输出/cache/编译器事实验证；CUDA ABI架构运行探测仍按既有私有模块hash严格禁用，无任何生成程序执行。失败立刻停，不自动安装/重试。完整命题与当前入口见[native §7.151](native_llama_window_and_adapter_v0_1.md#7151-固定ninja构建路线)；原7.150查询入口成为历史，不重复取事实。
+
+显式新增stage1与native build schema 0.2.0，仅标识Ninja构建路径；0.1.0的VS读取/历史判定保留，未知版本或错生成器拒绝。新build需要两份真实编译预检引用及精确编译器/SDK/status，不手填compiler works，不改producer/边界/同步/S/A/B/旧Formal。现有598阶段1CPU环境、CMake字节和原禁探测patch由封存回执/事实ZIP绑定后只读复用，设置禁pyc及新cache路径；pip只check、不install，不重传或再安装原wheels。原HF内容身份仍严格，转换与build新目录，GGUF仍F16/F32实际tensor检查、revision未知。
+
+本地tests-first覆盖缺能力、Ninja参数/SDK锁定、集中缺件、错实际编译器/路径/架构/输出、旧schema不可伪装Ninja、错/重封预检状态及实际stage1文件消费顺序。定向CPU命令`python -m pytest -q -p no:cacheprovider tests/test_native_ninja.py tests/test_native_stage1.py tests/test_native_llama.py tests/test_native_vs_precheck.py`（mask=-1）为94 passed、0 failed、0 skipped，40.21s；编译外部依赖用CPU替身，不等目标机真实compile/link。新增Python compileall、PS5.1 parse、diff及用户DOCX原字节检查通过；固定官方Ninja二进制仅本地执行--version=1.12.1，没有cl/nvcc实编译、GPU/CUDA初始化/模型/Nsight或Q0。一次小修复包以前置服务器598d447为基线，显式先预检后构建/转换、回传单metadata ZIP；目标机失败则只报告具体缺件/原始错误，不补造VS信息。20GiB临时空间/45–120分钟估计沿用，长期<50GB，无清理。Gate13限定PASS、Gate14/nativeGPU资格NOT_RUN及UNKNOWN/NOT_ASSESSED保持；用户DOCX及原ZIP不stage。
+
 ## 7.150 阶段1 VS实例发现停点与有界工具链预检（2026-10-13）
 
 **598d447的Git修复已由目标机实物验证；阶段1仍BLOCKED于CMake实例发现，不是模型执行失败。** 本地直接核验回传ZIP29227 bytes、SHA256 `ddfa4d5830874c2c0d98949deecd806fb447ccb07b329157ac37d2ec0b143e3c`；76文件/75项清单、CRC、安全路径、全部hash与完整覆盖通过，manifest SHA256 `d45b3e5e0c142b3dc15f8ae4e87765c601971c70fecab12da363e1faf8d8bc37`。实际checkout=598d447811e948a3ffb54845185631f4be761985/clean，独立llama HEAD=d81235049384534c167caea52b85a694f6103d14/clean。离线依赖、pip check、CPU32 passed（9.23s）、CMake3.31.10版本均成功；工具链回执记录cl19.38.33135、nvcc12.4.131/x64/14.38.33130。原receipt SHA256 `7c3e4f557c102fe8c6d649b01c8d510ec3061f4c256d4e529545f13118a41178`。

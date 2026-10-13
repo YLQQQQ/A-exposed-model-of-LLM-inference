@@ -20,6 +20,7 @@ PROFILE = 'LLAMA-NATIVE-WINDOW/0.1.0'
 SPEC_VERSION = 'exposedpath-native-llama-spec/0.1.0'
 PRODUCER_VERSION = 'exposedpath-native-llama-producer/0.1.0'
 BUILD_VERSION = 'exposedpath-native-llama-build/0.1.0'
+BUILD_NINJA_VERSION = 'exposedpath-native-llama-build/0.2.0'
 CONVERSION_VERSION = 'exposedpath-native-llama-conversion/0.1.0'
 BOUNDARY_VERSION = 'exposedpath-native-boundary/0.1.0'
 PREFIX = 'EXPOSEDPATH_NATIVE_BOUNDARY_V1:'
@@ -69,11 +70,14 @@ def _verify(ref):
     require(_ref(ref['path'])==ref,'ARTIFACT_CHANGED')
 
 
-def build_configuration():
-    return dict(platform='WINDOWS_X64', generator='Visual Studio 17 2022',
+def build_configuration(route='vs2022'):
+    require(route in ('vs2022','ninja'),'BUILD_ROUTE')
+    value=dict(platform='WINDOWS_X64', generator='Visual Studio 17 2022' if route=='vs2022' else 'Ninja',
         toolset_version='14.38.33130', cuda_version='12.4', cuda_architectures='89',
         cuda_graphs=False, shared_libraries=False, native_cpu_arch=False,
         cuda_backend=True, flash_attention='DISABLED')
+    if route=='ninja':value.update(ninja_version='1.12.1',sdk_version='10.0.20348.0',build_type='Release')
+    return value
 
 
 def configuration():
@@ -107,10 +111,22 @@ def _identity(value):
 
 
 def _validate_receipts(build,conversion):
-    require(build.get('schema_version')==BUILD_VERSION and conversion.get('schema_version')==CONVERSION_VERSION,'VERSION')
+    version=build.get('schema_version')
+    require(version in (BUILD_VERSION,BUILD_NINJA_VERSION) and conversion.get('schema_version')==CONVERSION_VERSION,'VERSION')
+    route='ninja' if version==BUILD_NINJA_VERSION else 'vs2022'
+    if route=='ninja':
+        checks=build.get('compile_link_prechecks')
+        require(isinstance(checks,dict) and set(checks)=={'cxx','cuda'},'BUILD_PRECHECKS')
+        for kind,ref in checks.items():
+            _verify(ref);v=_read(ref['path'])
+            versions={'C':'19.38.33135','CXX':'19.38.33135'} if kind=='cxx' else {'CXX':'19.38.33135','CUDA':'12.4.131'}
+            require(v.get('schema_version')=='exposedpath-native-compile-link/0.1.0' and
+                v.get('status')=='COMPILE_LINK_PASS_NOT_EXECUTED' and v.get('program_invoked') is False
+                and v.get('generator')=='Ninja' and v.get('compiler_versions')==versions
+                and v.get('sdk_version')=='10.0.20348.0','BUILD_PRECHECK_STATUS')
     require(build.get('engine_commit')==conversion.get('engine_commit')==ENGINE_COMMIT,'ENGINE_COMMIT')
     require(isinstance(build.get('execution_commit'),str) and re.fullmatch('[0-9a-f]{40}',build['execution_commit'])
-        and build.get('dirty') is False and build.get('configuration')==build_configuration(),'BUILD_CONFIGURATION')
+        and build.get('dirty') is False and build.get('configuration')==build_configuration(route),'BUILD_CONFIGURATION')
     require(build.get('backend_original_sha256')==BACKEND_SHA256,'BACKEND_SOURCE')
     for key in ('backend_instrumented_sha256','native_source_sha256'):_hash(build.get(key))
     for key in ('hf_snapshot_manifest_sha256','converter_source_sha256'):_hash(conversion.get(key))
