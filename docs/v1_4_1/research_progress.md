@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.150 阶段1 VS实例发现停点与有界工具链预检（2026-10-13）
+
+**598d447的Git修复已由目标机实物验证；阶段1仍BLOCKED于CMake实例发现，不是模型执行失败。** 本地直接核验回传ZIP29227 bytes、SHA256 `ddfa4d5830874c2c0d98949deecd806fb447ccb07b329157ac37d2ec0b143e3c`；76文件/75项清单、CRC、安全路径、全部hash与完整覆盖通过，manifest SHA256 `d45b3e5e0c142b3dc15f8ae4e87765c601971c70fecab12da363e1faf8d8bc37`。实际checkout=598d447811e948a3ffb54845185631f4be761985/clean，独立llama HEAD=d81235049384534c167caea52b85a694f6103d14/clean。离线依赖、pip check、CPU32 passed（9.23s）、CMake3.31.10版本均成功；工具链回执记录cl19.38.33135、nvcc12.4.131/x64/14.38.33130。原receipt SHA256 `7c3e4f557c102fe8c6d649b01c8d510ec3061f4c256d4e529545f13118a41178`。
+
+实际configure以VS17 2022/x64/-T version=14.38.33130调用，在CMakeLists第2行C/C++ project处0.109秒exit1/无timeout；错误为could not find any instance of Visual Studio。未进入native/CUDA编译或HF转换；没有模型/CUDA初始化/Nsight。argv没有显式generator instance，但这不能独自证明根因。回传没有Installer实例、MSBuild、默认VCTools实际声明或cache信息，不能从cl可用推断实例注册/组件完整，也不能断言缺安装。
+
+最高优先级仅一次定向只读事实检查：固定598 checkout和原失败receipt，查询vswhere全实例/VC/MSBuild组件谓词，记录实际路径/hash、默认工具版本及其目录、SDK文件、CUDA VS props/targets和旧CMake cache/log。原失败树/环境只读，所有输出在新diagnostic root、回传一个小ZIP。缺工具/查询失败保留unknown；不安装/升级、改cache、复制整个仓库或重跑阶段1。当前入口见[native §7.150](native_llama_window_and_adapter_v0_1.md#7150-vs实例发现与真实cc预检)。
+
+已实现独立的C/C++-only配置/编译/链接预检，采用同VS生成器/x64/14.38.33130和已观测实例版本，新build目录，实际检查Windows SDK、C/C++混合对象及链接输出；不运行生成exe、不启用CUDA语言。实例未被唯一完整识别时拒绝，不猜portable版本、不回填默认VCTools。**目标机真实预检尚未运行，不以CPU替身宣布通过；完整阶段1修复/续跑包需其实际回执后再收敛。** 本轮交付入口默认仅inspect，绝不自动调用precheck/build/convert。
+
+tests-first记录：缺能力RED，默认VCTools引用缺字段RED，真实-I子进程发现并修正兄弟模块导入失败（固定文件加载，不放宽搜索路径）。复核固定CMake源码另修正cache消费：它将实例说明存为所选location，不保留输入version参数；位置按路径身份核对，版本仍绑定事实与configure argv，不用原字符串相等误拒绝。最终相关命令`python -m pytest -q -p no:cacheprovider tests/test_native_vs_precheck.py tests/test_native_stage1.py`（CUDA_VISIBLE_DEVICES=-1）为**48 passed、0 failed、0 skipped，21.59s**，含真实独立Git/文件入口及错原receipt拒绝；编译器/Installer外部依赖由CPU替身替代，不是目标机实编译证据。相关compileall与PS5.1语法/diff检查通过；无全量/Q0/实验重跑。现有测量合同/Native候选边界/A/B/原Formal不变；Gate13限定PASS、Gate14/nativeGPU资格NOT_RUN、UNKNOWN/NOT_ASSESSED保持。用户DOCX和未跟踪原ZIP保留、不stage、不清理。
+
 ## 7.149 阶段1源码归档空目录与Git作用域最小修复（2026-10-13）
 
 **首次cc9b595阶段1保持BLOCKED，不是GPU/模型失败。** 本地直接核验回传ZIP17365 bytes，SHA256 `eff229f2165bc200bef7d80dc2bd343eaf9c49e141e3502e0aa13e7b507c2918`，39文件/38项清单及CRC/全部hash通过。原receipt前三步Git checkout身份成功后engine_head exit128/无超时，stderr为not a git repository；没有创建CPU转换venv、编译、转换、模型/CUDA初始化或collector步骤。旧包/报告不改，GPU资格NOT_RUN、Gate13限定PASS/Gate14 NOT_RUN保持。

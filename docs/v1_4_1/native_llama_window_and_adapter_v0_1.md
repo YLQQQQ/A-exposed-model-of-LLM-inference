@@ -245,3 +245,34 @@ Git查询与CMake都显式指定源码自己的`--git-dir`/`--work-tree`；核�
 离线包作为只读资产根，原manifest SHA256与全部40项当前文件/覆盖严格核验；缺失、
 变化、reparse或错来源即停。旧package/失败树不写入，不复用旧展开engine或转换环境；
 在全新root重新完成阶段1，没有模型/GPU探测/Nsight入口。回传仍一个metadata ZIP。
+
+### 7.150 VS实例发现与真实C/C++预检
+
+598d447目标机回传证明Git目录修复、依赖安装和32项CPU回归通过；CMake3.31.10却在
+首个C/C++ project处拒绝VS实例，尚未编译或转换。cl/nvcc版本正确仅证明相应文件可执行，
+不证明VS Installer实例/默认工具目录/MSBuild/SDK完整。失败argv没有显式实例；未取得
+实例事实前，不据此猜测缺安装或修改选择。原cache/失败root与原ZIP保持。
+
+依据[CMake3.31.10实例发现源码](https://github.com/Kitware/CMake/blob/v3.31.10/Source/cmVSSetupHelper.cxx)
+的LoadVSInstanceVCToolsetVersion与实例选择路径，记录默认VCTools声明及实际目录存在性；
+不把DevShell所选14.38覆盖写入声明。依据[VS实例选择](https://cmake.org/cmake/help/v3.31/variable/CMAKE_GENERATOR_INSTANCE.html)
+与[Microsoft vswhere/MSBuild](https://github.com/microsoft/vswhere/wiki/Find-MSBuild)，定向查询
+包含BuildTools的产品集合、VC和MSBuild资格谓词，保留all与qualified的区别。不能用
+空结果/查询异常推断工具绝不存在；portable实例需真正的安装build version，不编造版本。
+
+`inspect_native_vs_once.ps1`默认只读取固定checkout/原receipt、实例和指定组件文件，
+将facts、原stdout/stderr/exit以及旧cache/log的只读副本放到新诊断目录；不改DevShell、
+旧环境/源码/cache，不编译、不转换、不调用模型或CUDA。缺项继续unknown，只有事实
+回传完成，绝不是toolchain PASS。机器路径和包身份只存本地交接/忽略配置。
+
+新增`native/toolchain_precheck`仅LANGUAGES C CXX：使用Windows SDK、C对象和C++运行库，
+真实configure/compile/link，生成exe不运行。`native_vs_precheck`按事实唯一选择已完整
+注册的预定实例，并绑定原cl hash/当前MSBuild/CMake字节；同VS17/x64/-T14.38.33130，
+验证实际cache、19.38.33135编译器版本和exe内容。新build目录不可resume，失败即停；
+无实例/状态不完整/错版本/变化/歧义拒绝，不能借用本机其他VS版本证明目标机通过。
+
+当前唯一下一动作是取一次事实ZIP，不重跑整套阶段1。真实C/C++预检已经本地接线，但
+目标机NOT_RUN；核实实例后才能提供其独立CPU执行，不先交完整构建修复包。后续应
+优先严格只读引用已通过的固定CPU工具/资产，避免每次重复pip安装；新build与新回执，
+不得修改旧converter或失败cache。实际CUDA编译/转换仍须随后单独通过，CPU预检不授
+GPU/native资格，不改变旧Gate13限定PASS或Gate14 NOT_RUN。
