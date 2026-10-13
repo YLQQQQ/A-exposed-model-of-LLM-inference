@@ -312,3 +312,28 @@ pip install或修改旧环境。设置禁pyc和新HF/cache目录；固定源码�
 源码树/CPU环境或大型build中间件。预留20GiB临时、45–120分钟估计；长期50GB政策
 与归档后精确清理条件保持，无自动清理。目标步骤交协调审查后由用户执行；即使全部
 stage1成功，仍先审查构建/模型身份，再另行审查受控桥接，不能自动跑自然P0/P1。
+
+### 7.152 工具身份查询独立规则
+
+7.151目标机Ninja版本/原资产核对已通过，但link /?真实退出1100；stdout包含
+14.38.33135.0及帮助，stderr为空。它不是实际链接命令，通用Runner提前拒绝导致
+未进入C/C++预检。旧BLOCKED回执、原始字节及真实退出码保持，不能由此判断编译能力。
+
+本次选择Windows固定PE资源查询，而不是猜测link/lib本地化帮助的退出约定。
+身份规则`exposedpath-native-tool-identity/0.1.0`读取
+[GetFileVersionInfoW](https://learn.microsoft.com/en-us/windows/win32/api/winver/nf-winver-getfileversioninfow)
+与[VerQueryValueW](https://learn.microsoft.com/en-us/windows/win32/api/winver/nf-winver-verqueryvaluew)
+的固定部分：两个实际工具的路径/长度/SHA256先与本次封存reference一致，版本资源
+保留原DWORD和实际14.38.33135.0，查询后再核对字节。缺资源、错误版本/工具/读取、
+变化均拒绝；不执行link/lib，exit_code为null，不把原1100改成0，也不生成构建PASS。
+
+其余工具保持原严格约定：Ninja/CMake版本、Git身份、Python/CPU依赖assert成功；
+真实configure/compile/link/转换仍exit0且核对cache、真实编译器及输出文件。旧VS
+查询规则只供原版本路径，不全局允许非零。新目录元数据保留独立link/lib身份回执、
+toolchain引用及原帮助回执ZIP的SHA，完整帮助原件不转码改写。
+
+部署前置为882425c，旧CPU环境/VS事实来源仍598d447，二者显式分开，不随新HEAD
+改写历史身份。新小包带原帮助失败reference并复用原40资产及只读converter；不再
+安装依赖、不修改系统文件/旧源码/cache。相关CPU回归、真正C/C++与CUDA编译链接
+预检成功后才native构建/转换；生成exe不运行，设备查询/模型/collector预算均0。
+目标机尚未执行本修复，不授任何GPU资格；新输出/单metadata ZIP/失败即停，不重试。

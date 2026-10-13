@@ -12,6 +12,59 @@ CHECK_VERSION='exposedpath-native-compile-link/0.1.0'
 NINJA_VERSION='1.12.1'
 SDK_VERSION='10.0.20348.0'
 NINJA_SHA256='68865c3276d449d746cea5065fdec2baf755d7813e161ab04205b0907b2629b8'
+TOOL_IDENTITY_VERSION='exposedpath-native-tool-identity/0.1.0'
+
+
+def read_pe_version(path):
+    """Read the Windows fixed version resource; never execute the tool."""
+    import ctypes
+    from ctypes import wintypes
+    stage.require(os.name=='nt','PE_VERSION_WINDOWS_ONLY')
+    dll=ctypes.WinDLL('version.dll',use_last_error=True,winmode=0x800) # System32 only
+    size=dll.GetFileVersionInfoSizeW
+    size.argtypes=[wintypes.LPCWSTR,ctypes.POINTER(wintypes.DWORD)];size.restype=wintypes.DWORD
+    get=dll.GetFileVersionInfoW
+    get.argtypes=[wintypes.LPCWSTR,wintypes.DWORD,wintypes.DWORD,wintypes.LPVOID];get.restype=wintypes.BOOL
+    query=dll.VerQueryValueW
+    query.argtypes=[wintypes.LPCVOID,wintypes.LPCWSTR,ctypes.POINTER(wintypes.LPVOID),ctypes.POINTER(wintypes.UINT)]
+    query.restype=wintypes.BOOL
+    ignored=wintypes.DWORD();n=size(str(path),ctypes.byref(ignored))
+    if not n:raise ctypes.WinError(ctypes.get_last_error())
+    data=ctypes.create_string_buffer(n)
+    if not get(str(path),0,n,data):raise ctypes.WinError(ctypes.get_last_error())
+    pointer=wintypes.LPVOID();length=wintypes.UINT()
+    if not query(data,'\\',ctypes.byref(pointer),ctypes.byref(length)):raise ctypes.WinError(ctypes.get_last_error())
+    stage.require(pointer.value is not None and length.value==13*4,'PE_FIXED_RESOURCE_SIZE')
+    raw=list(ctypes.cast(pointer,ctypes.POINTER(wintypes.DWORD*13)).contents)
+    ms,ls=raw[2:4]
+    return dict(file_version='.'.join(map(str,(ms>>16,ms&0xffff,ls>>16,ls&0xffff))),file_type=raw[9],fixed_info=raw)
+
+
+def msvc_file_identity(name,path,expected,root,*,reader=None):
+    """Versioned identity-only policy, separate from Runner's exit-zero gate."""
+    path=Path(path);result=dict(schema_version=TOOL_IDENTITY_VERSION,tool=name,status='BLOCKED',error=None,
+        query='GetFileVersionInfoW/VerQueryValueW',tool_invoked=False,exit_code=None,expected_file=expected)
+    try:
+        stage.require(name in ('link','lib') and path.name.lower()==name+'.exe','MSVC_IDENTITY_TOOL')
+        result['file']=fact(path)
+        stage.require(result['file']==expected and expected['exists'] and expected['size_bytes']>0,'MSVC_IDENTITY_FILE_CONFLICT')
+        result['resource']=(reader or read_pe_version)(path)
+        r=result['resource'];raw=r['fixed_info']
+        stage.require(len(raw)==13 and raw[0]==0xFEEF04BD and raw[1]==0x10000,'MSVC_IDENTITY_RESOURCE')
+        actual='.'.join(map(str,(raw[2]>>16,raw[2]&0xffff,raw[3]>>16,raw[3]&0xffff)))
+        stage.require(actual==r['file_version']=='14.38.33135.0' and raw[9]==r['file_type']==1,'MSVC_IDENTITY_VERSION')
+        stage.require(fact(path)==expected,'MSVC_IDENTITY_CHANGED_DURING_QUERY')
+        result['status']='IDENTITY_ONLY_NOT_BUILD_CAPABILITY'
+        return result
+    except BaseException as error:result['error']=str(error);raise
+    finally:stage.write(Path(root)/(name+'_file_identity.json'),result)
+
+
+def validate_prior_roles(cfg,old,observation):
+    source=cfg.get('reuse_cpu_commit')
+    stage.require(isinstance(source,str) and re.fullmatch(r'[0-9a-f]{40}',source) is not None
+        and old['execution_commit']==source and old['error']=='NATIVE_STAGE1_STEP_EXIT:configure'
+        and observation['expected_checkout']==source,'NINJA_PRIOR_ROLE')
 
 
 def reference_zip(path,expected_sha,output):
@@ -60,8 +113,7 @@ def bind_tools(cfg,package,root,runner):
     old=reference_zip(package/'prior_review.zip',cfg['prior_review_sha256'],references/'prior')
     observation=reference_zip(package/'vs_facts.zip',cfg['vs_facts_zip_sha256'],references/'vs')
     observed=stage.read(references/'vs/vs_facts.json');old_tool=stage.read(references/'prior/toolchain.json')
-    stage.require(old['execution_commit']==cfg['prerequisite'] and old['error']=='NATIVE_STAGE1_STEP_EXIT:configure'
-        and observation['expected_checkout']==cfg['prerequisite'],'NINJA_PRIOR_ROLE')
+    validate_prior_roles(cfg,old,observation)
     for name in ('receipt.json','toolchain.json','cmake_probe_patch.json'):
         stage.require(stage.digest(prior/name)==stage.digest(references/'prior'/name),'NINJA_PRIOR_CHANGED:'+name)
     for key in ('cl','cmake'):
@@ -82,14 +134,18 @@ def bind_tools(cfg,package,root,runner):
     env=build_environment(cfg,tools,os.environ)
     version=runner.run('ninja_version',[tools['ninja'],'--version'],env=env).decode('ascii').strip()
     stage.require(version==NINJA_VERSION,'NINJA_VERSION')
-    for name in ('link','lib'):
-        runner.run(name+'_version',[tools[name],'/?'],env=env)
-        raw=(root/'logs'/(name+'_version.stdout.txt')).read_bytes()+(root/'logs'/(name+'_version.stderr.txt')).read_bytes()
-        stage.require(b'14.38.33135' in raw,'NINJA_MSVC_TOOL_VERSION:'+name)
+    stage.require(cfg.get('tool_identity_version')==TOOL_IDENTITY_VERSION,'NINJA_TOOL_IDENTITY_VERSION')
+    query_ref=reference_zip(package/'query_review.zip',cfg['query_review_sha256'],references/'query')
+    stage.require(query_ref['execution_commit']==cfg['query_reference_commit']==cfg['prerequisite']
+        and query_ref['error']=='NATIVE_STAGE1_STEP_EXIT:link_version'
+        and not any(query_ref[k] for k in ('model_executed','cuda_initialization_program_invoked','collector_executed')),'NINJA_QUERY_REFERENCE_ROLE')
+    query_files=stage.read(references/'query/toolchain_prerequisites.json')['files']
+    identities={name:msvc_file_identity(name,tools[name],query_files[name],root) for name in ('link','lib')}
     stage.write(root/'toolchain.json',dict(schema_version=CHECK_VERSION,generator='Ninja',ninja_version=version,
         msvc_toolset='14.38.33130',sdk_version=SDK_VERSION,files=values,device_query_invoked=False,
         environment={k:env[k] for k in ('PATH','INCLUDE','LIB')},prior_reference_sha256=cfg['prior_review_sha256'],
-        vs_facts_zip_sha256=cfg['vs_facts_zip_sha256']))
+        vs_facts_zip_sha256=cfg['vs_facts_zip_sha256'],tool_identity_version=TOOL_IDENTITY_VERSION,
+        tool_identities=identities,query_reference_sha256=cfg['query_review_sha256'],reuse_cpu_commit=cfg['reuse_cpu_commit']))
     return tools,env
 
 

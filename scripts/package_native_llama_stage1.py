@@ -79,10 +79,10 @@ def assemble_repair(destination,*,commit,prerequisite,reuse_delivery,engine_sour
         manifest_sha256=stage.digest(destination/'package_manifest.json'),reused_manifest_sha256=old_manifest_sha)
 
 
-def assemble_ninja(destination,*,commit,reuse_delivery,reuse_repair,ninja_exe,ninja_license,vs_facts,prior_review,server):
+def assemble_ninja(destination,*,commit,prerequisite,reuse_delivery,reuse_repair,ninja_exe,ninja_license,vs_facts,prior_review,query_review,server):
     """Fixed small route repair, no reinstall and no system metadata edits."""
     from exposedpath import native_ninja
-    prerequisite='598d447811e948a3ffb54845185631f4be761985'
+    stage.require(prerequisite=='882425c02f3e0ec70679c0ed58875a852cf3cbd1','NINJA_REPAIR_PREREQUISITE')
     old=Path(reuse_delivery).resolve();repair=Path(reuse_repair).resolve();destination=Path(destination).resolve()
     if destination.exists():raise FileExistsError(destination)
     old_manifest_sha='408c63b0ff6e3ebf01012190240d8dd075943daf76b259608a62bb4ec07a6a53'
@@ -93,6 +93,7 @@ def assemble_ninja(destination,*,commit,reuse_delivery,reuse_repair,ninja_exe,ni
     stage.require(stage.digest(ninja_license)=='eb7e9ab9690124c5c9f42bdc81383d886a3dede26345b6ed15bbad7caf81f7ea','NINJA_LICENSE_HASH')
     stage.require(stage.digest(vs_facts)=='e1dad7999c2d4e0780c23e9664bb807e9e5f55d06483d7e884430bc05709d34d'
         and stage.digest(prior_review)=='ddfa4d5830874c2c0d98949deecd806fb447ccb07b329157ac37d2ec0b143e3c','NINJA_EVIDENCE_INPUTS')
+    stage.require(stage.digest(query_review)=='3d8f2599cf0dec1499463e1a90d1ab1b3dcb32bbf2bd2df14314da3fa6746264','NINJA_QUERY_EVIDENCE_INPUT')
     original=stage.read(old/'config.json')
     for key in ('code_root','model_root','base_python','test_python','git','cuda_root','vs_root'):
         stage.require(server[key]==original[key],'NINJA_EXECUTION_CONFIG_CONFLICT:'+key)
@@ -101,11 +102,14 @@ def assemble_ninja(destination,*,commit,reuse_delivery,reuse_repair,ninja_exe,ni
     for source,target in [('exposedpath/native_stage1.py','native_stage1.py'),('scripts/run_native_llama_stage1.ps1','run_native_llama_stage1.ps1')]:
         (destination/target).write_bytes(git('show',commit+':'+source))
     for source,target in [(ninja_exe,'ninja.exe'),(ninja_license,'NINJA_COPYING'),
-        (vs_facts,'vs_facts.zip'),(prior_review,'prior_review.zip'),(repair/'llama_source_layout.json','llama_source_layout.json')]:
+        (vs_facts,'vs_facts.zip'),(prior_review,'prior_review.zip'),(query_review,'query_review.zip'),
+        (repair/'llama_source_layout.json','llama_source_layout.json')]:
         shutil.copyfile(source,destination/target)
     cfg=dict(original,**server)
     cfg.update(schema_version=native_ninja.VERSION,execution_commit=commit,prerequisite=prerequisite,bundle_ref='HEAD',
-        reuse_manifest_sha256=old_manifest_sha,vs_facts_zip_sha256=stage.digest(vs_facts),prior_review_sha256=stage.digest(prior_review))
+        reuse_manifest_sha256=old_manifest_sha,vs_facts_zip_sha256=stage.digest(vs_facts),prior_review_sha256=stage.digest(prior_review),
+        reuse_cpu_commit='598d447811e948a3ffb54845185631f4be761985',query_reference_commit=prerequisite,
+        tool_identity_version=native_ninja.TOOL_IDENTITY_VERSION,query_review_sha256=stage.digest(query_review))
     stage.write(destination/'config.json',cfg)
     stage.write(destination/'package_manifest.json',dict(schema_version=native_ninja.VERSION,execution_commit=commit,files=index(destination)))
     archive=destination.with_suffix('.zip');zip_tree(destination,archive)

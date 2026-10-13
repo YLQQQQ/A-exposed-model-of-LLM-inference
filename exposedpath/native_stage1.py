@@ -301,7 +301,7 @@ def execute(config,package,root,*,runner=None):
         test_env=dict(env,EXPOSEDPATH_TEST_CMAKE=str(cmake))
         if 'test_python' in cfg:
             tests=['tests/test_native_stage1.py']
-            if use_ninja:tests+=['tests/test_native_ninja.py','tests/test_native_llama.py']
+            if use_ninja:tests+=['tests/test_native_ninja.py','tests/test_native_tool_identity.py','tests/test_native_llama.py']
             runner.run('cpu_regression',[cfg['test_python'],'-X','utf8','-m','pytest','-q','-p','no:cacheprovider',
                 *tests,'--basetemp',root/'cpu-tests'],env=test_env,cwd=code,timeout=300)
         build_env=env

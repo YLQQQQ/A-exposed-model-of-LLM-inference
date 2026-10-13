@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.152 阶段1工具身份查询与构建退出码分离（2026-10-13）
+
+**服务器882425c已部署，但link帮助查询误拒绝，实际编译/转换仍NOT_RUN；本次仅本地工程修复。** 直接核验回传ZIP17793 bytes、SHA256 `3d8f2599cf0dec1499463e1a90d1ab1b3dcb32bbf2bd2df14314da3fa6746264`，43成员/42项、CRC、安全路径、hash及完整覆盖通过；manifest SHA `98b211c361b041947b56ea18b975ff301ccb21b8bb9b4c994c8fe3c1952d2986`。真实checkout为882425c02f3e0ec70679c0ed58875a852cf3cbd1且clean；ninja --version成功，link /?在0.047s退出1100、无timeout，stdout含14.38.33135.0及帮助、stderr为空。Runner在版本解析前执行通用exit-zero门，故误把身份查询作为构建失败。lib查询及真实configure/compile/link尚未执行，不能推断其返回约定或构建能力；旧BLOCKED原件不改。
+
+最小修复选择**文件版本资源查询**，不建立宽泛非零退出白名单。新tool identity合同`exposedpath-native-tool-identity/0.1.0`独立读取link/lib的Windows固定PE版本资源，记录路径/长度/SHA256、原13个DWORD、实际版本及错误；工具exe不执行、exit_code=null不是伪造0。当前两个文件必须精确匹配本次封存回执中的实际文件身份，查询前后字节一致、资源签名/类型及14.38.33135.0严格匹配；错文件/版本/资源、读取失败或变化拒绝。依据[GetFileVersionInfoW](https://learn.microsoft.com/en-us/windows/win32/api/winver/nf-winver-getfileversioninfow)与[VerQueryValueW](https://learn.microsoft.com/en-us/windows/win32/api/winver/nf-winver-verqueryvaluew)，查询固定版本不依赖本地化帮助文本。原帮助stdout/stderr与1100完整保存在封存ZIP、并作为新包的原样reference；不能将1100改写成功。通用Runner不变，实际configure/compile/link/转换等仍要求exit0和真实产物/cache验证。Ninja/CMake/Python/Git查询维持各自原有严格规则，不新增fallback。
+
+同时完成后续接线核对：部署前置882425c与只读复用CPU环境/事实的来源598d447分字段绑定，避免部署commit变化误污染旧资产身份；原40项离线资产/layout、598 CPU环境和禁运行CUDA探测patch不改。真实reference ZIP→工具文件/version→stage1消费路径补CPU正反例；Ninja入口纳入新相关测试，再C/C++实预检→CUDA实预检→native构建→GGUF转换，任何失败即停。stage1/build仍0.2.0，旧0.1.0读取及原判定不改，测量/producer/S/A/B与研究结果不变。
+
+tests-first首轮新查询反例16 failed/1 passed，部署前置接线反例1 failed/22 passed；最小实现后实际定向命令（mask=-1）`python -m pytest -q -p no:cacheprovider tests/test_native_tool_identity.py tests/test_native_ninja.py tests/test_native_stage1.py tests/test_native_llama.py`为**101 passed、0 failed、0 skipped，41.92s**。包含本机真实Windows PE资源只读查询、错误读取/内容/版本/变化、原始1100仍被真实构建Runner拒绝及实际文件reference消费链；CPU替身不等目标工具或compile/link验证。Python compileall/diff-check通过，用户DOCX原SHA不变。不重复全量/Q0、没有服务器/模型/CUDA初始化/Nsight操作。唯一下一步为以882425c为前置的小修复包，经协调审查后由用户执行一次原阶段1范围的新目录入口；20GiB临时空间/45–120分钟估计，长期<50GB、无清理。Gate13限定PASS、Gate14/nativeGPU资格NOT_RUN、UNKNOWN/NOT_ASSESSED保持。当前交付入口见[native §7.152](native_llama_window_and_adapter_v0_1.md#7152-工具身份查询独立规则)。
+
 ## 7.151 阶段1固定Ninja路线修复与编译预检（2026-10-13）
 
 **VS事实检查已完成，原VS生成器路线不能仅靠实例路径续跑；Ninja仅完成本地接线，目标编译/转换仍NOT_RUN。** 已直接核验事实ZIP12840 bytes，SHA256 `e1dad7999c2d4e0780c23e9664bb807e9e5f55d06483d7e884430bc05709d34d`；23成员/22项清单、CRC、安全路径/hash/完整覆盖通过，manifest SHA `ba3ba6a5b16a69cbab10029891265539050b63d3075935442d9c5588bf1758a6`，facts SHA `4d59db2bcb836f4634fe8773515f27b9db3aaaf4ec89cc160f66858ae3031037`。598 checkout clean；VS17.8.34525.116/MSBuild存在，VC与qualified查询为空；默认VCTools文件、CUDA12.4 VS props/targets缺失，三版SDK指定头/库存在。CMake固定源码要求默认工具声明，不能用cl可执行替代该事实。旧现场/报告保留；不修VS安装/注册表/marker、不升级Toolkit/driver、不转Linux。
