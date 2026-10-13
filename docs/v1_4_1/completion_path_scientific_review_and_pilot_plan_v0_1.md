@@ -5,8 +5,12 @@ Gate13限定PASS、Gate14 NOT_RUN保持。C0/Cpre现有资料仍是Engineering�
 Request/Decode拒绝、UNKNOWN/NOT_ASSESSED及原件不变。本轮无部署、采集入口或业务实现。
 
 > 2026-10-13优先级调整：**下述四对追加Pilot暂停，不再是当前下一项执行。** 当前以
-> [自然完成支持范围／首引擎收敛0.1](natural_completion_engine_applicability_v0_1.md)为入口；
+> [Device Exposure范围／Windows首引擎0.2](device_exposure_scope_and_windows_engine_v0_2.md)为入口；
 > 本页保留已完成审查与历史待审方案，Cpre只作受控对照，不替代自然baseline。
+
+> 用户本轮明确保留A_device_wait为操作性Device Exposure指标；“近似全部GPU相关Host阻塞”
+> 仅是未验证假设，不是当前研究前置。下面历史引擎/完整等待讨论不授权Linux或语义扩展；
+> 现行首候选是固定Windows/4090上的llama.cpp，自然PyTorch执行baseline保持。
 
 ## 1. 核心判断与证据—claim对应
 
@@ -109,6 +113,7 @@ Raw/hash前后不变。残余绝大部分在terminal前：它表示那些时刻�
 
 1. **方法与正确性**：定义内层Host-readable窗口、支持的S依赖、五类互斥A与单sync B。
    展示独立oracle/Raw来源；守恒是必要QA，不是贡献证明。把当前适用范围写在方法正文。
+   A_device_wait操作化Device Exposure而非全部Host阻塞；近似假设未获独立验证。
 2. **Formal G1**：全部六block显示activity与支持同步exposure的条件差异；与同窗kernel/API/
    sync count、sum/union、合法mapping/launch-to-start比较。Host补集和API sum=union的
    无额外信息结果一并写入，不能挑有利phase。P0只报告各执行合同下未profile的性能，
@@ -205,6 +210,6 @@ manifest/来源与最终汇总保留，不在运行中清理，也不顺带删�
 3. 仅做受影响身份/role/实际流与局部投影资格增量，复用独立S/A、闭合历史和两模式证据；
    不授Request/Decode、完整B、vLLM或全新版Q0。若核心测量语义实际变化，再集中裁决。
 
-**当前下一步只有一项：协调审查本四对Pilot的问题、八槽/45～60分钟/5GiB预算和角色
-接线范围。** 获准后才本地实现/固定交付；当前用户无需服务器操作。不是重开Gate13，
+**历史计划停点（已暂停，不是当前下一步）：协调审查本四对Pilot的问题、八槽/45～60分钟/5GiB预算和角色
+接线范围。** 现行下一步见顶部0.2入口；当前用户无需服务器操作。不是重开Gate13，
 不是进入Gate14，更不是为得到较大Device wait而变更自然基准。

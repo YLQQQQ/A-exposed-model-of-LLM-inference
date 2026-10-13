@@ -1,6 +1,22 @@
 # ExposedPath 科研进度清单
 
+## 7.146 Device Exposure操作性口径与Windows首引擎源码核对（2026-10-13）
+
+**用户已收敛范围：保留冻结A_device_wait交集/union定义，取消“完整GPU相关Host等待可识别性”前置；Windows/4090是当前唯一环境。** [现行0.2入口](device_exposure_scope_and_windows_engine_v0_2.md)统一论文提纲、解释与本地handoff；PyTorch自然路径是执行baseline，同窗常规活动/完整timeline是信息增益参照，Cpre保持受控机制Engineering角色。四对追加Pilot仍暂停，Linux/WSL/升级/换服务器未获授权；vLLM只保留为未来候选。Gate13限定PASS、Gate14 NOT_RUN、Raw/历史报告/BLOCKED/UNKNOWN/NOT_ASSESSED及全部数据角色不变。
+
+Device Exposure是合格同步区间与根据completion证据恢复的必要GPU活动并集的操作性预算；已完成成员仍保留、跨sync不直接相加、投影与完整物理W/B分开。“大致等于全部GPU相关Host阻塞”仅未验证假设，无独立ground truth/误差证据，不新增完整等待指标或采集设施。同步copy/依参数阻塞的已知支持缺口与原拒绝门保留；建模不豁免缺身份/边界/映射/依赖/诊断，不制造W/B或新增opaque-copy许可。用户本轮改变研究解释范围，不改冻结公式、registry、质量或排除规则，不重签/重标旧Formal。
+
+实际复用Formal最终审查§4与已保存C0/Cpre区间，无重算：G1 GPU activity增加不唯一决定同步exposure，wait差方向混合；API sum=union与Host补集在该数据未显示额外信息。N1完整W/terminal/单sync provenance有限支持自动可审计解释，标准完整timeline＋同语义可手工恢复；稳定P0收益、10/5ms保证、P1组成迁移P0不受支持。Cpre 87.646953=38.946574+48.700379ms保留，residual前/后terminal和copy差不推因果/全部等待。零unattributed/守恒/Gate PASS不替代信息增益，不以大wait选点。
+
+首引擎源码固定llama.cpp v0.6.0真实commit `d81235049384534c167caea52b85a694f6103d14`。官方simple→sample→sampled-token/logits getter→context/scheduler synchronize→CUDA backend `cudaStreamSynchronize`调用链已只读核验，CUDA输出get先提交D2H copy；这是原生完成行为，不添Cpre且不保证wait较大。VS2022/CUDA sm89/graph开关及Qwen2ForCausalLM转换识别已查，但现CUDA12.4/MSVC14.38/driver目标构建未验证，GGUF F16转换及数值/token身份未取得。未下载/安装引擎、不跑CUDA或模型。
+
+下一项本地工作仅native窗口/identity声明与最小文件链设计：自然process含input preparation/H2D，与MC0.2 GPU-resident start确有差异，须显式窄域声明裁决后接线；实际native多TID/stream/context/correlation/event/Host-ready桥接增量不等重跑全Q0。不强插同步统一路径、不授新引擎/完整B。后续目标只提议构建/模型身份、必要桥接和一对自然32/2 P0/P1；当前不制作包或服务器命令，不新增大矩阵/collector/监控。
+
+本轮仅文档/官方固定源码检查；无业务代码、测量schema/registry或签署协议变更，无pytest/重算/采集。32个相对文件链接目标存在、diff-check通过，新增公共内容私有路径/凭证模式检查无命中；代码/测试/合同/schema/registry/签署协议零diff。用户DOCX实际SHA256保持、原未跟踪大ZIP保留，均不纳入提交；本地handoff继续忽略。0.1的Linux环境待决及旧四对Pilot“当前下一步”均已标为历史，避免冲突入口。
+
 ## 7.145 自然完成支持范围裁决与首引擎适用性收敛（2026-10-13）
+
+> 历史方案；当前范围/Windows硬约束与首引擎优先级由7.146取代，下方Linux待决不再是前置。
 
 **优先级调整已执行：四对C0/Cpre追加Pilot暂停；当前只审查自然推理支持范围并准备首引擎方案。** [唯一新入口0.1](natural_completion_engine_applicability_v0_1.md)复用7.143/7.144、B4局部Prefill及Formal审查，不重追w11、84个memset或旧UNKNOWN。Gate13限定PASS、Gate14 NOT_RUN、全部原数据角色/失败报告及UNKNOWN/NOT_ASSESSED保持；不安装引擎、不改业务/合同、不运行测试/分析/实验、不交付采集包。
 

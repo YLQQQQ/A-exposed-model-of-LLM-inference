@@ -1,7 +1,9 @@
 # 自然完成路径支持范围与首引擎适用性收敛 0.1
 
 2026-10-13；**只读语义审查与待裁决方案，不是合同amendment、引擎资格或采集授权。**
-本页为当前入口。四对C0/Cpre追加Pilot暂停；Cpre保留为受控机制对照，不替代自然baseline。
+本页保留为历史审查；现行解释与Windows约束见[0.2入口](device_exposure_scope_and_windows_engine_v0_2.md)。
+用户已撤回本页的Linux/vLLM默认下一步及完整等待前置；下方方案不是当前执行指令。
+四对C0/Cpre追加Pilot暂停；Cpre保留为受控机制对照，不替代自然baseline。
 Gate13限定PASS、Gate14 NOT_RUN及原Engineering/BLOCKED/UNKNOWN/NOT_ASSESSED不变。
 
 ## 1. 自然token复制的裁决：C，有明确的合同解释缺口
