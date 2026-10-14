@@ -26,7 +26,8 @@ static json query_device(const json & expected) {
     check(order && mask && expected.at("cuda_device_order")==order && expected.at("cuda_visible_devices")==mask,"mask/order conflict");
     int count,device;cuda_check(cudaGetDeviceCount(&count));cuda_check(cudaGetDevice(&device));
     check(count==1 && device==0,"actual CUDA device count/index conflict");
-    cudaUUID_t uuid;cuda_check(cudaDeviceGetUuid(&uuid,device));
+    cudaDeviceProp properties{};cuda_check(cudaGetDeviceProperties(&properties,device));
+    const auto & uuid=properties.uuid;
     char pci[64];cuda_check(cudaDeviceGetPCIBusId(pci,sizeof(pci),device));
     std::ostringstream out;
     for (int i=0;i<16;++i) {

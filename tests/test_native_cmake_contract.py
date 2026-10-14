@@ -64,7 +64,7 @@ def test_four_part_versions_flow_from_real_cmake_to_stage1_and_receipt_consumer(
     monkeypatch.setattr(fixtures,'write_build',generated_build)
     test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_path,monkeypatch,ninja=True)
     root=tmp_path/'diagnostics/new';build=s.read(root/'build_receipt.json');conversion=s.read(root/'conversion_receipt.json')
-    assert build['schema_version']=='exposedpath-native-llama-build/0.2.1'
+    assert build['schema_version']=='exposedpath-native-llama-build/0.2.2'
     for kind,ref in build['compile_link_prechecks'].items():
         v=s.read(ref['path']);assert v['schema_version']=='exposedpath-native-compile-link/0.2.0'
         assert v['compiler_versions']['CXX']=='19.38.33135.0'

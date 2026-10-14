@@ -4,9 +4,10 @@
 Engineering；不是签署Formal协议、平台资格或采集授权。Gate13限定PASS保持、Gate14
 NOT_RUN；PyTorch自然baseline和原冻结结果不变，四对C0/Cpre追加Pilot仍暂停。
 
-**当前工程入口为§7.154。** 34fa866目标CPU103 passed/4 skipped，C/C++编译器识别
-小程序编译链接成功；完整预检停于RC路径生成错误。新修复只做CMake路径/版本适配，
-等待协调审查，不安排服务器执行；旧VS命令及§7.148～7.153保留为历史，不能重复执行。
+**当前工程入口为§7.155。** 48567aa目标C/C++、CUDA真实编译链接预检及完整configure
+已通过；完整build停于adapter引用不存在的CUDA Runtime API。修复与前置真实头文件
+编译门仅在本地验证，尚未授构建/GPU资格。本轮无新包、命令或服务器执行安排；旧入口
+及§7.148～7.154保留历史，不再恢复或重复执行。
 
 ## 1. 窗口与实际完成链
 
@@ -44,7 +45,7 @@ NOT_RUN；PyTorch自然baseline和原冻结结果不变，四对C0/Cpre追加Pil
 | `scripts/native_llama_local.py` | CPU文件CLI：patch-backend/prepare/inspect-producer/review；没有build、模型启动、profile/export或默认采集子命令 |
 
 spec/conversion/producer/scope为`exposedpath-native-llama-<kind>/0.1.0`；当前Ninja
-build为0.2.1（仅构建回执适配），显式旧build0.1.0/0.2.0读取见§7.154；
+build为0.2.2（仅构建回执适配），显式旧build0.1.0/0.2.0/0.2.1读取见§7.155；
 boundary=`exposedpath-native-boundary/0.1.0`、sync=`exposedpath-native-sync/0.1.0`。
 角色只能ENGINEERING/Engineering；公共旧schema、registry、A/B公式及旧读取路径零改动。
 未知版本、错role、错hash或错误配置拒绝，不把旧Engineering/Pilot/失败结果改名升级。
@@ -395,3 +396,59 @@ precheck0.1.0及三段MSVC版本，VS build0.1.0保留。错配、未知版本�
 query原件；新root/单metadata ZIP，不恢复旧cache或入口。20GiB临时空间及45–120
 分钟仅后续估计，长期50GB政策与归档后清理条件不变。本轮停在本地交付审查，未授权
 安排目标机执行；成功也不授GPU资格，不自动阶段2或自然配对。
+
+### 7.155 实际CUDA接口与adapter前置编译；支线收口范围
+
+48567aa回传的C/C++、CUDA预检均为实际compile/link成功，完整configure exit0；
+build在1606.078s exit1，唯一编译错误为main.cpp调用不存在的`cudaDeviceGetUuid`。
+原stub自行声明该函数，旧Host语法测试因此不能证明SDK兼容。本次改用固定Runtime
+的`cudaGetDeviceProperties(&properties,device)`读取实际`properties.uuid`；mask/count/
+logical ordinal、16字节UUID、PCI及错误返回门不变，仍在模型加载/测量窗口之外。
+[CUDA12.4.1 Device Management](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__DEVICE.html)
+与[DeviceProp.uuid](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/structcudaDeviceProp.html)
+给出该接口/字段。错误stub删除虚构声明，仅提供显式不完整的语法子集，不作ABI证明。
+
+本轮第一方adapter的全部Runtime调用核对如下，固定12.4真实头文件静态签名检查覆盖：
+
+| 调用 | 用途及边界 |
+|---|---|
+| `cudaGetDeviceCount(int*)`、`cudaGetDevice(int*)` | 窗外实际可见设备与当前logical device，不将编号直接解释为physical身份 |
+| `cudaGetDeviceProperties(cudaDeviceProp*,int)` | 窗外查询实际UUID，保留全部16字节比较，不复制期望值 |
+| `cudaDeviceGetPCIBusId(char*,int,int)` | 窗外实际PCI，按component核对 |
+| `cudaGetErrorString(cudaError_t)` | 保留原错误，不将失败转换为成功 |
+| `cudaRuntimeGetVersion(int*)`、`cudaDriverGetVersion(int*)` | API版本/driver能力；前者不是独立的已加载DLL字节认证 |
+| `cudaStreamSynchronize(cudaStream_t)` | 五个已有backend调用点，原参数/顺序/次数保留；handle/PTDS常量不直接推断trace ID或模式 |
+
+依据[版本接口](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART____VERSION.html)、
+[错误接口](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__ERROR.html)和
+[stream接口](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__STREAM.html)。
+未修改固定upstream后端的CUDA调用；本核对不授予vendor全部API的S/A支持或运行资格。
+
+顺序改为：旧身份/工具门→真实C/C++、CUDA预检→完整configure→
+`native-adapter-headers`→完整backend/link→GGUF转换/内容检查。新增target编译**同一份**
+main对象和observer，依赖固定llama/NVTX/CUDA真实头文件，但不依赖llama/ggml后端。
+后续native-llama复用该main对象及observer库，不复制入口、不手填compiler works。
+前置门最多300s，失败/缺对象/头版本冲突立刻停，不能进入昂贵后端或转换；无exe执行。
+
+新adapter-compile0.1.0保存实际cache/compiler、源码/SDK头/两个对象长度及SHA，
+build0.2.2必须引用它并核对源码hash；缺字段、执行标志、错版本/hash/来源拒绝。
+旧build0.1.0/0.2.0/0.2.1显式读取及其历史判定保留，不补写旧回执。测量spec、
+producer、窗口、流、原同步、registry/S/A/B及旧Formal不变；本次不是协议amendment。
+
+本地使用NVIDIA固定Windows runtime12.4.127及nvcc12.4.131发布包的真实头文件，
+只解出头文件、未安装/加载DLL或执行nvcc。runtime主头hash与封存目标SDK一致；
+其他头来自对应发布包，不能称已逐字节核对全部服务器SDK。本地GCC的语法检查及
+真实CMake/Ninja对象编译不等于目标MSVC14.38资格；没有运行生成程序/模型/CUDA。
+新13项检查全通过；实际CPU入口152 passed/7既有或可选本地编译审计skip，后续目标
+adapter门是mandatory，不能用skip或本机通过替代。详细命令/原件身份见科研进度7.155。
+
+**支线最小研究产出**：一个固定Windows/native自然执行子域，证明Host-token完成、
+身份/依赖/窗口可合法恢复，并与同窗常规baseline比较能否新增解释。保留API主导、
+零Device wait、无额外信息或不确定结果；不保证更大wait，不替代PyTorch核心Formal，
+不做引擎排名、并发、负载扫描或新Formal。候选起点包含自然输入准备，不能直接与旧
+GPU-resident PyTorch时延横向排名。
+
+剩余必要顺序仅三项，均非本轮执行要求：先完成目标adapter/最终link及F16转换身份；
+通过后仅验证新增scheduler/backend drain、线程/stream/event/correlation/ownership桥接；
+桥接充分后才另审一对自然32/2 P0/P1。任一步有具体缺件/闭包不明就停止此子域，
+不反复补设施或修改完成政策求大wait。当前停止在本地修复审查；不生成新部署/采集包。

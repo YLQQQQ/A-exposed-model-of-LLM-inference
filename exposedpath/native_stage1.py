@@ -206,6 +206,8 @@ def command_plan(code,engine,root,hf,nvtx,cuda,*,tools=None,git_executable=None)
         '-DGGML_CCACHE=OFF','-DGGML_CPU_KLEIDIAI=OFF','-DGGML_CUDA_CCCL_VERSION=',
         '-DGGML_OPENMP_FETCH=OFF','-DGGML_CUDA_NCCL=OFF',
         '-DLLAMA_BUILD_COMMON=OFF','-DLLAMA_BUILD_APP=OFF','-DLLAMA_BUILD_SERVER=OFF']),
+        *([] if tools is None else [dict(name='adapter_compile',arguments=[
+            '--build',cmake_path(root/'build'),'--target','native-adapter-headers','--parallel','2','--verbose'])]),
         dict(name='build',arguments=build),
         dict(name='convert',arguments=[str(engine/'convert_hf_to_gguf.py'),str(hf),'--outfile',str(root/'model-f16.gguf'),'--outtype','f16']),
         dict(name='inspect',arguments=['inspect','--model',str(root/'model-f16.gguf'),'--engine',str(engine),'--output',str(root/'gguf_inspection.json')])]
@@ -244,7 +246,7 @@ def cpu_regression_plan(cfg,code,root,env,cmake,use_ninja):
     """Bind just this CPU entry's test/helper namespace, not all repository tests."""
     code=Path(code).resolve();root=Path(root)
     files=['tests/test_native_stage1.py']
-    if use_ninja:files+=['tests/test_native_ninja.py','tests/test_native_tool_identity.py','tests/test_native_llama.py','tests/test_native_cpu_import.py','tests/test_native_cmake_contract.py']
+    if use_ninja:files+=['tests/test_native_ninja.py','tests/test_native_tool_identity.py','tests/test_native_llama.py','tests/test_native_cpu_import.py','tests/test_native_cmake_contract.py','tests/test_native_adapter_compile.py']
     paths=[str(code/'tests'),str(code)]
     if env.get('PYTHONPATH'):paths.append(env['PYTHONPATH'])
     test_env=dict(env,EXPOSEDPATH_TEST_CMAKE=str(cmake),PYTHONPATH=os.pathsep.join(paths),
@@ -362,9 +364,13 @@ def execute(config,package,root,*,runner=None):
         plan=command_plan(code,engine,root,cfg['model_root'],nvtx/'include',cfg['cuda_root'],tools=tools,git_executable=cfg['git'])
         for s in plan:
             print('[stage] '+s['name']+' START',flush=True)
-            exe=cmake if s['name'] in ('configure','build') else py
+            exe=cmake if s['name'] in ('configure','adapter_compile','build') else py
             args=s['arguments'] if s['name']!='inspect' else [str(package/'native_stage1.py'),*s['arguments']]
-            runner.run(s['name'],[exe,*args],env=build_env if s['name'] in ('configure','build') else env,timeout=5400 if s['name']=='build' else 1800)
+            runner.run(s['name'],[exe,*args],env=build_env if s['name'] in ('configure','adapter_compile','build') else env,
+                timeout=5400 if s['name']=='build' else 300 if s['name']=='adapter_compile' else 1800)
+            if use_ninja and s['name']=='adapter_compile':
+                write(root/'native_adapter_compile.json',native_ninja.adapter_compile_result(
+                    root/'build',tools,code,cfg['native_source_paths'],cfg['cuda_root']))
             if use_ninja and s['name']=='build':
                 write(root/'native_compile_link.json',native_ninja.validate_build(root/'build',tools,'cuda',root/'build/bin/native-llama.exe'))
             print('[stage] '+s['name']+' COMPLETE',flush=True)
@@ -380,7 +386,9 @@ def execute(config,package,root,*,runner=None):
             backend_original_sha256=native.BACKEND_SHA256,backend_instrumented_sha256=digest(root/'backend.cu'),
             native_source_sha256=hashlib.sha256(json.dumps({p:digest(code/p) for p in cfg['native_source_paths']},sort_keys=True).encode()).hexdigest(),
             actual_cache=cache,toolchain=read(root/'toolchain.json'),cmake_probe_patch=read(root/'cmake_probe_patch.json'))
-        if use_ninja:build['compile_link_prechecks']=compile_checks
+        if use_ninja:
+            build['compile_link_prechecks']=compile_checks
+            build['adapter_compile']=native._ref(root/'native_adapter_compile.json')
         conversion=dict(schema_version=native.CONVERSION_VERSION,engine_commit=cfg['engine_commit'],
             hf_snapshot_manifest_sha256=cfg['hf_manifest_sha256'],converter_source_sha256=digest(engine/'convert_hf_to_gguf.py'),
             conversion_arguments=['--outtype','f16'],model=native._ref(root/'model-f16.gguf'),architecture=inspections['architecture'],

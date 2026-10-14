@@ -160,7 +160,7 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
         cfg['test_python']=sys.executable
         test_files=source.parents[2]/'tests';test_files.mkdir()
         for name in ('test_native_stage1','test_native_ninja','test_native_tool_identity','test_native_llama',
-            'test_native_cpu_import','test_native_cmake_contract','native_cmake_fixture','test_gate8_identity','test_v141_canonical_raw'):
+            'test_native_cpu_import','test_native_cmake_contract','test_native_adapter_compile','native_cmake_fixture','test_gate8_identity','test_v141_canonical_raw'):
             shutil.copyfile(Path(__file__).parent/(name+'.py'),test_files/(name+'.py'))
     if ninja:
         from exposedpath import native_ninja as n
@@ -199,6 +199,16 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
                 p=root/'converter/Lib/site-packages/cmake/data/share/cmake-3.31/Modules/Internal/CMakeCUDAArchitecturesNative.cmake'
                 p.parent.mkdir(parents=True);p.write_bytes(original)
             if name=='cmake_version':return b'cmake version 3.31.10\n'
+            if ninja and name=='adapter_compile':
+                from test_native_ninja import write_build
+                import shutil
+                meta=root/'adapter-metadata';meta.mkdir()
+                built,_=write_build(meta,nt,'cuda');shutil.copytree(built,root/'build',dirs_exist_ok=True)
+                for key,target in [('main','exposedpath-native-adapter-main'),('observer','exposedpath-native-observer')]:
+                    p=root/'build/CMakeFiles'/(target+'.dir')/(key+'.cpp.obj');p.parent.mkdir(parents=True);p.write_bytes(b'CPU object substitute, not executed')
+                for name in ('cuda_runtime.h','cuda_runtime_api.h','driver_types.h','crt/host_defines.h','crt/host_config.h'):
+                    p=Path(cfg['cuda_root'])/'include'/name;p.parent.mkdir(parents=True,exist_ok=True)
+                    p.write_text('#define CUDART_VERSION 12040\n' if name=='cuda_runtime_api.h' else '// CPU SDK byte substitute\n')
             if name=='build':
                 p=root/('build/bin/native-llama.exe' if ninja else 'build/bin/Release/native-llama.exe')
                 p.parent.mkdir(parents=True);p.write_bytes(b'not executable')
@@ -225,10 +235,11 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
     assert receipt['build_receipt_sha256']==a.digest(root/'build_receipt.json')
     assert a.read(root/'conversion_receipt.json')['tensor_types']=={'F16':1,'F32':1}
     assert 'dependency_check' in [r['name'] for r in runner.records]
-    assert [r['name'] for r in runner.records][-4:]==['configure','build','convert','inspect']
+    tail=['configure','adapter_compile','build','convert','inspect'] if ninja else ['configure','build','convert','inspect']
+    assert [r['name'] for r in runner.records][-len(tail):]==tail
     if ninja:
         names=[r['name'] for r in runner.records]
-        assert names[-8:]==['cxx_configure','cxx_compile_link','cuda_configure','cuda_compile_link','configure','build','convert','inspect']
+        assert names[-9:]==['cxx_configure','cxx_compile_link','cuda_configure','cuda_compile_link','configure','adapter_compile','build','convert','inspect']
         assert 'create_cpu_environment' not in names and 'offline_dependencies' not in names
         assert a.read(root/'build_receipt.json')['schema_version']==native_llama.BUILD_NINJA_VERSION
 

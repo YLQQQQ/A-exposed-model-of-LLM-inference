@@ -1,5 +1,21 @@
 # ExposedPath 科研进度清单
 
+## 7.155 Native真实SDK接口修复与前置adapter编译（2026-10-14）
+
+**48567aa目标C/C++、CUDA真实编译链接预检及完整configure通过；native最终构建仍BLOCKED。** 本地只读核验新回传132773 bytes，SHA256 `5858ec42c8bcdc82bd3adb47fee47b58f80ce138153f53a8ae73c68121d3f25f`，109成员/108项、CRC/安全路径/长度/hash/完整覆盖通过，manifest SHA `3495eb1cf2a681d772f87900109db04567cbea45b1de6467feead7389925d7d3`。执行48567aa890bfd7f101ebf7b6b720308b4b48e20f；原CPU142 passed/4 skipped，原始两precheck JSON/输出及configure exit0已直接读取；build1606.078s exit1、无timeout，唯一编译错误为main.cpp:29的`cudaDeviceGetUuid`不存在。未进入GGUF转换，无模型/GPU探测/collector。原字节、退出码及BLOCKED不变；build stdout含非UTF8的MSVC诊断，读取展示不能改写Raw或假称UTF8原件。
+
+根因是Runtime API调用错误与自行虚构声明的stub一起掩盖SDK兼容问题，不是环境缺组件。固定CUDA12.4.1官方device/uuid原文及NVIDIA12.4真实头文件确认正确路径为`cudaGetDeviceProperties`→`cudaDeviceProp.uuid`。修复保留实际count/logical/mask/UUID/PCI及错误门，在模型/窗口之外；stub明确仅不完整语法子集，删除不存在的API。核对第一方native七个Runtime查询/错误接口及五个backend调用点复用的stream synchronize签名；不改变vendor CUDA行为或宣称所有API已获分析资格。接口/来源和支线claim集中在[native §7.155](native_llama_window_and_adapter_v0_1.md#7155-实际cuda接口与adapter前置编译支线收口范围)。
+
+新增真实adapter对象编译门位于完整configure之后、昂贵llama backend构建之前；同一main对象与observer库由最终exe复用，真实头文件来自固定SDK/vendor/NVTX而非stubs，不执行生成程序。必需输出、实际版本/SDK12040、源码/头文件/对象hash保存为adapter-compile0.1.0，新build0.2.2须严格绑定；旧0.1.0/0.2.0/0.2.1读取和原判定保留，不升级旧数据。source manifest新增共同target文件；当前服务器前置绑定48567aa。阶段1配置0.2.0、测量spec/producer/边界/流/同步/S/A/B/registry、签署G12-ROUTEA/0.1.1与旧Formal均不改变。本轮未生成交付ZIP或服务器命令。
+
+tests-first：真实12.4头编译独立复现同一缺API，stub“错误API应拒绝”和缺前置门反例先失败；修复后新文件13 passed/0 failed/0 skipped（15.75s）。其中真实CMake3.31.10/Ninja1.12.1在本地GCC仅编译实际main/observer对象、backend sentinel未触发、未生成或运行native模型exe；全Runtime签名静态检查不调用函数。头文件来自NVIDIA固定Windows runtime12.4.127（wheel SHA `09c2e35f48359752dfa822c09918211844a3d93c100a715d79b59591130c5e1e`）及nvcc12.4.131（`aadd9fb307352bbcd5bc89b5f98c10cd78000915094882d97321f5fe36441742`），只提取头文件、未安装/加载库/执行nvcc；runtime主头SHA `06fd5b2b2becb7f9165e88b8fdfdab778136f614be80ff82628c78ea97e218f4`与目标原回执完全一致，其他header未声称全部服务器字节一致。GCC头文件有已保留的`__cdecl`重定义警告，不冒充目标MSVC编译证据。
+
+生产CPU计划实际命令：`python -X utf8 -m pytest -q -rs -p no:cacheprovider tests/test_native_stage1.py tests/test_native_ninja.py tests/test_native_tool_identity.py tests/test_native_llama.py tests/test_native_cpu_import.py tests/test_native_cmake_contract.py tests/test_native_adapter_compile.py --basetemp <new-short-root>/cpu-tests`，本地Python3.12.7、工具式PATH无g++，152 passed/0 failed/7 skipped（35.36s）。3既有skip为可选SDK语法/两个编译CPU替身；4新skip为该入口无g++的可选本地header/syntax/CMake对象审计，已在上述独立13项中实际验证，不能把本机证明写成服务器资格。必需目标adapter编译不在pytest skip路径、无fallback；不重跑全量/Q0/旧实验，不运行生成程序。负例保留错schema/hash/SDK、缺对象、旧版兼容及真实文件链失败停在backend/转换之前。用户DOCX原SHA保持且不stage。
+
+相关Python compileall及diff-check通过；已审查完整configure→adapter→backend/link→转换调用链，不存在本轮新增模型/程序执行入口，失败仍保留原错误。用户DOCX及原未跟踪大ZIP不提交，无新部署包/服务器执行要求。
+
+**最小产出与停止点**：此支线只验证固定Windows llama.cpp自然完成子域的合法accounting及相对同窗baseline的解释适用性，不追求更大Device wait、不替代已完成PyTorch Formal、不进入Gate14。当前仅本地修复完成；必须目标机证明的剩余项为同对象前置编译、最终link/F16内容身份，之后才按另审方案做最小drain/依赖桥接与一对自然P0/P1。缺件或依赖闭包不足就停该子域，不无限扩展监控/负载/完成政策。零wait/无信息增益均是合法可能结果。Stage1仍BLOCKED/nativeGPU资格NOT_RUN；Gate13限定PASS、Gate14 NOT_RUN、UNKNOWN/NOT_ASSESSED及历史证据保持。以下7.154为历史，旧包不恢复；下一步先审本地修改，**现在不安排服务器执行**。
+
 ## 7.154 阶段1 CMake路径序列化与原始版本贯通（2026-10-14）
 
 **34fa866导入修复目标机通过；当前为CMake适配失败，不是缺VS安装。** 本地直接核验回传ZIP39717 bytes、SHA256 `ae6b7bbd643e76893650bb6e4887ba82786d447759b9ae998b71c18491809a08`，81成员/80项、CRC、安全路径、长度/hash及完整覆盖通过，manifest SHA `62eff475312c49890d54cdd59f197885553d04b27df01f5e26669c5d8d26e06c`。原始CPU日志为103 passed/4 skipped；源码/Git/工具/依赖门已跨过，CMake原始stdout识别C/CXX为MSVC19.38.33135.0。compiler identification小程序已真实编译链接；完整C/C++预检、CUDA预检、native构建/权重转换未通过或未执行，不能混称构建成功。最早失败为`NATIVE_STAGE1_STEP_EXIT:cxx_configure`，生成的RC编译器文件因未类型化反斜杠路径出现`Invalid character escape '\P'`。原退出码、失败cache、ZIP及BLOCKED保持。

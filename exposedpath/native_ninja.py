@@ -181,7 +181,7 @@ def compiler_field(path,key):
     return m.group(1)
 
 
-def validate_build(build,tools,kind,binary):
+def compiler_configuration(build,tools,kind):
     build=Path(build);cache=stage.read_cache(build/'CMakeCache.txt')
     stage.require(cache.get('CMAKE_GENERATOR')=='Ninja' and cache.get('CMAKE_BUILD_TYPE')=='Release'
         and cache.get('CMAKE_SYSTEM_VERSION')==SDK_VERSION,'NINJA_CACHE_CONFIGURATION')
@@ -202,9 +202,44 @@ def validate_build(build,tools,kind,binary):
         actual=compiler_field(path,'CMAKE_'+lang+'_COMPILER')
         stage.require(Path(actual).resolve()==Path(tools['nvcc' if lang=='CUDA' else 'cl']).resolve(),'NINJA_ACTUAL_COMPILER_PATH:'+lang)
         versions[lang]=version
+    return dict(compiler_versions=versions,cache=cache,sdk_version=SDK_VERSION)
+
+
+def validate_build(build,tools,kind,binary):
+    actual=compiler_configuration(build,tools,kind)
     stage.require(Path(binary).is_file() and Path(binary).stat().st_size>0,'NINJA_LINK_OUTPUT_MISSING')
     return dict(schema_version=CHECK_VERSION,status='COMPILE_LINK_PASS_NOT_EXECUTED',program_invoked=False,
-        generator='Ninja',compiler_versions=versions,cache=cache,binary=fact(binary),sdk_version=SDK_VERSION)
+        generator='Ninja',**actual,binary=fact(binary))
+
+
+def adapter_compile_result(build,tools,code,source_paths,cuda_root):
+    """Compile-only proof; never relabel an object file as a linked executable."""
+    build,code,cuda_root=map(Path,(build,code,cuda_root))
+    actual=compiler_configuration(build,tools,'cuda')
+    objects={}
+    for name,target in [('main','exposedpath-native-adapter-main'),('observer','exposedpath-native-observer')]:
+        # CMake nests absolute/out-of-source inputs differently; do not invent
+        # a flat object path. Search only this exact target's object directory.
+        directory=stage.checked(build,'CMakeFiles/'+target+'.dir')
+        matches=list(directory.rglob(name+'.cpp.obj'))
+        stage.require(len(matches)==1,'ADAPTER_OBJECT_IDENTITY:'+name)
+        p=stage.checked(build,matches[0].relative_to(build).as_posix());objects[name]=fact(p)
+    stage.require(all(v['exists'] and v['size_bytes']>0 for v in objects.values()),'ADAPTER_OBJECT_MISSING')
+    header_names=('cuda_runtime.h','cuda_runtime_api.h','driver_types.h','crt/host_defines.h','crt/host_config.h')
+    headers={p:fact(stage.checked(cuda_root/'include',p)) for p in header_names}
+    stage.require(all(v['exists'] and v['size_bytes']>0 for v in headers.values()),'ADAPTER_HEADER_MISSING')
+    api_header=Path(headers['cuda_runtime_api.h']['path']).read_text(encoding='utf-8')
+    version=re.search(r'^#define\s+CUDART_VERSION\s+(\d+)\s*$',api_header,re.M)
+    stage.require(version is not None and version.group(1)=='12040','ADAPTER_CUDA_HEADER_VERSION')
+    sources={p:fact(stage.checked(code,p)) for p in source_paths}
+    stage.require(sources and all(v['exists'] and v['size_bytes']>0 for v in sources.values()),'ADAPTER_SOURCE_MISSING')
+    source_sha=hashlib.sha256(json.dumps({p:v['sha256'] for p,v in sources.items()},sort_keys=True).encode()).hexdigest()
+    # Native artifact references have exactly three fields; existence above is
+    # a checked fact, not an extra field that could break their strict loader.
+    def refs(values):return {p:{k:v[k] for k in ('path','size_bytes','sha256')} for p,v in values.items()}
+    return dict(schema_version='exposedpath-native-adapter-compile/0.1.0',status='ADAPTER_COMPILE_PASS_NOT_EXECUTED',
+        program_invoked=False,generator='Ninja',**actual,objects=refs(objects),headers=refs(headers),sources=refs(sources),
+        cuda_header_version=12040,native_source_sha256=source_sha)
 
 
 def run_prechecks(code,root,tools,runner,env):

@@ -22,7 +22,8 @@ SPEC_VERSION = 'exposedpath-native-llama-spec/0.1.0'
 PRODUCER_VERSION = 'exposedpath-native-llama-producer/0.1.0'
 BUILD_VERSION = 'exposedpath-native-llama-build/0.1.0'
 BUILD_NINJA_LEGACY_VERSION = 'exposedpath-native-llama-build/0.2.0'
-BUILD_NINJA_VERSION = 'exposedpath-native-llama-build/0.2.1'
+BUILD_NINJA_CMAKE_VERSION = 'exposedpath-native-llama-build/0.2.1'
+BUILD_NINJA_VERSION = 'exposedpath-native-llama-build/0.2.2'
 CONVERSION_VERSION = 'exposedpath-native-llama-conversion/0.1.0'
 BOUNDARY_VERSION = 'exposedpath-native-boundary/0.1.0'
 PREFIX = 'EXPOSEDPATH_NATIVE_BOUNDARY_V1:'
@@ -114,7 +115,7 @@ def _identity(value):
 
 def _validate_receipts(build,conversion):
     version=build.get('schema_version')
-    require(version in (BUILD_VERSION,BUILD_NINJA_LEGACY_VERSION,BUILD_NINJA_VERSION) and conversion.get('schema_version')==CONVERSION_VERSION,'VERSION')
+    require(version in (BUILD_VERSION,BUILD_NINJA_LEGACY_VERSION,BUILD_NINJA_CMAKE_VERSION,BUILD_NINJA_VERSION) and conversion.get('schema_version')==CONVERSION_VERSION,'VERSION')
     route='vs2022' if version==BUILD_VERSION else 'ninja'
     if route=='ninja':
         checks=build.get('compile_link_prechecks')
@@ -131,6 +132,20 @@ def _validate_receipts(build,conversion):
         and build.get('dirty') is False and build.get('configuration')==build_configuration(route),'BUILD_CONFIGURATION')
     require(build.get('backend_original_sha256')==BACKEND_SHA256,'BACKEND_SOURCE')
     for key in ('backend_instrumented_sha256','native_source_sha256'):_hash(build.get(key))
+    if version==BUILD_NINJA_VERSION:
+        ref=build.get('adapter_compile');require(isinstance(ref,dict),'ADAPTER_COMPILE_REQUIRED');_verify(ref)
+        check=_read(ref['path'])
+        require(check.get('schema_version')=='exposedpath-native-adapter-compile/0.1.0'
+            and check.get('status')=='ADAPTER_COMPILE_PASS_NOT_EXECUTED' and check.get('program_invoked') is False
+            and check.get('generator')=='Ninja' and valid_compiler_versions(check.get('compiler_versions'),'cuda')
+            and check.get('sdk_version')=='10.0.20348.0' and check.get('cuda_header_version')==12040,'ADAPTER_COMPILE_STATUS')
+        objects,headers,sources=(check.get(k) for k in ('objects','headers','sources'))
+        require(isinstance(objects,dict) and set(objects)=={'main','observer'} and isinstance(headers,dict)
+            and set(headers)=={'cuda_runtime.h','cuda_runtime_api.h','driver_types.h','crt/host_defines.h','crt/host_config.h'}
+            and isinstance(sources,dict) and sources,'ADAPTER_INPUTS')
+        for r in [*objects.values(),*headers.values(),*sources.values()]:_verify(r)
+        source_sha=hashlib.sha256(json.dumps({p:r['sha256'] for p,r in sources.items()},sort_keys=True).encode()).hexdigest()
+        require(source_sha==check.get('native_source_sha256')==build['native_source_sha256'],'ADAPTER_SOURCE_BINDING')
     for key in ('hf_snapshot_manifest_sha256','converter_source_sha256'):_hash(conversion.get(key))
     require(conversion.get('architecture')=='qwen2' and conversion.get('conversion_arguments')==['--outtype','f16'],'CONVERSION')
     types=conversion.get('tensor_types')

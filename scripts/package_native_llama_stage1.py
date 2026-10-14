@@ -82,7 +82,7 @@ def assemble_repair(destination,*,commit,prerequisite,reuse_delivery,engine_sour
 def assemble_ninja(destination,*,commit,prerequisite,reuse_delivery,reuse_repair,ninja_exe,ninja_license,vs_facts,prior_review,query_review,server):
     """Fixed small route repair, no reinstall and no system metadata edits."""
     from exposedpath import native_ninja
-    stage.require(prerequisite=='34fa866780b8c38584ed40516c17dbfc2ed30e79','NINJA_REPAIR_PREREQUISITE')
+    stage.require(prerequisite=='48567aa890bfd7f101ebf7b6b720308b4b48e20f','NINJA_REPAIR_PREREQUISITE')
     old=Path(reuse_delivery).resolve();repair=Path(reuse_repair).resolve();destination=Path(destination).resolve()
     if destination.exists():raise FileExistsError(destination)
     old_manifest_sha='408c63b0ff6e3ebf01012190240d8dd075943daf76b259608a62bb4ec07a6a53'
@@ -110,7 +110,7 @@ def assemble_ninja(destination,*,commit,prerequisite,reuse_delivery,reuse_repair
         reuse_manifest_sha256=old_manifest_sha,vs_facts_zip_sha256=stage.digest(vs_facts),prior_review_sha256=stage.digest(prior_review),
         reuse_cpu_commit='598d447811e948a3ffb54845185631f4be761985',query_reference_commit='882425c02f3e0ec70679c0ed58875a852cf3cbd1',
         tool_identity_version=native_ninja.TOOL_IDENTITY_VERSION,query_review_sha256=stage.digest(query_review))
-    cfg['native_source_paths']=[*original['native_source_paths'],'native/cmake/NativeBuildContract.cmake']
+    cfg['native_source_paths']=[*original['native_source_paths'],'native/cmake/NativeBuildContract.cmake','native/cmake/NativeAdapter.cmake']
     stage.write(destination/'config.json',cfg)
     stage.write(destination/'package_manifest.json',dict(schema_version=native_ninja.VERSION,execution_commit=commit,files=index(destination)))
     archive=destination.with_suffix('.zip');zip_tree(destination,archive)
