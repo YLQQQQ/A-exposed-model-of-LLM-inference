@@ -1,5 +1,35 @@
 # ExposedPath 科研进度清单
 
+## 7.157 PyTorch研究可行性裁决：限定测量与边界主线（2026-10-14）
+
+完成用户授权的有界证据/最近工作审查；[唯一决策稿0.1](pytorch_research_feasibility_decision_v0_1.md)
+集中给出三问题贡献—证据表、风险与待审8槽方案。**研究建议裁决为“收缩为限定测量与
+边界研究”**：相对聚合指标的有限解释可以保留，但增强到同窗correlation/stream/完整
+时间线及同CUDA语义后，三个实物问题的关键事实基本可复原；尚未证明独占信息、稳定
+性能机制或效率/用户收益。不是推翻Gate13有限Formal审查，也不擅自修改签署claim。
+
+复用99f3bae执行/e19c308分析的六block、独立Raw终稿与同窗baseline；本轮仅读取小汇总、
+独立复核记录及CSV均值/原值，未重跑S/A/B或Raw全扫。G1 Prefill GPU union均值
+19.710030→42.431923ms、wait0.034954→0.029979ms；六块wait方向混合，Decode wait均0。
+N16完整W/hidden/terminal与C0/Cpre交集/residual独立记录保留；不把analyzer当唯一oracle。
+Formal/Engineering分开；1.5B/FP16实物不替7B/BF16设计候选矩阵，未部署新模型。
+
+直接核对Daydream作者全文§3～4/USENIX ATC2020、HTA官方critical path文档/源码、SKIP
+作者v1§III～IV及ISPASS2025接受元数据；依赖图、sync位置、Async可能阻塞及LLM映射均有
+先行思想，不能按“面向LLM/自动A/B”宣称创新。未运行同行工具，不猜源码缺失或能力差距，
+本有界核对不等于全面新颖性证明。CPU/P1扰动、point延迟、局部支持域及潜在量识别限制
+集中记录，不放宽原质量门或将结构直接迁移P0。
+
+**待审唯一下一步**由24-profile候选缩减为B1/B4×C0/Cpre×两个完整block，共8条新P1，
+只作Prefill政策结构的反证首批；0P0，不授性能收益/精度/稳定或Formal。固定输入512/
+每样本2、warmup3/repeat1、同包装/实际流，正反组序和负载先后平衡；预计45～60min/
+5GiB临时空间，固定预算或硬失败停止，不重试/替补/续批。这是设计建议，不是预算/实现/
+采集授权；协调审查前不制作包，旧四对Pilot不恢复。若仅重现强baseline已知现象，则
+停止扩大矩阵/引擎；不追显著。llama.cpp/Linux/设施继续暂停。
+
+本轮仅文档/链接/diff验证，无代码/测试/实验/服务器变更。Gate13限定PASS、Gate14 NOT_RUN，
+原Raw/报告/UNKNOWN/NOT_ASSESSED及用户DOCX、大型原件保持。当前服务器无需操作。
+
 ## 7.156 安全停点与PyTorch完成政策主线回归（2026-10-14）
 
 依据用户本轮优先级调整，**暂停llama.cpp扩展、部署包、服务器执行及后续引擎资格**；
