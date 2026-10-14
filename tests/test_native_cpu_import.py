@@ -71,7 +71,7 @@ def test_native_configure_uses_verified_git_even_when_build_path_has_no_git(tmp_
     actual_git=tmp_path/'verified/git.exe'
     plan=s.command_plan(tmp_path/'code',tmp_path/'engine',tmp_path/'new',tmp_path/'hf',
         tmp_path/'nvtx',tmp_path/'cuda',tools=tools(tmp_path),git_executable=actual_git)
-    assert '-DGIT_EXECUTABLE='+str(actual_git) in plan[0]['arguments']
+    assert '-DGIT_EXECUTABLE:FILEPATH='+actual_git.as_posix() in plan[0]['arguments']
 
 
 def test_stage1_entry_consumes_bound_cpu_environment_before_compile(tmp_path,monkeypatch):

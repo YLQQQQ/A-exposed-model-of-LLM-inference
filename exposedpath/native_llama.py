@@ -12,6 +12,7 @@ import struct
 
 from .gate8_identity import validate_shape
 from exposedpath_v141.gate8_adapter import normalized_uuid, normalized_pci
+from .native_build_contract import CHECK_VERSION,CHECK_LEGACY,valid_compiler_versions
 
 ENGINE_COMMIT = 'd81235049384534c167caea52b85a694f6103d14'
 BACKEND_SHA256 = '1315f06baff63da74e085b7ec01974474dac1f8ec1074af13eb70faba4751961'
@@ -20,7 +21,8 @@ PROFILE = 'LLAMA-NATIVE-WINDOW/0.1.0'
 SPEC_VERSION = 'exposedpath-native-llama-spec/0.1.0'
 PRODUCER_VERSION = 'exposedpath-native-llama-producer/0.1.0'
 BUILD_VERSION = 'exposedpath-native-llama-build/0.1.0'
-BUILD_NINJA_VERSION = 'exposedpath-native-llama-build/0.2.0'
+BUILD_NINJA_LEGACY_VERSION = 'exposedpath-native-llama-build/0.2.0'
+BUILD_NINJA_VERSION = 'exposedpath-native-llama-build/0.2.1'
 CONVERSION_VERSION = 'exposedpath-native-llama-conversion/0.1.0'
 BOUNDARY_VERSION = 'exposedpath-native-boundary/0.1.0'
 PREFIX = 'EXPOSEDPATH_NATIVE_BOUNDARY_V1:'
@@ -112,17 +114,17 @@ def _identity(value):
 
 def _validate_receipts(build,conversion):
     version=build.get('schema_version')
-    require(version in (BUILD_VERSION,BUILD_NINJA_VERSION) and conversion.get('schema_version')==CONVERSION_VERSION,'VERSION')
-    route='ninja' if version==BUILD_NINJA_VERSION else 'vs2022'
+    require(version in (BUILD_VERSION,BUILD_NINJA_LEGACY_VERSION,BUILD_NINJA_VERSION) and conversion.get('schema_version')==CONVERSION_VERSION,'VERSION')
+    route='vs2022' if version==BUILD_VERSION else 'ninja'
     if route=='ninja':
         checks=build.get('compile_link_prechecks')
         require(isinstance(checks,dict) and set(checks)=={'cxx','cuda'},'BUILD_PRECHECKS')
         for kind,ref in checks.items():
             _verify(ref);v=_read(ref['path'])
-            versions={'C':'19.38.33135','CXX':'19.38.33135'} if kind=='cxx' else {'CXX':'19.38.33135','CUDA':'12.4.131'}
-            require(v.get('schema_version')=='exposedpath-native-compile-link/0.1.0' and
+            legacy=version==BUILD_NINJA_LEGACY_VERSION
+            require(v.get('schema_version')==(CHECK_LEGACY if legacy else CHECK_VERSION) and
                 v.get('status')=='COMPILE_LINK_PASS_NOT_EXECUTED' and v.get('program_invoked') is False
-                and v.get('generator')=='Ninja' and v.get('compiler_versions')==versions
+                and v.get('generator')=='Ninja' and valid_compiler_versions(v.get('compiler_versions'),kind,legacy=legacy)
                 and v.get('sdk_version')=='10.0.20348.0','BUILD_PRECHECK_STATUS')
     require(build.get('engine_commit')==conversion.get('engine_commit')==ENGINE_COMMIT,'ENGINE_COMMIT')
     require(isinstance(build.get('execution_commit'),str) and re.fullmatch('[0-9a-f]{40}',build['execution_commit'])

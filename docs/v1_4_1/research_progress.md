@@ -1,5 +1,15 @@
 # ExposedPath 科研进度清单
 
+## 7.154 阶段1 CMake路径序列化与原始版本贯通（2026-10-14）
+
+**34fa866导入修复目标机通过；当前为CMake适配失败，不是缺VS安装。** 本地直接核验回传ZIP39717 bytes、SHA256 `ae6b7bbd643e76893650bb6e4887ba82786d447759b9ae998b71c18491809a08`，81成员/80项、CRC、安全路径、长度/hash及完整覆盖通过，manifest SHA `62eff475312c49890d54cdd59f197885553d04b27df01f5e26669c5d8d26e06c`。原始CPU日志为103 passed/4 skipped；源码/Git/工具/依赖门已跨过，CMake原始stdout识别C/CXX为MSVC19.38.33135.0。compiler identification小程序已真实编译链接；完整C/C++预检、CUDA预检、native构建/权重转换未通过或未执行，不能混称构建成功。最早失败为`NATIVE_STAGE1_STEP_EXIT:cxx_configure`，生成的RC编译器文件因未类型化反斜杠路径出现`Invalid character escape '\P'`。原退出码、失败cache、ZIP及BLOCKED保持。
+
+最小修复在CMake argv边界统一工具FILEPATH、源码/根PATH及`-S/-B/--build`正斜杠表示，结构化参数保留空格/括号，严格核对原文件路径/长度/hash，不归一化源码内容；无法安全表示的路径拒绝。三个CMakeLists共用精确MSVC规则，只接受已核验的`19.38.33135`或`19.38.33135.0`，不前缀匹配、不重写原始版本；nvcc仍精确12.4.131，工具路径/PE资源/SDK/输出检查不变。新precheck schema `exposedpath-native-compile-link/0.2.0`、Ninja build `exposedpath-native-llama-build/0.2.1`；旧build0.2.0只能配旧check0.1.0/原三段版本，VS0.1.0及旧读取/历史判定保留。未知、混用或不同版本拒绝。stage1配置仍0.2.0，producer/边界/流/同步/S/A/B/registry未改变。新共同CMake文件纳入实际native源码hash来源。
+
+tests-first真实固定CMake3.31.10模板生成→include先复现路径错误，三个实际CMakeLists先复现四段误拒绝。修复后涵盖空格/括号/反斜杠路径往返、same-file/hash、原始版本、实际预检→native回执→消费者接线、显式旧版兼容、错版本/错schema/缺输出反例；不以命令字符串或手填成功JSON代替CMake生成。LANGUAGES NONE及CMake脚本只验证生成/解析和版本门；CPU外部编译步骤仍为非执行替身，**没有本机cl/nvcc/生成程序执行，不证明目标机编译资格**。按生产`cpu_regression_plan`与Runner的六文件实际命令：`python -X utf8 -m pytest -q -rs -p no:cacheprovider tests/test_native_stage1.py tests/test_native_ninja.py tests/test_native_tool_identity.py tests/test_native_llama.py tests/test_native_cpu_import.py tests/test_native_cmake_contract.py --basetemp <new-short-root>/cpu-tests`，本地Python3.12.7，**143 passed/0 failed/3 skipped，28.87s**。三个既有skip为可选SDK语法审计及两个需要g++/固定JSON头的CPU编译替身；实际工具式PATH不含g++，不据skip授构建资格。新真实CMake资产明确绑定且不得缺件skip；CPU回执记录实际Ninja/CMake/test模块来源。
+
+后续configure→compile/link→转换核对：新目录、固定Ninja/cl/link/lib/rc/mt/nvcc/SDK及既有禁CUDA运行探测patch；两项真实编译链接及native实际cache/compiler/output成功后才转换，Python转换路径不受CMake序列化改写。只读复用原资产/CPU环境，不安装、不修改VS/CUDA/旧源码。独立历史VS诊断入口不是本次Ninja链，原规则保留。最终三个CMakeLists版本门12 passed/27 deselected（1.16s）；相关Python compileall、PowerShell解析与diff-check通过。仅准备以前置34fa866的小修复包，先交协调审查，**本轮不安排服务器执行**；阶段1仍BLOCKED，nativeGPU资格/Gate14 NOT_RUN、Gate13限定PASS、UNKNOWN/NOT_ASSESSED保持。用户DOCX及大型原件不改、不stage；当前入口[native §7.154](native_llama_window_and_adapter_v0_1.md#7154-cmake路径与原始版本合同)。下方7.153及更早为历史，不再执行旧包。
+
 ## 7.153 阶段1定向CPU测试模块身份修复（2026-10-14）
 
 **d77386目标机工具身份/源码/CPU依赖检查已跨过，仍在CPU测试失败，实际编译/转换NOT_RUN。** 本地直接核验回传ZIP30602 bytes、SHA256 `2ba5e75e62c0dd64d3fce89da781b817717848416e6e8203132721c7d17bfd09`，72成员/71项、CRC、安全路径、hash/完整覆盖通过，manifest SHA `aa0fe68244c1b4265a080a1f8ef0f42a1de791f96d53fecf70f623ee575ed68f`。真实执行d77386f79c16f01e25298564e98a0af431a3cedf，link/lib固定资源身份成功、依赖check和CPU版本成功；CPU为91 passed/6 failed/4 skipped，6项均在`tests.test_native_*`导入时失败。原日志未记录实际tests包解析来源，不能将某具体第三方包写成已证实根因；没有进入实际C/C++或CUDA预检/模型/转换/collector，原BLOCKED与原ZIP保留。

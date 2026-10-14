@@ -15,10 +15,10 @@ def tools(tmp_path):
 
 def test_ninja_plan_pins_all_compilers_without_vs_instance_or_forcing_success(tmp_path):
     t=tools(tmp_path);a=api().configure_arguments(tmp_path/'source',tmp_path/'new',t)
-    assert a[:6]==['-S',str(tmp_path/'source'),'-B',str(tmp_path/'new'),'-G','Ninja']
+    assert a[:6]==['-S',(tmp_path/'source').as_posix(),'-B',(tmp_path/'new').as_posix(),'-G','Ninja']
     for key,name in [('CMAKE_MAKE_PROGRAM','ninja'),('CMAKE_C_COMPILER','cl'),('CMAKE_CXX_COMPILER','cl'),
         ('CMAKE_CUDA_COMPILER','nvcc'),('CMAKE_CUDA_HOST_COMPILER','cl'),('CMAKE_LINKER','link'),
-        ('CMAKE_AR','lib'),('CMAKE_RC_COMPILER','rc'),('CMAKE_MT','mt')]:assert '-D'+key+'='+t[name] in a
+        ('CMAKE_AR','lib'),('CMAKE_RC_COMPILER','rc'),('CMAKE_MT','mt')]:assert '-D'+key+':FILEPATH='+Path(t[name]).as_posix() in a
     assert '-DCMAKE_BUILD_TYPE=Release' in a
     assert not any('FORCED' in x or 'WORKS' in x or 'GENERATOR_INSTANCE' in x or x=='-T' for x in a)
 

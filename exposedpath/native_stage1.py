@@ -189,18 +189,19 @@ def inspect_gguf(path,*,reader_factory=None):
 
 
 def command_plan(code,engine,root,hf,nvtx,cuda,*,tools=None,git_executable=None):
+    from exposedpath.native_build_contract import cmake_path,cmake_path_argument
     code,engine,root,hf,nvtx,cuda=map(Path,(code,engine,root,hf,nvtx,cuda))
-    prefix=['-S',str(code/'native/llama_cpp'),'-B',str(root/'build'),
+    prefix=['-S',cmake_path(code/'native/llama_cpp'),'-B',cmake_path(root/'build'),
         '-G','Visual Studio 17 2022','-A','x64','-T','version=14.38.33130']
-    build=['--build',str(root/'build'),'--config','Release','--target','native-llama','--parallel','2','--','/nodeReuse:false']
+    build=['--build',cmake_path(root/'build'),'--config','Release','--target','native-llama','--parallel','2','--','/nodeReuse:false']
     if tools is not None:
         from exposedpath import native_ninja
         prefix=native_ninja.configure_arguments(code/'native/llama_cpp',root/'build',tools)
-        build=['--build',str(root/'build'),'--target','native-llama','--parallel','2','--verbose']
+        build=['--build',cmake_path(root/'build'),'--target','native-llama','--parallel','2','--verbose']
     return [dict(name='configure',arguments=[*prefix,
-        *([] if git_executable is None else ['-DGIT_EXECUTABLE='+str(git_executable)]),
-        '-DLLAMA_SOURCE_ROOT='+str(engine),'-DNATIVE_PATCHED_BACKEND='+str(root/'backend.cu'),
-        '-DNVTX_INCLUDE_ROOT='+str(nvtx),'-DCUDAToolkit_ROOT='+str(cuda),
+        *([] if git_executable is None else [cmake_path_argument('GIT_EXECUTABLE',git_executable)]),
+        cmake_path_argument('LLAMA_SOURCE_ROOT',engine,'PATH'),cmake_path_argument('NATIVE_PATCHED_BACKEND',root/'backend.cu'),
+        cmake_path_argument('NVTX_INCLUDE_ROOT',nvtx,'PATH'),cmake_path_argument('CUDAToolkit_ROOT',cuda,'PATH'),
         '-DCMAKE_CUDA_ARCHITECTURES=89','-DFETCHCONTENT_FULLY_DISCONNECTED=ON',
         '-DGGML_CCACHE=OFF','-DGGML_CPU_KLEIDIAI=OFF','-DGGML_CUDA_CCCL_VERSION=',
         '-DGGML_OPENMP_FETCH=OFF','-DGGML_CUDA_NCCL=OFF',
@@ -243,13 +244,13 @@ def cpu_regression_plan(cfg,code,root,env,cmake,use_ninja):
     """Bind just this CPU entry's test/helper namespace, not all repository tests."""
     code=Path(code).resolve();root=Path(root)
     files=['tests/test_native_stage1.py']
-    if use_ninja:files+=['tests/test_native_ninja.py','tests/test_native_tool_identity.py','tests/test_native_llama.py','tests/test_native_cpu_import.py']
+    if use_ninja:files+=['tests/test_native_ninja.py','tests/test_native_tool_identity.py','tests/test_native_llama.py','tests/test_native_cpu_import.py','tests/test_native_cmake_contract.py']
     paths=[str(code/'tests'),str(code)]
     if env.get('PYTHONPATH'):paths.append(env['PYTHONPATH'])
     test_env=dict(env,EXPOSEDPATH_TEST_CMAKE=str(cmake),PYTHONPATH=os.pathsep.join(paths),
         CUDA_VISIBLE_DEVICES='-1',PYTHONDONTWRITEBYTECODE='1')
     modules=[Path(p).stem for p in files]
-    if use_ninja:modules+=['test_gate8_identity','test_v141_canonical_raw']
+    if use_ninja:modules+=['test_gate8_identity','test_v141_canonical_raw','native_cmake_fixture']
     return dict(argv=[cfg['test_python'],'-X','utf8','-m','pytest','-q','-rs','-p','no:cacheprovider',
         *files,'--basetemp',str(root/'cpu-tests')],env=test_env,cwd=code,modules=modules)
 
@@ -266,7 +267,7 @@ for name in json.loads(sys.argv[1]):
     modules[name]=None if origin is None else dict(origin=str(Path(origin).resolve()),sha256=hashlib.sha256(Path(origin).read_bytes()).hexdigest())
 namespace=importlib.util.find_spec('tests')
 print(json.dumps(dict(executable=sys.executable,base_executable=sys._base_executable,python_version=sys.version,cwd=str(Path.cwd()),
-    environment={k:os.environ.get(k) for k in ('PYTHONPATH','EXPOSEDPATH_TEST_CMAKE','CUDA_VISIBLE_DEVICES','PYTHONDONTWRITEBYTECODE')},
+    environment={k:os.environ.get(k) for k in ('PYTHONPATH','EXPOSEDPATH_TEST_CMAKE','EXPOSEDPATH_TEST_NINJA','CUDA_VISIBLE_DEVICES','PYTHONDONTWRITEBYTECODE')},
     modules=modules,tests_namespace_origin=None if namespace is None else namespace.origin,
     optional_native_audits=dict(gxx_path=shutil.which('g++'),
         backend_byte_input=Path('.local/diagnostics/llama_native_v0_1/ggml-cuda.original.cu').is_file(),
@@ -279,7 +280,7 @@ print(json.dumps(dict(executable=sys.executable,base_executable=sys._base_execut
         value=json.loads(raw);require(isinstance(value,dict),'CPU_TEST_ENVIRONMENT_STRUCTURE');result.update(value)
         require(Path(value['executable']).resolve()==Path(plan['argv'][0]).resolve() and
             Path(value['cwd']).resolve()==plan['cwd'],'CPU_TEST_PROCESS_IDENTITY')
-        require(all(value['environment'][k]==plan['env'][k] for k in value['environment']),'CPU_TEST_ENVIRONMENT_CONFLICT')
+        require(all(value['environment'][k]==plan['env'].get(k) for k in value['environment']),'CPU_TEST_ENVIRONMENT_CONFLICT')
         for name in plan['modules']:
             expected=checked(plan['cwd'],'tests/'+name+'.py');actual=value['modules'][name]
             require(actual is not None and Path(actual['origin'])==expected and actual['sha256']==digest(expected),'CPU_TEST_MODULE_ORIGIN:'+name)
@@ -350,7 +351,8 @@ def execute(config,package,root,*,runner=None):
         # Target-related tests use existing pytest, not the conversion dependency
         # environment. Explicit CMake is the already patched private CPU tool.
         if 'test_python' in cfg:
-            plan=cpu_regression_plan(cfg,code,root,env,cmake,use_ninja)
+            test_env=dict(env,EXPOSEDPATH_TEST_NINJA=tools['ninja']) if use_ninja else env
+            plan=cpu_regression_plan(cfg,code,root,test_env,cmake,use_ninja)
             bind_cpu_regression_environment(plan,root,runner)
             runner.run('cpu_regression',plan['argv'],env=plan['env'],cwd=plan['cwd'],timeout=300)
         build_env=env

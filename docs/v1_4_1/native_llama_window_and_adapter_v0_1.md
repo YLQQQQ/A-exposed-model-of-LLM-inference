@@ -4,6 +4,10 @@
 Engineering；不是签署Formal协议、平台资格或采集授权。Gate13限定PASS保持、Gate14
 NOT_RUN；PyTorch自然baseline和原冻结结果不变，四对C0/Cpre追加Pilot仍暂停。
 
+**当前工程入口为§7.154。** 34fa866目标CPU103 passed/4 skipped，C/C++编译器识别
+小程序编译链接成功；完整预检停于RC路径生成错误。新修复只做CMake路径/版本适配，
+等待协调审查，不安排服务器执行；旧VS命令及§7.148～7.153保留为历史，不能重复执行。
+
 ## 1. 窗口与实际完成链
 
 固定引擎commit `d81235049384534c167caea52b85a694f6103d14`，只支持单GPU、隔离request、
@@ -39,7 +43,8 @@ NOT_RUN；PyTorch自然baseline和原冻结结果不变，四对C0/Cpre追加Pil
 | `exposedpath_v141/native_llama_scope.py` | 新point投影/真实调用桥接，复用Canonical、设备映射、官方诊断规则和S/A，不重写算法 |
 | `scripts/native_llama_local.py` | CPU文件CLI：patch-backend/prepare/inspect-producer/review；没有build、模型启动、profile/export或默认采集子命令 |
 
-spec/build/conversion/producer/scope分别为`exposedpath-native-llama-<kind>/0.1.0`；
+spec/conversion/producer/scope为`exposedpath-native-llama-<kind>/0.1.0`；当前Ninja
+build为0.2.1（仅构建回执适配），显式旧build0.1.0/0.2.0读取见§7.154；
 boundary=`exposedpath-native-boundary/0.1.0`、sync=`exposedpath-native-sync/0.1.0`。
 角色只能ENGINEERING/Engineering；公共旧schema、registry、A/B公式及旧读取路径零改动。
 未知版本、错role、错hash或错误配置拒绝，不把旧Engineering/Pilot/失败结果改名升级。
@@ -92,13 +97,14 @@ P0也保留共同诊断包装，仅P1启用NVTX，故P0不是未经包装的SDK�
 drain/stream/event闭包与必要前缀。若需native局部closed-prior适配，先提交窄域条款和
 独立预期，不删除历史成员、伪造其request ownership或授完整物理B。
 
-## 3. 构建与模型身份锁定（未在目标机执行）
+## 3. 构建与模型身份锁定（完整目标构建尚未成功）
 
 固定VS2022 x64、MSVC14.38.33130、CUDA12.4、sm89、Release、静态库、GGML_NATIVE=OFF、
 GGML_CUDA=ON、GGML_CUDA_GRAPHS=OFF。不取较新预编译包、升级driver/Toolkit或转Linux。
 构建必须提供干净固定vendor根、另存的patched backend及NVTX include根；LF原件字节pin
 不接受静默CRLF归一化。CMake会拒绝错误commit/字节/工具链或不唯一source替换。
-最小构建参数（待审，不是本轮执行）：
+以下VS生成器参数仅保留为历史设计；当前Ninja路线使用§7.151/7.154的固定参数与
+生成的交付配置，不再次执行此旧命令：
 
 ```powershell
 cmake -S $CodeRoot/native/llama_cpp -B $BuildRoot -G 'Visual Studio 17 2022' -A x64 -T 'version=14.38.33130' -DLLAMA_SOURCE_ROOT=$EngineSource -DNATIVE_PATCHED_BACKEND=$PatchedBackend -DNVTX_INCLUDE_ROOT=$NvtxInclude
@@ -361,3 +367,31 @@ native CMake的Git现在通过已验证的固定Git路径显式传入，不依�
 相关本地107项为104 passed/3既有skip；Python3.12.7的生产入口接线验证不等目标
 3.11.16复验。旧0.1/0.2 build/producer/测量语义保持，仍只允许构建/转换/身份检查，
 不运行生成程序、GPU探测或native模型。新root/单ZIP/失败即停，stage2不自动启动。
+
+### 7.154 CMake路径与原始版本合同
+
+真实失败来源是未类型化反斜杠RC路径在`CMakeRCCompiler.cmake`中形成非法转义，
+不是VS缺安装。所有CMake路径参数采用正斜杠、工具FILEPATH和目录PATH，含空格/
+括号仍为单独argv；`-S/-B/--build`同样处理。只变路径表示，不变目标文件、源码字节
+或hash。NUL/换行/分号/插值/引号等无法安全表示的路径拒绝，不静默改名。
+
+实际CMake3.31.10识别MSVC为19.38.33135.0，工具此前显示19.38.33135。三个实际
+CMakeLists、预检读取、native构建读取及receipt消费者仅接受这两个精确形式；原值
+保留，不trim、前缀匹配或补字段伪装。SDK10.0.20348.0、固定工具字节、nvcc12.4.131
+不变；Toolkit只限12.4系列，不能放行新compiler build。共同规则文件
+`native/cmake/NativeBuildContract.cmake`纳入native源码身份。CUDA版本仍由实际CUDA
+预检/生成的compiler文件和native输出检查验证，不从vendor子目录猜测父scope变量。
+
+新build0.2.1须配precheck0.2.0，后者保存原始版本；旧Ninja build0.2.0只配原
+precheck0.1.0及三段MSVC版本，VS build0.1.0保留。错配、未知版本、错路径/hash、
+缺真实链接产物仍拒绝。转换0.1.0、stage1配置0.2.0、producer/adapter及测量合同不变。
+
+本地使用固定真实CMake模板生成→读取、三个实际CMakeLists版本门及实际stage1
+文件消费链验证；143 passed/3既有可选skip。LANGUAGES NONE不执行cl/nvcc/rc/link，
+外部编译结果仅CPU替身，不冒充目标机成功。本次未运行任何生成程序/模型/CUDA/Nsight。
+原34fa失败、103/4及所有Raw/合同保留；后续真实预检→native→GGUF仍需新目标回执。
+
+唯一待审小包以前置34fa866，仍复用原固定Ninja/旧资产/只读598 CPU环境和882工具
+query原件；新root/单metadata ZIP，不恢复旧cache或入口。20GiB临时空间及45–120
+分钟仅后续估计，长期50GB政策与归档后清理条件不变。本轮停在本地交付审查，未授权
+安排目标机执行；成功也不授GPU资格，不自动阶段2或自然配对。

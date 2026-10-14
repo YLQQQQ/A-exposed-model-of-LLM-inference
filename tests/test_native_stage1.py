@@ -160,7 +160,7 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
         cfg['test_python']=sys.executable
         test_files=source.parents[2]/'tests';test_files.mkdir()
         for name in ('test_native_stage1','test_native_ninja','test_native_tool_identity','test_native_llama',
-            'test_native_cpu_import','test_gate8_identity','test_v141_canonical_raw'):
+            'test_native_cpu_import','test_native_cmake_contract','native_cmake_fixture','test_gate8_identity','test_v141_canonical_raw'):
             shutil.copyfile(Path(__file__).parent/(name+'.py'),test_files/(name+'.py'))
     if ninja:
         from exposedpath import native_ninja as n

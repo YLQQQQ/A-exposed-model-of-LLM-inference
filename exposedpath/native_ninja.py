@@ -6,9 +6,9 @@ from pathlib import Path
 import re
 
 from . import native_stage1 as stage
+from .native_build_contract import CHECK_VERSION,MSVC_RAW_VERSIONS,CUDA_RAW_VERSION,cmake_path,cmake_path_argument
 
 VERSION='exposedpath-native-stage1/0.2.0'
-CHECK_VERSION='exposedpath-native-compile-link/0.1.0'
 NINJA_VERSION='1.12.1'
 SDK_VERSION='10.0.20348.0'
 NINJA_SHA256='68865c3276d449d746cea5065fdec2baf755d7813e161ab04205b0907b2629b8'
@@ -169,9 +169,9 @@ def configure_arguments(source,build,tools):
     mapping={'CMAKE_MAKE_PROGRAM':'ninja','CMAKE_C_COMPILER':'cl','CMAKE_CXX_COMPILER':'cl',
         'CMAKE_CUDA_COMPILER':'nvcc','CMAKE_CUDA_HOST_COMPILER':'cl','CMAKE_LINKER':'link',
         'CMAKE_AR':'lib','CMAKE_RC_COMPILER':'rc','CMAKE_MT':'mt'}
-    return ['-S',str(source),'-B',str(build),'-G','Ninja','-DCMAKE_BUILD_TYPE=Release',
+    return ['-S',cmake_path(source),'-B',cmake_path(build),'-G','Ninja','-DCMAKE_BUILD_TYPE=Release',
         '-DCMAKE_SYSTEM_VERSION='+SDK_VERSION,'-DCMAKE_CUDA_ARCHITECTURES=89',
-        *('-D'+key+'='+tools[name] for key,name in mapping.items())]
+        *(cmake_path_argument(key,tools[name]) for key,name in mapping.items())]
 
 
 def compiler_field(path,key):
@@ -198,7 +198,7 @@ def validate_build(build,tools,kind,binary):
     for lang in (('C','CXX') if kind=='cxx' else ('CXX','CUDA')):
         path=build/'CMakeFiles/3.31.10'/('CMake'+lang+'Compiler.cmake')
         version=compiler_field(path,'CMAKE_'+lang+'_COMPILER_VERSION')
-        stage.require(version==('12.4.131' if lang=='CUDA' else '19.38.33135'),'NINJA_ACTUAL_COMPILER_VERSION:'+lang)
+        stage.require(version==CUDA_RAW_VERSION if lang=='CUDA' else version in MSVC_RAW_VERSIONS,'NINJA_ACTUAL_COMPILER_VERSION:'+lang)
         actual=compiler_field(path,'CMAKE_'+lang+'_COMPILER')
         stage.require(Path(actual).resolve()==Path(tools['nvcc' if lang=='CUDA' else 'cl']).resolve(),'NINJA_ACTUAL_COMPILER_PATH:'+lang)
         versions[lang]=version
@@ -215,7 +215,7 @@ def run_prechecks(code,root,tools,runner,env):
         stage.require(not build.exists(),'NINJA_PRECHECK_NO_RESUME')
         print('[stage] '+kind+'_compile_link START; executable will NOT be run',flush=True)
         runner.run(kind+'_configure',[tools['cmake'],*configure_arguments(code/'native'/source,build,tools)],env=env,timeout=300)
-        runner.run(kind+'_compile_link',[tools['cmake'],'--build',build,'--target',target,'--parallel','2','--verbose'],env=env,timeout=300)
+        runner.run(kind+'_compile_link',[tools['cmake'],'--build',cmake_path(build),'--target',target,'--parallel','2','--verbose'],env=env,timeout=300)
         result=validate_build(build,tools,kind,build/(target+'.exe'))
         path=root/(kind+'_precheck.json');stage.write(path,result)
         refs[kind]=dict(path=str(path.resolve()),sha256=stage.digest(path),size_bytes=path.stat().st_size)
