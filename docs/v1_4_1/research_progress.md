@@ -1,5 +1,34 @@
 # ExposedPath 科研进度清单
 
+## 7.156 安全停点与PyTorch完成政策主线回归（2026-10-14）
+
+依据用户本轮优先级调整，**暂停llama.cpp扩展、部署包、服务器执行及后续引擎资格**；
+不撤销实现、不清理原件、不恢复历史入口。7.155最小API修复已完成并正常推送，固定
+提交`1e1c1fd6b91ed2001ea308d9bda2b721c23c2f9b`；本轮直接复用既有13 passed/0 failed/0 skipped
+真实头文件/对象审计及152 passed/0 failed/7可选skipped CPU入口记录，没有重跑测试。
+目标机旧C/C++、CUDA编译链接预检和configure已通过；新adapter的MSVC实际编译、最终link、
+GGUF转换及native观测资格仍未验证，stage1原BLOCKED/native资格NOT_RUN不改。暂停工作
+不是通过或撤销资格，未来若恢复须从保留的实际差距开始，不重跑已证明事项。
+
+本轮只读核对PyTorch实际runner/helper与Cpre接线：输入驻留目标GPU、成功窗前drain后
+request开始；首/末token经过真实Host读取后观察completion，共用三个半开窗口。
+没有实际网络流式发送。C0后复制同步的必要活动交集为零可符合有限Device Exposure定义，
+不证明复制API无内部阻塞；Cpre只改首token复制前的实际流同步，边界仍是Host-readable，
+Decode未改。预算迁移个案不是“Device wait修好”，也不是自然baseline替换或完整等待恢复。
+
+当前少量入口集中到[解释范围0.2的PyTorch路线](device_exposure_scope_and_windows_engine_v0_2.md#当前pytorch路线完成政策负载与可支持的解释)：
+复用Formal G32/G512的同政策输入长度证据、Engineering B1/B4的局部Prefill batch证据，
+与独立C0/Cpre完成政策个案分开。比较绝对预算/占比、GPU活动及同窗baseline，不要求wait
+单调或较大，不混合角色、不将P1组成迁移P0。已有独立正确性证据不等于一般机制规律；
+Cpre政策效应可重复性/适用范围仍是提出更广claim时的实际缺口。现有资料可以先完成有限
+论文解释，不需要引擎构建、完整Host等待认证或新增监控。旧84次/Request/Decode拒绝保持，
+不追索旧w11/UNKNOWN；四对C0/Cpre追加Pilot继续暂停。
+
+此次只是解释、优先级及交接更新，测量代码、schema/registry、冻结G12-ROUTEA/0.1.1、
+Formal结果/排除/统计规则及所有数据角色不变。Gate13限定PASS、Gate14 NOT_RUN、
+UNKNOWN/NOT_ASSESSED和用户DOCX/大型原件保持。本轮仅文档链接/diff检查，不实验、不
+重算、不清理、不生成交付包或服务器命令；当前服务器无需操作。以下7.155及更早为历史。
+
 ## 7.155 Native真实SDK接口修复与前置adapter编译（2026-10-14）
 
 **48567aa目标C/C++、CUDA真实编译链接预检及完整configure通过；native最终构建仍BLOCKED。** 本地只读核验新回传132773 bytes，SHA256 `5858ec42c8bcdc82bd3adb47fee47b58f80ce138153f53a8ae73c68121d3f25f`，109成员/108项、CRC/安全路径/长度/hash/完整覆盖通过，manifest SHA `3495eb1cf2a681d772f87900109db04567cbea45b1de6467feead7389925d7d3`。执行48567aa890bfd7f101ebf7b6b720308b4b48e20f；原CPU142 passed/4 skipped，原始两precheck JSON/输出及configure exit0已直接读取；build1606.078s exit1、无timeout，唯一编译错误为main.cpp:29的`cudaDeviceGetUuid`不存在。未进入GGUF转换，无模型/GPU探测/collector。原字节、退出码及BLOCKED不变；build stdout含非UTF8的MSVC诊断，读取展示不能改写Raw或假称UTF8原件。

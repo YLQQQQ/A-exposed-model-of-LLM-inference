@@ -5,6 +5,47 @@
 优先级和Linux前提；原审查/数据角色/失败判定保留。Gate13限定PASS、Gate14 NOT_RUN。
 四对C0/Cpre追加Pilot暂停；不安装、部署、采集、重算旧结果或修改用户DOCX。
 
+> **2026-10-14当前优先级（7.156）**：暂停llama.cpp扩展、交付及目标机资格工作；
+> 保留已完成的本地SDK接口修复与历史现场。下文§3～4仅保留先前引擎方案，不再是执行指令。
+> 当前只读回到PyTorch自然C0与独立受控Cpre，现行路线见下节；不改baseline、合同或数据角色。
+
+## 当前PyTorch路线：完成政策、负载与可支持的解释
+
+**自然C0作为执行baseline。** 固定输入已驻留GPU、成功窗前drain返回后开始request；
+forward→argmax→token-ready标记/Host准备→`.cpu().reshape(-1).tolist()`→实际Host token值
+及完成point。Prefill终止于首token可读，Request终止于末token可读，Decode为两者之间的
+半开窗口；文本输出/网络发送不在其中，当前未实现实际流式发送。源码见
+[runner完成helper](../../exposedpath/runner.py)及[MC0.2 §4](measurement_contract_v0_2.md#4-requestprefilldecode-与-token-就绪)。
+helper内部已观测复制/同步的顺序与依赖须按实物恢复；D2H结束不等于`.cpu()`已返回，
+NVTX也不独立证明GPU完成。自然路径的API预算可能含未分离内部阻塞；后续合格同步入口前
+必要活动已完成时，Device wait可以为零。这与当前有限指标一致，不证明不存在GPU相关Host阻塞。
+
+**Cpre是独立受控完成政策，不是修正后的自然baseline。** 同一负载下，仅在测量Prefill
+首token复制前同步实际当前流，仍以实际Host token可读作为完成边界；Decode未改。
+实际接线见[completion_path](../../exposedpath/completion_path.py)。它检验完成政策改变后，
+可观察同步暴露、API预算与residual如何迁移；不能用复制API差值精确估计原内部等待，
+不能由一次结果推断稳定收益，也不能拿Cpre替代自然G1或将不同政策混作负载效应。
+
+**同政策内的负载比较已有两种证据，不需先补引擎或改完成路径。**
+[Formal收尾](gate13_closeout_v0_1.json)的G32/G512固定batch1/输出2，检验输入长度；
+[B1/B4局部审查](batch_load_prefill_review_v0_1.md)固定输入512/每样本输出2，检验batch，
+batch4是一次批量request，不是四个并发用户。后者只有Prefill局部Engineering资格，
+Request/Decode拒绝保留。比较时同时呈现绝对A预算、逐次占比、总时长、GPU活动并集、
+同窗常规指标及同步/复制时间线，不能以较高Device wait选点或要求它随工作量单调增加。
+Formal与Engineering不能合并为重复，P1组成也不能精确迁移到P0。
+
+已有证据能支持“活动量与合格同步暴露不是同一个量”；C0/Cpre个案记录了不同完成政策下
+的预算位置差异，仍不能排除运行波动，或将全部差值因果归于新增同步。
+独立Q0/受控资格支持定义内的依赖与记账正确性，不支持完整Host等待识别或任意负载趋势。
+当前最小剩余缺口是**Cpre政策效应的可重复性/适用范围**，仅当论文要主张一般规律时才
+需要预定预算的新验证；现有单次C0/Cpre不能补足它。B4整request缺口不阻断已闭合Prefill，
+本轮不重新追索84次调用、w11或旧UNKNOWN，也不恢复四对Pilot。
+
+**下一项必要工作是先用上述现成结果形成论文的同政策负载对照与政策个案解释，允许零wait、
+无额外增益和不确定结论。** 本页已给出证据/claim边界，不新增资格层或服务器任务。
+若之后需要将Cpre用于负载系列，须另行明确共同完成政策与待检验claim；不自动改baseline、
+冻结定义、Formal资格或批准采集。Gate13限定PASS及UNKNOWN/NOT_ASSESSED保持。
+
 > 本地接线与固定SDK接口校正现见[native候选0.1](native_llama_window_and_adapter_v0_1.md)。
 > 固定头文件的普通batch入口为`llama_decode`；本页先前`llama_process`为接口简写，不能
 > 直接用于编译。原指标/证据结论不变，target native资格与新窗口仍未授予。
@@ -73,7 +114,7 @@ CUDA API预算可能含未分离阻塞；submit/non-submit不等阻塞/非阻塞
 已有论文提纲在[解释文档§4](completion_path_scientific_review_and_pilot_plan_v0_1.md#4-论文结果与限制提纲)，
 本页是其现行口径覆盖层；没有独立论文正文可同步，用户DOCX保持原样。
 
-## 3. Windows首引擎：固定源码的自然完成链
+## 3. 历史待审Windows首引擎：固定源码的自然完成链（当前暂停）
 
 当前仅既有Windows Server/4090；Linux、WSL、换服务器、升级driver均未授权。
 vLLM仅作未来候选，不是当前阻塞。首候选llama.cpp v0.6.0的
@@ -104,7 +145,7 @@ vLLM仅作未来候选，不是当前阻塞。首候选llama.cpp v0.6.0的
 输入用固定token内容，不让chat template/BOS自动改变输入；P0/P1逐值核对，不要求与HF
 生成token必然相同。不据转换后的时延做旧HF的同口径引擎排名。
 
-## 4. 唯一下一步及有限资格增量
+## 4. 历史引擎方案及有限资格增量（当前暂停，不执行）
 
 下一项本地工作是**写清native窗口/identity adapter的最小声明并对接现有文件链**，
 不是新collector或完整Q0：首次原生model process调用之前记录start，在首/末真实Host

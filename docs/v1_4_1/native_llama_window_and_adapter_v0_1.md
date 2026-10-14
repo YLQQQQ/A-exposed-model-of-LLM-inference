@@ -4,7 +4,12 @@
 Engineering；不是签署Formal协议、平台资格或采集授权。Gate13限定PASS保持、Gate14
 NOT_RUN；PyTorch自然baseline和原冻结结果不变，四对C0/Cpre追加Pilot仍暂停。
 
-**当前工程入口为§7.155。** 48567aa目标C/C++、CUDA真实编译链接预检及完整configure
+**2026-10-14安全停点（7.156）：llama.cpp扩展暂停。** 已完成的§7.155最小API修复
+保留在`1e1c1fd6b91ed2001ea308d9bda2b721c23c2f9b`，不撤销工作或删除原件；不再制作
+部署包、不安排服务器执行或后续引擎资格。当前转回[PyTorch完成政策与负载路线](device_exposure_scope_and_windows_engine_v0_2.md#当前pytorch路线完成政策负载与可支持的解释)。
+后文构建/桥接/自然配对步骤均为历史待审方案，不是现行执行指令。
+
+**最近已完成的本地工程记录为§7.155。** 48567aa目标C/C++、CUDA真实编译链接预检及完整configure
 已通过；完整build停于adapter引用不存在的CUDA Runtime API。修复与前置真实头文件
 编译门仅在本地验证，尚未授构建/GPU资格。本轮无新包、命令或服务器执行安排；旧入口
 及§7.148～7.154保留历史，不再恢复或重复执行。
