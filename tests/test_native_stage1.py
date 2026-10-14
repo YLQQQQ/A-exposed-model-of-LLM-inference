@@ -132,7 +132,7 @@ def test_missing_file_is_not_empty_set_success(tmp_path):
     assert failures[0]['reason']=='FILE_MISSING'
 
 
-def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_path,monkeypatch,reuse_assets=False,ninja=False):
+def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_path,monkeypatch,reuse_assets=False,ninja=False,cpu_entry=False):
     a=api(); from exposedpath import native_llama
     package=tmp_path/'package';package.mkdir(); root=tmp_path/'diagnostics'/'new';root.mkdir(parents=True)
     hf=tmp_path/'hf';hf.mkdir();(hf/'config.json').write_bytes(b'{"model_type":"qwen2"}')
@@ -155,9 +155,16 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
         code_root=str(tmp_path/'code'),server_root=str(tmp_path),model_root=str(hf),cuda_root=str(tmp_path/'cuda'),
         git='git',base_python='python',execution_commit='a'*40,engine_commit=native_llama.ENGINE_COMMIT,
         cmake_probe_sha256=sha(original),hf_manifest_sha256=sha(csv_data),native_source_paths=['native/llama_cpp/main.cpp'])
+    if cpu_entry:
+        import shutil,sys
+        cfg['test_python']=sys.executable
+        test_files=source.parents[2]/'tests';test_files.mkdir()
+        for name in ('test_native_stage1','test_native_ninja','test_native_tool_identity','test_native_llama',
+            'test_native_cpu_import','test_gate8_identity','test_v141_canonical_raw'):
+            shutil.copyfile(Path(__file__).parent/(name+'.py'),test_files/(name+'.py'))
     if ninja:
         from exposedpath import native_ninja as n
-        from tests.test_native_ninja import tools
+        from test_native_ninja import tools
         nt=tools(tmp_path);nt['python']=str(tmp_path/'old-cpu/python.exe')
         cfg['schema_version']=n.VERSION
         monkeypatch.setattr(n,'bind_tools',lambda *args,**kw:(nt,{}))
@@ -183,6 +190,7 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
         records=[]
         def run(self,name,argv,**kw):
             self.records.append(dict(name=name,exit_code=0,argv=[str(x) for x in argv]))
+            if name=='cpu_regression_environment':return a.Runner(root).run(name,argv,**kw)
             if name=='git_head':return b'a'*40+b'\n'
             if name=='engine_head':return native_llama.ENGINE_COMMIT.encode()+b'\n'
             if name=='engine_gitdir':return str(root/'engine/.git').encode()+b'\n'
@@ -195,13 +203,13 @@ def test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_pat
                 p=root/('build/bin/native-llama.exe' if ninja else 'build/bin/Release/native-llama.exe')
                 p.parent.mkdir(parents=True);p.write_bytes(b'not executable')
                 if ninja:
-                    from tests.test_native_ninja import write_build
+                    from test_native_ninja import write_build
                     import shutil
                     built,_=write_build(root,nt,'cuda');shutil.copytree(built,root/'build',dirs_exist_ok=True)
                 with (root/'build/CMakeCache.txt').open('a' if ninja else 'w') as f:
                     f.write('CMAKE_CUDA_ARCHITECTURES:STRING=89\nGGML_CUDA_GRAPHS:BOOL=OFF\nGGML_NATIVE:BOOL=OFF\nFETCHCONTENT_FULLY_DISCONNECTED:BOOL=ON\n')
             if ninja and name in ('cxx_compile_link','cuda_compile_link'):
-                from tests.test_native_ninja import write_build
+                from test_native_ninja import write_build
                 import shutil
                 kind=name.split('_')[0];b,exe=write_build(root,nt,kind)
                 shutil.move(str(b),str(root/(kind+'-precheck')))

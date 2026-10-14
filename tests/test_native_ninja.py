@@ -24,7 +24,7 @@ def test_ninja_plan_pins_all_compilers_without_vs_instance_or_forcing_success(tm
 
 
 def test_build_receipt_versions_cannot_disguise_generator(tmp_path):
-    from tests.test_native_llama import prepared
+    from test_native_llama import prepared
     from exposedpath import native_llama as native
     from exposedpath import native_stage1 as stage
     spec=stage.read(prepared(tmp_path))
@@ -103,13 +103,13 @@ def test_cxx_failure_stops_before_cuda_or_native(tmp_path):
 
 
 def test_actual_stage1_file_consumer_reuses_cpu_and_gates_native_on_both_prechecks(tmp_path,monkeypatch):
-    from tests.test_native_stage1 import test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts
+    from test_native_stage1 import test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts
     test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_path,monkeypatch,ninja=True)
 
 
 @pytest.mark.parametrize('damage',['sdk','version','executed','swap'])
 def test_new_receipt_refuses_changed_compile_evidence_even_if_rehashed(tmp_path,monkeypatch,damage):
-    from tests.test_native_stage1 import test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts
+    from test_native_stage1 import test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts
     from exposedpath import native_stage1 as s,native_llama as n
     test_cpu_file_chain_runs_all_stage1_steps_and_creates_bound_receipts(tmp_path,monkeypatch,ninja=True)
     root=tmp_path/'diagnostics/new';b=s.read(root/'build_receipt.json');c=s.read(root/'conversion_receipt.json')

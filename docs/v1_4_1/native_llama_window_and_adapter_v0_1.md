@@ -337,3 +337,27 @@ toolchain引用及原帮助回执ZIP的SHA，完整帮助原件不转码改写�
 安装依赖、不修改系统文件/旧源码/cache。相关CPU回归、真正C/C++与CUDA编译链接
 预检成功后才native构建/转换；生成exe不运行，设备查询/模型/collector预算均0。
 目标机尚未执行本修复，不授任何GPU资格；新输出/单metadata ZIP/失败即停，不重试。
+
+### 7.153 定向CPU测试身份与环境一致性
+
+d77386工具身份查询已在目标通过；91 passed/6 failed/4 skipped停止于测试共享helper
+导入，未进入实际编译。仓库tests是namespace目录，原`tests.test_native_*`依赖环境中
+同名package选择。外部同名regular包可独立复现相同6项错误；原回执缺实际包来源，
+不得把该复现当作某服务器第三方包身份已经证明。
+
+仅该CPU入口采用既有`test_*` helper导入，包括内部反向导入，显式PYTHONPATH
+本仓库tests/code优先并保留转换gguf-py路径。独立新进程记录实际解释器/base/version、
+cwd、这几个环境字段及实际helper origin/hash；错来源拒绝。不得把配置值复制为实际值，
+也不全仓包化tests或配置新的全局pytest行为。同名外部包干扰的独立pytest子进程通过
+全部6项原反例；actual stage1→环境门→CPU回归→编译前文件链保持，不吞ImportError。
+
+CPU回归保留`-rs`，记录可选g++和私有源码/SDK/JSON头输入存在性。原四个skip为
+可选upstream字节审计、真实SDK语法审计及两个compiled CPU替身用例；原-q日志没有
+细分OR条件的缺件事实。目标机必须执行的C/C++、CUDA两项真实compile/link不属于
+这些skip，必须有exit0、实际cache/compiler/output；本机替身/可选审计不能代替。
+
+native CMake的Git现在通过已验证的固定Git路径显式传入，不依赖干净编译PATH猜测。
+部署前置d77386与598 CPU来源、882 query来源各自绑定，原件hash不变，不追认失败。
+相关本地107项为104 passed/3既有skip；Python3.12.7的生产入口接线验证不等目标
+3.11.16复验。旧0.1/0.2 build/producer/测量语义保持，仍只允许构建/转换/身份检查，
+不运行生成程序、GPU探测或native模型。新root/单ZIP/失败即停，stage2不自动启动。

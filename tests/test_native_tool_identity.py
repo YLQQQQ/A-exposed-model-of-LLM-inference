@@ -104,7 +104,7 @@ def sealed(root,files):
         z.writestr('artifact_manifest.json',json.dumps(dict(files=rows)))
 
 
-@pytest.mark.parametrize('damage',[None,'query-version','query-source','query-tool','query-diagnostic'])
+@pytest.mark.parametrize('damage',[None,'deploy-moved','query-version','query-source','query-tool','query-diagnostic'])
 def test_production_binder_consumes_real_reference_files_and_never_launches_help(tmp_path,monkeypatch,damage):
     from exposedpath import native_stage1 as s
     a=api();package=tmp_path/'package';package.mkdir();root=tmp_path/'new';root.mkdir()
@@ -137,6 +137,7 @@ def test_production_binder_consumes_real_reference_files_and_never_launches_help
     if damage=='query-source':query['execution_commit']='d'*40
     if damage=='query-tool':query_files['lib']['sha256']='0'*64
     if damage=='query-diagnostic':query['error']='different failure'
+    if damage=='deploy-moved':cfg['prerequisite']='e'*40
     sealed(package/'query_review.zip',{'receipt.json':query,'toolchain_prerequisites.json':dict(files=query_files)})
     for key,name in [('prior_review_sha256','prior_review.zip'),('vs_facts_zip_sha256','vs_facts.zip'),('query_review_sha256','query_review.zip')]:cfg[key]=s.digest(package/name)
     monkeypatch.setattr(a,'NINJA_SHA256',s.digest(paths['ninja']))
@@ -145,7 +146,7 @@ def test_production_binder_consumes_real_reference_files_and_never_launches_help
         def __init__(self):self.calls=[]
         def run(self,name,argv,**kw):self.calls.append((name,argv));assert name=='ninja_version';return b'1.12.1\n'
     runner=QueryRunner()
-    if damage:
+    if damage not in (None,'deploy-moved'):
         with pytest.raises(ValueError):a.bind_tools(cfg,package,root,runner)
     else:
         tools,env=a.bind_tools(cfg,package,root,runner)

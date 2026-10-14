@@ -136,7 +136,7 @@ def bind_tools(cfg,package,root,runner):
     stage.require(version==NINJA_VERSION,'NINJA_VERSION')
     stage.require(cfg.get('tool_identity_version')==TOOL_IDENTITY_VERSION,'NINJA_TOOL_IDENTITY_VERSION')
     query_ref=reference_zip(package/'query_review.zip',cfg['query_review_sha256'],references/'query')
-    stage.require(query_ref['execution_commit']==cfg['query_reference_commit']==cfg['prerequisite']
+    stage.require(query_ref['execution_commit']==cfg['query_reference_commit']
         and query_ref['error']=='NATIVE_STAGE1_STEP_EXIT:link_version'
         and not any(query_ref[k] for k in ('model_executed','cuda_initialization_program_invoked','collector_executed')),'NINJA_QUERY_REFERENCE_ROLE')
     query_files=stage.read(references/'query/toolchain_prerequisites.json')['files']

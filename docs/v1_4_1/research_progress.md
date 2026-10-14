@@ -1,5 +1,17 @@
 # ExposedPath 科研进度清单
 
+## 7.153 阶段1定向CPU测试模块身份修复（2026-10-14）
+
+**d77386目标机工具身份/源码/CPU依赖检查已跨过，仍在CPU测试失败，实际编译/转换NOT_RUN。** 本地直接核验回传ZIP30602 bytes、SHA256 `2ba5e75e62c0dd64d3fce89da781b817717848416e6e8203132721c7d17bfd09`，72成员/71项、CRC、安全路径、hash/完整覆盖通过，manifest SHA `aa0fe68244c1b4265a080a1f8ef0f42a1de791f96d53fecf70f623ee575ed68f`。真实执行d77386f79c16f01e25298564e98a0af431a3cedf，link/lib固定资源身份成功、依赖check和CPU版本成功；CPU为91 passed/6 failed/4 skipped，6项均在`tests.test_native_*`导入时失败。原日志未记录实际tests包解析来源，不能将某具体第三方包写成已证实根因；没有进入实际C/C++或CUDA预检/模型/转换/collector，原BLOCKED与原ZIP保留。
+
+独立子进程用同名外部regular tests包复现完全相同的6项失败；最小修复统一采用仓库原有`test_*`共享helper约定，覆盖Ninja→stage1和stage1→Ninja内部反向导入，不删除失败测试/skip/吞ImportError。只对该生产CPU入口显式绑定tests和code路径后保留gguf-py；不全仓包化tests或修改全局pytest配置。新增实际Python/cwd/PYTHONPATH/module origin+SHA的只读子进程回执，来源错配拒绝；记录未使用的tests namespace来源及可选审计输入可用性，但不导入外部包、不读取全环境。实际stage1文件链证明此门在CPU回归之前、实编译之前；真实Python/测试清单仍由固定配置执行，未来目标机数据不能由本地替代。新入口附`-rs`保留skip原因。
+
+原4项skip对应：fixed_backend_patch缺可选私有upstream字节审计输入；main_host_syntax缺可选g++或固定llama.h；compiled_native_producer两个参数用例缺g++或固定JSON头。后两种OR分支缺哪项原日志没有记录，保持该限制，不断言系统组件缺失。它们是可选开发/CPU替身审计，**不是**目标机必需的C/C++与CUDA configure/compile/link；后者必须实际成功并验证cache/输出，不因skip授构建资格。新回执保留g++路径与三项文件存在性，目标缺件照实记录，不能静默通过或安装补齐。
+
+后续接线审查另发现：固定编译PATH排除了Git，native CMake却`find_package(Git REQUIRED)`；新configure显式绑定已有verified Git executable，消除环境偶然发现，不改变源码/同步或补工具。部署前置本次d77386、CPU环境事实来源598d447、工具query原件来源882425c继续分开；两个旧引用均按原哈希校验，不把新部署HEAD填回旧reference。其余Ninja/MSVC14.38/nvcc12.4/SDK、只读CPU环境、原40资产、禁运行CUDA ABI探测、预检→native→转换与真实输出验证不变；没有重新安装、工具链升级或VS修改。
+
+tests-first：新子进程/环境3项先失败，其中嵌套真实pytest复现6项；Git绑定/部署来源分离2项先失败；实际CPU入口接线新增反例先失败后通过。本地按生产`cpu_regression_plan`+Runner、同argv/cwd/PYTHONPATH/测试清单运行5个相关文件，**104 passed/0 failed/3 skipped，19.67s**。本地Python3.12.7，固定工具式PATH不含g++，所以3项既有可选审计skip；upstream字节审计输入本地存在并通过，不把差异改写成目标机4skip已经完成。没有运行生成CPU/native程序、CUDA/Nsight/模型。本地长诊断根使3个既有fixture文件达到261字符而失败，扩展路径确认限制后仅在新的短临时根按同入口验证通过，不改测试/生产规则；保留该本地失败记录。Python compileall/diff检查通过，用户DOCX原字节保持。目标机相关CPU和真实构建仍需新回执审查，stage1 BLOCKED/GPU资格NOT_RUN；Gate13限定PASS、Gate14 NOT_RUN、UNKNOWN/NOT_ASSESSED保持。唯一下一步是以前置d77386的小包、新输出目录、单metadata ZIP，先交协调审查；不重复旧入口、不恢复/重试/清理。
+
 ## 7.152 阶段1工具身份查询与构建退出码分离（2026-10-13）
 
 **服务器882425c已部署，但link帮助查询误拒绝，实际编译/转换仍NOT_RUN；本次仅本地工程修复。** 直接核验回传ZIP17793 bytes、SHA256 `3d8f2599cf0dec1499463e1a90d1ab1b3dcb32bbf2bd2df14314da3fa6746264`，43成员/42项、CRC、安全路径、hash及完整覆盖通过；manifest SHA `98b211c361b041947b56ea18b975ff301ccb21b8bb9b4c994c8fe3c1952d2986`。真实checkout为882425c02f3e0ec70679c0ed58875a852cf3cbd1且clean；ninja --version成功，link /?在0.047s退出1100、无timeout，stdout含14.38.33135.0及帮助、stderr为空。Runner在版本解析前执行通用exit-zero门，故误把身份查询作为构建失败。lib查询及真实configure/compile/link尚未执行，不能推断其返回约定或构建能力；旧BLOCKED原件不改。
