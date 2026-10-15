@@ -1,5 +1,43 @@
 # ExposedPath 科研进度清单
 
+## 7.159 路线B一次本地可行性检查终态：停止扩大（2026-10-15）
+
+用户仅批准7.158的一次本地方法检查，未授权新GPU/8-profile/引擎。已在同一
+[决策稿0.3](pytorch_research_feasibility_decision_v0_1.md)收口：**唯一建议是停止扩大路线B，
+不安排新的受控GPU验证、采集设施或负载矩阵。** 不是撤销A/B或旧Gate，也不是断言工具
+永不可观测；**本轮限定的必要关系目标可行且已在现有资料上完成验证，无需新GPU实验**。
+取得了必要设备效果→实际Host token及负载完成位置描述，但未产生值得新增方法投入的
+独立解释关系。不能用“存在一个合格内部sync”替代自然路径用途，也不把测尽全部Host
+阻塞/整段约束时长重新设为这一弱对象的前置。方法对象可核验与科研增量成立分开记录。
+
+实际完成了新的、有限的本地工作，而非重复旧10项CPU断言：从原件12个G32/G512 P1 run
+只读查询24次token的结构化范围、唯一runtime复制/同步、原correlation映射D2H/physical
+sync及device/context/trace stream，并与实际token/Host ledger和输入receipt文件hash绑定。
+24次均满足必要先后关系；G32实际token为463/2529，G512为29184/6556，不把不同输入的
+token强行设为相同。CPU手写参考6项通过/0失败，区分READY/NOT_READY/UNKNOWN、内容
+冲突及晚到无关效果；不调用S/A/B，不将逻辑例称真实CUDA证据或新增资格。
+
+六block的G512−G32 D2H完成位置差（相对原request point）为−3.058493/5.529030/
+−7.325998/1.072328/9.427312/−12.929171ms，与投影Prefill结束差均三正三负。结合GPU
+union差全正，能核验活动量与完成位置不同；不能将位置差归因给GPU净阻塞。实际Host
+读取仅夹在成功sync返回和后发point之间，区间宽2.072793～4.205537ms；Host后缀差夹界
+均含0不证明等价。该小表是事后解释核对，不替换原冻结统计/计时，不跨钟拟合offset。
+
+本次验证对象、输入/预设依赖、独立参考取得方式、反例和停止依据均在同稿§4～7；Q0人工
+expected及已完成独立Raw资格直接复用，未重跑全Q0或完整analyzer。原0.2所提一次受控
+P0/P1也不能独自验证自然opaque完成的解释迁移，两种竞争解释都可通过同一理想正例，
+因此不制作入口或交付包。进一步区分完成操作内部前提/消费就绪需要尚无可靠证据路径的
+新观测与验证工程，本轮判定其当前信息收益依据不足，不滚动延长1～2工作日检查上限。
+
+本机参考产物schema `completion-constraint-feasibility-reference/0.3`、SHA256
+`08523a5166b8b75c50ae71f2cdb287759e367f7d3624e80cb7c042301ae9792e`，24条原始引用/
+12run输入hash/六block夹界及6项断言留在忽略的本地索引。没有业务代码、schema、registry、
+测量或统计语义变化，不重签/重算旧Formal；Gate13限定PASS/Gate14 NOT_RUN及原Raw/ZIP/
+BLOCKED/UNKNOWN/NOT_ASSESSED保持。用户DOCX和未跟踪大型原件不改/不stage，当前
+无需服务器操作；只更新少量现行文档、唯一进度与handoff，下方7.158保留为当时建议。
+本轮194个仓库文件链接、新增行隐私、参考结果/hash/作用域、DOCX前后hash及diff-check
+通过；无生产代码变更，不执行pytest/compileall、全量测试或任何实验。
+
 ## 7.158 投入收敛：完成约束适用性先于新增负载矩阵（2026-10-15）
 
 更新同一[研究决策稿至0.2](pytorch_research_feasibility_decision_v0_1.md)，不是新合同或资格。
