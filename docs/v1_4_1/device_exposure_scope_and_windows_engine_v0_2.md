@@ -5,6 +5,12 @@
 优先级和Linux前提；原审查/数据角色/失败判定保留。Gate13限定PASS、Gate14 NOT_RUN。
 四对C0/Cpre追加Pilot暂停；不安装、部署、采集、重算旧结果或修改用户DOCX。
 
+> **2026-10-16当前收口（7.165）**：[自然B1/B4 Prefill候选演算与研究建议](completion_operation_batch_prefill_review_v0_1.md)
+> 已完成。固定草案下交集1.782176/30.910044ms，占原窗1.780104%/20.257246%；是新对象的
+> 事后探索，不是旧A修复或纯等待。每点一次不能证明负载规律。下一项仅审查固定自然路径
+> batch1/2/4×三个block的9个P1结构验证建议，未授权新采/部署；原B4 Request/Decode仍拒绝，
+> 不恢复引擎/CUPTI/Cpre追加，不改变Gate或旧Formal。
+>
 > **2026-10-15当前收口（7.164）**：已完成[候选合同草案0.1](completion_operation_contract_draft_v0_1.md)
 > 和[既有24链的独立预算迁移预览](completion_operation_budget_preview_review_v0_1.md)。
 > 全部153迁移片段来自原CUDA API/submit，36窗口总长/父子预算/阶段相加保持，第二token的
