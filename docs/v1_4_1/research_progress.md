@@ -1,5 +1,36 @@
 # ExposedPath 科研进度清单
 
+## 7.163 封存四token的操作层增量验证：可进入合同设计（2026-10-15）
+
+用户认可独立的“复制—成功同步子包络内必要活动暴露”对象，仅授权复用封存
+NULL-FIFO-D2H四token原件。完成[增量验证0.1](completion_operation_controlled_validation_v0_1.md)：
+**操作层独立依据充分，可以进入版本化合同设计；不授生产A改版、自然阻塞解释或新Formal。**
+不是恢复路线B，也不改变Gate13限定PASS/Gate14 NOT_RUN或原attempt BLOCKED。
+
+先从原prepared/prompt、固定runner/native源锁定两request的copy→sync ordinal2→3/7→8、
+token11/12/21/22、人工必要后缀{K1,C1}/{K1,C1,K2,C2}及terminal C1/C2，再读SQLite区间。
+按完整identity/原operation NVTX/成功runtime/correlation验证，未调用候选集合恢复或生产
+S/A/B。集合截止于配对sync捕获的提交边界，四次copy入口之后才提交的D2H均在集合；
+历史warmup/前request的2/6条前缀保留、闭合，后提交排除。先验证成员非重叠再逐项手算
+裁剪，与既有候选区间函数比较，身份/完成、成员、算术三层逐条相符，不以交集增大为准。
+
+原sync/候选交集分别均为448、24032、480、1376ns；I墙钟56634、223673、56394、66860ns，
+补集56186、199641、55914、65484ns。四条扩大包络后交集未增加，同样验证成立，不移起点。
+源码和本SQLite枚举明确受控原件为Device→Pinned/4-byte，不能把它写成上一轮自然
+Device→Pageable/8-byte子域已获完整新增资格。已验证的是组合对象结构与独立成员/算术；
+可复用范围和Pageable特定资格需在下一版合同中分开，不默认新采。
+
+澄清Host工作重叠不自动使固定配对/依赖无效，但不能称纯等待；身份/配对歧义、未闭合
+前缀、失败同步、错误token及未知incoming则保持拒绝。未来A设计仅纸面集合迁移：先对
+操作/成员union，新增片段从原API等预算重分配，保留未知，旧sync不重复计；本次四条
+增量Δ全0，不可重复加预算。单sync B及冻结A/B保持原义，未实现任何生产改版。
+
+本机独立目录`.local/diagnostics/completion_operation_controlled_v0_1/derived_v0_1/`保留
+四行CSV、来源/原始区间JSON和审计脚本hash。仅复核实际消费12项旧源文件的hash及关联，
+查询后全部未变；复用原全包CRC/清单、限定资格及既有反例，不重跑完整Q0/原analyzer或
+31项旧CPU检查，不新增测试数量。没有服务器、模型、CUDA/Nsight、部署包或采集命令。
+UNKNOWN/NOT_ASSESSED、所有原Raw/报告及用户DOCX保持；当前下一步只有版本化合同设计。
+
 ## 7.162 复制—同步完成操作候选：新假设的实际探索演算（2026-10-15）
 
 用户单独授权有界的完成操作语义验证与现有Raw离线候选演算。不是自动恢复此前路线B，

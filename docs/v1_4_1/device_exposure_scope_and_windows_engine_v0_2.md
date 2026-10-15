@@ -5,6 +5,12 @@
 优先级和Linux前提；原审查/数据角色/失败判定保留。Gate13限定PASS、Gate14 NOT_RUN。
 四对C0/Cpre追加Pilot暂停；不安装、部署、采集、重算旧结果或修改用户DOCX。
 
+> **2026-10-15四token增量验证（7.163）**：用户认可独立组合完成对象后，已完成
+> [封存受控原件的操作层验证](completion_operation_controlled_validation_v0_1.md)。
+> 预先固定的配对/成员/terminal与独立算术相符，四条候选交集等于原sync交集，仍验证成立。
+> 可进入版本化合同设计；受控Pinned/4-byte与自然Pageable/8-byte资格不混用，不授新A/纯
+> 阻塞/正式结果或论文贡献。当前不采集、不操作服务器，旧结论和7.162报告保留。
+
 > **2026-10-15新假设有界审查（7.162）**：用户另行批准复制API/组合完成操作的语义与
 > 既有Raw候选演算，见[完成操作审查0.1](completion_operation_candidate_review_v0_1.md)。
 > 单Async复制的独立完成scope仍未证明；复制入口至配对成功sync返回的限定子包络可定义、
