@@ -7,6 +7,10 @@
 - Verification Status：ANALYZED；独立区间算术已核对，不是新GPU验证或研究规律验证。
 - 角色：原Engineering；新结果为`EXPLORATORY_POSTHOC_BUDGET_PREVIEW_NOT_FORMAL_A`。
 
+7.166展示补充（2026-10-16）：依据用户重发的完整五项要求，复用7.165演算，只补占比、
+来源时间线与选定Raw记录复核。唯一分析对象仍是同一2af14b批次的B1P1/B4P1，不用C0/Cpre
+替代；无新实验/协议/生产改版。下文未获授权的后续建议不是本次执行任务。
+
 **裁决：B1/B4首token完成操作符合固定COE通用条件，可作本轮事后演算；不是继承99f3bae的
 profile资格。现有证据支持继续研究自然完成操作的必要活动暴露，但不支持“全部GPU阻塞已测准”
 或稳定负载规律。下一步不扩展大矩阵，优先以小规模独立重复检验解释增量。**
@@ -56,20 +60,27 @@ profile资格。现有证据支持继续研究自然完成操作的必要活动�
 Q为I与该次合格必要后缀活动union的交集，不是copy API时长减D2H。
 旧Device wait是整个Prefill的冻结结果；“原配对sync交集”仅是末尾token-ready那一次。
 
-| 实物/派生量 | B1 | B4 |
+各行单位ms，括号统一为占各自**原Prefill窗口**的比例；它们不是互斥项目，不能相加。
+只有§3的预算overlay作互斥守恒检查。操作补集也不是整个Prefill的补集。
+
+| 实物/派生量，ms（占原Prefill %） | B1 | B4 |
 |---|---:|---:|
-| Prefill原窗口总长 | 100.116413 | 152.587591 |
-| 全Prefill GPU activity union（非A） | 52.541659 | 104.121389 |
-| 原Prefill Device wait | 0.525502 | 0.025024 |
-| 首token copy API墙钟 | 1.868619 | 43.854908 |
-| 配对sync墙钟 / 原配对sync交集 | 0.027852 / 0 | 0.040571 / 0 |
-| 操作I墙钟 | 1.897322 | 43.897532 |
-| 候选Q交集 | 1.782176 | 30.910044 |
-| └ 必要kernel / MemOp并集 | 1.781280 / 0.000896 | 30.867774 / 0.042270 |
-| └ 其中D2H | 0.000544 | 0.000416 |
-| I补集（不是sync residual或纯CPU成本） | 0.115146 | 12.987488 |
-| Q / 原Prefill总长 | 1.780104% | 20.257246% |
+| Prefill原窗口总长 | 100.116413（100.000000%） | 152.587591（100.000000%） |
+| 全Prefill GPU activity union（非A） | 52.541659（52.480565%） | 104.121389（68.237127%） |
+| 原Prefill Device wait | 0.525502（0.524891%） | 0.025024（0.016400%） |
+| 首token copy API墙钟 | 1.868619（1.866446%） | 43.854908（28.740809%） |
+| 配对sync墙钟 | 0.027852（0.027820%） | 0.040571（0.026589%） |
+| 原配对sync交集 | 0.000000（0.000000%） | 0.000000（0.000000%） |
+| 操作I墙钟 | 1.897322（1.895116%） | 43.897532（28.768743%） |
+| 候选Q交集 | 1.782176（1.780104%） | 30.910044（20.257246%） |
+| └ 必要kernel并集 | 1.781280（1.779209%） | 30.867774（20.229544%） |
+| └ 必要MemOp并集 | 0.000896（0.000895%） | 0.042270（0.027702%） |
+| └ 其中D2H | 0.000544（0.000543%） | 0.000416（0.000273%） |
+| I补集（非纯CPU成本） | 0.115146（0.115012%） | 12.987488（8.511497%） |
 | 预算预览：旧Device wait ∪ Q | 2.307678（2.304995%） | 30.935068（20.273646%） |
+
+[完整占比CSV](completion_operation_batch_prefill_percentages_v0_1.csv)逐值保留整数ns、分母、
+原结果/SQLite hash，百分比只是显示派生，不是新质量阈值。
 
 两组Q全部位于copy API内，没有与旧sync交集重叠；本批kernel/MemOp无交叠，但一般情形
 必须union并保留mixed，不能默认相加。B1来源为10 kernel＋1 memset＋1 D2H；B4为516 kernel＋
@@ -84,6 +95,20 @@ Q为I与该次合格必要后缀活动union的交集，不是copy API时长减D2
   最后必要kernel11846于`23693053659`完成；D2H347 `23693055035..23693055451`；
   sync38584/corr200923/physical354，`23693187174..23693227745`；首Host-ready `23694390270`。
   kernel和D2H在该sync入口前完成，但有30.910044ms必要活动落于I内。
+
+![同批B1/B4自然Prefill完成子包络及尾部放大，来源为原SQLite记录](figures/completion_operation_batch_prefill_v0_1/source_timeline.png)
+
+图只展开完成操作附近；只画与I相交的成员，不把它们冒充整个W。全部必要成员、早完成
+成员与闭合历史仍在7.165的原清单中。虚线是固定copy入口/paired sync返回；横轴仅为
+**显示用**copy-entry偏移（两panel比例不同），各自原点ns已标明；不修改原trace时间，
+不作Host/trace时钟拟合。黑菱形为Host结果之后发出的原trace token-ready point，不是
+CPU实际读取token的精确瞬间，也不由NVTX独立证明GPU完成。
+
+[原始时间线CSV](completion_operation_batch_timeline_v0_1.csv)保存两组Prefill/drain、最后
+kernel及其launch、copy、D2H、runtime/physical sync、原completion point的绝对ns、
+record/correlation和SQLite hash。新增展示逐条核对copy/D2H/runtime和physical sync、最后
+kernel及其launch、原completion point；Prefill/drain复用已绑定的7.165结果。成员与算术
+验证同样复用，没有重算S或据几何重叠生成依赖。
 
 “旧sync交集为零”和“自然完成操作期间有必要GPU活动”可以同时正确；它们测的是不同对象。
 不能反推旧分析算错，也不能由重叠认定copy内部Host净停顿。API间隙、GPU空隙及库/观测
@@ -105,7 +130,7 @@ Q为I与该次合格必要后缀活动union的交集，不是copy API时长减D2
 对batch不变。新字段是独立完成暴露预览，不能拿它替换旧A_device_wait或与原API全长相加。
 本轮未计算/发布B4 Request、Decode或新物理B，不能把仅Prefill守恒当完整request准入。
 
-![固定Prefill窗口下的旧A与探索预算迁移](figures/completion_operation_batch_prefill_v0_1/budget_preview.png)
+既有[预算迁移图](figures/completion_operation_batch_prefill_v0_1/budget_preview.png)保持原样。
 
 完整[两条件数值/来源/旧新预算CSV](completion_operation_batch_prefill_v0_1.csv)及
 [538片段迁移清单](completion_operation_batch_migration_atoms_v0_1.csv)保留整数ns与Raw引用。
@@ -128,6 +153,13 @@ P1，能验证这个执行实例的配对、依赖和区间，不能估计batch�
 零未知、守恒、较大占比和符合预期都不是重复性/创新判据。
 
 ## 5. 唯一研究建议与待审最小下一步
+
+**完整指令后的当前停点：本轮仅补齐已有数据分析，不推进下述九次建议、点位接线或新预算。**
+有限重复值得审查的具体理由是：同完成政策下，两实例的全phase GPU活动约增为1.98倍、
+copy约23.47倍、候选交集约17.34倍，暴露位置均发生在copy包络而非配对sync；但每点一次
+及已有P0/P1波动不能判断这是否可重复。重复能回答“该条件结构是否仅是单次现象”，
+不能回答“算法是否比完整timeline多出独占信息”。若目标是后一命题，不应凭本结果申请
+更多相同单FIFO采集；也不以20%或大占比本身作为继续依据。下述预算方案仍仅是先前待审建议。
 
 **建议继续“自然完成操作的必要设备活动暴露与负载结构”这一限定方法方向，不继续承诺
 测准全部GPU阻塞CPU。** 本轮把原先opaque的长copy包络细分为有依赖来源的活动交集与
@@ -185,6 +217,12 @@ B1/B4实际阶段耗时约1.017/4.122s，不是模型/CUDA执行。初稿错误�
 `python -X utf8 present_and_verify.py`、`python -X utf8 check_final_artifacts.py`，最终均exit0；
 三脚本`python -m py_compile`通过。前两项来源/算术回执与最终公平baseline/输入复核回执
 分别保存在同一派生目录，不称目标机复现或科学规律验证。
+
+7.166仅新增本机`complete_delivery.py`及`presentation_v0_2/`显示产物，未重跑前三项。
+显示脚本SHA256 `a4b434044a2a1898c5d74353005b4f20bc63e1324bd712d9c0623800a00952c2`；
+`display_receipt.json`绑定原results、固定草案、两份未变预算CSV和新增占比/时间线CSV及PNG。
+实际命令`python -X utf8 .local/diagnostics/coe_batch_prefill_v0_1/complete_delivery.py`成功，
+新图目视检查、选定Raw/比例/来源/链接/diff和单脚本编译检查通过；不是新qualification。
 
 ARS统计风险11/11已检查：phase/角色混合（分开展示）、生态推断（批量不作四重复）、
 Berkson/选择偏差（支持域/局部限制披露）、collider（无结果后协变量调整）、base-rate（不适用）、

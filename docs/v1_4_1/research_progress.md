@@ -1,5 +1,23 @@
 # ExposedPath 科研进度清单
 
+## 7.166 完整指令补齐：同批B1/B4占比与来源时间线（2026-10-16）
+
+用户补发完整任务，唯一对象仍为2af14b同批B1P1/B4P1局部Prefill；不以C0/Cpre替代。
+复用7.165已闭合的适用性/成员/独立算术及538片段overlay，补齐同一
+[审查报告](completion_operation_batch_prefill_review_v0_1.md)的13项绝对值/统一Prefill分母占比，
+新增[来源时间线](completion_operation_batch_timeline_v0_1.csv)与图，包含copy/D2H/sync、
+最后必要kernel及launch、原Host结果之后的trace point；原ns/clock和显示偏移明确分开。
+本轮只复核选定Raw和显示，不重跑成员恢复、S/A/B、Q0或完整分析。原结果SHA667aa462…，
+原预算/538片段CSV的SHA51b4dc4b…/2bb39632…保持；固定草案也未改。新显示命令exit0，
+图目视、比例/来源/链接/diff/隐私与单脚本py_compile通过，不新增GPU/pytest资格。
+
+结论仍是候选操作可作有支持假设的探索：1.782176/30.910044ms、1.780104%/20.257246%；
+旧配对sync交集均0，同I普通GPU union与COE相同，不声称独占信息或纯Host阻塞。有限重复
+值得审查的是本次“活动/包络/暴露不同响应”能否复现，不是为了获得较大占比或胜过完整
+timeline。九次建议仍未授权，本轮不推进点位接线/采集包/新预算，仅收齐已有数据交付。
+原B4 Request/Decode/BLOCKED、UNKNOWN/NOT_ASSESSED、Gate13限定PASS/Gate14 NOT_RUN、
+Formal/Raw及用户DOCX保持。无服务器步骤或新设施，7.165实算与历史建议保留。
+
 ## 7.165 自然B1/B4 Prefill的COE候选实算与研究决策（2026-10-16）
 
 用户授权从098efde继续本地事后分析，不停留于合同审阅；同时质疑负载点数和研究可信度。
