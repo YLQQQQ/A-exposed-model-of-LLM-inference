@@ -1,5 +1,50 @@
 # ExposedPath 科研进度清单
 
+## 7.162 复制—同步完成操作候选：新假设的实际探索演算（2026-10-15）
+
+用户单独授权有界的完成操作语义验证与现有Raw离线候选演算。不是自动恢复此前路线B，
+也不将7.159/7.161的停止/技术报告结论机械套给新对象。完成
+[候选审查及同页未批准草案0.1](completion_operation_candidate_review_v0_1.md)和
+[24条数值CSV](completion_operation_candidates_v0_1.csv)：**A单个Async复制的独立返回scope
+仍未证明；B复制入口→配对成功stream sync返回的完成操作子包络可定义、可计算。**
+两者不能混同；B不称纯Host阻塞/优化收益或新Formal A，不重定义原Device wait。
+
+演算前固定12个G32/G512 P1 run及24个token的唯一配对/范围和独立手算反例，明确已知
+block1旧时序、不是盲选/预注册。独立复核指定SQLite SHA84d3a0c...70d87e：MEMCPY347
+corr197682/bytes8，按该文件枚举解释Device→Pageable；runtime37815复制/37816成功sync、
+physical354同流同context。头文件2.6.0+cu124真实字节SHA343d0c...d84a重新核对，官方
+CUDA12.4.1只说Async Device↔Pageable可能对Host同步，不提供此实例内部等待真值。
+复制加随后成功sync具有整体完成保证；原runner、输入receipt、token与ledger绑定保持。
+
+独立只读SQLite脚本不导入S/A/B、torch或domain。以correlation→submit、同线程FIFO、
+drain闭合及原两模式投影条件恢复本地必要后缀，保留已完成成员和全部Raw历史前缀ID，
+排除后提交；不将该清单宣称完整物理W/B或全部token数学数据依赖。可见额外流/线程/
+event/graph或缺映射拒绝，无未记录incoming依赖仍是显式支持假设。24链完成演算、
+查询后12个SQLite hash未变，原身份/作用域资格复用，不重跑完整分析/Q0。
+
+block1/G512首token：固定I总长1.910952ms，候选必要活动交集1.525365ms，其中kernel
+1.524501、MemOp0.000864（D2H0.000544+memset0.000320），未覆盖0.385587；原token-ready
+sync交集0。仅copy correlation会漏掉FIFO必要前驱；API全长也不能作等待。全部24链原
+token-ready sync交集0、新交集均在copy API内；G512第2token五个block仅极短D2H，
+保留另一block及方向变化。新数值为事后探索，不反写Formal统计或A；未声称新负载规律。
+Cpre before_copy在natural NVTX之前，本轮没有共同起点的对照资格，不任意扩包络。
+
+新增CPU独立反例包括有用Host工作、无关流、短D2H长前驱、早完成成员、GPU空隙和
+任意改起点；证明候选不是纯等待，不以CPU模型冒充新CUDA资格。首次实际文件入口
+因run级receipt与request级token身份结构不同拒绝；修为精确字段/共同身份/原签署引用
+检查并补错role/run/request/reference反例，不以忽略字段追绿。原失败探索目录保留。
+
+唯一建议：审阅窄域`COMPLETION-OPERATION-EXPOSURE/0.1-draft`，再决定是否以封存
+NULL-FIFO-D2H四token的预设独立集合做最小操作层增量资格；当前未批准/实施生产
+amendment、未授新资格，无服务器操作或新采集需求。全依赖timeline也能恢复相同结果，
+本轮解释增量不等于论文创新；旧停止/成文记录和Gate13限定PASS/Gate14 NOT_RUN保持。
+生产S/A/B/registry/冻结协议、Raw/原报告、UNKNOWN/NOT_ASSESSED和用户DOCX未改。
+实际运行新独立脚本测试`python -m pytest -q -p no:cacheprovider
+tests/test_completion_operation_candidate.py --junitxml=.local/diagnostics/completion_operation_candidate_v0_1/cpu_final.xml`：
+31 passed、0 failed、0 skipped；`python -m py_compile`仅新脚本/测试通过，未跑旧全量。
+逐条CSV/结果JSON、来源索引/12个SQLite后验hash、文档链接、隐私和diff定向核对；提交身份在
+本轮收尾handoff，不将验证数量当作研究增量。
+
 ## 7.161 限定核心成文验证：完成方法/结果稿，按技术报告收口（2026-10-15）
 
 用户接受路线A的一次有界成文授权，取消“真实导师确认为推进前置”；不是预先认可论文
