@@ -1,5 +1,34 @@
 # ExposedPath 科研进度清单
 
+## 7.164 候选合同0.1与24链预算迁移预览完成（2026-10-15）
+
+用户认可独立完成操作对象，仅授权合同设计及既有数据的事后预算预览。完成
+[COE-CANDIDATE/0.1.0-draft](completion_operation_contract_draft_v0_1.md)及
+[完整演算/图表/科学限制](completion_operation_budget_preview_review_v0_1.md)。配对/成功保证、
+copy入口→paired sync返回、sync捕获提交截止、完整W/局部后缀、有效性/profile/解释限制分开；
+不是单copy同步保证或纯GPU阻塞，不改生产A/B/registry/冻结协议，不自动恢复旧路线B。
+
+复用四token独立预设及原24链成员/资格，只读12个封存G32/G512 SQLite与小型旧A审查；
+没有重跑完整analyzer/Q0或恢复集合。逐Raw成员/提交/实际scope验证、原类别来源和区间检查后，
+24链全部候选片段均位于copy API内，与所有目标同步API包络不交；据旧E定义证明无重复覆盖。
+新153原子片段全来自CUDA API/submit，36个旧窗口只作同墙钟扣减与completion_exposure预览
+增加；Host/non-submit/opaque/residual/U不动，父子守恒与Request=Prefill+Decode逐ns成立。
+完整24链/36窗口/153片段公开CSV相互绑定，不把原Formal输入角色冒充新Formal结果。
+
+首token交集中位数G32 0.672139ms、G512 1.642275ms，六block差均正；第二token分别
+0.618300ms、0.000448ms，G512−G32五负一正。新增来源以FIFO必要kernel前驱为主，不是
+API−D2H；迁移仅占各Request原长0.574232%～1.403041%。完整依赖timeline可恢复同样信息；
+数值变大/守恒/独立验证不单独证明创新、全部Host等待或优化收益。全部有效值和负向结果保留。
+
+本轮独立审计exit0（12run/24token/36窗口/153片段），仅复用区间union算术，不调用生产S/A/B；
+12个Raw SHA前后未变，原角色/UNKNOWN/NOT_ASSESSED/历史BLOCKED保持。另做整数反向重构、
+已有手算重叠例、公开CSV/图表/链接/隐私/diff与用户DOCX保全检查；不新增/重跑pytest。
+本地新派生目录`.local/diagnostics/completion_operation_budget_preview_v0_1/derived_v0_1/`；
+preview SHA803b4ce7…60dd4b，草案SHA0dd73d0f…0927a8。当前停点仅审阅候选合同/独立overlay，
+未签署、未授生产A改版或新Formal，单sync B不变；Gate13限定PASS、Gate14 NOT_RUN保持。
+不需要服务器、采集包或新实验。7.163“未来迁移仅设计”的范围由本轮独立预览授权扩展，
+其独立验证/历史边界保留，不改旧报告或用户DOCX，不将旧数据升级。
+
 ## 7.163 封存四token的操作层增量验证：可进入合同设计（2026-10-15）
 
 用户认可独立的“复制—成功同步子包络内必要活动暴露”对象，仅授权复用封存

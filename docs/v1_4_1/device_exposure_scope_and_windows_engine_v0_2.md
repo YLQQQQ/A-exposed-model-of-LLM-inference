@@ -5,6 +5,12 @@
 优先级和Linux前提；原审查/数据角色/失败判定保留。Gate13限定PASS、Gate14 NOT_RUN。
 四对C0/Cpre追加Pilot暂停；不安装、部署、采集、重算旧结果或修改用户DOCX。
 
+> **2026-10-15当前收口（7.164）**：已完成[候选合同草案0.1](completion_operation_contract_draft_v0_1.md)
+> 和[既有24链的独立预算迁移预览](completion_operation_budget_preview_review_v0_1.md)。
+> 全部153迁移片段来自原CUDA API/submit，36窗口总长/父子预算/阶段相加保持，第二token的
+> 反向/极小值完整保留。仅事后探索，未签署/接入生产A，不授纯Host阻塞或新Formal；单sync B、
+> 原Raw/报告/UNKNOWN及Gate不改。当前仅审阅合同和overlay，无服务器/新采/引擎任务。
+>
 > **2026-10-15四token增量验证（7.163）**：用户认可独立组合完成对象后，已完成
 > [封存受控原件的操作层验证](completion_operation_controlled_validation_v0_1.md)。
 > 预先固定的配对/成员/terminal与独立算术相符，四条候选交集等于原sync交集，仍验证成立。
