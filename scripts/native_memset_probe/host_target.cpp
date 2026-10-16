@@ -15,4 +15,3 @@ EpHostMemset(void* ptr, int value, size_t count, cudaStream_t stream) {
     if(recursive) { auto next=recursive; recursive=nullptr; next(ptr,value,count,stream); }
     SetLastError(31337); return static_cast<cudaError_t>(result);
 }
-

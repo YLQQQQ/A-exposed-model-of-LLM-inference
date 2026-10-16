@@ -102,4 +102,3 @@ extern "C" __declspec(dllexport) LONG ep_stop() {
 extern "C" __declspec(dllexport) const CallRecord* ep_records(unsigned* n, LONG* error) {
     *n=static_cast<unsigned>(used<0 ? 0 : used>4 ? 4 : used); *error=fault; return records;
 }
-

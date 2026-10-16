@@ -120,4 +120,3 @@ def test_real_ps51_default_and_explicit_switch_dispatch_only(tmp_path,argv,phase
     args=json.loads((tmp_path/'dispatch.json').read_text())
     assert args[0]==('stage-a' if phase=='A' else 'stage-b')
     assert ('a'*64 in args)==(phase=='B')
-

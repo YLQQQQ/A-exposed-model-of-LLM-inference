@@ -61,4 +61,3 @@ def test_real_host_wrong_entry_and_reentry_refuse(native,mode,field,want):
     assert r.returncode==0,r.stderr.decode('utf8',errors='replace')
     value=json.loads(r.stdout);assert value[field]==want
     if mode=='reentry':assert value['actual_target_calls']==2
-

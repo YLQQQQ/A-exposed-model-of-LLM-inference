@@ -159,4 +159,3 @@ def test_a_kernel_effect_for_zero_call_cannot_be_silently_filtered(tmp_path):
     _,_,e=fixture()
     with pytest.raises(ValueError,match='ZERO_EFFECT_CONFLICT'):
         api().review_files(tmp_path/'capture.sqlite',tmp_path/'side.json',e,tmp_path/'kernel_zero')
-

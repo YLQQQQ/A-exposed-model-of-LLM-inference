@@ -17,4 +17,3 @@ using StartFn = LONG (*)(HMODULE, const char*);
 using ArmFn = LONG (*)(std::uint64_t);
 using StopFn = LONG (*)();
 using RecordsFn = const CallRecord* (*)(unsigned*, LONG*);
-
