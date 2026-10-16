@@ -20,13 +20,16 @@ compile尚未执行。最近可信服务器前置已是7fcdb2fa3952fc61926d3ac3f
 生产A/B、registry、runner、COE科学定义和九P1矩阵无变更，不影响旧冻结Formal。
 
 先红测新结构/行为与Stage A采集禁止门，再实现；最终命令：
-`python -m pytest -q -p no:cacheprovider tests/test_coe_pilot.py tests/test_coe_pilot_driver.py tests/test_coe_candidate.py tests/test_coe_helper_identity.py --basetemp .local/ast-chain-release --junitxml .local/ast-chain-release.xml --tb=short`
-实得**110 passed/0 failed/0 skipped，64.57s**，本地3.12.7；真实文件链负例精确核对拒绝原因。
+`python -m pytest -q -p no:cacheprovider tests/test_coe_pilot.py tests/test_coe_pilot_driver.py tests/test_coe_candidate.py tests/test_coe_helper_identity.py --basetemp .local/ast-chain-delivery --junitxml .local/ast-chain-delivery.xml --tb=short`
+实得**110 passed/0 failed/0 skipped，65.53s**，本地3.12.7；真实文件链负例精确核对拒绝原因。
 compileall analysis、相关py_compile、Windows PowerShell5.1实际解析及diff检查通过。
 两profile在实际3.10/3.12/3.13隔离进程结构一致，真实行为改动拒绝；不是3.11或GPU资格。
 封存原件轻回归输出regression_ast_identity_v0_2_1，共30条全部成员/交集算术MATCH；
 B1/B4 Prefill仍1.782176/30.910044ms、四token仍448/24032/480/1376ns；旧B4 Decode仍拒绝。
 本地审计及中间失败保留coe_ast_identity_v0_2_1与ast-*，无完整Q0/旧大分析/新实验。
+交付前实际3.10发现非空type_params负例的夹具会因实例_fields属性提前拒绝；改为明确
+AST形状，再于实际3.10/3.12/3.13核对五种精确拒绝。中间5cbf788包撤回不交付，最终包
+绑定后续夹具/记录修正提交；生产模块、测量与30条旧结果未再变化。
 
 当前最高优先级：提交后绑定新执行=分析commit，提供单一待审增量包（前置7fcdb2f），
 新输出目录，只重做A。包stage_a_only=true，即使显式Collect也拒绝；新增真实目标3.11.16

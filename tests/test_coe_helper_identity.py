@@ -63,9 +63,14 @@ def test_closed_ast_schema(damage, reason):
     from analysis.coe_helper_identity import fingerprint
     node = helper()
     if damage == 'nonempty_type_params':
-        node.type_params = [ast.Name(id='T', ctx=ast.Load())]
+        # Do not mutate instance _fields on older CPython: that would add an
+        # unknown attribute and mask the intended nonempty-type-params gate.
         if 'type_params' not in node._fields:
-            node._fields = node._fields + ('type_params',)
+            old = node
+            node = type('FunctionDef', (ast.AST,), {'_fields': old._fields + ('type_params',)})()
+            for field in old._fields:
+                setattr(node, field, copy.deepcopy(getattr(old, field)))
+        node.type_params = [ast.Name(id='T', ctx=ast.Load())]
     elif damage == 'unknown_field':
         # An empty new field is NOT silently stripped as "harmless".
         node = type('FunctionDef', (ast.AST,), {'_fields': node._fields + ('future_empty',)})()

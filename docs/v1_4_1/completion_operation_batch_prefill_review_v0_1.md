@@ -394,11 +394,14 @@ incoming runtime摘要作期望；role、manifest、文件实字节及输入身�
 旧0.1/0.2合同和历史产物保留，不重写旧结果；新结果另带结构身份及实际分析Python。
 没有修改COE边界/成员/公式、生产S/A/B、registry、runner、完成路径或九P1矩阵。
 
-最终相关命令见唯一进度7.169：**110 passed/0 failed/0 skipped，64.57s**；含真实
+最终相关命令见唯一进度7.169：**110 passed/0 failed/0 skipped，65.53s**；含真实
 prepare/producer/Canonical/局部Prefill/COE/消费和PS5.1解析。负例精确核对原因，避免上游
 helper错误掩盖版本/role/hash/PID等拒绝。中间一次断言预期为较后的binding门，核对实际
 消费者后确认更早的collection合同门应拒绝；另一次系统Temp权限失败改用已有pytest
 workspace临时目录，未改生产门、未skip或吞异常。新旧函数真实行为变化仍拒绝。
+交付前实际3.10另揭示负例夹具动态修改实例_fields会提前触发未知属性门；改为显式旧/新
+AST形状后，三个实际版本均精确命中五种预期拒绝。5cbf788中间包撤回、不交付；最终
+包绑定后续仅夹具/记录修正提交，正常增量push，不改生产身份或COE语义。
 
 本地实际3.10/3.12/3.13 stdlib隔离进程，两profile结构身份一致，移除`.cpu()`仍精确拒绝。
 轻量封存回归30条（24自然链、B1/B4 Prefill、四token）全部成员/交集/来源算术MATCH，
