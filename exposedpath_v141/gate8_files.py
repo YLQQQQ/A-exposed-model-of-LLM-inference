@@ -83,6 +83,8 @@ def _identities(paths):
             raise ValueError('PILOT_PRODUCER_BINDING')
         producer_version=('exposedpath-pilot-producer-receipt/0.2.0' if observed_warmups
                           else 'exposedpath-pilot-producer-receipt/0.1.0')
+        from exposedpath import coe_pilot
+        if coe_pilot.active(binding): producer_version=coe_pilot.PRODUCER_VERSION
     if ledger['run_role']=='FORMAL':
         from exposedpath.formal_protocol import validate,reference,PRODUCER_VERSION
         binding=validate(manifest)
@@ -165,6 +167,8 @@ def write_input_receipt(output_path, *, artifacts, collector_version, capture_se
         version=STAGE_RECEIPT_VERSION
     if identity['run_role']=='PILOT':
         version=PILOT_RECEIPT_VERSION
+        from exposedpath import coe_pilot
+        if coe_pilot.active(_json(artifacts['wmpc_manifest']).get('pilot')):version=coe_pilot.RECEIPT_VERSION
     elif identity['run_role']=='FORMAL':
         version=FORMAL_RECEIPT_VERSION
     elif 'batch_tokens' in artifacts:
@@ -179,23 +183,27 @@ def write_input_receipt(output_path, *, artifacts, collector_version, capture_se
 def load_input_receipt(path):
     path = Path(path).resolve()
     value = _json(path)
+    from exposedpath.coe_pilot import RECEIPT_VERSION as COE_RECEIPT_VERSION
     expected_artifacts = ARTIFACTS | ({'drain_ledger'} if value.get('schema_version') in (DRAIN_RECEIPT_VERSION,STAGE_RECEIPT_VERSION) else set())
     if value.get('schema_version')==STAGE_RECEIPT_VERSION:
         expected_artifacts=expected_artifacts | {'stage_ledger'}
-    if value.get('schema_version')==PILOT_RECEIPT_VERSION:
+    if value.get('schema_version') in (PILOT_RECEIPT_VERSION,COE_RECEIPT_VERSION):
         expected_artifacts=ARTIFACTS | {'drain_ledger','stage_ledger','pilot_tokens'}
     if value.get('schema_version')==FORMAL_RECEIPT_VERSION:
         expected_artifacts=ARTIFACTS | {'drain_ledger','stage_ledger','formal_tokens'}
     if value.get('schema_version')==BATCH_RECEIPT_VERSION:
         expected_artifacts=ARTIFACTS | {'drain_ledger','stage_ledger','batch_tokens'}
     if (set(value) != {'schema_version','identity','artifacts','collector_version','capture_session_id'}
-            or value['schema_version'] not in (RECEIPT_VERSION,DRAIN_RECEIPT_VERSION,STAGE_RECEIPT_VERSION,PILOT_RECEIPT_VERSION,FORMAL_RECEIPT_VERSION,BATCH_RECEIPT_VERSION) or set(value['artifacts']) != expected_artifacts):
+            or value['schema_version'] not in (RECEIPT_VERSION,DRAIN_RECEIPT_VERSION,STAGE_RECEIPT_VERSION,PILOT_RECEIPT_VERSION,COE_RECEIPT_VERSION,FORMAL_RECEIPT_VERSION,BATCH_RECEIPT_VERSION) or set(value['artifacts']) != expected_artifacts):
         raise ValueError('INPUT_RECEIPT_VERSION_OR_SHAPE_INVALID')
     paths = {k:_resolve(path.parent,e) for k,e in value['artifacts'].items()}
     if value['identity'] != _identities(paths):
         raise ValueError('IDENTITY_CONFLICT: receipt')
-    if (value['identity']['run_role']=='PILOT') != (value['schema_version']==PILOT_RECEIPT_VERSION):
+    if (value['identity']['run_role']=='PILOT') != (value['schema_version'] in (PILOT_RECEIPT_VERSION,COE_RECEIPT_VERSION)):
         raise ValueError('PILOT_RECEIPT_VERSION')
+    from exposedpath.coe_pilot import active
+    if active(_json(paths['wmpc_manifest']).get('pilot')) != (value['schema_version']==COE_RECEIPT_VERSION):
+        raise ValueError('COE_PILOT_RECEIPT_VERSION')
     if (value['identity']['run_role']=='FORMAL') != (value['schema_version']==FORMAL_RECEIPT_VERSION):
         raise ValueError('FORMAL_RECEIPT_VERSION')
     return value, paths

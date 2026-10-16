@@ -14,7 +14,7 @@ from test_gate8_identity import UUID, sha, write_json
 
 
 def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, queries=False,
-           default_prefix=False, allocations=False, vm_bits=False, pilot_binding=None,formal_binding=None,driver_apis=False,batch_binding=None,completion_binding=None):
+           default_prefix=False, allocations=False, vm_bits=False, pilot_binding=None,formal_binding=None,driver_apis=False,batch_binding=None,completion_binding=None,collector_contract=None):
     queries=queries or damage=='unknown_query'
     if batch_binding is not None:
         from exposedpath.batch_load import minimal_fields as batch_fields  # before OS probe doubles
@@ -46,6 +46,24 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
             if pilot_binding['variant'] is None:
                 manifest.pop('n1_model'); manifest.pop('n1_model_execution')
             manifest.update(minimal_fields(pilot_binding))
+        from exposedpath import coe_pilot
+        coe=coe_pilot.active(pilot_binding)
+        batched=batch_binding if batch_binding is not None else pilot_binding if coe else None
+        if coe:
+            manifest.pop('domain_qualification',None)
+            model=tmp_path/'coe-model';model.mkdir()
+            write_json(model/'config.json',dict(model_type='qwen2',vocab_size=100,max_position_embeddings=4096))
+            prompt=dict(schema_version='exposedpath-prompt-tokens/1',tokenizer_id='synthetic',fixed_input_tokens=512,
+                samples=[dict(sample_index=i,input_ids=[7]*512,attention_mask=[1]*512)
+                         for i in range(batched['batch_size'])])
+            write_json(args['prompt_path'],prompt)
+            manifest.update(model_id=str(model),prompt_tokens_sha256=sha(args['prompt_path']),coe_input=coe_pilot.input_identity(prompt),
+                runner_git_commit=pilot_binding['execution_commit'],**coe_pilot.SOFTWARE)
+            monkeypatch.setattr(coe_pilot,'software_identity',lambda _:dict(coe_pilot.SOFTWARE)) # external runtime double
+            if collector_contract is not None:
+                from exposedpath_v141 import gate8_target_python as target
+                manifest['target_python']=collector_contract
+                monkeypatch.setattr(target,'current',lambda _:dict(pid=os.getpid(),snapshot=collector_contract['actual']['snapshot']))
         if batch_binding is not None:
             manifest.pop('n1_model');manifest.pop('n1_model_execution')
             manifest.update(batch_fields(batch_binding))
@@ -115,10 +133,12 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         from test_runner_token_ready import _FakeToken
         cpu=_FakeToken.cpu
         def read(token):
-            if batch_binding is not None: token._token_ids=token._token_ids*batch_binding['batch_size']
+            if batched is not None: token._token_ids=token._token_ids*batched['batch_size']
             a,b,c=backend.api('cudaMemcpyAsync_v3020')
             db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_MEMCPY VALUES (?,?,0,1,NULL,?,?,?,4,2,2,1,NULL)',
                 (b,b+2,stream_id(),c,os.getpid()<<24))
+            if coe:
+                db.execute('UPDATE CUPTI_ACTIVITY_KIND_MEMCPY SET bytes=?,dstKind=0 WHERE correlationId=?',(8*batched['batch_size'],c))
             sync(); return cpu(token)
         monkeypatch.setattr(_FakeToken,'cpu',read)
         def model(*a,**kw):
@@ -166,7 +186,7 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         if damage=='graph': db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET graphId=7')
         if damage=='blocking_flag': db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=1 WHERE streamId=3')
         if damage=='null_measured': db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=3')
-        if completion_binding is not None and damage in ('future_gap','prefill_gap'):
+        if (completion_binding is not None or coe) and damage in ('future_gap','prefill_gap'):
             points=db.execute('SELECT start FROM NVTX_EVENTS WHERE eventType=34 ORDER BY start').fetchall()
             low,high=(points[1][0],points[2][0]) if damage=='future_gap' else (points[0][0],points[1][0])
             corr=db.execute('SELECT correlationId FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE start>=? AND end<=? AND nameId IN (SELECT id FROM StringIds WHERE value=?) ORDER BY start LIMIT 1',
@@ -199,6 +219,13 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
                 db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET end=? WHERE correlationId=?',(second_start+1,correlations[0][0]))
         if damage=='unmarked_token':
             db.execute("DELETE FROM NVTX_EVENTS WHERE text LIKE '%natural_token_ready%'")
+        if coe and damage=='pair':
+            db.execute("DELETE FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE correlationId=(SELECT MIN(correlationId) FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION WHERE syncType=3)")
+        if coe:
+            db.execute('CREATE TABLE ENUM_CUDA_MEM_KIND(id INTEGER,name TEXT,label TEXT)')
+            db.executemany('INSERT INTO ENUM_CUDA_MEM_KIND VALUES (?,?,?)',[(0,'CUDA_MEMOPR_MEMORY_KIND_PAGEABLE','Pageable'),(2,'CUDA_MEMOPR_MEMORY_KIND_DEVICE','Device')])
+            db.execute('CREATE TABLE ENUM_CUDA_MEMCPY_OPER(id INTEGER,name TEXT,label TEXT)')
+            db.execute("INSERT INTO ENUM_CUDA_MEMCPY_OPER VALUES (2,'CUDA_MEMCPY_KIND_DTOH','D2H')")
         if damage=='unmarked_intervention':
             db.execute("DELETE FROM NVTX_EVENTS WHERE text LIKE 'EXPOSEDPATH_JSON_V1:%n1_intervention%'")
         if damage=='raw_marker_conflict':

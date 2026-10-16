@@ -140,7 +140,12 @@ def profile_argv(nsys,python,prepared,output,root=ROOT):
 
 
 def analyze_receipt(manifest,receipt,execution,output):
-    if 'completion_path' in manifest:
+    from exposedpath import coe_pilot
+    if coe_pilot.active(manifest.get('pilot')):
+        from analysis.coe_pilot import process
+        result=process(receipt,execution,output)
+        value=json.loads(result.read_text(encoding='utf8'))
+    elif 'completion_path' in manifest:
         from exposedpath_v141.completion_path_scope import process,load
         result=process(receipt,execution,output)
         value=load(result,receipt,execution)
@@ -206,7 +211,10 @@ def analyze_model(output,prepared,collector_version):
         sqlite=output/'capture.sqlite',export_report=output/'postprocess_report.json',
         **{k:root/v for k,v in names.items()}))
     result,value=analyze_receipt(manifest,receipt,root/'engineering_execution.json',output/'analyzed')
-    if 'completion_path' in manifest:
+    from exposedpath.coe_pilot import active
+    if active(manifest.get('pilot')):
+        if value['status']!='COE_PILOT_PREFILL_ONLY_PENDING_REVIEW':raise ModelScopeBlocked(result,value)
+    elif 'completion_path' in manifest:
         if value['status']!='PREFILL_LOCAL_ENGINEERING_ONLY':raise ModelScopeBlocked(result,value)
     else:check_model_admission(result,value,domain='domain_qualification' in manifest)
     return result
@@ -300,13 +308,16 @@ def main():
                 q0_status='NOT_RUN',dropped_records_status='UNKNOWN',measurement_validity='NOT_ASSESSED')
             if args.pilot:
                 report.update(status='PILOT_RUN_COMPLETE_PENDING_REVIEW',schema_version='gate11-pilot-collection/0.1.0')
+                from exposedpath.coe_pilot import active
+                if active(manifest['pilot']):
+                    report.update(status='COE_PILOT_PREFILL_ONLY_PENDING_REVIEW',schema_version='coe-pilot-collection/0.1.0')
             if args.signed_formal_protocol:
                 report.update(status='FORMAL_RUN_COMPLETE_PENDING_REVIEW',schema_version='gate12-formal-collection/0.1.0')
     except (ValueError,OSError,KeyError) as exc:
         record_analysis_error(report,exc)
     (output/'collection_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(report['status'])
-    return 0 if report['status'] in ('PREFILL_LOCAL_ENGINEERING_ONLY','DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW','FORMAL_RUN_COMPLETE_PENDING_REVIEW') else 1
+    return 0 if report['status'] in ('COE_PILOT_PREFILL_ONLY_PENDING_REVIEW','PREFILL_LOCAL_ENGINEERING_ONLY','DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW','FORMAL_RUN_COMPLETE_PENDING_REVIEW') else 1
 
 
 if __name__=='__main__': raise SystemExit(main())

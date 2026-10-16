@@ -331,3 +331,43 @@ opaque allocation版本上下文；cudaMalloc不能借另一路径的例外进�
 不是质量失败，也不自动否定整个方向；应据其限制对应claim。实证重复性只能回答结构是否
 复现；分析用途必须另指出COE比同信息baseline多完成了哪项可核验的完成语义判断。
 当前没有新的研究语义待裁决，也没有服务器事项；准备工作不等于采集就绪。
+
+## 7. 207bdf2之后的候选Pilot最小执行交付（2026-10-16）
+
+用户随后授权本地接线、CPU及待审打包，故本节取代§6末尾“本轮不打包”的当前执行限制；
+§6的旧原件验证和有限科学解释不变。原pending配置保留，新执行配置见
+[coe_candidate_pilot_execution_v0_1.json](../../configs/coe_candidate_pilot_execution_v0_1.json)。
+执行域COE-NATURAL-PREFILL-PILOT/0.1，分析接口0.2.0；科学对象仍COE-CANDIDATE/0.1.0-draft，
+不改生产A/B、API分类、完成政策或单sync B，不授新Formal、纯Host等待、P0性能或收益解释。
+
+- 复用既有verified模型入口与真实prepare→seal→采集argv→producer→Canonical；新角色不是
+  给旧文件改PILOT字符串。独立pass/execution/producer/token/input receipt版本贯通；旧角色和
+  原G1 batch门不改。batch2仅进入这个前瞻候选域，实际资格仍由新run逐项闭合。
+- 完整batch input_ids/mask各自二维摘要及batch payload摘要、原输入文件SHA同时保存；
+  实际tensor输入Host列表在窗外独立观察，和声明冲突就拒绝；不做设备回读或额外同步。
+  输出形状、逐样本token及EOS从实际结果消费，跨条件/跨block逐值核对。暖机实际三次，
+  未观测的warmup token字段仍null。当前helper保留可选Cpre hook，但新域禁止该控制器；
+  新旧helper AST显式区分，不把任意source或Cpre混入自然路径。
+- 每run独立局部Prefill准入仍检查边界、clock、成功drain、已完成历史、实际stream/context/
+  correlation/ownership、全部必要后缀、内部sync、terminal及两模式成员/边。不是仅检查
+  数值相等或守恒。未知incoming/event/graph、前缀pending及影响范围不明仍拒绝。
+  对首完成之后的缺效果API逐项记录Raw引用/时间/理由；只有同线程同clock且无向前影响
+  才隔离，Request/Decode保持NOT_ACCEPTED，不追索旧84次参数。
+- 分析先保存Canonical/projection及局部结果，再走COE全操作覆盖。相同窗口常规API
+  count/sum/union、GPU activity与合法mapping/timeline不删减；全记录在每run来源中，
+  批次汇总只留小型指标及hash引用，避免复制巨型domain或把批次对象常驻缓存。
+- 九个固定新P1、三个完整block、无P0/Cpre；主要比较每block signed B4−B1绝对COE，
+  其余全部单次值和B2保留。硬失败立即停止，失败原因/partial/NOT_RUN保留；不跨block
+  拼接、不按数值方向自动延长。实证重复性和公平baseline下的完成语义用途仍分开评判。
+
+最终相关CPU文件链及兼容回归205 passed、0 failed、0 skipped，174.44秒，命令与来源见
+[唯一进度7.168](research_progress.md)。实际PowerShell5.1解析、compileall及diff检查通过。
+Python3.12.7本地CPU替身不代表目标3.11.16/CUDA、batch2或新Pilot通过。
+
+交付仅从提交后Git实际内容生成bundle，最近可信服务器前置48567aa…来自已回传部署+HEAD
+日志，A仍须现场严格核对；执行/分析相同精确commit由delivery.json绑定，非文档HEAD代替。
+默认A只部署与CPU，不初始化CUDA、不运行模型或collector；B须协调审查A后用户另带明确
+开关及已审receipt真实SHA才启动。未取得A回执前，不提供可误启动的B命令或虚构review hash。
+计划估计15～30分钟，临时空闲12GiB；长期YLQ严格<50,000,000,000字节，取代旧50GiB表述。
+实际空间由A/B记录，不自动清理，UNKNOWN writer继续阻断封包；原件/失败历史不动。
+当前没有新研究语义待裁决；真正待证是目标部署/空间、batch2实物及九个新run的局部闭合。

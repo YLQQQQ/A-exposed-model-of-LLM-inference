@@ -409,7 +409,7 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                        clock_ns=time.perf_counter_ns, record_drains=False,
                        record_stages=False, model_setup=None, record_load_tasks=False,
                        setup_observer=None, allow_load_fallback=True, invocation_observer=None,
-                       n1_controller=None, completion_controller=None):
+                       n1_controller=None, completion_controller=None,input_observer=None):
     """Explicit local Gate8 producer API over already-resident inputs.
 
     Not enabled by the legacy CLI/launcher. The caller supplies preflight-bound
@@ -508,7 +508,11 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                 or hashlib.sha256(Path(__file__).read_bytes()).hexdigest()!=ledger['runner_source_sha256']):
             raise ValueError('STAGE_SETUP_MANIFEST_OR_SOURCE_HASH')
         manifest=json.loads(manifest_bytes)
-        batch = get_batch_inputs(load_prompt_tokens(prompt_path),batch_size,run_role=ledger['run_role'])
+        from exposedpath.coe_pilot import active as coe_active
+        batch = get_batch_inputs(load_prompt_tokens(prompt_path),batch_size,run_role=ledger['run_role'],
+            **({'coe_binding':ledger['pilot']} if coe_active(ledger.get('pilot')) else {}))
+        if input_observer is not None:
+            input_observer(batch) # Host lists actually passed to tensor(), outside all request windows.
         expected={k:ledger[k] for k in ('experiment_id','wmpc_id','run_id','run_role','data_role',
                                         'runner_git_commit','runner_git_dirty','runner_source_sha256')}
         expected.update(model_id=model_setup['model_path'],batch_size=batch_size,
@@ -677,6 +681,8 @@ def run_gate8_requests_to_files(*, output_dir, **request_arguments):
         control=active(ledger['pilot'])
         receipt.update(schema_version='exposedpath-pilot-producer-receipt/0.2.0' if control else 'exposedpath-pilot-producer-receipt/0.1.0',
                        pilot=ledger['pilot'],run_role='PILOT',data_role='Pilot',gate11_verdict='BLOCKED' if control else 'NOT_RUN')
+        from exposedpath.coe_pilot import active,PRODUCER_VERSION
+        if active(ledger['pilot']):receipt['schema_version']=PRODUCER_VERSION
     if ledger['run_role']=='FORMAL':
         from exposedpath.formal_protocol import PRODUCER_VERSION, reference
         receipt.update(schema_version=PRODUCER_VERSION,formal=ledger['formal'],run_role='FORMAL',

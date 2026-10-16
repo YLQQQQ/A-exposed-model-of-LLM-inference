@@ -43,6 +43,7 @@ def get_batch_inputs(
     prompt_tokens: Dict,
     batch_size: int,
     run_role: str = "FORMAL",
+    *, coe_binding=None,
 ) -> Dict:
     """Extract input_ids and attention_mask tensors for the given batch_size.
 
@@ -67,11 +68,18 @@ def get_batch_inputs(
             f"but batch_size={batch_size} requires at least {batch_size}"
         )
 
+    approved_coe=False
+    if coe_binding is not None:
+        from .coe_pilot import validate_binding,input_identity,require
+        b=validate_binding(coe_binding)
+        require(run_role=='PILOT' and b['batch_size']==batch_size,'INPUT_DOMAIN')
+        input_identity(prompt_tokens)
+        approved_coe=True
     ok, msg = check_batch_sample_distinctness(samples, batch_size)
     if not ok:
         if run_role == "FORMAL":
             raise ValueError(f"FORMAL mode: {msg}")
-        elif run_role == "PILOT":
+        elif run_role == "PILOT" and not approved_coe:
             # PILOT default: also fail
             raise ValueError(f"PILOT mode (strict): {msg}")
 

@@ -44,6 +44,8 @@ def schedule(batch_id, *, blocks=3):
 
 def validate_binding(value):
     require(isinstance(value,dict),'BINDING')
+    from . import coe_pilot
+    if coe_pilot.active(value): return coe_pilot.validate_binding(value)
     from . import gate11_warmup as warmup
     if warmup.active(value):
         return warmup.validate_binding(value)
@@ -54,6 +56,8 @@ def validate_binding(value):
 
 def minimal_fields(binding):
     validate_binding(binding)
+    from . import coe_pilot
+    if coe_pilot.active(binding): return coe_pilot.minimal_fields(binding)
     from exposedpath_v141.gate9_domain import declaration as domain, N1, G1
     from .n1_model import declaration, execution_declaration, CALLSITE
     length,variant=CONDITIONS[binding['condition']]
@@ -71,6 +75,8 @@ def minimal_fields(binding):
 
 
 def validate(manifest):
+    from . import coe_pilot
+    if coe_pilot.active(manifest.get('pilot')): return coe_pilot.validate(manifest)
     binding=validate_binding(manifest.get('pilot'))
     expected=minimal_fields(binding)
     require(all(type(manifest.get(k)) is type(v) and manifest[k]==v for k,v in expected.items()),'DECLARATION_CONFLICT')
@@ -94,6 +100,8 @@ def roles(manifest):
 
 
 def validate_prepared(manifest, prepared, root):
+    from . import coe_pilot
+    if coe_pilot.active(manifest.get('pilot')): return coe_pilot.validate_prepared(manifest,prepared,root)
     from .gate8_engineering_contract import validate_declaration
     from .workload import load_prompt_tokens
     validate(manifest); validate_declaration(manifest)
@@ -107,6 +115,9 @@ def validate_prepared(manifest, prepared, root):
 
 
 def validate_tokens(path, manifest, ledger, execution, manifest_path, producer_path):
+    from . import coe_pilot
+    if coe_pilot.active(manifest.get('pilot')):
+        return coe_pilot.validate_tokens(path,manifest,ledger,execution,manifest_path,producer_path)
     import json
     binding=validate(manifest)
     pass_version,execution_version=versions(binding)
@@ -132,6 +143,9 @@ def validate_tokens(path, manifest, ledger, execution, manifest_path, producer_p
 def execution_extension(manifest, ledger, execution, execution_path, manifest_path, producer_path, *, token_path=None):
     """Validate new fields before reusing unchanged execution/measurement checks."""
     roles(manifest)
+    from . import coe_pilot
+    if coe_pilot.active(manifest.get('pilot')):
+        return coe_pilot.execution_extension(manifest,ledger,execution,execution_path,manifest_path,producer_path,token_path)
     if 'formal' in manifest:
         from .formal_protocol import execution_extension as formal_extension
         return formal_extension(manifest,ledger,execution,execution_path,manifest_path,producer_path,token_path)
@@ -145,12 +159,16 @@ def execution_extension(manifest, ledger, execution, execution_path, manifest_pa
 
 def versions(binding):
     validate_binding(binding)
+    from . import coe_pilot
+    if coe_pilot.active(binding): return coe_pilot.PASS_VERSION,coe_pilot.EXECUTION_VERSION
     from . import gate11_warmup as warmup
     return (warmup.PASS_VERSION,warmup.EXECUTION_VERSION) if warmup.active(binding) else (PASS_VERSION,EXECUTION_VERSION)
 
 
 def validate_actual_requests(manifest, ledger):
     """Validate observed warmup nulls separately from measured completion facts."""
+    from . import coe_pilot
+    if coe_pilot.active(manifest.get('pilot')):return coe_pilot.validate_actual_requests(manifest,ledger)
     from .gate11_warmup import active, request_plan
     binding=validate(manifest)
     require(active(binding) and ledger.get('pilot')==binding,'OBSERVED_WARMUP_BINDING')

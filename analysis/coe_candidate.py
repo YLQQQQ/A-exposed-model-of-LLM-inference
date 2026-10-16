@@ -21,7 +21,7 @@ from scripts.analyze_completion_operation_candidate import (
 from exposedpath_v141.a_api_classification import _classify, VERSION as A_API_REGISTRY_VERSION
 from exposedpath_v141.sync_semantics import classify_cuda_api
 
-VERSION = 'coe-candidate-analysis/0.1.0'
+VERSION = 'coe-candidate-analysis/0.2.0'
 EVIDENCE_VERSION = 'coe-operation-evidence/0.1.0'
 ROLE = 'EXPLORATORY_CANDIDATE_NOT_FORMAL_A'
 CONTRACT = 'COE-CANDIDATE/0.1.0-draft'
@@ -240,6 +240,7 @@ def analyze_files(receipt_path, canonical_path, output):
         'exposedpath_v141/gate8_files.py','exposedpath_v141/gate8_diagnostic_scope.py','exposedpath_v141/gate9_diagnostic_review.py',
         'docs/v1_4_1/contracts/a_api_registry_v0_1.json','docs/v1_4_1/contracts/sync_semantics_registry_v0_2.json',
         'docs/v1_4_1/contracts/coe_candidate_analysis_v0_1.json',
+        'docs/v1_4_1/contracts/coe_candidate_analysis_v0_2.json','exposedpath/coe_pilot.py',
         'docs/v1_4_1/completion_operation_contract_draft_v0_1.md'))
     hashes={str(p):sha(p) for p in source_files}
     require(not any(p.resolve().is_relative_to(Path(output).resolve()) for p in source_files),'OUTPUT_CONTAINS_INPUT')
@@ -249,7 +250,13 @@ def analyze_files(receipt_path, canonical_path, output):
     require(producer['status']=='COMPLETE','PRODUCER_INCOMPLETE')
     source=paths['runner_source'].read_text(encoding='utf-8-sig')
     helper=one((n for n in ast.parse(source).body if isinstance(n,ast.FunctionDef) and n.name=='observe_token_ready_boundary'),'HELPER_SOURCE')
-    require(hashlib.sha256(ast.dump(helper,include_attributes=False).encode()).hexdigest()==HELPER_AST,'HELPER_PROFILE_OUT_OF_SCOPE')
+    from exposedpath import coe_pilot
+    # The prospective runner retains the later Cpre hook, but this domain
+    # forbids a completion controller. The natural .cpu()/anchor path is the
+    # same; legacy source profiles still accept ONLY their original AST.
+    expected_helper=('9ca270cc50f907f7a6b7aa37e05ca3de44b3e94ffa8b63606798ca377a3c60bf'
+        if coe_pilot.active(mf.get('pilot')) else HELPER_AST)
+    require(hashlib.sha256(ast.dump(helper,include_attributes=False).encode()).hexdigest()==expected_helper,'HELPER_PROFILE_OUT_OF_SCOPE')
     require(not any(k in mf for k in ('n1_model','completion_path')) and mf['execution_mode']=='eager','NATURAL_PROFILE_OUT_OF_SCOPE')
     require(mf['inference_framework_version']=='torch2.6.0+cu124' and mf['attention_backend']=='sdpa'
             and mf['dtype_and_quantization']=='fp16','SOFTWARE_PROFILE_OUT_OF_SCOPE')
@@ -260,6 +267,10 @@ def analyze_files(receipt_path, canonical_path, output):
     require(token['manifest_sha256']==sha(paths['wmpc_manifest']) and token['producer_receipt_sha256']==sha(paths['producer_receipt']),'TOKEN_LINEAGE')
     token_version={'formal_tokens':'exposedpath-formal-tokens/0.1.0','batch_tokens':'exposedpath-batch-load-tokens/0.1.0',
                    'pilot_tokens':'exposedpath-pilot-tokens/0.1.0'}[token_key]
+    from exposedpath import coe_pilot
+    if coe_pilot.active(mf.get('pilot')):
+        require(token_key=='pilot_tokens','PILOT_TOKEN_SOURCE')
+        token_version=coe_pilot.TOKEN_VERSION
     require(token['schema_version']==token_version,'TOKEN_VERSION')
     binding_key={'formal_tokens':'formal','pilot_tokens':'pilot','batch_tokens':'batch_load'}[token_key]
     require(token[binding_key]==mf[binding_key],'TOKEN_ROLE_BINDING')
@@ -277,7 +288,7 @@ def analyze_files(receipt_path, canonical_path, output):
             values=tr['token_ids'];batch=mf['batch_size']
             require(len(values)==mf['fixed_output_tokens']==lr['actual_output_tokens'] and
                 all(len(t)==batch and all(type(v) is int and v>=0 for v in t) for t in values),'ACTUAL_TOKEN_SHAPE')
-            if token_key=='batch_tokens':
+            if token_key=='batch_tokens' or coe_pilot.active(mf.get('pilot')):
                 require(tr['actual_input_shape']==[batch,mf['fixed_input_tokens']] and tr['actual_output_tokens_per_sample']==[len(values)]*batch
                         and tr['early_eos'] is False,'ACTUAL_BATCH_SHAPE')
             markers=[];ranges=[];drange=[]
@@ -299,7 +310,8 @@ def analyze_files(receipt_path, canonical_path, output):
                     and ds['start_ns']<=a['start']<=a['end']<=ds['end_ns']),'DRAIN_API')
             require(type(da['return_code']) is int and da['return_code']==0 and da['end']<=ds['end_ns']<=origin['start_ns'],'DRAIN_SUCCESS')
             ps=one((s for s in syncs if s['runtime_record_id']==da['id']),'DRAIN_PHYSICAL')
-            require(ps['sync_type_name'].endswith('_CONTEXT_SYNCHRONIZE'),'DRAIN_SEMANTICS')
+            from exposedpath_v141.gate8_qualification_oracle import sync_kind
+            require(sync_kind(ps['sync_type_name'])=='CONTEXT_SYNCHRONIZE','DRAIN_SEMANTICS')
             for ti,actual in enumerate(values):
                 phase='prefill' if ti==0 else 'decode';op=dict(token_index=ti,phase=phase,identity=identity,actual_host_token=actual,
                     operation_validity='UNRESOLVED',candidate_ns=None,reasons=[])
@@ -335,10 +347,10 @@ def analyze_files(receipt_path, canonical_path, output):
                             internal=one((s for s in syncs if s['runtime_record_id']==a['id']),'INTERNAL_SYNC_MAPPING')
                             require(a['return_code']==0 and internal['global_pid']==process
                                 and internal['device_id']==d['scope'][1] and internal['context_id']==d['scope'][2], 'INTERNAL_SYNC_IDENTITY')
-                            require(internal['sync_type_name'].endswith('_STREAM_SYNCHRONIZE')
+                            require(sync_kind(internal['sync_type_name'])=='STREAM_SYNCHRONIZE'
                                 and internal['stream_id']==d['scope'][3],'INTERNAL_SYNC_SCOPE')
                     physical=dict(id=phys['record_id'],correlation=phys['correlation_id'],scope=[phys[k] for k in ('global_pid','device_id','context_id','stream_id')],
-                        start=phys['start_ns'],end=phys['end_ns'],semantic='STREAM_SYNCHRONIZE' if phys['sync_type_name'].endswith('_STREAM_SYNCHRONIZE') else 'UNSUPPORTED')
+                        start=phys['start_ns'],end=phys['end_ns'],semantic='STREAM_SYNCHRONIZE' if sync_kind(phys['sync_type_name'])=='STREAM_SYNCHRONIZE' else 'UNSUPPORTED')
                     result=analyze_operation(apis=ra,effects=re,copy=copy,sync=sync,physical=physical,identity=identity,
                         scope=d['scope'],thread=thread,request_start=origin['start_ns'],drain_end=da['end'],completion_point=anchor['start_ns'],
                         copy_effect=d['id'],source_sha256=source_sha)

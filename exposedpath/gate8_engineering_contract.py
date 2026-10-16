@@ -26,6 +26,10 @@ def validate_declaration(manifest):
         return value
     from .gate11_pilot import roles
     roles(manifest)
+    from . import coe_pilot
+    if coe_pilot.active(manifest.get('pilot')):
+        coe_pilot.validate(manifest)
+        return value
     if 'batch_load' in manifest:
         from .batch_load import validate
         validate(manifest)

@@ -1,5 +1,53 @@
 # ExposedPath 科研进度清单
 
+## 7.168 COE候选Pilot真实执行接线与两阶段待审交付（2026-10-16）
+
+本次从207bdf2继续，用户授权本地实现/CPU/打包；未授权服务器、模型、CUDA/Nsight或采集。
+完成[独立执行域](../../exposedpath/coe_pilot.py) `COE-NATURAL-PREFILL-PILOT/0.1`、
+[局部分析链](../../analysis/coe_pilot.py)、[九槽编排](../../scripts/coe_pilot_batch.py)及
+[待审执行配置](../../configs/coe_candidate_pilot_execution_v0_1.json)。复用verified prepare/seal/
+显式解释器/collector/producer/Canonical与原局部Prefill S/A；COE分析入口增量版本0.2.0，
+[兼容合同](contracts/coe_candidate_analysis_v0_2.json)保留0.1原合同和旧helper指纹。
+没有改生产S/A/B公式、registry、旧Formal协议或历史结果。旧7.167不打包/不可执行状态为历史；
+本次只将新执行链准备为待审交付，不是采集授权或新资格PASS。
+
+新域固定batch1/2/4、512/每样本2、w3/r1、FP16/eager/SDPA、自然Host-readable完成。
+逐run绑定完整二维input_ids、attention_mask、batch payload及文件字节摘要；对实际送入
+tensor构造的Host列表独立观察并比对，输出形状/每样本token由真实producer结果取得，
+不以单样本digest或复制manifest冒充实际batch身份，不增加D2H/同步。旧Pilot/Formal
+重复样本门保留；只有完整新绑定允许这次已批准的同输入克隆，batch2不扩展旧G1。
+当前runner保留可选Cpre钩子但本域禁止controller；自然分支与旧路径相同，新指纹显式绑定。
+
+每run执行Canonical→边界/成功drain→局部Prefill准入→COE→严格报告/hash消费，不走巨型domain。
+原有两模式成员/依赖边、ownership、terminal、诊断与前缀检查均保留；完成后的缺效果调用
+必须同线程同clock且开始于首token锚点之后，并通过无incoming event/graph等局部闭合门。
+它们逐项留在覆盖与隔离记录；Request/Decode仍NOT_ACCEPTED，UNKNOWN/NOT_ASSESSED不变。
+固定三个位置平衡block 1→2→4 / 2→4→1 / 4→1→2，9新P1；完整block的B4−B1 signed绝对差，
+保留B2、零/负/反向及全部单次值；首硬失败停，保存完成/失败/未运行槽，不拼接、不重试/替补。
+
+先红测缺入口、克隆域、实际构造mask冲突、软件身份与完整文件链，再实现。最终命令：
+`python -m pytest -q -p no:cacheprovider tests/test_coe_pilot.py tests/test_coe_pilot_driver.py tests/test_coe_candidate.py tests/test_runner_token_ready.py tests/test_batch_load_diagnostic.py tests/test_gate11_pilot_files.py tests/test_gate12_formal.py --basetemp .local/cp-release --junitxml .local/cp-release-results.xml`
+实得 **205 passed / 0 failed / 0 skipped，174.44s**。含真实prepare、seal→profile argv、实际producer
+文件→collector post-export分派→Canonical/局部Prefill/COE/消费，以及九槽whole-block编排的CPU边界替身。
+compileall、diff检查及实际Windows PowerShell5.1解析通过。本地Python3.12.7，目标3.11.16；
+这些是CPU文件链/算术/拒绝证据，不是目标CUDA或batch2实物资格。不重跑Q0、完整旧分析或GPU。
+提交前用0.2入口做轻量旧原件回归：24自然链、同批B1/B4 Prefill及四token，共30条
+成员/terminal/交集算术均MATCH，逐run约2.1～3.6秒；B1/B4仍1.782176/30.910044ms，
+四token仍448/24032/480/1376ns。新派生目录regression_pilot_wiring_v0_2，不覆盖旧结果或运行完整analyzer。
+
+最近可信服务器回传HEAD为48567aa890bfd7f101ebf7b6b720308b4b48e20f，来源是已核验native_stage1
+回传中的部署receipt及最终git_head/clean原日志；不是假定当前checkout。交付在提交后从实际
+commit生成增量bundle并绑定执行=分析、源码精确Git/LF及合法CRLF表示与输入，避免自引用。
+默认[阶段A](../../scripts/run_coe_candidate_pilot.ps1)仅部署/必要CPU/空间检查；B另需显式开关和
+已审查A原receipt实际SHA256，不能凭本地测试自动采集。当前最高优先级仅协调审查交付、
+用户执行A并回传；目标实际HEAD/软件/空间、batch2与新run局部闭合仍未实测。
+
+预计总15～30分钟仅规划估计，单profile300s、单run driver900s保留硬限；临时空闲12GiB。
+**长期YLQ目标统一为严格低于50,000,000,000字节，不是50GiB**，取代7.167的旧单位表述。
+A/B记录实际空间，不自动清理；归档门遇UNKNOWN writer仍拒绝封包。采集后只保留必要Raw/
+Canonical/小型来源与局部结果，不重复展开或生成domain。已有Gate13限定PASS、Gate14 NOT_RUN、
+历史数据角色/Raw/BLOCKED及用户DOCX不变；不启用P0/Cpre/引擎/CUPTI、Pilot统计冻结或Formal。
+
 ## 7.167 COE可复用本地入口、成员级回归及待审9P1配置（2026-10-16）
 
 用户接受“自然完成操作内必要设备活动结构”的有限科学对象，不将COE视为纯Host阻塞
