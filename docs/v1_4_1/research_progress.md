@@ -1,5 +1,49 @@
 # ExposedPath 科研进度清单
 
+## 7.173 已批准存储分离接线完成；新两阶段包待A回执审查（2026-10-16）
+
+本轮按用户接受§11的决定实现，不再停于运维政策待审；未操作服务器/模型/CUDA/Nsight。
+详细当前入口：[主报告§12](completion_operation_batch_prefill_review_v0_1.md#12-已批准存储政策的两阶段最小接线2026-10-16)。
+新增[资源检查](../../scripts/coe_startup_storage.py)与[组件复用](../../scripts/coe_delivery_reuse.py)，
+只替换[launcher](../../scripts/run_coe_candidate_pilot.ps1)存储/证据复用接线及必要回执绑定，
+科学runner、Canonical、局部Prefill/COE、A/B和registry均未改。
+
+启动查实际输出/TEMP/TMP（可选TMPDIR）/归档父目录的fresh空闲与写入，volume GUID同卷去重；
+每个参与卷12GiB，不加总；未知/不足/写入失败、旧输出/ZIP/reparse拒绝。无历史目录遍历、
+ACL、旧补证调用或自动清理。历史YLQ总量null/UNKNOWN，长期<50,000,000,000 bytes尚未证明，
+随新回执保留，**本身不阻断当前启动资源检查**。只删除独占新建的微小写探针，不删证据。
+
+复用原4f1静态ZIP的110 CPU/compile/真实3.11.16两helper子证据，不改原BLOCKED或旧包。
+新提交构建后精确比较全部311旧源/合同Git内容，并由原source_bytes的已核验表示与当前实字节
+复核；模型/输入、plan/analysis合同hash和设备/解释器配置固定。新launcher/新增运维代码及测试
+单独锁定新commit的精确blob，不再要求等于旧executed.ps1；新包带原ZIP和组件兼容证明。
+
+本地最终命令：
+`python -m pytest -q -p no:cacheprovider tests/test_coe_startup_storage.py tests/test_coe_delivery_resources.py --basetemp .local/coe-resource-release --junitxml .local/coe-resource-release.xml --tb=short`
+本地3.12.7/PS5.1，最终**28 passed/0 failed/0 skipped（120.02s）**，见该JUnit及交付local_validation；
+相关py_compile、源码科学目录zero-diff、文档链接与diff检查通过。
+原launcher解析/旧stage_a_only禁采三项定向保护**3 passed/0 failed/0 skipped（2.49s）**。
+不是重跑110/完整Q0或GPU资格。实际执行PS解析/文件hash/真实封存ZIP消费/安全新ZIP封包及
+一次本地真实volume查询；部署/git状态、CPU命令分派、collector/九槽模型调用和故障磁盘是
+明确CPU边界替身。中间错误保留：PS7继承模块路径、内存ScriptBlock上下文、测试夹具控制字符；
+均修在测试边界，不删反例、不放宽身份。合同hash冲突先红测，补兼容比较后精确拒绝。
+
+新包默认A仅固定版本部署、变更28CPU/相关compile、兼容和fresh空间；结束回传待审。
+B严格要求本次已审A receipt实际SHA，核验A完整清单/delivery/storage/reuse，并再次fresh查
+来源/空间；旧BLOCKED/hash或错误版本不放行。真实B命令仅A审查后再给，当前不提前提供。
+旧stage_a_only交付永久历史不解锁。新提交后才写交付commit/hash和bundle，无自引用。
+
+仍固定9 P1/9profile、三个位置平衡block、512/每样本2、batch1/2/4、w3/r1、自然完成、
+FP16/eager/SDPA，无P0/Cpre，完整输入/mask/token/drain/依赖/诊断质量门均不变；
+仅局部Prefill、无巨型domain，无重试/替补/追加。15～30分钟/新增约0.1～0.5GB为估计，
+临时预留12GiB，长期容量归档后另行核验/精准清理审查，历史未知不当零或删除依据。
+
+最高优先级：交协调审查唯一新包与A整段命令，由用户执行A后回传单ZIP；不跑九P1。
+新存储/兼容接线目标3.11实际结果和目标fresh空间待A，batch2 GPU实物与九run局部闭合仍待
+后续显式批准B回答；不是提前判Pilot/研究增益成功。Gate13限定PASS/Gate14 NOT_RUN、
+旧Formal/Raw/UNKNOWN/NOT_ASSESSED/BLOCKED和用户DOCX保持。当前交付身份保存在私有
+`.local/coe_storage_delivery_identity.json`及`.local/COE_STORAGE_DELIVERY.md`，不把文档HEAD当服务器实物。
+
 ## 7.172 本地绑定修复完成；启动空间与长期留存分离，入口调整待审（2026-10-16）
 
 用户本轮授权最小本地修复/真实包回归及存储执行含义纠正；未操作服务器、模型、CUDA/

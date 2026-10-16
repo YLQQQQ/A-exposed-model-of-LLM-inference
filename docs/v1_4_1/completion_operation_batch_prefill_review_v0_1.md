@@ -565,3 +565,58 @@ batch2的真实GPU行为与九个新run仍未验证，应由未来限定Pilot回
 失败原件或唯一来源。历史未知不触发自动清理、权限升级或再扫描；长期合规未证明就照实
 保留UNKNOWN。本轮无服务器命令、部署包、采集、ACL/删除动作；Gate13限定PASS、
 Gate14 NOT_RUN、旧Formal/COE数据角色与UNKNOWN/NOT_ASSESSED保持。
+
+## 12. 已批准存储政策的两阶段最小接线（2026-10-16）
+
+用户已接受§11分离方案，本轮完成实现、CPU文件链验证及固定版本待审包；不执行服务器。
+§11.3的“入口调整待审”是历史停止点，本节取代其当前执行状态；不改任何原BLOCKED回执。
+
+- [启动资源模块](../../scripts/coe_startup_storage.py) `coe-startup-resources/0.1.0`只查询新输出、
+  TEMP/TMP（存在TMPDIR时也纳入）与归档父目录。用实际Windows volume GUID去重，同卷
+  只查一次空闲，不加总不同卷的free；每个参与卷保守要求12GiB。记录UTC、原始free、
+  卷/路径及写探针结果，未知/不足/不可写/reparse/已存在归档都拒绝。
+  launcher先独占新建输出树，已有目录/ZIP不覆盖；写探针只删除刚独占创建的临时叶文件，
+  不删研究证据。没有全YLQ遍历、旧ACL或旧补证脚本调用。
+- 历史总量继续`null`，`long_term_status=UNKNOWN_NOT_PROVEN`，长期目标严格
+  `<50,000,000,000 bytes`仍未证明。资源READY只表示当前参与卷/路径具备本批启动条件，
+  不是容量合规或科研有效性PASS。预计新增/归档约0.1～0.5GB、临时12GiB仍是估计与预留，
+  没有自动清理或修改旧manifest。
+- [兼容消费者](../../scripts/coe_delivery_reuse.py)先验证原静态ZIP/manifest/全部hash、原
+  receipt与原路径实字节，再消费旧110/compile/实际3.11/helper证据。交付以固定Git blob
+  比较证明**全部311项旧科研源/合同不变**，当前实际文件还须匹配旧已核验精确表示。
+  输入/模型、backend执行合同、plan/analysis合同hash、设备/解释器配置仍绑定。
+  **只复用通过的子证据，不把原BLOCKED当作新静态成功。**
+- 新launcher、资源/兼容代码及新增测试单独绑定新commit的精确blob/长度/SHA；不要求等于
+  旧executed.ps1，也不由当前运行hash生成期望。新兼容证明附版本和执行/分析commit，
+  构建器提交后才写交付JSON与清单，避免自引用hash。311项之外的新增运维组件不混作旧证据。
+- [真实launcher](../../scripts/run_coe_candidate_pilot.ps1)默认A：固定前置checkout、bundle
+  verify/fetch/checkout、来源/组件兼容、fresh空间、仅变更CPU和相关compile，然后停止待审。
+  不重跑旧110/完整Q0/实验或两helper查询，无CUDA/collector/模型。
+  原stage_a_only包的字节与禁止采集标志永久不改，新包有独立版本、新目录/新ZIP。
+  B需本次真实A receipt SHA256，核验新A清单、delivery、storage与reuse子回执；错hash、
+  旧BLOCKED或错执行版本拒绝。B再查fresh空间/来源，不将A的旧free视为持续保证。
+
+新增验证：[资源检查](../../tests/test_coe_startup_storage.py)与
+[真实PS入口/封存兼容链](../../tests/test_coe_delivery_resources.py)。在本地Python3.12.7、
+Windows PowerShell5.1执行，目标3.11.16的新接线仍待A；CPU替身不能授GPU资格。
+覆盖足够/不足/查询失败、多卷不合并、同卷一次、写入失败/旧输出、receipt/科研源码/合同
+冲突，默认A成功及显式B正确/缺少/错误/历史回执、A通过后B空间不足。
+PS5.1真实解析、文件hash、旧ZIP/manifest/原receipt消费和安全新ZIP封包均实际执行；
+Git部署、pytest/compile分派、collector版本及九槽模型调用为明确的进程边界替身，磁盘
+故障为OS替身；另有一次本地真实Windows volume API与路径写入检查，不冒称目标机结果。
+旧包禁采的原三项定向保护检查通过（3 passed/0 failed/0 skipped），非重跑110。
+中间本地测试遇PS7继承模块路径/内存ScriptBlock缺文件上下文及测试夹具控制字符，均在
+测试边界修正，未弱化生产门；反例须命中其确切原因，不能被上游环境错误掩盖。
+最终命令/数量见唯一进度7.173，待审包携带本轮JUnit和组件证明。
+
+科研批次完全保持：自然Host-readable，512/每样本输出2、batch1/2/4、FP16/eager/SDPA、
+w3/r1，三个位置平衡block（1→2→4、2→4→1、4→1→2），9 P1/9profile，无P0/Cpre。
+原token、整batch输入/mask、身份、成功drain、必要依赖/terminal及诊断门不变；仅接收可独立
+闭合Prefill，Decode未知须能证明局限才隔离，不授Request/Decode/完整物理B。
+不生成巨型domain；预算结束或硬失败即停，无重试/替补/追加，保留全部槽位和signed差。
+
+**待审交付停点：**单一新ZIP，默认A可执行；A回传单ZIP审查之前不提供可直接运行的B命令。
+本轮只提供A命令，预计数分钟；B仍15～30分钟估计，单profile300s/driver900s，不加时追绿。
+来源/空间/写入/CPU等失败立即停，安全pack遇未知写者仍拒绝封包，保留现场、不删marker。
+不执行服务器、不安装依赖或更换工具链；旧A/B、Formal、Gate13限定PASS/Gate14 NOT_RUN、
+Raw/UNKNOWN/NOT_ASSESSED及用户DOCX保留。归档后长期容量核验/精准清理另审，不恢复权限追索。

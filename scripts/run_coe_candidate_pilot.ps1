@@ -7,6 +7,7 @@ if ($C.PSObject.Properties.Name -contains 'stage_a_only') {
     if ($C.stage_a_only -isnot [bool]) {throw 'STATIC_REPAIR_FLAG_TYPE'}
     if ($C.stage_a_only -and $CollectReviewedPilot) {throw 'STATIC_REPAIR_ONLY_NO_COLLECTION'}
 }
+if ($C.operational_revision -ne 'coe-startup-resources/0.1.0') {throw 'Operational revision conflict'}
 function Hash([string]$P) {return (Get-FileHash -LiteralPath $P -Algorithm SHA256).Hash.ToLowerInvariant()}
 function Safe([string]$Root,[string]$Relative) {
     $Base=[IO.Path]::GetFullPath($Root).TrimEnd('\')+'\'
@@ -33,17 +34,24 @@ function VerifyManifest([string]$Root) {
 }
 VerifyManifest $PSScriptRoot
 $Code=$C.code_root;$Target=$C.commit;$Python=Join-Path $Code '.venv\Scripts\python.exe'
-$Static=Join-Path $C.server_root ('logs\coe_'+$Target.Substring(0,12)+'_static')
+$Static=Safe $C.server_root ('logs\coe_'+$Target.Substring(0,12)+'_static')
 $Kind=if ($CollectReviewedPilot) {'pilot'} else {'static'}
-$Out=if ($CollectReviewedPilot) {Join-Path $C.server_root ('evidence\coe_pilot\'+$C.batch_id)} else {$Static}
-$Zip=Join-Path $C.server_root ('transfer\coe_'+$Target.Substring(0,12)+'_'+$Kind+'.zip')
+$Out=if ($CollectReviewedPilot) {Safe $C.server_root ('evidence\coe_pilot\'+$C.batch_id)} else {$Static}
+$Zip=Safe $C.server_root ('transfer\coe_'+$Target.Substring(0,12)+'_'+$Kind+'.zip')
 if ((Test-Path -LiteralPath $Out) -or (Test-Path -LiteralPath $Zip)) {throw 'No overwrite/resume/retry'}
 if ($CollectReviewedPilot) {
     if ($ReviewedStaticReceiptSHA256 -notmatch '^[0-9a-fA-F]{64}$' -or
         (Hash (Join-Path $Static 'receipt.json')) -ine $ReviewedStaticReceiptSHA256) {throw 'Explicit reviewed Stage A receipt hash required'}
     VerifyManifest $Static
     $R=Get-Content -LiteralPath (Join-Path $Static 'receipt.json') -Raw | ConvertFrom-Json
-    if ($R.status -ne 'STATIC_READY_FOR_REVIEW' -or $R.execution_commit -ne $Target -or $R.delivery_sha256 -ne (Hash (Join-Path $PSScriptRoot 'delivery.json'))) {throw 'Static receipt conflict'}
+    if ($R.status -ne 'STATIC_READY_FOR_REVIEW' -or $R.execution_commit -ne $Target -or $R.analysis_commit -ne $Target -or
+        $R.operational_revision -ne $C.operational_revision -or $R.delivery_sha256 -ne (Hash (Join-Path $PSScriptRoot 'delivery.json')) -or
+        $R.storage_sha256 -ne (Hash (Join-Path $Static 'storage.json')) -or
+        $R.component_reuse_sha256 -ne (Hash (Join-Path $Static 'component_reuse.json'))) {throw 'Static receipt conflict'}
+    $StorageReceipt=Get-Content -LiteralPath (Join-Path $Static 'storage.json') -Raw | ConvertFrom-Json
+    $ReuseReceipt=Get-Content -LiteralPath (Join-Path $Static 'component_reuse.json') -Raw | ConvertFrom-Json
+    if ($StorageReceipt.status -ne 'STARTUP_RESOURCES_READY' -or $ReuseReceipt.status -ne 'COMPONENT_REUSE_VERIFIED' -or
+        $ReuseReceipt.execution_commit -ne $Target) {throw 'Static subreceipt conflict'}
 }
 New-Item -ItemType Directory -Path $Out | Out-Null
 Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $Out 'executed.ps1')
@@ -80,20 +88,19 @@ function Sources {
     }
 }
 function Storage {
-    $StorageCode=@'
-import json,os,pathlib,shutil,sys
-root=pathlib.Path(sys.argv[1]).resolve();total=0;count=0
-def fail(error):raise error
-for base,dirs,files in os.walk(root,followlinks=False,onerror=fail):
-    for name in dirs+files:
-        p=pathlib.Path(base)/name
-        if p.is_symlink() or getattr(p.lstat(),'st_file_attributes',0)&0x400:raise ValueError('Storage reparse: '+str(p))
-    for name in files:total+=(pathlib.Path(base)/name).stat().st_size;count+=1
-v=dict(current_bytes=total,files=count,long_term_target_bytes_below=50000000000,temporary_free_required_bytes=12*1024**3,free_bytes=shutil.disk_usage(root).free,automatic_cleanup=False)
-pathlib.Path(sys.argv[2]).write_text(json.dumps(v,indent=2),encoding='utf8')
-if total>=50000000000 or v['free_bytes']<12*1024**3:raise ValueError('Storage requirement not met; no cleanup')
-'@
-    Run $Python @('-X','utf8','-c',$StorageCode,$C.server_root,(Join-Path $Out 'storage.json')) 'storage'
+    # Long-term target 50000000000 bytes stays UNKNOWN; not a startup census.
+    if (!$env:TEMP -or !$env:TMP) {throw 'Explicit inherited TEMP and TMP required'}
+    $Args=@('-X','utf8','scripts/coe_startup_storage.py','--output-directory',$Out,
+        '--temporary-directory',$env:TEMP,'--temporary-directory',$env:TMP,
+        '--archive',$Zip,'--receipt',(Join-Path $Out 'storage.json'))
+    if ($env:TMPDIR) {$Args+=@('--temporary-directory',$env:TMPDIR)}
+    Run $Python $Args 'storage'
+}
+function Reuse {
+    Run $Python @('-X','utf8','scripts/coe_delivery_reuse.py','--delivery',(Join-Path $PSScriptRoot 'delivery.json'),
+        '--sources',(Join-Path $Out 'source_bytes.json'),'--receipt',(Join-Path $Out 'component_reuse.json')) 'component_reuse'
+    if ((Hash $PSCommandPath) -ne $C.launcher_sha256 -or
+        (Hash (Join-Path $Code 'scripts\run_coe_candidate_pilot.ps1')) -ne $C.launcher_sha256) {throw 'New launcher identity conflict'}
 }
 try {
     Set-Location -LiteralPath $Code
@@ -108,38 +115,17 @@ try {
         $Fetched=& git -C $Code rev-parse refs/remotes/coe-pilot/execution
         if ($LASTEXITCODE -ne 0 -or $Fetched -ne $Target) {throw 'Bundle target conflict'}
         Run 'git' @('-c','core.autocrlf=false','checkout','--detach',$Target) '03_checkout'
-        Tree $Target;Sources
+        Tree $Target;Sources;Reuse;Storage
         $CpuTemp=Join-Path $C.server_root ('diagnostics\coe_'+$Target.Substring(0,12)+'_cpu')
         if (Test-Path -LiteralPath $CpuTemp) {throw 'CPU output exists'}
+        $env:COE_REUSE_STATIC_ARCHIVE=Safe $PSScriptRoot $C.reuse_static_archive
         Run $Python @('-X','utf8','-m','pytest','-q','-ra','-p','no:cacheprovider','--basetemp',$CpuTemp,
-            '--junitxml',(Join-Path $Out 'cpu_results.xml'),'tests/test_coe_pilot.py','tests/test_coe_pilot_driver.py','tests/test_coe_candidate.py','tests/test_coe_helper_identity.py') '04_cpu'
-        Run $Python @('-X','utf8','-m','compileall','-q','exposedpath','analysis','exposedpath_v141','scripts/coe_pilot_batch.py') '05_compile'
-        if ($C.stage_a_only) {
-            # Isolated stdlib-only target interpreter receipt. Reads source;
-            # never imports the runner, torch or any CUDA/model/collector code.
-            $HelperCode=@'
-import ast,hashlib,importlib.util,json,pathlib,sys
-spec=importlib.util.spec_from_file_location('identity',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
-assert '.'.join(map(str,sys.version_info[:3]))==sys.argv[4], 'TARGET_PYTHON_VERSION_CONFLICT'
-rows=[]
-for profile,filename in zip(('COE_PILOT_NATURAL','LEGACY_NATURAL'),sys.argv[2:4]):
-    b=pathlib.Path(filename).read_bytes();s=b.decode('utf-8-sig')
-    h=next(n for n in ast.parse(s).body if isinstance(n,ast.FunctionDef) and n.name=='observe_token_ready_boundary')
-    rows.append(dict(profile=profile,source_bytes=len(b),source_sha256=hashlib.sha256(b).hexdigest(),raw_ast_sha256=hashlib.sha256(ast.dump(h,include_attributes=False).encode()).hexdigest(),identity=m.validate_source(s,profile)))
-assert len(rows)==2
-print(json.dumps(dict(schema_version='coe-helper-target-receipt/0.1.0',python=sys.version,executable=sys.executable,rows=rows,cuda_initialized=False,model_started=False)))
-'@
-            $Legacy=Safe $PSScriptRoot $C.helper_legacy_source
-            Run $C.target_python @('-I','-S','-B','-c',$HelperCode,(Join-Path $Code 'analysis/coe_helper_identity.py'),
-                (Join-Path $Code 'exposedpath/runner.py'),$Legacy,$C.target_python_version) '06_target_helper_identity'
-        }
+            '--junitxml',(Join-Path $Out 'cpu_results.xml'),'tests/test_coe_startup_storage.py','tests/test_coe_delivery_resources.py') '04_cpu_changed_wiring'
+        Run $Python @('-X','utf8','-m','py_compile','scripts/coe_startup_storage.py','scripts/coe_delivery_reuse.py') '05_compile_changed_wiring'
         Tree $Target
-        Storage
         $Status='STATIC_READY_FOR_REVIEW'
     } else {
-        Tree $Target;Sources
-        Storage
-        if ([IO.DriveInfo]::new([IO.Path]::GetPathRoot($Out)).AvailableFreeSpace -lt 12GB) {throw '12GiB free required'}
+        Tree $Target;Sources;Reuse;Storage
         Copy-Item -LiteralPath $Static -Destination (Join-Path $Out 'static') -Recurse
         if ((Hash $C.nsys) -ne $C.nsys_sha256) {throw 'Collector conflict'}
         $env:CUDA_VISIBLE_DEVICES='3'
@@ -156,8 +142,14 @@ print(json.dumps(dict(schema_version='coe-helper-target-receipt/0.1.0',python=sy
     }
 } catch {$Failure=$_.ToString();Write-Host ('STOP: '+$Failure)}
 finally {
+    $StorageHash=if (Test-Path -LiteralPath (Join-Path $Out 'storage.json')) {Hash (Join-Path $Out 'storage.json')} else {$null}
+    $ReuseHash=if (Test-Path -LiteralPath (Join-Path $Out 'component_reuse.json')) {Hash (Join-Path $Out 'component_reuse.json')} else {$null}
+    $ReusedCpu=if ($ReuseHash) {110} else {$null}
     [ordered]@{status=$Status;error=$Failure;execution_commit=$Target;analysis_commit=$Target;
         delivery_sha256=(Hash (Join-Path $PSScriptRoot 'delivery.json'));role='Pilot';automatic_retry=$false;
+        operational_revision=$C.operational_revision;storage_sha256=$StorageHash;component_reuse_sha256=$ReuseHash;
+        historical_ylq_total_bytes=$null;long_term_status='UNKNOWN_NOT_PROVEN';long_term_target_exclusive_bytes=50000000000;
+        reused_cpu_count=$ReusedCpu;new_wiring_checks_only=$true;
         actual_phase=$Kind;stage_a_model_processes=0;stage_a_profiles=0;stage_a_cuda_initializations=0;
         model_process_budget=9;profile_budget=9;measurement_validity='NOT_ASSESSED';dropped_records_status='UNKNOWN'} |
         ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Out 'receipt.json') -Encoding utf8
