@@ -1,5 +1,40 @@
 # ExposedPath 科研进度清单
 
+## 7.170 COE目标静态实现项通过；独立存储补证待审（2026-10-16）
+
+原件coe_4f1c3b55caf3_static.zip，85783 bytes，SHA256
+b062b9502e2796cdbd91b47a1d0de17c549062036cc361948a9d6d131e8e13bc；本地独立核验
+20 ZIP成员/19项清单、安全路径、CRC/全部hash/完整覆盖，manifest SHA256
+d2e11bfb636eae91be0ba754a019b1ae6571c8c7316a6617122fdd3bcb1e66c0。
+当前[主报告§9](completion_operation_batch_prefill_review_v0_1.md)集中说明；原报告保持BLOCKED。
+最近可信执行/分析为4f1c3b55caf33cd669aeee05e95be98c96ef0e11；311源码实字节匹配，
+目标**110 passed/0 failed/0 skipped（JUnit45.466s）**、compile exit0、实际Python3.11.16
+新旧helper身份通过，旧7.169“目标3.11待证”已关闭。无模型/CUDA初始化/collector。
+不重跑这组CPU/Stage A，不因静态子项通过授Pilot/GPU资格。
+
+唯一失败是Storage读取历史gate7静态预检的pytest_full_tmp发生WinError5；旧onerror
+立即raise，未记录累计值、未查询disk free、未产生storage.json，故两项数值均未知。
+已查本地既有存储说明/清理方案/交接：历史盘点两项异常的原始路径明细未取得，不能
+认定就是同目录，也不能从pytest名称判断为空或可删。旧总量与清理后估计不作当前证明。
+
+本轮只准备一次独立只读补证命令，脚本/准确路径保存在.local/coe_storage_evidence_once.ps1
+及同主题私有说明；无新部署包/checkout/采集入口，不改生产代码或存储门。
+绑定原ZIP/manifest/旧receipt、当前HEAD/clean及三份相关源码；复用已通过110/311/helper。
+记录当前token/四级ACL、有限读取旧盘点原错误/summary（最多64项、单报告1MiB/合计4MiB），
+再做一次YLQ文件元数据遍历（300s/500000项软预算），收集所有已发现错误和未扫描frontier。
+不读取大Raw内容，不改ACL/takeown、不自动提权、不删除、不追索进程或逐目录重试。
+已观察文件逻辑长度之和只能作相应口径的下界，不是NTFS实际分配或原子快照；未知子树
+字节保持null。磁盘空闲前后独立查询，临时12GiB与长期<50,000,000,000 bytes分开。
+不可读/预算耗尽时，长期目标仍未证明；错误/冲突回执照常保存为新的诊断ZIP，不改旧BLOCKED。
+
+本地仅新增诊断逻辑的六项小型检查通过（0失败/0跳过，0.72秒），PS5.1真实解析、仅本地
+fixture权限片段及错原件绑定的实际入口保护通过；无110/Q0/实验/完整分析重跑。
+本地审计与命令验证：.local/diagnostics/coe_storage_review_v0_1；不是服务器权限或空间实测。
+当前最高优先级：协调审查这一次存储命令，用户如执行则回传单ZIP；若仍不可读，停止
+权限追索，集中保留“YLQ低于50,000,000,000字节尚未证明”，不自动续A/B或修改质量规则。
+COE/生产A/B/签署Formal不改，原Raw/UNKNOWN/BLOCKED及用户DOCX保留；Gate13限定PASS，
+Gate14 NOT_RUN，候选Pilot尚未采集。本轮无服务器操作。
+
 ## 7.169 COE静态失败的AST结构身份兼容修复（2026-10-16）
 
 从7fcdb2f继续，用户仅授权本地诊断/最小修复/CPU/待审Stage A包；未操作服务器、模型、
