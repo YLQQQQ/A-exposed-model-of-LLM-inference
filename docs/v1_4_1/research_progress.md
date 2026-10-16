@@ -1,5 +1,34 @@
 # ExposedPath 科研进度清单
 
+## 7.175 同次Nsight memset实例取证：接口级GO，仅限微例实现评审（2026-10-16）
+
+本轮仅源码/SDK/接口审查与文档收口，无采集器实现、测试、包、服务器命令或CUDA/Nsight执行。
+当前集中裁决：[既有可行性稿0.2增补](memset_parameter_feasibility_v0_1.md#2026-10-16增补同次nsight实例取证的有界裁决-02)。
+复用7.174全部实例/关联结论，不再次查询旧SQLite；d6957de的B1 COMPLETE、B2 BLOCKED、
+7 NOT_RUN、0完整block不变，参数不能由未来实例回填。
+
+只比较两路：固定Nsight已核验API覆盖/内存/栈接口不提供缺失count，路径a本轮NO-GO；
+路径b为同进程实际cudaMemsetAsync入口的窄域Detours trampoline参数/原返回码记录，
+以唯一call_id NVTX线程范围绑定同次Nsight runtime，再用合法correlation/driver桥审设备效果。
+Microsoft v4.0.1明确固定commit e4bfd6b03e50de46b47abfbd1e46b384f0c5f833；匹配CUDA12.4头文件
+确认ABI，NVTX只作显式调用范围，既不冒充correlation也不用最近时间配对。无第二CUPTI subscriber。
+
+**GO是技术接口级、可进入最小微例实现评审，不是目标机通过或模型/COE准入。** 私有/static
+runtime、副本/PTSZ、Nsight共存、实际native stream↔trace stream/context及全部实例覆盖均未验证；
+每条runtime必须与侧记录一对一，任何缺口停，不扩展通用hook或关闭Nsight来追绿。
+count0只证明零字节参数，不证明无顺序/隐式效果；零字节无activity准入若要变化仍需另审窄规则。
+count>0有合法效果桥才可继续现门；无效果仍BLOCKED。身份/边界/drain/依赖/terminal不删。
+
+唯一未来验证设计是同栈一个native进程/一条profile内0/64-byte两case，独立sentinel/读回预期，
+oracle同步与D2H位于被测调用范围外；非零必须有明确64-byte效果桥，不能由读值代替关联。
+本地原型审查投入封顶1～2工作日为止损预算，后续目标验证120s硬上限、15分钟/0.25GiB估计，
+均未执行/未授权；失败、唯一绑定或共存不成立即停止该路线，不追加模型批次。
+
+本地核固定安装UserGuide和12.4 SDK字段/小文件hash；公开第一方Detours/NVTX/CUDA接口核对，
+固定Nsight2026.2归档网页不可读，版本依据使用既有安装原件，不借滚动新版本推断。
+下一项仅是集中审该微例的最小实现投入，当前无用户服务器操作。Gate13限定PASS/Gate14
+NOT_RUN、旧Formal/Raw/报告/BLOCKED、UNKNOWN/NOT_ASSESSED与用户DOCX均保持。
+
 ## 7.174 COE候选Pilot B2 Prefill缺效果：本批BLOCKED，停止剩余7槽（2026-10-16）
 
 本轮仅本地只读审计和文档收口，不改生产代码、合同或质量门，不制作新包/命令、不操作
@@ -2513,6 +2542,10 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ## 7. 固定执行顺序与最近任务
 
+**7.175现行补充：** COE新Pilot仍按7.174停止，不续7槽；同次Nsight参数取证只完成接口级
+GO与一个0/64-byte微例设计，未实现/执行、未授COE/模型资格，详见可行性稿0.2。与Nsight
+共存/入口覆盖未验证，不能默认为成功；无服务器下一步命令，不恢复独立CUPTI路线。
+
 **7.131现行覆盖：** Gate13限定签署路线A最终PASS，唯一现行入口[完整审查](gate13_local_review_v0_1.md)/[最终裁决](gate13_closeout_v0_1.json)。外部取证回执已经取得并核验，无待执行服务器事项。下方各“现行覆盖”是历史；不重启阶段B/finish/pack、不重采、追索进程或清理。Gate14 NOT_RUN，有限信息支持与不确定/负结果照实报告。
 
 **7.126现行覆盖：** Gate13首槽prepare失败BLOCKED，模型/collector未启动；0.1.1修复已重签绑定99f3bae，新签署包先交审查/默认阶段A，新的静态回执审查通过才独立显式B。禁止旧阶段B重试/续采。Gate12限定PASS及旧签署历史、Gate7～11和全部限制保持，下方旧“唯一下一步阶段B”为历史。
@@ -2562,6 +2595,11 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 **Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
 ## 8. 计划调整记录
+
+7.175（2026-10-16）：用户授权一次同Nsight memset实例取证的源码/SDK接口裁决；原7.174
+失败事实不重查。已核验Nsight接口不足，不恢复独立CUPTI；选择native窄入口＋NVTX调用范围
+作为接口级GO，仅设计一个0/64-byte微例及有界止损，不实现/打包/执行或放宽count0准入。
+共存、覆盖与效果映射未验证，失败即停止，不改冻结规则、原Formal或任何历史资格/UNKNOWN。
 
 7.135（2026-10-11）：用户批准同自然completion路径的512/b1与512/b4/o2、固定4进程/2profile Engineering单轴对照。只增加闭集批量身份、已读Host向量/逐样本token和文件链接线、报告及有界交付；不新增API内部等待拆分，不要求Device wait升高，不改变S/A/B或旧Formal冻结语义/资格。默认A部署CPU、回执审阅后显式B，失败不续采；本轮无服务器/模型/CUDA/Nsight/删除。Gate13限定PASS、Gate14 NOT_RUN；旧w11/失败报告/UNKNOWN原样保留。
 

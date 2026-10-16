@@ -1,5 +1,64 @@
 # Batch4 memset参数取证可行性审查 0.1
 
+## 2026-10-16增补：同次Nsight实例取证的有界裁决 0.2
+
+**裁决：GO，仅指有依据进入一个窄域同进程记录器的最小实现评审与受控微例设计；不是目标机验证通过，也不是模型采集或COE准入授权。** 选用下面路径b，不增加CUPTI subscriber。路径a在固定版本的已核验接口内不足。若b的唯一调用绑定或与Nsight共存不能在微例闭合，停止此路线，不扩大hook范围、换工具链或制作模型包。
+
+本节是当前结论；下文2026-10-12的独立CUPTI方案/CPU原型保留为历史，不是本次选定路径。当前依据是[本批失败审查§13](completion_operation_batch_prefill_review_v0_1.md#13-d6957de候选pilot失败收口b2-prefill缺提交效果不续剩余槽位2026-10-16)：d6957de的B1完成、B2阻塞、7槽未运行、0完整block；B2 Prefill/Decode各84次缺效果。复用已完成Raw/Canonical和替代关联核对，本轮不重新查询SQLite。新实例不能补旧参数，旧B2/批次保持BLOCKED。
+
+### 0.2.1 参数事实不等于资格
+
+共同必要事实是新run/进程创建实例、PID/TID、实际被调用模块/入口、`size_t count`、native stream、原始返回码和同次Nsight API身份；还需原request/phase、设备/context/stream生命周期、drain、依赖闭包与完成证据。
+
+|同次证据|能证明什么|仍不能自动证明什么|
+|---|---|---|
+|count=0且成功，实参/调用绑定完整|请求写入0字节；可以标记ZERO_LENGTH_ARGUMENT_OBSERVED|无内部设备操作、无顺序影响、全局无漏记录或A/COE合格|
+|count>0且成功，有唯一合法设备效果桥，bytes/value/scope相符|该实例的非零效果可纳入既有提交/依赖恢复审查|必要前驱齐全、默认流条件、terminal与整窗质量均通过|
+|count>0但效果缺失，或参数/桥接不明|具体缺口可被区分和定位|不能补零、改成non-submit/Host或借相邻kernel；仍BLOCKED|
+
+[CUDA12.4.1 memory API](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__MEMORY.html)定义count为字节数、写入前count字节；没有给出“count=0必然不建立任何顺序关系”的独立保证。因此零参数不能删除先行成员、事件边或默认流依赖，不能据此更改submit门。若未来拟允许“有实参但无activity”的零长度实例，仍须另审窄域零字节操作的消费规则及反例；本节不实施或预批准该语义。返回成功也不等于异步工作已完成；[API synchronization behavior](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/api-sync-behavior.html)不支持把调用墙钟解释为纯等待。
+
+### 0.2.2 仅比较两条接口路径
+
+**a．固定Nsight自有接口：本轮NO-GO。** 保存的2026.2.1安装UserGuide（SHA256 `5b100930126f3a3a819f13dd8335efc0bc2cd7f8bf0207a7063d57acb4c33e7c`）L763–779把`cuda-memory-usage`定义为内存使用观测、`cuda-trace-all-apis`定义为API覆盖；backtrace提供调用栈，不提供count。L6109起的NVTX payload能力能记录调用者显式传入的数据，并不自动取得第三方CUDA实参。现有已审schema没有这些API参数。固定[2026.2官方归档链接](https://archive.docs.nvidia.com/nsight-systems/2026.2/UserGuide/index.html)本轮不可读取，版本判断来自本地安装原件，不借滚动新版网页授予目标build能力。结论仅为“已核验接口不足”，不声称REP内部永无参数；不再搜索私有REP或增加采样。
+
+**b．同进程native入口拦截＋专用NVTX调用范围：源码/接口级GO，目标兼容性NOT_RUN。**
+
+- 候选插入点是实际已加载CUDA runtime模块的`cudaMemsetAsync`机器码入口，不是Python `.zero_()`包装或另一份runtime。匹配12.4.127 SDK的`cuda_runtime_api.h:7538`声明为`cudaError_t CUDARTAPI (void*, int, size_t, cudaStream_t)`；保留x64宽度/调用约定。头文件L210另有PTSZ重定向，**不得把_ptsz、私有静态runtime或其他模块默认为同一入口**；首版未绑定的入口一律未覆盖。
+- 具体机制为[Microsoft Detours v4.0.1](https://github.com/microsoft/Detours/releases/tag/v4.0.1)，release绑定commit `e4bfd6b03e50de46b47abfbd1e46b384f0c5f833`。其[固定源码样例](https://github.com/microsoft/Detours/blob/e4bfd6b03e50de46b47abfbd1e46b384f0c5f833/samples/simple/simple.cpp)展示`DetourAttach`、trampoline调用原函数并原样返回结果；[使用说明](https://github.com/microsoft/Detours/wiki/Using-Detours)要求签名/调用约定一致。仅加载独立参数DLL，不调用`cuptiSubscribe`、不启用第二套activity、不借用Nsight私有CUPTI DLL。
+- 在模型窗外完成库身份、地址和事务检查；包装体仅分配预留记录槽，复制count/value/stream与run内目标指针别名，push唯一调用NVTX范围，**原参数转发原trampoline恰好一次**，保存返回码并pop。不得新增CUDA查询、同步、D2H、模型行为或原request边界；不在包装内做磁盘I/O/模型日志，溢出或异常保留失败。保存原返回码/Windows线程错误状态，不清除CUDA错误或伪造成功。DLL/所指模块/导出地址身份、实际加载实例与事务结果均需留痕；加载、调用覆盖未在目标机验证。
+- NVTX使用已有基础线程范围接口`nvtxDomainRangePushEx/Pop`，专用domain、带run nonce的消息及uint64 call_id；不依赖新扩展payload功能。[NVIDIA接口定义](https://nvidia.github.io/NVTX/doxygen/group___m_a_r_k_e_r_s___a_n_d___r_a_n_g_e_s.html)保证的是同线程嵌套范围，**不是CUDA correlation自动桥**。参数/返回记录在窗外落盘并绑定源码、DLL和REP/SQLite身份；不保存完整环境、调用参数全集或用户数据。
+
+### 0.2.3 同次绑定及不能越过的边界
+
+拟验证的证据链：`run/进程实例/TID/call_id侧记录 → 同call_id闭合NVTX线程范围 → 该动态范围内唯一原函数runtime记录 → Nsight合法correlation/driver桥 → device effect`。
+
+这不是最近时间配对：范围由受审包装明确包住**一次原函数调用**；必须在同一Nsight时钟、PID/TID、函数/事件类别内完整包含该runtime，且一对一、无重复、无重入歧义，返回码与侧记录一致。无runtime、两个候选、范围丢失/交叉或不能证明一次原转发均拒绝，不设距离容差或回退到相邻编号。NVTX的call_id不冒充CUPTI correlation；缺少实际效果时，范围本身不能补造效果。
+
+非零效果继续使用已验证的Nsight关联合同；匹配SDK `CUpti_ActivityMemset4`的correlation是**driver API命名空间**（`cupti_activity.h:2247–2252`），不能无条件等同runtime编号。有可见、唯一的嵌套driver桥或其他已证明的Nsight关系才使用；仅bytes、重叠或最终内存内容相同不足以补桥。native stream handle不能直接等于trace stream ID，尤其handle0不能判全局模式。零长度无activity时context/stream仍需独立现有生命周期与调用scope桥；缺失则停，不从相邻调用复制。
+
+**覆盖/共存风险是微例的硬门，不是已消除的假设。** [Detours FAQ](https://github.com/microsoft/Detours/wiki/FAQ#why-dont-i-see-any-calls-to-my-detour-of-malloc)明确指出hook另一份函数不能覆盖目标私有实现。未来被审scope中每条目标Nsight runtime都必须唯一匹配记录器，记录器也必须反向匹配；未绑定的静态/动态副本、PTSZ变体保留未知，不升级成全API hook。安装UserGuide L1089–1092的`--injection-use-detours`仅描述Nsight进程注入，**不是自有API hook与Nsight共存保证**。不得修改Nsight的hook或以关闭Nsight绕过冲突；若记录丢失/重复或API/诊断冲突，路线停止。此附加NVTX/Host工作有时延扰动，所得运行不能当自然P0性能或无扰动基准。
+
+### 0.2.4 唯一微例与停止预算（仅设计，未实现/未授权执行）
+
+一个新native x64进程、一条同版本Nsight CUDA+NVTX profile；同Windows/4090/driver555.99/CUDA12.4栈，使用实际锁定runtime，不改工具链。与PyTorch同runtime文件身份必须另核；直接调用微例**不证明cuBLAS等第三方内部路径已覆盖**。只审已绑定的`cudaMemsetAsync`入口；不加载模型、不追加模型槽。
+
+1. Setup在case窗外：选择既定GPU，单context、实际默认流入口、64-byte合法device buffer，置0x3c并成功drain；记录身份。测试计划预先给定两个不同call_id，不从analyzer生成答案。
+2. case Z：原始参数`(buffer,0x7b,0,stream)`，原样转发一次；随后在**被测调用范围之外**执行既定成功sync/D2H验证，64字节须仍为0x3c。必须记录count0、实际stream与原始成功返回，并一对一找到Nsight runtime。零次/零bytes activity均按实物保留，不能预设缺activity=零顺序影响；出现正bytes矛盾或未知桥则停。
+3. case N：同buffer/流调用`(buffer,0x7b,64,stream)`，随后范围外相同验证，64字节须全为0x7b。必须取得count64/成功、唯一runtime及合法64-byte设备效果桥、正确device/context/stream。最终读值是独立功能参考，不替代correlation；效果未映射即失败，即使读值正确。
+
+这是一次微例内两个预定case，不是两个模型进程；验证用sync/读取属于微例oracle，**不复制进模型完成路径**。任何构建/加载/入口身份、NVTX/runtime覆盖、参数/return/效果或诊断冲突即停止；零值本身不是失败，必需记录缺失也不能判成功。结果只决定是否值得审查记录器的有限模型应用：通过不能认证旧B2，不能证明所有模型调用经过该地址，更不能授予COE或零字节准入。后续新模型如再出现任何未覆盖/非零缺效果，仍拒绝，不临场补hook/加采。
+
+投入上限建议：后续若批准，最小本地原型及CPU ABI/转发/文件链审查封顶1～2工作日，**这是止损预算而非完成承诺**；目标机仅1进程/1profile、硬超时120s、含构建/审查预留15分钟/临时0.25GiB估计，未知空间拒绝，无重试/模型/额外样本。微例失败或到本地投入上限仍不能建立唯一调用桥即NO-GO，保留失败事实并结束，不滚动扩建。本轮没有代码、测试、包或服务器命令。
+
+### 0.2.5 本轮证据与未验证项
+
+本轮只读安装说明/匹配SDK/公开接口，未运行旧SQL、CUDA DLL、Nsight或任何实验。新核对`cuda_runtime_api.h` SHA256 `fb3c938ef38d3a9be88e111688ced12ea9b96dd62e48da8c955409e867e1db08`；UserGuide与`cupti_activity.h`的既有hash复核一致（后者`3796fb651d9983e407f2d007d8089f53a218e96b167a5452ab23908176b18b6e`）。官方Detours/NVTX/CUDA资料只证明接口存在与所述功能；目标加载、共存、命中率和效果桥均NOT_RUN。没有“取得参数即可放行”的规则改变；COE/生产A/B/registry/旧Formal、UNKNOWN/NOT_ASSESSED和Gate13限定PASS均不变。唯一建议下一步是**审查该微例的最小实现是否值得投入**，不是恢复剩余7槽或重采旧配置。
+
+---
+
+## 2026-10-12历史方案（以下原文保留，不作为当前执行计划）
+
 2026-10-12；Engineering设计和CPU原型，不是collector资格、服务器交付或采集授权。[旧实例审查](batch_load_memset_effect_review_v0_1.md)已结束：原B4仍BLOCKED，旧84次调用不再追索。Gate13限定PASS、Gate14 NOT_RUN保持。
 
 ## 明确结论
