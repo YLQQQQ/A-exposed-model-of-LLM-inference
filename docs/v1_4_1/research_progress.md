@@ -1,5 +1,41 @@
 # ExposedPath 科研进度清单
 
+## 7.176 同次memset微例最小实现、CPU演练与待审两阶段交付（2026-10-16）
+
+本轮按用户接受db6bd3e接口GO后的授权实现；仅本地CPU，未操作服务器、模型、CUDA或Nsight。
+当前集中依据：[原可行性稿0.3](memset_parameter_feasibility_v0_1.md#2026-10-16增补最小同次微例实现与待审交付-03当前)。
+本地实现完成不等于目标验证：目标A/B均NOT_RUN、COE/A NOT_ASSESSED；d6957de旧B2/批次
+BLOCKED、7 NOT_RUN、0完整block，Gate13限定PASS/Gate14 NOT_RUN及所有原件/角色保持。
+
+新增独立`memset_same_capture`适配器、固定Detours4.0.1/NVTX3.1.0记录器与一个0/64-byte微例。
+只绑定目标共享CUDART普通导出，动态绝对路径/所属模块核验，无static/private/PTSZ覆盖声明；
+真实SDK签名，原参数恰好一次转发，保存uint64 count/原return/线程LastError、PID/TID/创建实例。
+唯一NVTX线程范围↔唯一runtime双向对应，再经目标Nsight2026.2保存AnalysisGuide所定义的
+MEMSET→API表外键映射效果，禁止邻近配对/原生driver编号借用。微例的同步/D2H是范围外
+预定读回oracle，不改变任何模型完成路径；0bytes不授无顺序影响，64bytes缺效果继续BLOCKED。
+
+tests-first并实际运行：`python -m pytest -q -p no:cacheprovider tests/test_memset_same_capture.py tests/test_memset_micro_delivery.py tests/test_memset_micro_native.py --basetemp .local/memset_micro_release --junitxml .local/diagnostics/memset_same_capture_v0_1/release.xml --tb=short -ra`
+显式本地MSVC/SDK配置，**54 passed/0 failed/0 skipped，10.93s**；完整微例/记录DLL真实头文件
+编译链接且PE无CUDA导入，**未执行微例/DLL的CUDA路径**。Host函数/NVTX为明确替身，但
+Detours attach/trampoline/detach是真实CPU执行，含大count、失败return、LastError、重入/错入口。
+本地Python3.12.7/MSVC19.44/SDK26100，不冒称目标3.11.16/MSVC19.38/SDK20348资格。
+
+完整PS5.1默认A演练exit0/54通过、封包与真实已审A SHA接线通过；显式B用采集器替身exit17
+验证立即停止、原退出码/日志/失败ZIP保全，无side/SQLite/微例执行。Git边界/collector是替身，
+不冒称真实部署或Nsight共存。实际源码/SDK byte、三份相关测试/必要静态检查完成，不重跑110项/
+完整Q0。演练及JUnit在.local/diagnostics/memset_same_capture_v0_1；旧失败演练不覆盖。
+
+交付前置由封存d6957de真实receipt确定；实现提交后绑定执行=分析commit及全部源码/依赖/工具链，
+包与命令身份写入忽略交付说明，避免自引用hash。默认A只部署/编译/CPU/PE文件查询；必须先审
+目标A原件和实际runtime字节，再凭该真实receipt SHA显式B，1native进程/1profile、0模型，
+profile120s/export另120s，失败即停不重试。fresh输出/TEMP/TMP/归档卷预留0.25GiB、同卷去重，
+历史总量null/UNKNOWN、长期50,000,000,000bytes目标尚未证明，不遍历/ACL/自动清理。
+
+最高优先级/止点：仅交协调窗口审查唯一两阶段包及A命令，不启动B、不恢复旧7槽。
+目标编译/3.11、实际ordinary导出命中、Nsight共存与context/trace stream/效果映射仍未验证；
+任一失败就在微例停，不扩大hook、重编PyTorch、换工具链或追加模型。生产A/B/COE/registry/
+冻结协议/原Formal无变化；用户DOCX修改与大型原件不纳入提交。
+
 ## 7.175 同次Nsight memset实例取证：接口级GO，仅限微例实现评审（2026-10-16）
 
 本轮仅源码/SDK/接口审查与文档收口，无采集器实现、测试、包、服务器命令或CUDA/Nsight执行。

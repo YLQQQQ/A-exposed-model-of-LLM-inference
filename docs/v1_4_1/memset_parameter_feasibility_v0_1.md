@@ -1,10 +1,98 @@
 # Batch4 memset参数取证可行性审查 0.1
 
+## 2026-10-16增补：最小同次微例实现与待审交付 0.3（当前）
+
+**本地实现与CPU审查完成；目标机阶段A/B均NOT_RUN。** 用户已接受0.2接口级GO，
+本轮只落实普通动态runtime入口的0/64-byte微例，不接模型、不恢复d6957de剩余7槽，
+不改生产A/B、COE、registry、已签署协议或旧证据。下面0.2是设计来源，不再是当前实现状态；
+不是因为本地通过就授予新实例/旧B2的准入。
+
+### 0.3.1 实际接线与版本身份
+
+- [记录器](../../scripts/native_memset_probe/recorder.cpp)、[真实SDK接口](../../scripts/native_memset_probe/recorder.h)
+  固定Detours v4.0.1 / `e4bfd6b03e50de46b47abfbd1e46b384f0c5f833`，
+  NVTX v3.1.0 / `bc282655dadb9288505f419c5b79d2ed3f1b4dfd`，CUDA12.4.127 runtime头与12.4.131 CRT头。
+  依赖归档SHA与逐文件清单放入唯一交付，不在服务器下载浮动依赖或升级环境。
+- [微例](../../scripts/native_memset_probe/micro.cpp)无CUDART/static runtime导入或链接库；
+  未来B仅由绝对路径加载目标Torch所用`cudart64_12.dll`，校验实际模块路径/导出所属模块，
+  查实际runtime API版本12040、单个mask3设备UUID/PCI。仅ordinary `cudaMemsetAsync`被审，
+  PTSZ/static/private副本没有覆盖声明。微例通过也不能证明PyTorch内部走这个地址。
+- 包装内只有一次原参数trampoline转发，保留原CUDA返回码及Win32线程LastError；
+  `size_t`按uint64保存，含`2^63+7`的CPU实转发检查，无float/signed截断。
+  预分配记录，无包装内磁盘I/O、CUDA查询/同步/复制。重入、未arm/溢出明确标错。
+  实际PID/TID、进程创建FILETIME、run/call_id、native stream、导出地址与事务状态保留。
+- 每次调用由专用domain的闭合NVTX线程范围包住；[离线消费者](../../analysis/memset_same_capture.py)
+  用同PID/TID/entry的唯一完整动态包围关系双向配对，**不是最近时间**。
+  侧记录、NVTX范围、runtime和效果均单独校验；readback不能代替效果映射。
+  `side / exported-provider / review / delivery / receipt`均显式0.1.0版本。
+
+本轮补齐的是**Nsight导出命名空间依据**，不改旧Native CUPTI字段解释：保存的目标2026.2
+`AnalysisGuide.html`（SHA256 `bdcf574189e7eb687d4dc7c52bcebacae9c700c5a93a9e3aed8ff674960cbb11`）
+明确把MEMSET.correlationId外键指向`CUPTI_ACTIVITY_KIND_RUNTIME(correlationId)`，该API表
+eventClass 0/1区分runtime/driver。新微例只用该provider关系及进程内唯一correlation，
+不把原生`CUpti_ActivityMemset4`的driver编号无条件当runtime编号。0.2要求的“已证明的Nsight关系”
+据此落实；旧B2确无效果，仍无桥可补。目标归档网页不能直接读取，依据是已保存且复核hash的
+安装文档，公开[AnalysisGuide](https://docs.nvidia.com/nsight-systems/AnalysisGuide/index.html)仅作可访问参照。
+
+### 0.3.2 独立预期、真实验证及其界限
+
+固定顺序不依赖实际活动长短：64-byte buffer setup为0x3c，成功device drain在测试scope外；
+case1原参数count0/value0x7b，验证读回全0x3c；case2 count64/value0x7b，读回全0x7b。
+两case各自既定成功stream sync与D2H是**微例功能参考**，位于被测调用范围之外，
+不向模型增加同步。普通native handle0经每次独立成功stream sync的物理记录绑定trace
+device/context/stream，**不证明全局LEGACY/PTDS**。正64必须唯一关联同scope的64-byte MEMSET；
+非零无效果、错scope、重复/未知关联停止。count0只报告零长度实参；顺序作用NOT_PROVEN、
+COE/A准入NOT_ASSESSED、dropped UNKNOWN，不实施零字节消费豁免。
+
+独立手写fixture/SQLite文件链与实际Host DLL检查见
+[配对测试](../../tests/test_memset_same_capture.py)、
+[交付测试](../../tests/test_memset_micro_delivery.py)、
+[native测试](../../tests/test_memset_micro_native.py)。
+先验证缺失、重复、wrong entry/stream/identity、失败返回、重入、count溢出、未知诊断、
+错误sync类型、缺drain和缺效果的拒绝；不能用更早的错误掩盖预期负例。
+MEMSET之外的相关KERNEL/MEMCPY也读入，避免过滤后误称零效果；缺诊断表不等于空诊断。
+同类官方warning沿用既有Gate9处置规则，不新建宽松规则。
+
+本地实际命令（显式`MEMSET_MICRO_CPU_CONFIG`指向本地MSVC/SDK/固定依赖）：
+
+```text
+python -m pytest -q -p no:cacheprovider tests/test_memset_same_capture.py tests/test_memset_micro_delivery.py tests/test_memset_micro_native.py --basetemp .local/memset_micro_release --junitxml .local/diagnostics/memset_same_capture_v0_1/release.xml --tb=short -ra
+```
+
+最终 **54 passed / 0 failed / 0 skipped，10.93s**。本地Python3.12.7、MSVC19.44.35217、
+SDK10.0.26100.0；目标Python3.11.16/MSVC19.38.33135/SDK10.0.20348.0仍待A。
+真实编译/链接了完整微例与生产记录DLL，未执行二者；PE导入检查无CUDART/nvcuda/CUPTI。
+真实运行的是Host函数替身DLL＋**真实Detours**，验证原参数恰好一次、返回码/LastError、
+detach、错误入口和重入；NVTX在这组CPU测试中是明确替身，不是目标Nsight收集证据。
+官方CUDART PE文件只读查询得到`6.14.11.12040`，不是虚构的toolkit semver；没有加载CUDA DLL。
+
+另在全新本地目录完成**真实PS5.1→默认A→编译/HostCPU→回执/封包→已审A SHA→显式B失败**演练：
+A exit0、内层54通过，B的采集器替身exit17后立即BLOCKED并封存原退出码，未生成side/SQLite、
+未进入export或任何微例。Git部署/HEAD/clean和Nsight程序是明确CPU替身，不能冒称真实部署/共存。
+证据位于忽略目录`memset_same_capture_v0_1/entry_rehearsal_release/audit.json`及原始日志/单ZIP。
+本地未跑完整110项、完整Q0或旧模型分析；不新增长期监控或追索旧PID。
+
+### 0.3.3 唯一交付及停止点
+
+[默认PS入口](../../scripts/run_memset_micro.ps1)与[控制器](../../scripts/memset_micro.py)
+仅A部署/构建/CPU检查，B必须显式开关＋真实已审A receipt SHA。新执行=分析commit在实现提交后
+由[包生成器](../../scripts/package_memset_micro.py)精确绑定，避免hash自引用；服务器前置仅复用
+封存d6957de真实receipt，旧失败包不解锁。交付包括bundle、固定依赖/SDK头、来源/源码/工具链
+清单；不附新模型/新环境。A只编译链接与CPU替身，不运行微例、GPU查询或Nsight。
+新runtime文件实际hash/PE导出/二进制hash必须先审A，再由B复核同一字节，不能由运行时hash自认证。
+
+资源仅查询新输出、TEMP/TMP（可选TMPDIR）及归档卷的fresh空闲、同卷去重/可写；每卷预留
+0.25GiB。本次无历史遍历/ACL/清理；长期目标<50,000,000,000 bytes，历史总量null/UNKNOWN。
+预计A数分钟、含B/导出审查预留15分钟，仅估计；B单profile120s硬上限、export另120s，
+失败/缺桥/共存/重入/诊断冲突即停，禁止重试/替补/模型；timeout后代UNKNOWN时拒绝自动封包。
+所有新输出/ZIP不覆盖；旧B2、7槽NOT_RUN、0完整block及旧Gate/Raw/UNKNOWN保持。
+**下一项只有协调审查这一个交付，然后由用户选择执行A；当前没有B采集授权或模型续跑授权。**
+
 ## 2026-10-16增补：同次Nsight实例取证的有界裁决 0.2
 
 **裁决：GO，仅指有依据进入一个窄域同进程记录器的最小实现评审与受控微例设计；不是目标机验证通过，也不是模型采集或COE准入授权。** 选用下面路径b，不增加CUPTI subscriber。路径a在固定版本的已核验接口内不足。若b的唯一调用绑定或与Nsight共存不能在微例闭合，停止此路线，不扩大hook范围、换工具链或制作模型包。
 
-本节是当前结论；下文2026-10-12的独立CUPTI方案/CPU原型保留为历史，不是本次选定路径。当前依据是[本批失败审查§13](completion_operation_batch_prefill_review_v0_1.md#13-d6957de候选pilot失败收口b2-prefill缺提交效果不续剩余槽位2026-10-16)：d6957de的B1完成、B2阻塞、7槽未运行、0完整block；B2 Prefill/Decode各84次缺效果。复用已完成Raw/Canonical和替代关联核对，本轮不重新查询SQLite。新实例不能补旧参数，旧B2/批次保持BLOCKED。
+本节保留0.2时点的接口裁决与设计来源，当前实现状态见0.3；下文2026-10-12的独立CUPTI方案/CPU原型保留为历史，不是本次选定路径。当前依据是[本批失败审查§13](completion_operation_batch_prefill_review_v0_1.md#13-d6957de候选pilot失败收口b2-prefill缺提交效果不续剩余槽位2026-10-16)：d6957de的B1完成、B2阻塞、7槽未运行、0完整block；B2 Prefill/Decode各84次缺效果。复用已完成Raw/Canonical和替代关联核对，本轮不重新查询SQLite。新实例不能补旧参数，旧B2/批次保持BLOCKED。
 
 ### 0.2.1 参数事实不等于资格
 
