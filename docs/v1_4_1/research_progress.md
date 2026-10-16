@@ -1,5 +1,30 @@
 # ExposedPath 科研进度清单
 
+## 7.171 存储补证回传：消费者清单绑定错误，权限查询到此为止（2026-10-16）
+
+本轮只读核验新7070-byte ZIP，SHA256
+88e527a15d6a970a448b1c438349891c83e56d0b8ea8949468482aab2f519409；4成员/3项清单、
+安全路径/CRC/hash/覆盖通过，manifest SHA
+ad888e08a881be6d1557bc3b0a89c845adfbb57e0db9b411ce204c96f3dbd07e。
+详见[现有主报告§10](completion_operation_batch_prefill_review_v0_1.md)。
+原status BINDING_OR_QUERY_BLOCKED_STOP_FOR_REVIEW，error.type=StopIteration。
+原因是补证脚本误到311项Python/JSON源清单查PowerShell launcher；两Python各1行，
+该.ps1为0行，唯一next()空匹配，本地原清单已复现。不是本次又遇遍历WinError5或采集错误。
+说明此前诊断验证缺少真实归档的成功绑定路径；不弱化身份门或把实际hash回填为期望。
+当前Git/历史盘点/占用遍历均未执行，storage=null，不能将它们当作通过。
+
+已取得独立事实：2026-10-16T06:23:02Z前后free均375369994240 bytes（349.59055GiB），
+满足当时临时12GiB；不是当前/未来空闲保证。admin_token=false，祖先3级ACL可读，
+pytest_full_tmp自身ACL UNKNOWN（0x80070005）；不能推断为空、大小、枚举结果或管理员可解决。
+YLQ总量仍未知，长期低于50,000,000,000 bytes尚未证明，不将空闲充足替代总量要求。
+
+一次权限补证结束，不再发权限/提权/逐目录查询或服务器命令。本轮未修改诊断/业务脚本，
+无新测试或GPU/实验；只做原归档核验和原lookup独立重现。原件/报告不改，旧命令撤为历史。
+后续最小本地修复设计：.py走source_bytes，.ps1单独绑定封存executed.ps1/固定Git内容及
+当前实字节；先补真实归档成功/缺失/重复/hash冲突覆盖，再决定未执行的存储取证必要性。
+不自动安排重跑，且绑定修复不等于ACL未知解决。此前110 CPU/compile/真实3.11/helper
+继续复用；COE/生产A/B/数据角色、Gate13限定PASS/Gate14 NOT_RUN、UNKNOWN/BLOCKED及DOCX不变。
+
 ## 7.170 COE目标静态实现项通过；独立存储补证待审（2026-10-16）
 
 原件coe_4f1c3b55caf3_static.zip，85783 bytes，SHA256
