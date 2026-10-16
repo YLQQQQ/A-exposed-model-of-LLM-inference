@@ -11,8 +11,8 @@ from pathlib import Path
 import re
 import sqlite3
 
-VERSION='memset-same-capture-review/0.1.0'
-PROVIDER='nsys-2026.2-memset-micro/0.1.0'
+VERSION='memset-same-capture-review/0.1.1'
+PROVIDER='nsys-2026.2-memset-micro/0.1.1'
 
 
 def require(ok,reason):
@@ -67,25 +67,41 @@ def review(side,raw,expected):
     require(type(side.get('setup_drain_return')) is int and side['setup_drain_return']==0,'DRAIN')
     disposition=diagnostics(raw)
     calls=side['calls'];require(len(calls)==2 and [c['call_id'] for c in calls]==[1,2],'CALLS')
-    used=set();result=[]
+    used=set();result=[];previous_end=None
     for c,expected_count in zip(calls,[0,64]):
         require(c.get('pid')==side['pid'] and type(c.get('tid')) is int and c['tid']>0,'IDENTITY')
         require(type(c.get('count')) is int and 0<=c['count']<2**64 and c['count']==expected_count,'COUNT')
         require(c.get('value')==123 and c.get('stream_hex')=='0' and c.get('pointer_alias')==1,'PARAMETERS')
         require(c.get('forwards')==1 and c.get('completed') is True,'FORWARDING')
         require(type(c.get('return_code')) is int and c['return_code']==0,'CALL_RETURN')
-        require(type(c.get('push_level')) is int and c['push_level']>=0
-            and c.get('pop_level')==c['push_level'],'NVTX_RECORDING')
+        # NVTX levels vary by tool. Preserve the observed -1/-1 convention,
+        # but it is never evidence of recording: exported domain/range/API
+        # checks below are mandatory even for non-negative returns.
+        push,pop=c.get('push_level'),c.get('pop_level')
+        require(type(push) is int and type(pop) is int and
+            ((0<=push<2**31 and pop==push) or (push,pop)==(-1,-1)),'NVTX_RECORDING')
         nr=one((v for v in raw['ranges'] if v['call_id']==c['call_id']),'RANGE_PAIR')
         require(nr.get('run_id')==side['run_id'] and nr.get('pid')==c['pid']
             and nr.get('tid')==c['tid'] and nr.get('event_type')==59 and interval(nr),'RANGE_PAIR')
+        domain=one((v for v in raw['domains'] if v['pid']==nr['pid']
+            and v['domain_id']==nr.get('domain_id')),'NVTX_DOMAIN')
+        require(type(nr.get('domain_id')) is int and nr['domain_id']>0
+            and domain['event_type']==75 and domain['name']=='EP_MEMSET_MICRO'
+            and type(domain.get('start')) is int and domain['start']<=nr['start'],'NVTX_DOMAIN')
+        scope=raw['micro_scope']
+        require(scope.get('event_type')==59 and scope.get('domain_id')==0
+            and scope.get('pid')==c['pid'] and scope.get('tid')==c['tid']
+            and within(nr,scope),'MICRO_SCOPE')
+        require(previous_end is None or previous_end<=nr['start'],'RANGE_ORDER')
         runtime=one((v for v in raw['apis'] if v['pid']==c['pid'] and v['tid']==c['tid']
             and v['event_class']==0 and name(v['name'])=='cudaMemsetAsync' and within(v,nr)),'RUNTIME_PAIR')
         require(runtime['record_id'] not in used and runtime['return_code']==c['return_code'],'RUNTIME_PAIR')
         used.add(runtime['record_id'])
         vr=one((v for v in raw['verification_ranges'] if v['call_id']==c['call_id']),'STREAM_SCOPE')
         require(vr['pid']==c['pid'] and vr['tid']==c['tid'] and interval(vr)
-            and vr['start']>=nr['end'],'STREAM_SCOPE')
+            and vr.get('event_type')==59 and vr.get('domain_id')==0
+            and within(vr,scope) and vr['start']>=nr['end'],'STREAM_SCOPE')
+        previous_end=vr['end']
         sync=one((v for v in raw['sync_apis'] if v['pid']==c['pid'] and v['tid']==c['tid']
             and name(v['name'])=='cudaStreamSynchronize' and within(v,vr) and v['return_code']==0),'STREAM_SCOPE')
         physical=one((v for v in raw['synchronizations'] if v['pid']==c['pid']
@@ -111,6 +127,10 @@ def review(side,raw,expected):
             oracle['readback_hex']==('3c' if c['count']==0 else '7b')*64,'FUNCTIONAL_ORACLE')
         result.append(dict(call_id=c['call_id'],count=c['count'],state=state,
             runtime_id=runtime['record_id'],range_id=nr['record_id'],effect_ids=[v['record_id'] for v in effects],
+            nvtx_recording=dict(evidence='EXPORTED_DOMAIN_RANGE_AND_UNIQUE_RUNTIME',
+                domain_id=nr['domain_id'],domain_record_id=domain['record_id'],
+                push_return=push,pop_return=pop,return_interpretation=(
+                    'UNAVAILABLE_LEVEL_NOT_RECORDING_PROOF' if push==-1 else 'LEVEL_NOT_RECORDING_PROOF')),
             scope=physical,zero_length_ordering='NOT_PROVEN' if c['count']==0 else 'NOT_APPLICABLE'))
     target=[v for v in raw['apis'] if v['pid']==side['pid'] and name(v['name'])=='cudaMemsetAsync']
     require({v['record_id'] for v in target}==used and len(target)==len(used),'RUNTIME_COVERAGE')
@@ -132,13 +152,18 @@ def read_sqlite(path,run_id):
                  'CUPTI_ACTIVITY_KIND_SYNCHRONIZATION','ENUM_CUPTI_SYNC_TYPE','DIAGNOSTIC_EVENT'}<=tables,'SQLITE_SCHEMA')
         require({'source','severity','text','globalPid','timestampType'}<=
                 {r[1] for r in db.execute('PRAGMA table_info(DIAGNOSTIC_EVENT)')},'DIAGNOSTIC_SCHEMA')
+        require('domainId' in {r[1] for r in db.execute('PRAGMA table_info(NVTX_EVENTS)')},'SQLITE_SCHEMA')
         strings=dict(db.execute('SELECT id,value FROM StringIds'))
         def rows(table):return [dict(v) for v in db.execute('SELECT rowid AS source_rowid,* FROM '+table)]
-        ranges=[];verification=[];scopes=[];nvtx_all=[]
+        ranges=[];verification=[];scopes=[];nvtx_all=[];domains=[]
         for r in rows('NVTX_EVENTS'):
             text=r.get('text') or strings.get(r.get('textId'),'')
             nvtx_all.append(dict(record_id='NVTX:'+str(r['source_rowid']),source_table='NVTX_EVENTS',
                 source_rowid=r['source_rowid'],global_tid=r['globalTid']))
+            if r['eventType']==75:
+                domains.append(dict(record_id='NVTX:'+str(r['source_rowid']),event_type=75,
+                    pid=(r['globalTid']>>24)&0xffffff,tid=r['globalTid']&0xffffff,
+                    domain_id=r['domainId'],name=text,start=r['start']))
             if text=='EP_MICRO:'+run_id:scopes.append(r)
             match=re.fullmatch(r'EP_(MEMSET|VERIFY):([0-9a-f]{32}):([12])',text)
             if not match:continue
@@ -146,9 +171,10 @@ def read_sqlite(path,run_id):
             require(r.get('endGlobalTid') in (None,r['globalTid']),'RANGE_PAIR')
             v=dict(record_id='NVTX:'+str(r['source_rowid']),run_id=match[2],call_id=int(match[3]),
                 pid=(r['globalTid']>>24)&0xffffff,tid=r['globalTid']&0xffffff,
-                start=r['start'],end=r['end'],event_type=r['eventType'])
+                start=r['start'],end=r['end'],event_type=r['eventType'],domain_id=r['domainId'])
             (ranges if match[1]=='MEMSET' else verification).append(v)
-        scope=one(scopes,'MICRO_SCOPE');require(interval(scope),'MICRO_SCOPE')
+        scope=one(scopes,'MICRO_SCOPE')
+        require(interval(scope) and scope.get('endGlobalTid') in (None,scope['globalTid']),'MICRO_SCOPE')
         target_global_pid=scope['globalTid']-scope['globalTid']%2**24
         apis=[];sync=[]
         for r in rows('CUPTI_ACTIVITY_KIND_RUNTIME'):
@@ -179,7 +205,10 @@ def read_sqlite(path,run_id):
         diagnostics=rows('DIAGNOSTIC_EVENT') if 'DIAGNOSTIC_EVENT' in tables else []
         result=dict(schema_version=PROVIDER,clock_id='NSYS_TRACE_NS',ranges=ranges,
             verification_ranges=verification,apis=apis,sync_apis=sync,effects=effects,
-            synchronizations=physical,diagnostics=diagnostics)
+            synchronizations=physical,diagnostics=diagnostics,domains=domains,
+            micro_scope=dict(record_id='NVTX:'+str(scope['source_rowid']),start=scope['start'],end=scope['end'],
+                event_type=scope['eventType'],domain_id=scope['domainId'],
+                pid=(scope['globalTid']>>24)&0xffffff,tid=scope['globalTid']&0xffffff))
         if diagnostics:
             diagnostic_records=[]
             for r in diagnostics:

@@ -24,15 +24,17 @@ def fixture():
                     push_level=0, pop_level=0) for i,n in [(1,0),(2,64)]],
         cases=[dict(call_id=i, sync_return=0, copy_return=0,
                     readback_hex=h*64) for i,h in [(1,'3c'),(2,'7b')]])
-    raw=dict(schema_version='nsys-2026.2-memset-micro/0.1.0',clock_id='NSYS_TRACE_NS',
+    raw=dict(schema_version='nsys-2026.2-memset-micro/0.1.1',clock_id='NSYS_TRACE_NS',
+        micro_scope=dict(record_id='scope',event_type=59,pid=7,tid=9,domain_id=0,start=9,end=70),
+        domains=[dict(record_id='domain',event_type=75,pid=7,tid=9,domain_id=1,name='EP_MEMSET_MICRO',start=8)],
         ranges=[dict(record_id='range'+str(i),run_id='a'*32,call_id=i,pid=7,tid=9,
-                    start=s,end=e,event_type=59) for i,s,e in [(1,10,20),(2,30,50)]],
+                    start=s,end=e,event_type=59,domain_id=1) for i,s,e in [(1,10,20),(2,30,50)]],
         apis=[dict(record_id='r'+str(i),name='cudaMemsetAsync_v3020',event_class=0,
                   pid=7,tid=9,start=s,end=e,correlation_id=100+i,return_code=0)
               for i,s,e in [(1,11,19),(2,31,49)]],
         effects=[dict(record_id='m1',kind='MEMSET',pid=7,correlation_id=102,
                     bytes=64,value=123,device_id=0,context_id=3,stream_id=17,start=55,end=60)],
-        verification_ranges=[dict(call_id=i,pid=7,tid=9,start=s,end=e)
+        verification_ranges=[dict(call_id=i,pid=7,tid=9,start=s,end=e,event_type=59,domain_id=0)
                              for i,s,e in [(1,21,28),(2,50,66)]],
         synchronizations=[dict(pid=7,correlation_id=c,device_id=0,context_id=3,stream_id=17,sync_type='STREAM_SYNCHRONIZE')
                           for c in (201,202)],
@@ -117,7 +119,7 @@ def test_file_consumer_binds_exact_side_and_sqlite_bytes(tmp_path):
     s,r,e=fixture();p=tmp_path/'capture.sqlite'
     with sqlite3.connect(p) as c:
         c.executescript('CREATE TABLE StringIds(id INTEGER,value TEXT);'
-            'CREATE TABLE NVTX_EVENTS(start INTEGER,end INTEGER,eventType INTEGER,globalTid INTEGER,endGlobalTid INTEGER,text TEXT,textId INTEGER);'
+            'CREATE TABLE NVTX_EVENTS(start INTEGER,end INTEGER,eventType INTEGER,globalTid INTEGER,endGlobalTid INTEGER,text TEXT,textId INTEGER,domainId INTEGER);'
             'CREATE TABLE CUPTI_ACTIVITY_KIND_RUNTIME(start INTEGER,end INTEGER,eventClass INTEGER,globalTid INTEGER,correlationId INTEGER,nameId INTEGER,returnValue INTEGER);'
             'CREATE TABLE CUPTI_ACTIVITY_KIND_MEMSET(start INTEGER,end INTEGER,globalPid INTEGER,correlationId INTEGER,deviceId INTEGER,contextId INTEGER,streamId INTEGER,bytes INTEGER,value INTEGER);'
             'CREATE TABLE CUPTI_ACTIVITY_KIND_SYNCHRONIZATION(globalPid INTEGER,correlationId INTEGER,deviceId INTEGER,contextId INTEGER,streamId INTEGER,syncType INTEGER);'
@@ -125,12 +127,13 @@ def test_file_consumer_binds_exact_side_and_sqlite_bytes(tmp_path):
             'CREATE TABLE DIAGNOSTIC_EVENT(source INTEGER,severity INTEGER,text TEXT,globalPid INTEGER,timestampType INTEGER);')
         c.execute('INSERT INTO ENUM_CUPTI_SYNC_TYPE VALUES (3,"STREAM_SYNCHRONIZE")')
         c.executemany('INSERT INTO StringIds VALUES (?,?)',[(1,'cudaMemsetAsync_v3020'),(2,'cudaStreamSynchronize_v3020')])
-        c.execute('INSERT INTO NVTX_EVENTS VALUES (9,70,59,?,?,?,NULL)',((7<<24)|9,(7<<24)|9,'EP_MICRO:'+'a'*32))
+        c.execute('INSERT INTO NVTX_EVENTS VALUES (8,NULL,75,?,NULL,?,NULL,1)',((7<<24)|9,'EP_MEMSET_MICRO'))
+        c.execute('INSERT INTO NVTX_EVENTS VALUES (9,70,59,?,?,?,NULL,0)',((7<<24)|9,(7<<24)|9,'EP_MICRO:'+'a'*32))
         for i,start,end in [(1,10,20),(2,30,50)]:
-            c.execute('INSERT INTO NVTX_EVENTS VALUES (?,?,59,?,?,?,NULL)',(start,end,(7<<24)|9,(7<<24)|9,'EP_MEMSET:'+'a'*32+':'+str(i)))
+            c.execute('INSERT INTO NVTX_EVENTS VALUES (?,?,59,?,?,?,NULL,1)',(start,end,(7<<24)|9,(7<<24)|9,'EP_MEMSET:'+'a'*32+':'+str(i)))
             c.execute('INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES (?,?,0,?,?,1,0)',(start+1,end-1,(7<<24)|9,100+i))
         for i,start,end in [(1,21,28),(2,50,66)]:
-            c.execute('INSERT INTO NVTX_EVENTS VALUES (?,?,59,?,?,?,NULL)',(start,end,(7<<24)|9,(7<<24)|9,'EP_VERIFY:'+'a'*32+':'+str(i)))
+            c.execute('INSERT INTO NVTX_EVENTS VALUES (?,?,59,?,?,?,NULL,0)',(start,end,(7<<24)|9,(7<<24)|9,'EP_VERIFY:'+'a'*32+':'+str(i)))
         c.execute('INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES (22,27,0,?,201,2,0)',((7<<24)|9,))
         c.execute('INSERT INTO CUPTI_ACTIVITY_KIND_RUNTIME VALUES (51,65,0,?,202,2,0)',((7<<24)|9,))
         c.execute('INSERT INTO CUPTI_ACTIVITY_KIND_MEMSET VALUES (55,60,?,102,0,3,17,64,123)',(7<<24,))

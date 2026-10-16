@@ -1,6 +1,76 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-16增补：最小同次微例实现与待审交付 0.3（当前）
+## 2026-10-16增补：NVTX返回值适配与封存微例离线裁决 0.4（当前）
+
+**限定0/64-byte同次微例Engineering复核PASS；原attempt仍BLOCKED，旧B2/批次仍BLOCKED。**
+这是对已采原件的消费者0.1.1离线修复，不是新采集、模型覆盖或COE资格。下文0.3保留交付时状态。
+没有服务器操作、部署、微例重采、CUDA/Nsight执行或新包。
+
+### 根因与最小规则
+
+原消费者把`push_level>=0 && pop_level==push_level`当作NVTX记录必要条件；两次实际返回均
+`-1/-1`，却已有完整NVTX导出范围，因此在设备效果检查前误拒绝。
+[NVTX接口文档](https://nvidia.github.io/NVTX/doxygen/group___m_a_r_k_e_r_s___a_n_d___r_a_n_g_e_s.html)
+描述层级及负值错误约定，但[CUDA12.4.1 Profiler §5.1 Return Values](https://docs.nvidia.com/cuda/archive/12.4.1/profiler-users-guide/index.html#nvtx-api-overview)
+明确提示返回值随工具实现变化，不宜用于条件判断；
+[2023年官方论坛讨论](https://forums.developer.nvidia.com/t/nvtxrangepusha-and-nvtxrangepop-returns-2/255993)
+也有Nsight返回-1而正确记录范围的实例。这不证明所有负值成功，不能据此忽略丢范围。
+
+消费者/微型导出provider升级为**0.1.1**，side仍按0.1.0读取。只增加已观察的`-1/-1`
+返回组合兼容，原始值写入新结果、标记`UNAVAILABLE_LEVEL_NOT_RECORDING_PROOF`，不改0或成功码；
+其他未知负值/混合组合仍拒绝。无论返回正负，都必须核对：同进程唯一DomainCreate(event75)
+实物及名称`EP_MEMSET_MICRO`、正确非默认domainId、闭合event59范围、run/call/PID/TID、
+外层scope包含关系、固定调用/验证次序、唯一完整runtime动态范围和原返回码。
+随后全部原设备/context/stream/correlation/bytes/value、功能参考及diagnostic门继续执行。
+不是按NVTX消息推断domain，也不是用时间邻近配对。旧0.1.0 raw_excerpt缺少这些证明字段，
+不能当新provider输入；从同一原SQLite重新提取，旧结果保留原版本，不补造字段。
+native记录器、producer、launcher、采集argv及生产S/A/B/COE/registry均未改。
+
+### 封存输入与独立复核
+
+原ZIP `memset_micro_002f3ae9fcc2_once.zip`：68,580 bytes，SHA256
+`29e4413ad7c2895d261718c54fd301266c01a94e647fe2d265475865f22ab3b8`。
+CRC、27唯一安全成员/26项清单全部通过；manifest SHA256
+`c177dcdd8caf4fb448074cf648c03f0e7734dd8f5c1ae48e7460a5b2be67bb32`。
+原执行/原分析002f3ae9fcc22f04356dbd22092dcddd8c63a460，13源实字节↔对应Git blob、
+delivery/包清单、已审A receipt/build/runtime引用全部一致，profile/export均exit0/无超时。
+本次修复分析版本0.1.1及实际分析commit/源码hash另立绑定，不沿用旧分析身份。
+
+|case / count|实际NVTX / domain|唯一runtime / corr|设备效果与验证|窄域判断|
+|---|---|---|---|---|
+|1 / 0|row2 / EP_MEMSET_MICRO，返回-1/-1|row8 / 126|未见关联效果；成功sync corr127 / physical row2，context1/stream7；读回64字节0x3c|零长度参数事实成立，顺序作用仍NOT_PROVEN|
+|2 / 64|row3 / 同domain，返回-1/-1|row11 / 129|MEMSET row2，64bytes/value123，同context1/stream7；成功sync corr130 / physical row3；读回64字节0x7b|非零设备效果明确映射|
+
+两次PID70312/TID73452、native stream0；不把native0等同trace7或全局默认流模式。
+DomainCreate row1与外层row4均实际存在；setup成功drain为runtime row7，先于外层scope。
+14条diagnostic全部severity1，既有规则无阻塞；不因此声称全会话无丢失，UNKNOWN保持。
+独立Raw SQL按固定scope/call标签、同线程动态范围和文档correlation恢复以上表，不调用候选函数
+生成预期成员；与完整消费者输出交叉核对。没有按最长API、相邻活动或最终读值补关联。
+
+### 验证、产物与停止点
+
+新增[回归](../../tests/test_memset_nvtx_recording.py)先复现14失败/2通过，原件失败原因为
+`NVTX_RECORDING`；修复后实际命令：
+
+```text
+python -m pytest -q -p no:cacheprovider tests/test_memset_nvtx_recording.py tests/test_memset_same_capture.py --basetemp .local/micro_nvtx_final --junitxml .local/diagnostics/memset_micro_nvtx_reanalysis_v0_1/final.xml --tb=short -ra
+```
+
+**54 passed / 0 failed / 0 skipped，1.50s**，本地Python3.12.7；仅消费者CPU回归，不重跑native
+构建、110项、完整Q0或任何实验。缺/重复范围、错domain/进程/线程/run、未闭合、API越界、
+范围交叠、未知负值、效果缺失及真实SQLite错domain/endGlobalTid反例均按具体原因拒绝；
+原正返回路径保留，fixture仅增加真实provider要求的domain/scope字段，不删负例。
+py_compile、diff检查通过。复核新目录`memset_micro_nvtx_reanalysis_v0_1/analysis_0_1_1`包含
+review/source_hashes/raw_excerpt、独立adjudication/calls及提交后analysis_binding；输入副本与原ZIP
+前后逐项hash不变。原Raw/side/原derived/原BLOCKED receipt全保留，不覆盖报告。
+
+**本次仅关闭这个微例的消费者误拒绝。** 可确认普通共享CUDART入口在这一次Nsight观测中完成
+两次参数/NVTX/runtime/效果取证，但不能外推PyTorch/cuBLAS内部覆盖、零长度无顺序作用、
+COE/A准入或自然性能。旧B2/批次BLOCKED、7槽NOT_RUN/0完整block、Gate13限定PASS及
+UNKNOWN/NOT_ASSESSED不变。无需服务器补执行，不发新包、不恢复剩余槽；任何模型覆盖/零字节
+消费政策仍未获本微例授权。本轮用户DOCX与大型原件均不纳入提交。
+
+## 2026-10-16增补：最小同次微例实现与待审交付 0.3（历史交付状态）
 
 **本地实现与CPU审查完成；目标机阶段A/B均NOT_RUN。** 用户已接受0.2接口级GO，
 本轮只落实普通动态runtime入口的0/64-byte微例，不接模型、不恢复d6957de剩余7槽，

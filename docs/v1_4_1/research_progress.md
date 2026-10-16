@@ -1,5 +1,36 @@
 # ExposedPath 科研进度清单
 
+## 7.177 NVTX返回值消费者修复；同一0/64微例离线限定PASS（2026-10-16）
+
+仅本地封存副本/CPU修复与复核，不部署、不运行CUDA/Nsight/模型、不重采或发新包。
+当前依据：[可行性稿0.4](memset_parameter_feasibility_v0_1.md#2026-10-16增补nvtx返回值适配与封存微例离线裁决-04当前)。
+原微例ZIP 68,580bytes/SHA29e4413ad7c2895d261718c54fd301266c01a94e647fe2d265475865f22ab3b8，
+27成员/26清单的CRC/全部hash/安全唯一全覆盖通过；manifest c177dcdd8caf4fb448074cf648c03f0e7734dd8f5c1ae48e7460a5b2be67bb32。
+原执行/分析002f3ae，13源实字节与Git、已审A/build/runtime/包索引绑定一致；profile/export
+exit0/无超时。原attempt仍BLOCKED/NVTX_RECORDING，原ZIP/Raw/side/旧派生/receipt不改。
+
+根因是把NVTX非负相等层级返回当成已记录的必要条件；两次-1/-1却都有真实闭合范围。
+CUDA12.4.1官方指南明确提示返回值随工具变化，不能以返回值决定是否记录。consumer/provider
+升0.1.1，side0.1.0兼容；仅额外支持已观察-1/-1，不笼统接受未知负值。原值保留，任何正负
+返回均需同进程真实DomainCreate/正确domain/run/call/PID/TID/闭合范围、scope与顺序及唯一
+runtime；其后所有效果、bytes/value、stream/context/corr、读回和诊断检查保持。
+不改native记录器/producer/launcher/S/A/B/COE/registry或冻结语义；旧raw_excerpt不冒充新schema。
+
+tests-first原件与新增负例14 failed/2 passed复现；最终命令：
+`python -m pytest -q -p no:cacheprovider tests/test_memset_nvtx_recording.py tests/test_memset_same_capture.py --basetemp .local/micro_nvtx_final --junitxml .local/diagnostics/memset_micro_nvtx_reanalysis_v0_1/final.xml --tb=short -ra`
+**54 passed/0 failed/0 skipped，1.50s**，本地3.12.7；真实SQLite错误domain/endGlobalTid及缺效果
+反例也严格拒绝，保留旧身份/同步/映射负例；未重跑native、110项、完整Q0或实验。
+
+新analysis_0_1_1完整离线复核与独立Raw SQL均通过：PID70312/TID73452，NVTX2/3→runtime8/11
+corr126/129；count0无关联效果、读回全3c；count64→MEMSET2/64bytes/value123，context1/stream7、
+读回全7b。两次配对sync corr127/130正确，setup drain row7在scope前，14诊断均severity1。
+**限定普通共享runtime微例Engineering PASS**由新adjudication关联，不改原BLOCKED。
+新分析版本/源码hash及提交后实际commit单独绑定原ZIP/SQLite/side；原输入逐项hash前后不变。
+
+最高优先级/停止点：交本地修复与离线裁决，无服务器操作需要，不恢复7槽、不制作采集包。
+PyTorch内部覆盖、零长度顺序作用仍NOT_PROVEN；COE/A NOT_ASSESSED、旧B2/批次BLOCKED、
+7 NOT_RUN/0完整block、Gate13限定PASS/Gate14 NOT_RUN、原Formal/UNKNOWN及用户DOCX均保持。
+
 ## 7.176 同次memset微例最小实现、CPU演练与待审两阶段交付（2026-10-16）
 
 本轮按用户接受db6bd3e接口GO后的授权实现；仅本地CPU，未操作服务器、模型、CUDA或Nsight。
