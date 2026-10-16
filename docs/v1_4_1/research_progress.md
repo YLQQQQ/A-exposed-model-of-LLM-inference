@@ -1,5 +1,42 @@
 # ExposedPath 科研进度清单
 
+## 7.172 本地绑定修复完成；启动空间与长期留存分离，入口调整待审（2026-10-16）
+
+用户本轮授权最小本地修复/真实包回归及存储执行含义纠正；未操作服务器、模型、CUDA/
+Nsight，不发命令、不制作包、不改ACL/删除/提权或继续权限追索。
+当前结论集中于[主报告§11](completion_operation_batch_prefill_review_v0_1.md#11-本地绑定修复及存储执行含义纠正2026-10-16待协调审查)。
+
+新增[绑定模块0.2.0](../../scripts/coe_storage_binding.py)，无CLI/扫描/采集。Python两源按
+真实封存source_bytes.json；PS按同ZIP executed.ps1及既核验11714 bytes/SHA99ba960b…28d6b47，
+之后严格比较当前实字节，不归一化或运行hash自认证。原ZIP/manifest/receipt固定hash、
+当前HEADclean/精确Python门保留；缺失、重复、篡改和原receipt变化有明确拒绝与冲突详情。
+原已执行0.1脚本/ZIP/BLOCKED保持历史，不再补跑它；生产launcher/S/A/B/registry未改。
+
+先用封存失败ZIP里的真实原代码运行成功夹具，得到1 failed（StopIteration），不是猜测；
+修复后命令：
+`python -m pytest -q -p no:cacheprovider tests/test_coe_storage_binding.py --basetemp .local/storage-binding-final --junitxml .local/storage-binding-final.xml --tb=short`
+最终实际**20 passed / 0 failed / 0 skipped（7.84s）**；
+相关py_compile通过。真实静态ZIP、原receipt、固定4f1 Git字节，只有目标Git状态与Python
+3.11.16元组为CPU边界替身；本地3.12.7，不冒称目标验证。110 CPU/compile/目标实际3.11
+及311源码原通过证据复用未重跑。小型本地审查产物coe_storage_binding_v0_2/review.json。
+
+**计划调整（纠正7.170的过强执行前置）：**长期目标是归档后YLQ保留<50,000,000,000 bytes，
+临时可超出；不是每次科研启动前完整扫描历史树。启动应新查实际卷free及本批12GiB临时
+预算，本批新增/最终保留量另记；历史总量和不可读部分仍UNKNOWN/尚未证明达标，不将未知
+算零，也不把历史目录不可读自动作为本批科学不合格。当前launcher仍有全根Storage硬门，
+**本轮未改**，只交入口分离方案待协调审查；旧stage_a_only包仍禁止采集，旧BLOCKED不重判。
+一次补证free349.59055GiB只代表原时刻，不可用作未来启动许可。
+
+仅复用旧batch-load ZIP目录元数据估算：不含巨型domain/重复export的B1/B4展开为
+9,175,273/6,203,231 bytes，九倍较大者82,577,457 bytes只是尺度参考非上界；B2未实测。
+本批新增/最终归档约0.1～0.5GB量级估计，临时预留仍12GiB，实际另记；不生成domain，
+不据此保证历史50GB目标。核验归档后再评估可恢复重复副本，清理另审，本轮无清理。
+
+最高优先级：协调审查一次“fresh free/临时预算是启动门、长期容量是归档后管理”的入口调整；
+通过后仅补Storage接线及新版本/交付绑定，复用110项，不再全A/权限追索；Pilot仍须显式
+授权，9P1逐run质量与局部闭合硬门不变，batch2真实支持待证。无测量/冻结规则或Formal资格
+变化，Gate13限定PASS/Gate14 NOT_RUN，用户DOCX、Raw、历史UNKNOWN/BLOCKED保留。
+
 ## 7.171 存储补证回传：消费者清单绑定错误，权限查询到此为止（2026-10-16）
 
 本轮只读核验新7070-byte ZIP，SHA256
