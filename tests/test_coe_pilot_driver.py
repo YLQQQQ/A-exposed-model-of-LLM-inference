@@ -47,7 +47,13 @@ def test_actual_producer_to_result_consumer(tmp_path,monkeypatch,damage):
     b=binding()
     if damage=='binding':b['run_id']='wrong-run'
     if damage:
-        with pytest.raises((ValueError,FileNotFoundError)):consume(target,b,'a'*40)
+        with pytest.raises((ValueError,FileNotFoundError)) as error:consume(target,b,'a'*40)
+        if damage=='missing_result':assert isinstance(error.value,FileNotFoundError)
+        else:
+            reason=dict(report_version='COE_PILOT_COLLECTION_CONTRACT',role='COE_PILOT_COLLECTION_CONTRACT',
+                result_hash='COE_PILOT_COLLECTION_HASH:result_sha256',pid='COE_PILOT_TARGET_EXIT',
+                token='ARTIFACT_HASH_MISMATCH',binding='COE_PILOT_COLLECTION_CONTRACT')[damage]
+            assert str(error.value)==reason
     else:
         r=consume(target,b,'a'*40)
         assert r['token_ids']==[[17,17],[18,18]] and r['coe']['candidate_ns']==2
@@ -152,3 +158,17 @@ def test_review_launcher_parses_in_windows_powershell51_without_execution():
     assert 'param([switch]$CollectReviewedPilot' in text
     assert 'ReviewedStaticReceiptSHA256' in text and '50000000000' in text
     assert "'--collect-reviewed-coe-pilot'" in text
+
+
+@pytest.mark.parametrize('value,reason',[(True,'STATIC_REPAIR_ONLY_NO_COLLECTION'),('true','STATIC_REPAIR_FLAG_TYPE')])
+def test_static_repair_delivery_cannot_start_collection(tmp_path,value,reason):
+    import os,subprocess,shutil
+    if os.name!='nt':pytest.skip('Windows deployment guard; no Linux launcher support claimed')
+    path=tmp_path/'run_coe_candidate_pilot.ps1'
+    shutil.copyfile(Path(__file__).resolve().parents[1]/'scripts/run_coe_candidate_pilot.ps1',path)
+    write_json(tmp_path/'delivery.json',dict(schema_version='coe-pilot-delivery/0.1',
+        model_process_budget=9,profile_budget=9,commit='a'*40,analysis_commit='a'*40,stage_a_only=value))
+    proc=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(path),
+        '-CollectReviewedPilot'],capture_output=True,timeout=30)
+    assert proc.returncode!=0 and reason.encode() in proc.stderr
+    assert {p.name for p in tmp_path.iterdir()}=={'run_coe_candidate_pilot.ps1','delivery.json'}

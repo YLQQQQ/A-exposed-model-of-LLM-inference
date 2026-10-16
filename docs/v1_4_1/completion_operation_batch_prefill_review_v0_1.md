@@ -371,3 +371,43 @@ Python3.12.7本地CPU替身不代表目标3.11.16/CUDA、batch2或新Pilot通过
 计划估计15～30分钟，临时空闲12GiB；长期YLQ严格<50,000,000,000字节，取代旧50GiB表述。
 实际空间由A/B记录，不自动清理，UNKNOWN writer继续阻断封包；原件/失败历史不动。
 当前没有新研究语义待裁决；真正待证是目标部署/空间、batch2实物及九个新run的局部闭合。
+
+## 8. Stage A helper结构指纹兼容修复（2026-10-16）
+
+原静态回传`coe_7fcdb2fa3952_static.zip`（87027 bytes，SHA256
+`ae7fb5d98976f49eb2b6d942d86741faae59699a68c9351de046abc6dccdcfac`）
+独立核验CRC、安全路径、14项清单/hash和完整覆盖通过；308项源码实字节匹配。
+原结果为78 passed/11 failed/0 skipped，11项均在helper门拒绝；没有模型/采集，
+未执行之后的compile步骤。旧BLOCKED、ZIP和报告不改。当前最近可信服务器前置为
+`7fcdb2fa3952fc61926d3ac3fd38356c294c866b`，取代§7的历史48567aa；新部署仍现场核对。
+
+根因不是helper源码变化，而是0.2.0把未绑定CPython版本的`ast.dump`序列化当作内容身份。
+实际隔离的本地3.10.19新helper原摘要为f04634…efa93，3.12.7为9ca270…c60bf；
+3.13.1又因dump省略空列表等输出约定不同而为2cf9e3…8ee83。这里只证明这些实际解释器，
+没有找到可用本地3.11，不能把删去type_params的结构模拟写成目标3.11实际回执。
+
+修复为[分析兼容合同0.2.1](contracts/coe_candidate_analysis_v0_2_1.json)和
+[独立结构身份0.1.0](../../analysis/coe_helper_identity.py)：固定节点、字段顺序和JSON编码，
+只允许FunctionDef.type_params缺省或精确空列表；非空/未知字段、未知属性/节点及必需字段
+缺失均拒绝。忽略的只有源码位置元数据。新旧helper各自期望来自固定Git源码，不取
+incoming runtime摘要作期望；role、manifest、文件实字节及输入身份仍单独严格核验。
+旧0.1/0.2合同和历史产物保留，不重写旧结果；新结果另带结构身份及实际分析Python。
+没有修改COE边界/成员/公式、生产S/A/B、registry、runner、完成路径或九P1矩阵。
+
+最终相关命令见唯一进度7.169：**110 passed/0 failed/0 skipped，64.57s**；含真实
+prepare/producer/Canonical/局部Prefill/COE/消费和PS5.1解析。负例精确核对原因，避免上游
+helper错误掩盖版本/role/hash/PID等拒绝。中间一次断言预期为较后的binding门，核对实际
+消费者后确认更早的collection合同门应拒绝；另一次系统Temp权限失败改用已有pytest
+workspace临时目录，未改生产门、未skip或吞异常。新旧函数真实行为变化仍拒绝。
+
+本地实际3.10/3.12/3.13 stdlib隔离进程，两profile结构身份一致，移除`.cpu()`仍精确拒绝。
+轻量封存回归30条（24自然链、B1/B4 Prefill、四token）全部成员/交集/来源算术MATCH，
+每run约2.15～4.65秒；四token仍448/24032/480/1376ns，B1/B4仍1.782176/30.910044ms。
+新派生目录regression_ast_identity_v0_2_1，旧B4 Decode仍缺效果拒绝，不重跑Q0/巨型分析。
+
+待审修复包仅Stage A，明确`stage_a_only=true`，即使给Collect开关也拒绝。实际提交后绑定
+新commit/新目录/增量bundle，原静态成功身份不得沿用；A只部署/CPU/compile/空间及目标
+Python3.11.16下的两helper只读结构回执，不导入runner、模型/CUDA或collector。
+目标环境复验仍待执行，不称新GPU资格或Pilot完成；本轮不提供可采集入口。
+临时空闲12GiB与长期YLQ严格<50,000,000,000 bytes分开，当前实际空间仍待A，不自动清理。
+Gate13限定PASS、Gate14 NOT_RUN、UNKNOWN/NOT_ASSESSED、旧Formal与用户DOCX保持。

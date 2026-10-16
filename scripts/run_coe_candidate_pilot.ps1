@@ -3,6 +3,10 @@ param([switch]$CollectReviewedPilot,[string]$ReviewedStaticReceiptSHA256='')
 $ErrorActionPreference='Stop'
 $C=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'delivery.json') -Raw | ConvertFrom-Json
 if ($C.schema_version -ne 'coe-pilot-delivery/0.1' -or $C.model_process_budget -ne 9 -or $C.profile_budget -ne 9 -or $C.commit -ne $C.analysis_commit) {throw 'Delivery conflict'}
+if ($C.PSObject.Properties.Name -contains 'stage_a_only') {
+    if ($C.stage_a_only -isnot [bool]) {throw 'STATIC_REPAIR_FLAG_TYPE'}
+    if ($C.stage_a_only -and $CollectReviewedPilot) {throw 'STATIC_REPAIR_ONLY_NO_COLLECTION'}
+}
 function Hash([string]$P) {return (Get-FileHash -LiteralPath $P -Algorithm SHA256).Hash.ToLowerInvariant()}
 function Safe([string]$Root,[string]$Relative) {
     $Base=[IO.Path]::GetFullPath($Root).TrimEnd('\')+'\'
@@ -108,8 +112,27 @@ try {
         $CpuTemp=Join-Path $C.server_root ('diagnostics\coe_'+$Target.Substring(0,12)+'_cpu')
         if (Test-Path -LiteralPath $CpuTemp) {throw 'CPU output exists'}
         Run $Python @('-X','utf8','-m','pytest','-q','-ra','-p','no:cacheprovider','--basetemp',$CpuTemp,
-            '--junitxml',(Join-Path $Out 'cpu_results.xml'),'tests/test_coe_pilot.py','tests/test_coe_pilot_driver.py','tests/test_coe_candidate.py') '04_cpu'
+            '--junitxml',(Join-Path $Out 'cpu_results.xml'),'tests/test_coe_pilot.py','tests/test_coe_pilot_driver.py','tests/test_coe_candidate.py','tests/test_coe_helper_identity.py') '04_cpu'
         Run $Python @('-X','utf8','-m','compileall','-q','exposedpath','analysis','exposedpath_v141','scripts/coe_pilot_batch.py') '05_compile'
+        if ($C.stage_a_only) {
+            # Isolated stdlib-only target interpreter receipt. Reads source;
+            # never imports the runner, torch or any CUDA/model/collector code.
+            $HelperCode=@'
+import ast,hashlib,importlib.util,json,pathlib,sys
+spec=importlib.util.spec_from_file_location('identity',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+assert '.'.join(map(str,sys.version_info[:3]))==sys.argv[4], 'TARGET_PYTHON_VERSION_CONFLICT'
+rows=[]
+for profile,filename in zip(('COE_PILOT_NATURAL','LEGACY_NATURAL'),sys.argv[2:4]):
+    b=pathlib.Path(filename).read_bytes();s=b.decode('utf-8-sig')
+    h=next(n for n in ast.parse(s).body if isinstance(n,ast.FunctionDef) and n.name=='observe_token_ready_boundary')
+    rows.append(dict(profile=profile,source_bytes=len(b),source_sha256=hashlib.sha256(b).hexdigest(),raw_ast_sha256=hashlib.sha256(ast.dump(h,include_attributes=False).encode()).hexdigest(),identity=m.validate_source(s,profile)))
+assert len(rows)==2
+print(json.dumps(dict(schema_version='coe-helper-target-receipt/0.1.0',python=sys.version,executable=sys.executable,rows=rows,cuda_initialized=False,model_started=False)))
+'@
+            $Legacy=Safe $PSScriptRoot $C.helper_legacy_source
+            Run $C.target_python @('-I','-S','-B','-c',$HelperCode,(Join-Path $Code 'analysis/coe_helper_identity.py'),
+                (Join-Path $Code 'exposedpath/runner.py'),$Legacy,$C.target_python_version) '06_target_helper_identity'
+        }
         Tree $Target
         Storage
         $Status='STATIC_READY_FOR_REVIEW'

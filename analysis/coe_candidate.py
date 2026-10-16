@@ -6,13 +6,13 @@ diagnostic disposition. No model, CUDA, collector or domain calculation runs.
 from __future__ import annotations
 
 import argparse
-import ast
 from collections import Counter, defaultdict
 import hashlib
 import json
 from pathlib import Path
 import re
 import sqlite3
+import sys
 
 from scripts.analyze_completion_operation_candidate import (
     Activity, Api, CandidateError, clipped_union, completion_overlap, enum_name,
@@ -20,12 +20,12 @@ from scripts.analyze_completion_operation_candidate import (
 )
 from exposedpath_v141.a_api_classification import _classify, VERSION as A_API_REGISTRY_VERSION
 from exposedpath_v141.sync_semantics import classify_cuda_api
+from analysis.coe_helper_identity import validate_source as validate_helper_source
 
-VERSION = 'coe-candidate-analysis/0.2.0'
+VERSION = 'coe-candidate-analysis/0.2.1'
 EVIDENCE_VERSION = 'coe-operation-evidence/0.1.0'
 ROLE = 'EXPLORATORY_CANDIDATE_NOT_FORMAL_A'
 CONTRACT = 'COE-CANDIDATE/0.1.0-draft'
-HELPER_AST = '86b56df2f7d9381a6d73a14510c3345c911b1735825d2916521a5a3678bbde4a'
 IDENTITY_FIELDS = ('experiment_id','wmpc_id','run_id','run_role','data_role',
                    'pass_id','attempt_id','request_id','repeat_id')
 DEPENDENCIES = {'cudaStreamWaitEvent','cudaEventRecord','cudaEventSynchronize',
@@ -235,12 +235,13 @@ def analyze_files(receipt_path, canonical_path, output):
     require(manifest['data_role']==receipt['identity']['data_role'] and manifest['clock']['clock_domain_id']=='NSYS_TRACE_RELATIVE_NS','CANONICAL_IDENTITY_CLOCK')
     source_files={receipt_path,canonical_path,*paths.values(),*(canonical_path.parent/e['filename'] for e in manifest['files'].values())}
     code_root=Path(__file__).resolve().parents[1]
-    source_files.update((code_root/p) for p in ('analysis/coe_candidate.py','scripts/analyze_completion_operation_candidate.py',
+    source_files.update((code_root/p) for p in ('analysis/coe_candidate.py','analysis/coe_helper_identity.py','scripts/analyze_completion_operation_candidate.py',
         'exposedpath_v141/a_api_classification.py','exposedpath_v141/sync_semantics.py',
         'exposedpath_v141/gate8_files.py','exposedpath_v141/gate8_diagnostic_scope.py','exposedpath_v141/gate9_diagnostic_review.py',
         'docs/v1_4_1/contracts/a_api_registry_v0_1.json','docs/v1_4_1/contracts/sync_semantics_registry_v0_2.json',
         'docs/v1_4_1/contracts/coe_candidate_analysis_v0_1.json',
-        'docs/v1_4_1/contracts/coe_candidate_analysis_v0_2.json','exposedpath/coe_pilot.py',
+        'docs/v1_4_1/contracts/coe_candidate_analysis_v0_2.json',
+        'docs/v1_4_1/contracts/coe_candidate_analysis_v0_2_1.json','exposedpath/coe_pilot.py',
         'docs/v1_4_1/completion_operation_contract_draft_v0_1.md'))
     hashes={str(p):sha(p) for p in source_files}
     require(not any(p.resolve().is_relative_to(Path(output).resolve()) for p in source_files),'OUTPUT_CONTAINS_INPUT')
@@ -249,14 +250,12 @@ def analyze_files(receipt_path, canonical_path, output):
     producer=read('producer_receipt');ledger=read('pass_identity');mf=read('wmpc_manifest')
     require(producer['status']=='COMPLETE','PRODUCER_INCOMPLETE')
     source=paths['runner_source'].read_text(encoding='utf-8-sig')
-    helper=one((n for n in ast.parse(source).body if isinstance(n,ast.FunctionDef) and n.name=='observe_token_ready_boundary'),'HELPER_SOURCE')
     from exposedpath import coe_pilot
     # The prospective runner retains the later Cpre hook, but this domain
     # forbids a completion controller. The natural .cpu()/anchor path is the
-    # same; legacy source profiles still accept ONLY their original AST.
-    expected_helper=('9ca270cc50f907f7a6b7aa37e05ca3de44b3e94ffa8b63606798ca377a3c60bf'
-        if coe_pilot.active(mf.get('pilot')) else HELPER_AST)
-    require(hashlib.sha256(ast.dump(helper,include_attributes=False).encode()).hexdigest()==expected_helper,'HELPER_PROFILE_OUT_OF_SCOPE')
+    # same; legacy profiles still accept ONLY their own reviewed structure.
+    helper_identity=validate_helper_source(source,
+        'COE_PILOT_NATURAL' if coe_pilot.active(mf.get('pilot')) else 'LEGACY_NATURAL')
     require(not any(k in mf for k in ('n1_model','completion_path')) and mf['execution_mode']=='eager','NATURAL_PROFILE_OUT_OF_SCOPE')
     require(mf['inference_framework_version']=='torch2.6.0+cu124' and mf['attention_backend']=='sdpa'
             and mf['dtype_and_quantization']=='fp16','SOFTWARE_PROFILE_OUT_OF_SCOPE')
@@ -373,6 +372,7 @@ def analyze_files(receipt_path, canonical_path, output):
     return _publish(output,dict(version=VERSION,contract=CONTRACT,role=ROLE,source_identity=receipt['identity'],
         source_data_role=receipt['identity']['data_role'],source_sqlite_sha256=source_sha,operations=operations,coverage=coverage,
         source_hashes=hashes,diagnostic_review=disposition,analysis_code_sha256=sha(Path(__file__)),
+        helper_identity=helper_identity,analysis_python=sys.version,
         computation='CANONICAL_PLUS_REUSED_FIFO_RECOVERY',new_qualification=False,production_A_B_modified=False,
         dropped_records_status='UNKNOWN',measurement_validity='NOT_ASSESSED',pure_host_stall_ns=None))
 

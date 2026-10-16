@@ -1,5 +1,40 @@
 # ExposedPath 科研进度清单
 
+## 7.169 COE静态失败的AST结构身份兼容修复（2026-10-16）
+
+从7fcdb2f继续，用户仅授权本地诊断/最小修复/CPU/待审Stage A包；未操作服务器、模型、
+CUDA/Nsight或采集。当前说明集中在[原主报告§8](completion_operation_batch_prefill_review_v0_1.md)。
+原静态ZIP 87027 bytes、SHA ae7fb5d98976f49eb2b6d942d86741faae59699a68c9351de046abc6dccdcfac；
+CRC/安全路径/14项清单完整覆盖/hash通过，manifest SHA
+647b00213b4c1cc5c9e118a5402fe740d14d911e86cdf1c2cadb96a7853d37eb；308项源码实字节匹配。
+CPU78通过/11失败/0跳过，均COE_HELPER_PROFILE_OUT_OF_SCOPE；原BLOCKED不改，无模型/采集，
+compile尚未执行。最近可信服务器前置已是7fcdb2fa3952fc61926d3ac3fd38356c294c866b，不再沿用48567aa。
+
+根因：未版本化的ast.dump格式混入身份。实际3.10.19/3.12.7/3.13.1对同源码dump不同；
+3.12新增空type_params，3.13又省略空列表字段。未发现可用本地3.11，结构模拟不冒充目标实测。
+完成[独立身份模块](../../analysis/coe_helper_identity.py) coe-helper-structure/0.1.0与
+[分析兼容0.2.1](contracts/coe_candidate_analysis_v0_2_1.json)：闭合节点/字段、固定JSON编码，
+仅容许空type_params缺省，未知/非空字段和行为变化拒绝。期望分别绑定旧2af14b1及新7fcdb2f
+真实Git源码内容，不接受incoming hash作期望；旧合同/产物保留，新输出另带helper_identity和Python。
+源码实字节、角色、manifest/输入/token、设备/drain、依赖、诊断与局部准入检查不删不改。
+生产A/B、registry、runner、COE科学定义和九P1矩阵无变更，不影响旧冻结Formal。
+
+先红测新结构/行为与Stage A采集禁止门，再实现；最终命令：
+`python -m pytest -q -p no:cacheprovider tests/test_coe_pilot.py tests/test_coe_pilot_driver.py tests/test_coe_candidate.py tests/test_coe_helper_identity.py --basetemp .local/ast-chain-release --junitxml .local/ast-chain-release.xml --tb=short`
+实得**110 passed/0 failed/0 skipped，64.57s**，本地3.12.7；真实文件链负例精确核对拒绝原因。
+compileall analysis、相关py_compile、Windows PowerShell5.1实际解析及diff检查通过。
+两profile在实际3.10/3.12/3.13隔离进程结构一致，真实行为改动拒绝；不是3.11或GPU资格。
+封存原件轻回归输出regression_ast_identity_v0_2_1，共30条全部成员/交集算术MATCH；
+B1/B4 Prefill仍1.782176/30.910044ms、四token仍448/24032/480/1376ns；旧B4 Decode仍拒绝。
+本地审计及中间失败保留coe_ast_identity_v0_2_1与ast-*，无完整Q0/旧大分析/新实验。
+
+当前最高优先级：提交后绑定新执行=分析commit，提供单一待审增量包（前置7fcdb2f），
+新输出目录，只重做A。包stage_a_only=true，即使显式Collect也拒绝；新增真实目标3.11.16
+stdlib只读两helper回执，记录实际Python/原AST/新结构/源码hash，不导入runner或CUDA。
+旧BLOCKED/静态报告和成功身份不复用；目标CPU、实际3.11/空间仍待新A回执审查，Pilot未采。
+长期YLQ严格<50,000,000,000字节、临时空闲12GiB分开，不安装依赖、不升级Python、不自动清理。
+Gate13限定PASS/Gate14 NOT_RUN、UNKNOWN/NOT_ASSESSED、历史角色/Raw及用户DOCX不变。
+
 ## 7.168 COE候选Pilot真实执行接线与两阶段待审交付（2026-10-16）
 
 本次从207bdf2继续，用户授权本地实现/CPU/打包；未授权服务器、模型、CUDA/Nsight或采集。

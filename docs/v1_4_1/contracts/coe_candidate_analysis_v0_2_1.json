@@ -1,0 +1,40 @@
+{
+  "schema_version": "coe-candidate-analysis-contract/0.2.1",
+  "analyzer_version": "coe-candidate-analysis/0.2.1",
+  "extends": "coe_candidate_analysis_v0_2.json",
+  "measurement_reference": "COE-CANDIDATE/0.1.0-draft",
+  "measurement_formula_changed": false,
+  "production_A_B_changed": false,
+  "helper_identity": {
+    "version": "coe-helper-structure/0.1.0",
+    "serialization": "ASCII_JSON_COMPACT_VERSION_AND_CLOSED_NODE_ORDERED_FIELDS",
+    "field_schema": "analysis/coe_helper_identity.py:FIELDS",
+    "accepted_shape_difference": "FunctionDef.type_params ABSENT_OR_EXACT_EMPTY_LIST_ONLY",
+    "ignored_attributes": ["lineno", "col_offset", "end_lineno", "end_col_offset"],
+    "unknown_field_node_or_attribute": "REJECT_INCLUDING_EMPTY_UNKNOWN_FIELDS",
+    "missing_field_or_nonempty_type_params": "REJECT",
+    "expectation_basis": "PINNED_GIT_SOURCE_NOT_RUNTIME_OBSERVED_HASH",
+    "profiles": {
+      "LEGACY_NATURAL": {
+        "source_commit": "2af14b11dd990d159ff0b3204d26a1527244079c",
+        "source_path": "exposedpath/runner.py",
+        "git_blob_sha256": "a0e3e0cb9ee518b8bbb1c4a348e597e7984c23a0cebacc6de4ed88754bfe09f3",
+        "function_source_sha256": "c3a069ee2b6bcca69f3e9742ac1df3c4a107d75a4d3e14ed87adcab46c8d6d6e",
+        "structure_sha256": "8fb94439753b53d792d5c81d797fefd21a7fff6a5ba77d3a27f2d61a7dcbcd9a"
+      },
+      "COE_PILOT_NATURAL": {
+        "source_commit": "7fcdb2fa3952fc61926d3ac3fd38356c294c866b",
+        "source_path": "exposedpath/runner.py",
+        "git_blob_sha256": "6341ea928466418f81f93ced14c558b12989887f83a677faffb36fb7419107c8",
+        "function_source_sha256": "a65f207770a9acea60aea81947328b908165c3a0845650e0bab44671640c091c",
+        "structure_sha256": "205ef13d491d6a30850cd3a3b15fd883832887cc3dd72a5e702966dd68c80c1f"
+      }
+    },
+    "legacy_serialization_status": "OLD_0_1_0_AND_0_2_0_CONTRACTS_AND_RESULTS_PRESERVED_NOT_REWRITTEN",
+    "source_bytes_role_and_manifest_checks": "UNCHANGED_AND_INDEPENDENT_OF_STRUCTURE"
+  },
+  "qualification_granted": false,
+  "formal_eligible": false,
+  "dropped_records_status": "UNKNOWN",
+  "measurement_validity": "NOT_ASSESSED"
+}
