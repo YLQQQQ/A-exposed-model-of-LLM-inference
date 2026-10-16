@@ -1,5 +1,41 @@
 # ExposedPath 科研进度清单
 
+## 7.174 COE候选Pilot B2 Prefill缺效果：本批BLOCKED，停止剩余7槽（2026-10-16）
+
+本轮仅本地只读审计和文档收口，不改生产代码、合同或质量门，不制作新包/命令、不操作
+服务器/模型/CUDA/Nsight，不重跑完整analyzer/Q0/测试或恢复旧参数/CUPTI追索。
+当前集中依据：[主报告§13](completion_operation_batch_prefill_review_v0_1.md#13-d6957de候选pilot失败收口b2-prefill缺提交效果不续剩余槽位2026-10-16)。
+原ZIP coe_d6957deeb588_pilot.zip为8,738,786 bytes，SHA256
+3f4b6bd63b6ced66612f462b8344106a7d060418255ae8c936609238fd34a10f；181成员/180项清单，
+manifest 3c911d66442e656fc5b8c5087630783d339dec20e62e7a2be8ad98a2516bc59d。
+独立核包身份/安全唯一覆盖，复用协调全CRC/180hash；实际消费24成员再核hash/CRC。
+执行/分析d6957deeb588cc125bf386d8ae07620ea35e14e3；新A READY、组件复用和空间READY，
+历史总占用仍null/UNKNOWN。本次不是Storage或旧warning再阻塞，原历史报告不改。
+
+9槽实际为**1 COMPLETE（B1）、1 BLOCKED（B2）、7 NOT_RUN；0完整block**。
+B2目标PID66188 exit0、producer/execution COMPLETE，实际[2,512]、每样本2token、非early EOS，
+tokens [[29184,29184],[6556,6556]]；profile30.485s/exit0/无超时、export PASS。
+局部准入最早具体拒绝ENGINEERING_SCOPE_SUBMIT_MAPPING；外层COLLECTION_CONTRACT非根因。
+
+B2 SQLite只读副本SHA5e5529ac94cae1426bca8d2ff47b8bbd119bc5aefca417688e3beaeb9c76a2f3，
+与Canonical绑定一致。Raw→Canonical：41,523 API、13,520 kernel、348 memcpy、120 memset
+全部逐rowid及关键字段一致，无过滤遗漏。46表schema/全部6个correlation列中，168个缺口
+只命中API自身；driver类别也已包含，不是未查独立DRIVER表。无同线程嵌套/包含API桥、
+无重复runtime关联，callchain全部null、无实参/外部关联表，不能按时间邻近或corr递增补图。
+84条缺口实在Prefill [22936806408,23033553142)ns内，另84条Decode；首条runtime37514/
+corr173737在起点后2.580762ms，不能按未来Decode隔离。已有submit分类不等于效果已证明，
+不改non-submit/Host、不给unknown补零，不发布B2可信A/COE或跳过前缀。
+
+B1原局部候选结果保留：Prefill95.904337ms、COE5.088286ms（kernel5.048510/MemOp0.039776ms），
+GPU活动union29.088835ms；仍单次Pilot、非Formal，不与旧样本拼block，不支持负载差或重复性。
+最小缺证是本次84条Prefill native调用的明确效果/身份scope关联，或可证明无设备提交的
+实例参数与条件。现存接口不足，**无合同内消费修复可让旧B2通过**；不声称已证明真实零长度。
+
+最高优先级/停止点：保持B2与批次BLOCKED、7槽NOT_RUN，不重试/续跑/替补或同配置盲采；
+若未来再讨论，必须先给出能回答上述实例命题的有界证据方案，不恢复泛化追索/新设施。
+新审计脚本/JSON/逐条CSV仅在.local/diagnostics/coe_d6957_local_failure_review_v0_1；
+原ZIP/Raw/协调审计/失败报告与用户DOCX保持，Gate13限定PASS/Gate14 NOT_RUN及旧角色不变。
+
 ## 7.173 已批准存储分离接线完成；新两阶段包待A回执审查（2026-10-16）
 
 本轮按用户接受§11的决定实现，不再停于运维政策待审；未操作服务器/模型/CUDA/Nsight。

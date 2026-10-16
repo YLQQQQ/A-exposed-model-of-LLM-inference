@@ -620,3 +620,80 @@ w3/r1，三个位置平衡block（1→2→4、2→4→1、4→1→2），9 P1/9p
 来源/空间/写入/CPU等失败立即停，安全pack遇未知写者仍拒绝封包，保留现场、不删marker。
 不执行服务器、不安装依赖或更换工具链；旧A/B、Formal、Gate13限定PASS/Gate14 NOT_RUN、
 Raw/UNKNOWN/NOT_ASSESSED及用户DOCX保留。归档后长期容量核验/精准清理另审，不恢复权限追索。
+
+## 13. d6957de候选Pilot失败收口：B2 Prefill缺提交效果，不续剩余槽位（2026-10-16）
+
+**结论：未找到可验证的替代关联或Raw→Canonical消费遗漏；B2与本批保持BLOCKED。**
+本轮只读核对已有原件/SQL/小型结果，无生产修改、合同放宽、服务器命令、新包或实验。
+
+原件`coe_d6957deeb588_pilot.zip`为8,738,786 bytes，SHA256
+`3f4b6bd63b6ced66612f462b8344106a7d060418255ae8c936609238fd34a10f`；manifest SHA256
+`3c911d66442e656fc5b8c5087630783d339dec20e62e7a2be8ad98a2516bc59d`。
+本地复核归档大小/hash、181成员/180项清单安全路径/唯一覆盖，复用协调窗口已完成的
+全部CRC/180项hash核验；本轮实际消费24个成员各自再核清单hash与CRC，不重复全包扫描。
+执行/分析`d6957deeb588cc125bf386d8ae07620ea35e14e3`，320项source记录均matched；新静态
+回执`STATIC_READY_FOR_REVIEW`，组件复用和启动空间READY，历史总量依然null/UNKNOWN。
+因此本次不是存储、旧helper身份或旧warning问题再次阻塞。
+
+|槽位|实际执行与证据状态|允许保留的用途|
+|---|---|---|
+|block1 B1|模型/采集成功，保存局部Prefill、COE、同窗baseline；run COMPLETE|单次候选Pilot观测，不是完整block或Formal|
+|block1 B2|目标PID66188 exit0，producer/execution COMPLETE；profile exit0/30.485s/无超时，export PASS；driver exit0/116.906s|执行/观测事实可保留；Prefill准入拒绝，无有效COE/A结果|
+|其余7槽|NOT_RUN；没有完整block|保持未运行，不续跑、替补或拼接旧样本|
+
+B2实际input shape为[2,512]、每样本输出2、无early EOS，token为
+`[[29184,29184],[6556,6556]]`，与manifest/producer的batch身份相符。外层
+`COE_PILOT_COLLECTION_CONTRACT`是消费者拒绝非成功collection合同；更早的具体原因为
+`COE_PILOT_LOCAL_ADMISSION:["ENGINEERING_SCOPE_SUBMIT_MAPPING"]`，不是模型异常或采集超时。
+
+### 13.1 独立关联核对与适用边界
+
+选取B2原SQLite的只读/immutable副本，SHA256
+`5e5529ac94cae1426bca8d2ff47b8bbd119bc5aefca417688e3beaeb9c76a2f3`，与原input receipt、
+Canonical manifest及export副本一致。原REP仍封存，未重新export/GUI打开；不声称其私有
+格式永不可能含信息，本结论限定于本次已有可读接口。
+
+- Raw与Canonical逐原rowid比对：API **41,523/41,523**，kernel **13,520/13,520**，
+  memcpy **348/348**，memset **120/120**；身份/correlation/区间/scope字段无遗漏或差异。
+  parser在原表存在时保留MEMSET记录，并未因名称/参数/时长过滤这些效果。
+- 检查本SQLite全部46张表的schema、全部六个correlation列，168个缺口correlation只在
+  RUNTIME各命中API本身；KERNEL/MEMCPY/MEMSET/OVERHEAD/SYNCHRONIZATION均0命中。
+  查询效果时未先按目标PID或时间过滤，故不是被错误scope条件排除。
+- RUNTIME含eventClass0的14,033条与eventClass1的27,490条，不能因没有单独DRIVER表
+  就漏查driver。全部缺口无同线程包含/被包含API候选、无重复runtime correlation，
+  callchainId均null；现存schema没有外部correlation/实参桥接。没有证据可把不同corr的
+  相邻kernel或driver调用接给这些API；相邻时间、递增corr或重复规律均不构成映射。
+- 本次`cudaMemsetAsync_v3020`是**已有submit分类但缺实例效果**，不是注册表未知名称。
+  不能改成non-submit、Host、零时长或已证明no-op；returnValue=0不补出count/stream参数。
+
+84条缺口落在Prefill本身，而不只是Decode：固定trace窗口为
+`[22936806408,23033553142)`ns（96.746734ms）。首条runtime37514/corr173737，PID66188/
+TID66648，`[22939387170,22939388752)`ns，在窗口开始后2.580762ms；最后Prefill缺口
+runtime39244/corr201655于23024161106ns结束，仍在首token完成之前。另84条在Decode。
+不依据phase标签排除影响，不移动Prefill起点或只取copy后的已知片段冒充完整必要前缀。
+
+[局部门](../../exposedpath_v141/gate8_engineering_scope.py)要求已观察submit有可验证效果；
+[候选Pilot消费](../../analysis/coe_pilot.py)先过局部门再计算COE。当前正是在这一条件拒绝，
+未发现“缺口其实在Raw存在而被consumer漏掉”的可修证据；无理由删掉该门。
+因此不运行完整analyzer续算、不发布B2可信Device wait/COE或预算overlay；尚未走到的
+后续检查也不填PASS。B1结果5.088286ms的COE（kernel5.048510ms、MemOp0.039776ms），
+原Prefill95.904337ms及GPU活动union29.088835ms可以按原候选角色保留；单次值不支持
+B4−B1、B2中间点、重复性或负载规律，完整block数为0。
+
+### 13.2 最小缺证与唯一停止点
+
+缺的是**这84条Prefill native调用实例的可验证提交/无效果证据**：或者已有明确的同次
+设备效果及身份/stream/context关联，或者能证明该实例无设备提交的实际参数与相应语义
+条件。当前既没有这种替代效果桥，也没有实际count/native-stream等实参，故不能区分
+有证据的零操作与非零但未观测的效果；不由成功调用、源码可能性或新调用反推旧实例。
+即使未来取得参数，也需按已批准合同审查其准入用途，不自动使原B2合格。
+
+**本批到此停止，不制作修复包、不安排剩余7槽或同配置重复采集。** 再采相同字段不能
+保证消除该不确定性；本轮不恢复已暂停的CUPTI/其他采集设施或泛化来源调查。若未来
+重新讨论投入，必须先有能取得上述具体实例事实的有界方案及独立裁决，不把“再跑一次”
+作为默认下一步。B1/全部Raw/原ZIP/原BLOCKED、7个NOT_RUN槽位、UNKNOWN/NOT_ASSESSED、
+旧Formal及Gate13限定PASS保持；Gate14不启动。
+
+新只读审计与逐条CSV在忽略的`.local/diagnostics/coe_d6957_local_failure_review_v0_1/`；
+原协调`review.json`与CSV未改，新SQL副本查询前后hash相同。未运行测试、完整分析或实验；
+只有审计脚本、文档/进度/handoff更新，不把静态检查或Gate数量当新研究结果。
