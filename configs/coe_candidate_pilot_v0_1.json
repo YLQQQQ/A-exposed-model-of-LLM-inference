@@ -1,0 +1,60 @@
+{
+  "schema_version": "coe-candidate-pilot-plan/0.1.0",
+  "status": "PENDING_REVIEW_NOT_EXECUTABLE",
+  "data_role": "Pilot",
+  "run_role": "PILOT",
+  "candidate_contract": "COE-CANDIDATE/0.1.0-draft",
+  "analyzer": "coe-candidate-analysis/0.1.0",
+  "execution_commit": null,
+  "passes": ["pass1"],
+  "block_orders": [[1, 2, 4], [2, 4, 1], [4, 1, 2]],
+  "order_balance": "POSITION_BALANCED_NOT_ALL_ORDER_OR_DRIFT_EFFECTS_REMOVED",
+  "execution": {
+    "model": "Qwen2.5-1.5B-Instruct",
+    "model_inventory_sha256": "72465c906baeb0cfa4fd94d21ef6c69c1cd8046bb68c61a94c02a1580d2541f9",
+    "model_revision": "UNKNOWN",
+    "input_tokens_per_sample": 512,
+    "output_tokens_per_sample": 2,
+    "input_rule": "EXACT_REPLICAS_OF_SEALED_G512_SAMPLE0",
+    "input_ids_digest_algorithm": "SHA256_UTF8_JSON_INTEGER_ARRAY_COMPACT_SEPARATORS",
+    "input_ids_digest": "6fb4e647ae4c9b0528662917d91417dee9f71c8101c039246289e04e3de5628a",
+    "attention_mask_rule": "512_ONES_PER_SAMPLE",
+    "dtype": "fp16",
+    "backend": "sdpa",
+    "execution_mode": "eager",
+    "framework": "torch2.6.0+cu124",
+    "cuda": "12.4",
+    "platform": "EXISTING_WINDOWS_4090_NOT_REQUALIFIED_BY_THIS_PLAN",
+    "warmup_count": 3,
+    "repeat_count": 1,
+    "fresh_process_per_run": true,
+    "completion_policy": "NATURAL_HOST_READABLE_TOKEN_UNCHANGED_NO_CPRE",
+    "sampling": "GREEDY",
+    "early_eos": "STOP_PRESERVE_DO_NOT_PAD",
+    "request_semantics": "ONE_BATCHED_REQUEST_NOT_CONCURRENT_USERS"
+  },
+  "analysis_scope": "QUALIFIED_LOCAL_PREFILL_ONLY",
+  "primary_comparison": {
+    "name": "B4_MINUS_B1_COE_ABSOLUTE_NS_WITHIN_COMPLETE_BLOCK",
+    "signed": true,
+    "statistical_unit": "COMPLETE_BLOCK",
+    "missing_policy": "NO_IMPUTATION_NO_BLOCK_STITCHING"
+  },
+  "secondary_outputs": ["B2", "ALL_NINE_SINGLE_RUN_VALUES", "PREFILL_WALL_NS", "COE_PERCENT_OF_PREFILL", "GPU_ACTIVITY_UNION", "COPY_API_WALL", "OPERATION_WALL", "ORIGINAL_SYNC_INTERSECTION", "OPERATION_COMPLEMENT", "KERNEL_AND_MEMOP_SOURCES", "ACTUAL_KERNEL_BRANCHES", "SAME_WINDOW_API_COUNT_SUM_UNION", "SAME_OPERATION_ALL_GPU_UNION", "CORRELATION_STREAM_TIMELINE"],
+  "separate_assessments": {
+    "empirical_repeatability": "STRUCTURE_NOISE_AND_MIDDLE_POINT_ONLY_NOT_FINAL_REPEAT_OR_PRECISION",
+    "analysis_utility": "IDENTIFY_A_SPECIFIC_COMPLETION_SEMANTIC_JUDGMENT_VERSUS_EQUAL_INFORMATION_BASELINES_NOT_INFERRED_FROM_REPEATABILITY"
+  },
+  "quality": {
+    "required": ["FRESH_ROLE_RUN_IDENTITY", "FIXED_INPUT_AND_MODEL_CONTENT", "ACTUAL_WARMUP_AND_TOKEN_COUNTS_VALUES", "SUCCESSFUL_PREWINDOW_DRAIN", "COPY_AND_SUCCESSFUL_SYNC_PAIR", "DEVICE_CONTEXT_STREAM_CORRELATION", "COMPLETE_CAPTURED_LOCAL_SUFFIX_AND_TERMINAL", "DEFAULT_STREAM_LOCAL_PROJECTION_EVIDENCE", "ACCEPTED_EXISTING_DIAGNOSTIC_DISPOSITION"],
+    "decode_isolation": "ONLY_WITH_PROOF_GAPS_BEGIN_AFTER_FIRST_HOST_TOKEN_AND_CANNOT_INVALIDATE_PREFILL_DEPENDENCIES",
+    "token_comparison": "COMPARE_ACTUAL_PER_SAMPLE_TOKEN_VALUES_ACROSS_CONDITIONS_WITHIN_BLOCK_AND_ACROSS_BLOCKS_NO_COPY_OF_EXPECTED_VALUES_NO_PADDING",
+    "dropped_records_status": "UNKNOWN_NOT_ZERO",
+    "measurement_validity": "NOT_ASSESSED_NOT_GLOBAL_CERTIFICATION",
+    "unsupported_or_ambiguous": "REJECT_WITH_REASON_NOT_ZERO"
+  },
+  "budget": {"complete_blocks": 3, "model_processes": 9, "profiles": 9, "profile_timeout_seconds": 300, "temporary_space_gib_estimate": 12, "long_term_total_target_gib_below": 50},
+  "stopping": {"automatic_retry": false, "replacement": false, "automatic_more_blocks": false, "hard_quality_failure": "STOP_AND_PRESERVE_PARTIAL_AND_NOT_RUN", "fixed_batch_complete": "STOP_FOR_REVIEW", "zero_reverse_or_uncertain_result": "KEEP_NO_AUTOMATIC_EXTENSION_OR_REJECTION"},
+  "prohibited_claims": ["PURE_HOST_STALL", "P0_PERFORMANCE_OR_OPTIMIZATION_BENEFIT", "FORMAL_QUALIFICATION", "STABLE_MONOTONIC_LAW", "ALGORITHM_SUPERIORITY", "FULL_REQUEST_OR_DECODE_ADMISSION", "TWENTY_PERCENT_TARGET"],
+  "remaining_before_collection": ["REVIEW_AND_APPROVE_FIXED_EXECUTION_BINDING", "PROSPECTIVE_PILOT_ROLE_AND_BATCH2_RUNNER_CONNECTION", "BATCH2_ACTUAL_REQUEST_QUALITY_NOT_INHERITED", "CURRENT_SERVER_CHECKOUT_AND_SPACE_FACTS", "EXPLICIT_SEPARATE_COLLECTION_AUTHORIZATION"]
+}

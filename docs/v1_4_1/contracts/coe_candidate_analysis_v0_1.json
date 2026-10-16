@@ -1,0 +1,54 @@
+{
+  "schema_version": "coe-candidate-analysis-contract/0.1.0",
+  "analyzer_version": "coe-candidate-analysis/0.1.0",
+  "measurement_reference": "COE-CANDIDATE/0.1.0-draft",
+  "measurement_reference_sha256": "0dd73d0f95a3947263236eeb17fb4ff2f6a9b046e9894f85280db6e0fb0927a8",
+  "role": "EXPLORATORY_CANDIDATE_NOT_FORMAL_A",
+  "production_contract_changed": false,
+  "entry": "python -m analysis.coe_candidate --receipt INPUT_RECEIPT --canonical CANONICAL_MANIFEST --output NEW_DIRECTORY",
+  "input_policy": {
+    "receipt": "REUSE_STRICT_load_input_receipt_NO_ROLE_FALLBACK",
+    "canonical": "REUSE_STRICT_load_canonical_bundle_SOURCE_SQLITE_AND_CLOCK_MATCH",
+    "producer": "COMPLETE_SEALED_SOURCE_AND_INPUT_BINDINGS",
+    "token": "EXPLICIT_SCHEMA_ROLE_BINDING_ACTUAL_VALUES_SHAPE_AND_LEDGER_IDENTITY",
+    "helper_ast_sha256": "86b56df2f7d9381a6d73a14510c3345c911b1735825d2916521a5a3678bbde4a",
+    "a_api_registry_version": "exposedpath-a-api-registry/0.1.0",
+    "caller_context_policy": "DO_NOT_INHERIT_N1_OPAQUE_ALLOCATION_EXCEPTION",
+    "pairing": "STRUCTURED_REQUEST_TOKEN_RANGE_UNIQUE_COPY_PLUS_SUCCESSFUL_STREAM_SYNC_NOT_NEAREST_OR_LONGEST",
+    "scope": "ISOLATED_MAIN_THREAD_SERIAL_FIFO_CLOSED_PRIOR_LOCAL_SUFFIX",
+    "unsupported": "OBSERVED_CROSS_STREAM_THREAD_EVENT_GRAPH_OR_UNRESOLVED_SUBMIT_EFFECT_REFUSED",
+    "candidate_source_roles": ["Engineering", "Pilot", "Formal"],
+    "source_role_promotion": "FORBIDDEN",
+    "future_run_role_support": "MUST_FIRST_BE_DECLARED_AND_VALIDATED_BY_EXISTING_PRODUCER_RECEIPT_CONTRACT_NOT_THIS_ANALYZER",
+    "reference_answers_used_in_analysis": false
+  },
+  "output": {
+    "filename": "candidate.json",
+    "required": ["version", "contract", "role", "source_identity", "source_data_role", "source_sqlite_sha256", "operations", "coverage", "source_hashes", "diagnostic_review", "analysis_code_sha256", "new_qualification", "production_A_B_modified", "dropped_records_status", "measurement_validity", "pure_host_stall_ns"],
+    "operations": "ONE_PER_ACTUAL_HOST_TOKEN_CHAIN_NO_DURATION_OR_INTERSECTION_FILTER",
+    "valid": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+    "invalid_or_unresolved": "NULL_CANDIDATE_PLUS_SPECIFIC_REASON_NOT_ZERO",
+    "coverage_states": ["SUPPORTED_OPERATION_COMPONENT", "PAIRED_BUT_UNRESOLVED_OPERATION", "ORDINARY_API_BUDGET", "PHYSICAL_SYNC_NOT_COMPOSITE", "UNRESOLVED_OR_OUT_OF_SCOPE"],
+    "local_stage_isolation": "ALL_VISIBLE_PREFIX_FACTS_CHECKED_BEFORE_PAIR_SYNC_LATER_FAILURE_NEVER_AUTO_CANCELS_OR_AUTO_ADMITS_EARLIER_STAGE",
+    "scope_proof": "STRUCTURAL_FIFO_PROOF_NOT_MERELY_EQUAL_NUMERIC_RESULTS_IN_TWO_MODES",
+    "full_physical_W_qualified": false,
+    "pure_host_stall_ns": null,
+    "removable_latency_ns": null,
+    "dropped_records_status": "UNKNOWN",
+    "measurement_validity": "NOT_ASSESSED",
+    "new_qualification": false
+  },
+  "optional_preview": {
+    "inputs": "COMPLETE_OLD_ATOMIC_PARTITION_AND_ALL_OPERATION_UNIONS",
+    "rule": "UNION_OPERATIONS_THEN_REMOVE_OLD_DEVICE_WAIT_AND_MIGRATE_EACH_SOURCE_SEGMENT_ONCE",
+    "unattributed_migration": "REFUSE_UNTIL_INDEPENDENTLY_RESOLVED",
+    "submit_non_submit": "EXACT_PARENT_CHILD_CONSERVATION",
+    "single_sync_B": "UNCHANGED_NO_COMPOSITE_B_OR_CROSS_SYNC_SUM"
+  },
+  "evidence_snapshot_entry": {
+    "version": "coe-operation-evidence/0.1.0",
+    "purpose": "PORTABLE_LOW_LEVEL_MODEL_REPLAY_NOT_RAW_PARSE_OR_QUALIFICATION",
+    "allowed_roles": ["CPU_SYNTHETIC_NOT_GPU_QUALIFICATION", "EXPLORATORY_BOUND_OPERATION_NOT_QUALIFICATION"],
+    "not_a_source_fidelity_proof": true
+  }
+}

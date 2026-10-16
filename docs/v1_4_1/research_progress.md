@@ -1,5 +1,42 @@
 # ExposedPath 科研进度清单
 
+## 7.167 COE可复用本地入口、成员级回归及待审9P1配置（2026-10-16）
+
+用户接受“自然完成操作内必要设备活动结构”的有限科学对象，不将COE视为纯Host阻塞
+或其近似；结束概念评审，授权最小本地实现/验证和机器配置，不授权服务器/采集/打包。
+新增独立[候选入口](../../analysis/coe_candidate.py)版本coe-candidate-analysis/0.1.0及
+[接口合同](contracts/coe_candidate_analysis_v0_1.json)，复用严格receipt/Canonical、producer/
+token/设备桥接、现有FIFO后缀和官方诊断处置，不调用生产A/B或巨型domain。计算不依赖
+旧run/CSV/固定record ID/最长copy；helper AST限定实际已审路径，旧答案仅在回归驱动比较。
+[现有主报告§6](completion_operation_batch_prefill_review_v0_1.md)
+为当前说明，不另起重复流程。原COE草案SHA0dd73d0f…0927a8、生产schema/registry/冻结A/B不变。
+
+新增完整逐run操作/API覆盖；[公开示例](completion_operation_coverage_examples_v0_1.csv)21行，
+[机器汇总](completion_operation_reuse_validation_v0_1.json)含30条回归和14个run覆盖计数/hash。
+24条G32/G512链、同批B1/B4 Prefill、原四token的必要成员/闭合历史/未来排除及算术均复现；
+B1/B4仍1.782176/30.910044ms，四token仍448/24032/480/1376ns。B4 Decode保持null及具体
+SUBMIT_EFFECT_MISSING（runtime38606），覆盖明确84项缺效果、2项已配对但未准入组件；
+不追索参数、不发布B4可信Request/Decode、不改原BLOCKED。计算正确性、操作适用性及
+尚未证明的纯阻塞/收益/可重复性/分析增量分别报告；同I普通GPU union相同的限制保留。
+
+先补缺口红测，再最小实现。最终命令`python -m pytest -q -p no:cacheprovider
+tests/test_coe_candidate.py tests/test_completion_operation_candidate.py --basetemp .local/tmp/coe_release_context_verified`：
+72 passed/0 failed/0 skipped，18.68秒，本地Python3.12.7；相关py_compile通过，不代表CUDA资格。
+最后审查发现调用方N1 opaque上下文可泄漏到分类；红测后显式绑定原A registry 0.1.0，
+不继承该例外，未改生产规则。封存回归driver最终输出regression_release_v0_1，每run约2～3.5秒，原件/源码hash前后复核；
+独立源及新输出另存.local/diagnostics/coe_reusable_v0_1，不覆盖旧结果。初始Temp路径、
+零值fixture terminal并列等诊断保留，未弱化terminal门或改测试追绿；只修了错误fixture。
+
+[待审配置](../../configs/coe_candidate_pilot_v0_1.json)锁定512/每样本2、batch1/2/4、w3/r1、
+三个位置平衡完整block、9个全新P1；固定B4−B1绝对signed差、B2/全部样本及公平baseline，
+完整block统计、不混旧数据、不按零/反向/不确定自动补采。状态PENDING_REVIEW_NOT_EXECUTABLE，
+execution_commit=null；只有配置，不是新runner或执行授权。实证重复性与分析用途分开评价。
+真正剩余仅未来Pilot角色/batch2及局部Prefill消费者的producer/receipt接线、固定执行/输入身份审查及届时目标机
+checkout/空间事实和显式执行授权；不自动要求新完整Q0、引擎/设施或模型实验。粗估总操作
+15～30分钟（非承诺），300s/profile硬限下采集本体上限45分钟，临时12GiB，长期YLQ<50GiB
+目标但实际余量未知。本轮无包/服务器命令/清理。用户DOCX/大原件、UNKNOWN/NOT_ASSESSED、
+Gate13限定PASS/Gate14 NOT_RUN及所有原数据角色不变；最高优先级仅审阅本地交付与剩余接线。
+
 ## 7.166 完整指令补齐：同批B1/B4占比与来源时间线（2026-10-16）
 
 用户补发完整任务，唯一对象仍为2af14b同批B1P1/B4P1局部Prefill；不以C0/Cpre替代。

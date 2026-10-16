@@ -1,0 +1,807 @@
+{
+  "version": "coe-existing-evidence-reuse/0.1.0",
+  "role": "EXPLORATORY_REGRESSION_NOT_NEW_FORMAL_OR_GPU_QUALIFICATION",
+  "analysis_hashes": {
+    "analysis/coe_candidate.py": "adc000fb8b75936cf27a097d5a9361197b5b79f5f69d766455471a04e143ac52",
+    "tests/test_coe_candidate.py": "4ae14885a316c536d53c59f9dbcb15674d492db17afd9b1ac66da3cc1be301e9",
+    "configs/coe_candidate_pilot_v0_1.json": "286c0fc85e81496b31ec02a767629711fe90eb0d6732958f23f77a25a42e789f",
+    "docs/v1_4_1/contracts/coe_candidate_analysis_v0_1.json": "e62dd34867c8939c4bb813cc7cea14f7cf6266bc395abf321e823fd7701ef827",
+    "docs/v1_4_1/completion_operation_contract_draft_v0_1.md": "0dd73d0f95a3947263236eeb17fb4ff2f6a9b046e9894f85280db6e0fb0927a8"
+  },
+  "regression_receipt_sha256": "08f9abffb2239b79dd80c8e9bc6154e00ca0347051128dd6c65b72751a9912f8",
+  "rows": [
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b1-G32-pass1",
+      "token_index": 0,
+      "candidate_ns": 819610,
+      "original_sync_ns": 0,
+      "wall_ns": 1250687,
+      "uncovered_ns": 431077,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1906
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b1-G32-pass1",
+      "token_index": 1,
+      "candidate_ns": 650043,
+      "original_sync_ns": 0,
+      "wall_ns": 989337,
+      "uncovered_ns": 339294,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 3498
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b1-G512-pass1",
+      "token_index": 0,
+      "candidate_ns": 1525365,
+      "original_sync_ns": 0,
+      "wall_ns": 1910952,
+      "uncovered_ns": 385587,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1905
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b1-G512-pass1",
+      "token_index": 1,
+      "candidate_ns": 416,
+      "original_sync_ns": 0,
+      "wall_ns": 372767,
+      "uncovered_ns": 372351,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 3497
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b2-G32-pass1",
+      "token_index": 0,
+      "candidate_ns": 655835,
+      "original_sync_ns": 0,
+      "wall_ns": 1756081,
+      "uncovered_ns": 1100246,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1906
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b2-G32-pass1",
+      "token_index": 1,
+      "candidate_ns": 604892,
+      "original_sync_ns": 0,
+      "wall_ns": 1893807,
+      "uncovered_ns": 1288915,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 3498
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b2-G512-pass1",
+      "token_index": 0,
+      "candidate_ns": 1632115,
+      "original_sync_ns": 0,
+      "wall_ns": 2129939,
+      "uncovered_ns": 497824,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1905
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b2-G512-pass1",
+      "token_index": 1,
+      "candidate_ns": 448,
+      "original_sync_ns": 0,
+      "wall_ns": 274450,
+      "uncovered_ns": 274002,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 3497
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b3-G32-pass1",
+      "token_index": 0,
+      "candidate_ns": 672923,
+      "original_sync_ns": 0,
+      "wall_ns": 1338508,
+      "uncovered_ns": 665585,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1906
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b3-G32-pass1",
+      "token_index": 1,
+      "candidate_ns": 601979,
+      "original_sync_ns": 0,
+      "wall_ns": 1084348,
+      "uncovered_ns": 482369,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 3498
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b3-G512-pass1",
+      "token_index": 0,
+      "candidate_ns": 1652435,
+      "original_sync_ns": 0,
+      "wall_ns": 2630315,
+      "uncovered_ns": 977880,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1905
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b3-G512-pass1",
+      "token_index": 1,
+      "candidate_ns": 448,
+      "original_sync_ns": 0,
+      "wall_ns": 103995,
+      "uncovered_ns": 103547,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 3497
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b4-G32-pass1",
+      "token_index": 0,
+      "candidate_ns": 694747,
+      "original_sync_ns": 0,
+      "wall_ns": 948144,
+      "uncovered_ns": 253397,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1906
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b4-G32-pass1",
+      "token_index": 1,
+      "candidate_ns": 631707,
+      "original_sync_ns": 0,
+      "wall_ns": 1121543,
+      "uncovered_ns": 489836,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 3498
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b4-G512-pass1",
+      "token_index": 0,
+      "candidate_ns": 1689842,
+      "original_sync_ns": 0,
+      "wall_ns": 2681682,
+      "uncovered_ns": 991840,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1905
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b4-G512-pass1",
+      "token_index": 1,
+      "candidate_ns": 826105,
+      "original_sync_ns": 0,
+      "wall_ns": 1198929,
+      "uncovered_ns": 372824,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 3497
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b5-G32-pass1",
+      "token_index": 0,
+      "candidate_ns": 643322,
+      "original_sync_ns": 0,
+      "wall_ns": 842096,
+      "uncovered_ns": 198774,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1906
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b5-G32-pass1",
+      "token_index": 1,
+      "candidate_ns": 856602,
+      "original_sync_ns": 0,
+      "wall_ns": 1163376,
+      "uncovered_ns": 306774,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 3498
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b5-G512-pass1",
+      "token_index": 0,
+      "candidate_ns": 1733586,
+      "original_sync_ns": 0,
+      "wall_ns": 2113425,
+      "uncovered_ns": 379839,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1905
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b5-G512-pass1",
+      "token_index": 1,
+      "candidate_ns": 448,
+      "original_sync_ns": 0,
+      "wall_ns": 112719,
+      "uncovered_ns": 112271,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 3497
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b6-G32-pass1",
+      "token_index": 0,
+      "candidate_ns": 671354,
+      "original_sync_ns": 0,
+      "wall_ns": 1040032,
+      "uncovered_ns": 368678,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1906
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b6-G32-pass1",
+      "token_index": 1,
+      "candidate_ns": 575036,
+      "original_sync_ns": 0,
+      "wall_ns": 848556,
+      "uncovered_ns": 273520,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 3498
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b6-G512-pass1",
+      "token_index": 0,
+      "candidate_ns": 1547508,
+      "original_sync_ns": 0,
+      "wall_ns": 1934167,
+      "uncovered_ns": 386659,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1905
+    },
+    {
+      "cohort": "G1",
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b6-G512-pass1",
+      "token_index": 1,
+      "candidate_ns": 416,
+      "original_sync_ns": 0,
+      "wall_ns": 282151,
+      "uncovered_ns": 281735,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 3497
+    },
+    {
+      "cohort": "batch",
+      "run_id": "batch-load-2af14b11dd99-20261011-once-B1-pass1",
+      "token_index": 0,
+      "candidate_ns": 1782176,
+      "original_sync_ns": 0,
+      "wall_ns": 1897322,
+      "uncovered_ns": 115146,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1905
+    },
+    {
+      "cohort": "batch",
+      "run_id": "batch-load-2af14b11dd99-20261011-once-B4-pass1",
+      "token_index": 0,
+      "candidate_ns": 30910044,
+      "original_sync_ns": 0,
+      "wall_ns": 43897532,
+      "uncovered_ns": 12987488,
+      "independent_expected_comparison": "MATCH",
+      "member_count": 1821
+    },
+    {
+      "cohort": "controlled",
+      "run_id": "qualification_20260927T143910Z_4b9c1fd9128d4badb1f451843fd51aea",
+      "token_index": 0,
+      "request_id": "controlled-0",
+      "candidate_ns": 448,
+      "original_sync_ns": 448,
+      "wall_ns": 56634,
+      "uncovered_ns": 56186,
+      "member_count": 2,
+      "independent_expected_comparison": "MATCH"
+    },
+    {
+      "cohort": "controlled",
+      "run_id": "qualification_20260927T143910Z_4b9c1fd9128d4badb1f451843fd51aea",
+      "token_index": 1,
+      "request_id": "controlled-0",
+      "candidate_ns": 24032,
+      "original_sync_ns": 24032,
+      "wall_ns": 223673,
+      "uncovered_ns": 199641,
+      "member_count": 4,
+      "independent_expected_comparison": "MATCH"
+    },
+    {
+      "cohort": "controlled",
+      "run_id": "qualification_20260927T143910Z_4b9c1fd9128d4badb1f451843fd51aea",
+      "token_index": 0,
+      "request_id": "controlled-1",
+      "candidate_ns": 480,
+      "original_sync_ns": 480,
+      "wall_ns": 56394,
+      "uncovered_ns": 55914,
+      "member_count": 2,
+      "independent_expected_comparison": "MATCH"
+    },
+    {
+      "cohort": "controlled",
+      "run_id": "qualification_20260927T143910Z_4b9c1fd9128d4badb1f451843fd51aea",
+      "token_index": 1,
+      "request_id": "controlled-1",
+      "candidate_ns": 1376,
+      "original_sync_ns": 1376,
+      "wall_ns": 66860,
+      "uncovered_ns": 65484,
+      "member_count": 4,
+      "independent_expected_comparison": "MATCH"
+    }
+  ],
+  "run_coverage": [
+    {
+      "run_id": "batch-load-2af14b11dd99-20261011-once-B1-pass1",
+      "source_data_role": "Engineering",
+      "source_sqlite_sha256": "4cbbb85fa37ece216394be4910d23c62632312b8e8ac0c6c1b2e808a7712bca5",
+      "derived_sha256": "8221de4719918cce572a9b520f97907453bc17437f40d08eb2150184ff53c8eb",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9497,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 1782176,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37815",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37816"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 220912,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39409",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39410"
+        }
+      ]
+    },
+    {
+      "run_id": "batch-load-2af14b11dd99-20261011-once-B4-pass1",
+      "source_data_role": "Engineering",
+      "source_sqlite_sha256": "569b690715495748f1af6706d2ea93a5b0a5a94a0fc29f104e1c9cd542b2a7be",
+      "derived_sha256": "3a06705d161774adfd1937a2a00114e704fdadb5f1f9ac9ee876ce4a91eaac67",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9554,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 2,
+        "UNRESOLVED_OR_OUT_OF_SCOPE": 84,
+        "PAIRED_BUT_UNRESOLVED_OPERATION": 2
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 30910044,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38583",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38584"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "UNRESOLVED",
+          "candidate_ns": null,
+          "reasons": [
+            "COE_SUBMIT_EFFECT_MISSING:cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38606"
+          ],
+          "copy_id": null,
+          "sync_id": null
+        }
+      ]
+    },
+    {
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b1-G32-pass1",
+      "source_data_role": "Formal",
+      "source_sqlite_sha256": "37a0b1755a9b833df4c10a0b8b22e4f873fc13edcdf72a97198e772dff14e820",
+      "derived_sha256": "198461594c023b884fe31fe1a1d0095bc4627c65f4ba9ed115608cabe596b7a7",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9667,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 819610,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38482",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38483"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 650043,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:40076",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:40077"
+        }
+      ]
+    },
+    {
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b1-G512-pass1",
+      "source_data_role": "Formal",
+      "source_sqlite_sha256": "84d3a0cfc8afab129f3c07b893d5155c1ee7101017b376359303f0cfec70d87e",
+      "derived_sha256": "53d13b69deb7efe312aa604201322766bedf8a98b745a134a9ada85025b61f67",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9497,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 1525365,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37815",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37816"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 416,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39409",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39410"
+        }
+      ]
+    },
+    {
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b2-G32-pass1",
+      "source_data_role": "Formal",
+      "source_sqlite_sha256": "803b399b4f1b439ec9ad69bb0f0a7c987add0a03962e4d55edd680b6c9dbb0a8",
+      "derived_sha256": "96c52feb8b7ca7fae0d485a49dce8c17efa44d805697ef4e73e79754c06bfd75",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9667,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 655835,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38482",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38483"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 604892,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:40076",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:40077"
+        }
+      ]
+    },
+    {
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b2-G512-pass1",
+      "source_data_role": "Formal",
+      "source_sqlite_sha256": "e7dbecd17eabadccdfc1c1a519ee5082042f38c3d0cb8bd0460dbb358e95a6a8",
+      "derived_sha256": "127c7a868f377dc280c97f335739fdc2eeece167e707431abd5e5e02af1894a0",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9497,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 1632115,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37815",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37816"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 448,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39409",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39410"
+        }
+      ]
+    },
+    {
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b3-G32-pass1",
+      "source_data_role": "Formal",
+      "source_sqlite_sha256": "e62d2c72e0d3f05e66b01d37409ab7e2c5fbbe1fb8beedea922727df8adfa0c7",
+      "derived_sha256": "28d6613323f99a49b01719ba4e5ebc2934dac6618c5be256640fb86baca0f386",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9667,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 672923,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38482",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38483"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 601979,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:40076",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:40077"
+        }
+      ]
+    },
+    {
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b3-G512-pass1",
+      "source_data_role": "Formal",
+      "source_sqlite_sha256": "7c577d3fdf76ebb6553ec601b485017fa3b90fc051aa684c5e4d8a4f3bc50066",
+      "derived_sha256": "d677b10ffd95592ce3b8cfc61a4e150a02099dd6818488db3b7a561fd94aedcf",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9497,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 1652435,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37815",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37816"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 448,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39409",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39410"
+        }
+      ]
+    },
+    {
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b4-G32-pass1",
+      "source_data_role": "Formal",
+      "source_sqlite_sha256": "37a8c3f56cd6fab07ebe6b46b3bd11cf1103e11f926ffa00d57e9b1d6cc50b48",
+      "derived_sha256": "1808fe68ad596620a1f5f54329cfc9e94c4b91343a12da5e273c6f55b9ab4402",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9667,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 694747,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38482",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38483"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 631707,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:40076",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:40077"
+        }
+      ]
+    },
+    {
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b4-G512-pass1",
+      "source_data_role": "Formal",
+      "source_sqlite_sha256": "944af63583be31cde89609ad6a6c5629d5c34bc8133b0f6b70c1dc8f0eeb59cf",
+      "derived_sha256": "65df06646342bd35ea9583bd2312e0aa28db914e41c22457fb17dcb62ee6c9f8",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9497,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 1689842,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37815",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37816"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 826105,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39409",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39410"
+        }
+      ]
+    },
+    {
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b5-G32-pass1",
+      "source_data_role": "Formal",
+      "source_sqlite_sha256": "ae5b864ee11f9e0ca73bab808a6ba0f96599d6b53a8b422bdf47aad203347cf0",
+      "derived_sha256": "6fbe79dff96917bb86031477aff7a21b0067c38dd51bea825058f9c4d3b83d8b",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9667,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 643322,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38482",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38483"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 856602,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:40076",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:40077"
+        }
+      ]
+    },
+    {
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b5-G512-pass1",
+      "source_data_role": "Formal",
+      "source_sqlite_sha256": "67143f16f600c46d5e5139c6df15ea932d84865c6bbd49bf6dd2eb83a64b4ae3",
+      "derived_sha256": "bb5ca9c32a0495e3fb93c415e1f047cfc554a82c47e56604b0d9f47e8252119c",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9497,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 1733586,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37815",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37816"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 448,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39409",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39410"
+        }
+      ]
+    },
+    {
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b6-G32-pass1",
+      "source_data_role": "Formal",
+      "source_sqlite_sha256": "b729ab8dfd4defde40244de65e63569e369212ca9cc41e743ed8112a77e45691",
+      "derived_sha256": "86428495dca715679e577dcf728407115a19cbcc3029b39067bb1bb76c095238",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9667,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 671354,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38482",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38483"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 575036,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:40076",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:40077"
+        }
+      ]
+    },
+    {
+      "run_id": "formal-99f3bae966f2-20261010-sixblock-b6-G512-pass1",
+      "source_data_role": "Formal",
+      "source_sqlite_sha256": "b931386c32ebb36accca2716bc567f063a33009d5f4534c337d0021ba54e87ad",
+      "derived_sha256": "69c18e1a891e73b8cd0ed05d67c62013823bc57651e3b488a3bf42601aa36ad5",
+      "coverage_counts": {
+        "ORDINARY_API_BUDGET": 9497,
+        "PHYSICAL_SYNC_NOT_COMPOSITE": 1,
+        "SUPPORTED_OPERATION_COMPONENT": 4
+      },
+      "operations": [
+        {
+          "token_index": 0,
+          "phase": "prefill",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 1547508,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37815",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:37816"
+        },
+        {
+          "token_index": 1,
+          "phase": "decode",
+          "operation_validity": "VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS",
+          "candidate_ns": 416,
+          "reasons": [],
+          "copy_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39409",
+          "sync_id": "cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:39410"
+        }
+      ]
+    }
+  ],
+  "computation_correctness": "MATCHES_INDEPENDENT_CONTROLLED_REFERENCE_AND_EXISTING_NATURAL_RESULTS_MEMBERS_AND_ARITHMETIC",
+  "operation_applicability": "EXPLORATORY_SUPPORTED_SCOPE_UNDER_DISCLOSED_ASSUMPTIONS_NOT_BLANKET_PROFILE",
+  "interpretation_not_proven": [
+    "PURE_HOST_STALL",
+    "REMOVABLE_LATENCY",
+    "NUMERIC_ADVANTAGE_OVER_EQUAL_INFORMATION_TIMELINE",
+    "EMPIRICAL_REPEATABILITY"
+  ],
+  "pilot_executed": false,
+  "cpu_verification": {
+    "command": "python -m pytest -q -p no:cacheprovider tests/test_coe_candidate.py tests/test_completion_operation_candidate.py --basetemp .local/tmp/coe_release_context_verified",
+    "python": "3.12.7",
+    "passed": 72,
+    "failed": 0,
+    "skipped": 0,
+    "role": "CPU_ONLY_NOT_TARGET_CUDA"
+  },
+  "prototype_engineering_pilot_formal_not_merged": true,
+  "original_reports_and_A_B_unchanged": true
+}

@@ -229,3 +229,105 @@ Berkson/选择偏差（支持域/局部限制披露）、collider（无结果后
 回归均值（不按大数挑点）、survivorship（失败保留）、look-elsewhere（全两点展示）、
 forking paths（明确事后探索）、相关/因果（不称净阻塞/收益）、反向因果（未作此推断）。
 未作显著性/等价/功效结论；新的Formal合同、生产A改版和新预算均未在本轮生效。
+
+## 6. 7.167：可复用候选入口与待审Pilot配置（2026-10-16）
+
+用户已接受有限对象“自然完成操作内的必要设备活动结构”，明确不将COE解释为纯Host
+阻塞或其近似；本轮恢复本地实现/增量验证，不授权服务器、CUDA/Nsight、模型或采集。
+本节更新当前入口；§5的先前暂停指令保留为历史，九次预算仍未执行、未制包。
+
+### 实际入口和覆盖合同
+
+新增[analysis/coe_candidate.py](../../analysis/coe_candidate.py)，版本
+`coe-candidate-analysis/0.1.0`，独立于生产A/B；其
+[接口合同](contracts/coe_candidate_analysis_v0_1.json)与
+[待审机器配置](../../configs/coe_candidate_pilot_v0_1.json)均显式版本化。
+科学草案`COE-CANDIDATE/0.1.0-draft`及其SHA0dd73d0f…0927a8原字节不变，没有签新Formal。
+本地入口为`python -m analysis.coe_candidate --receipt INPUT_RECEIPT --canonical CANONICAL_MANIFEST --output NEW_DIRECTORY`；
+这是离线CPU命令，不是服务器采集命令。
+
+实际接线：复用严格`load_input_receipt`和`load_canonical_bundle`，核对原输入/源码/设备/
+producer、角色/完整request身份、token文件及其manifest/producer引用；source role保留。
+用固定helper AST指纹限定已审查的Host-readable路径，而不绑定旧run、CSV答案或record ID。
+copy/sync由实际结构化token范围及唯一成功调用选择，不按最近、最长、时长或交集筛选。
+对所有实际token链统一处理，返回完整API覆盖清单；普通API分类复用原registry，同名copy
+不会自动成为完成操作，失败/缺效果调用保留原因，不以0代替。
+
+成员恢复复用已有FIFO后缀函数和原Canonical身份：成功drain闭合历史、同步捕获提交
+边界、成功submit/correlation、同流/线程、内部同步、terminal与可见incoming/event/
+graph冲突逐项检查。操作内D2H必须保留；先行API提交的必要活动不能因API早于copy而删掉。
+仅允许现有串行、闭合历史的局部投影；观察到跨流/线程/未知依赖即拒绝，不补全局默认流
+模式、不授自然完整物理W/B。两模式适用依据是这组结构条件，不是数字相等。无未记录
+incoming依赖仍为显式支持假设；同类warning复用已接受的官方处置，不重开追索。
+
+覆盖状态包括`SUPPORTED_OPERATION_COMPONENT`、`ORDINARY_API_BUDGET`、
+`PHYSICAL_SYNC_NOT_COMPOSITE`、`PAIRED_BUT_UNRESOLVED_OPERATION`及
+`UNRESOLVED_OR_OUT_OF_SCOPE`，后两项必须携带具体原因。普通API标签只表示保持原分类，
+不表示调用非阻塞，也不重新授A有效性。每个run的完整覆盖在独立candidate.json；
+[公开覆盖示例](completion_operation_coverage_examples_v0_1.csv)按名称/状态/原因取首个记录，
+不按时长取有利案例。[机器汇总](completion_operation_reuse_validation_v0_1.json)含全部30条
+回归、14个run覆盖计数、原件与新输出hash；不含本机路径或Raw内容。
+
+### 三项证据分别结案
+
+1. **计算正确性**：24条G32/G512链、同批B1/B4两个Prefill、原NULL-FIFO-D2H四token均复现。
+   除时长/交集/补集，还核对必要成员、闭合历史前缀、排除未来集合；受控四token仍为
+   `448/24032/480/1376ns`，未因包络更宽而增加。B1/B4仍为`1.782176/30.910044ms`。
+2. **操作适用性**：复用旧逐实例来源与限定资格，并重新通过严格文件入口和结构检查；
+   不是从99f继承batch4资格，亦不是本轮新增CUDA验证。B4 Decode返回null，具体原因
+   `COE_SUBMIT_EFFECT_MISSING:cuda_api:CUPTI_ACTIVITY_KIND_RUNTIME:38606`；覆盖清单显示84项
+   缺效果submit、2个已配对但未准入的操作组件，不能称普通API均有充分证据。
+   首token之前的Prefill闭合仍成立；原B4 Request/Decode/BLOCKED不变。B1第二token只作旧链
+   回归，不因新Pilot仅Prefill就删除它，也不混入新重复。
+3. **解释/分析用途**：本轮没有证明纯Host阻塞、可消除时延、稳定负载规律或方法优越性。
+   相同I的普通GPU union在B1/B4仍等于COE；完成语义/成员来源提供可审计解释，而非新传感
+   信息。未来重复性与公平baseline下的具体用途必须分开评价，不能相互替代。
+
+CPU独立正反例覆盖身份/配对、错流/线程、失败sync、缺/重复correlation、捕获边界、
+已完成成员、操作内D2H/未来排除、Host有效工作重叠、合法零值、多操作/旧sync去重及
+unattributed不得迁移；复用已有31项反例，不重跑Q0。补充source变化/越界/错版本/错角色的
+实际文件读写检查，以及真实receipt入口拒绝篡改Raw的检查。低层portable snapshot用于
+模型重放，不是自动证明它与Raw内容一致的资格捷径。
+
+实际最终CPU命令：
+`python -m pytest -q -p no:cacheprovider tests/test_coe_candidate.py tests/test_completion_operation_candidate.py --basetemp .local/tmp/coe_release_context_verified`；
+结果见本轮机器汇总，72 passed、0 failed、0 skipped，18.68秒；本地Python3.12.7，不代表目标机CUDA资格。
+新增/旧入口的初始红测、默认Temp权限问题、零值fixture最初terminal并列的构造错误均保留
+本地诊断；修正fixture后未放宽terminal唯一性。相关py_compile通过，不跑全量或GPU。
+封存回归使用本地`coe_reusable_v0_1/regress_existing.py`，输出到
+`regression_release_v0_1/`；每run约2～3.5秒，逐run释放对象，没有跨run依赖缓存或巨型domain。
+接口复用registry对象和correlation索引，避免逐API重读文件及逐成员扫描所有API；不跳过检查。
+最后审查以独立反例发现并修复调用方上下文泄漏：显式绑定A registry 0.1.0，不继承N1
+opaque allocation版本上下文；cudaMalloc不能借另一路径的例外进入本自然候选支持域。
+此修复仅在新候选入口，未改生产registry或旧opaque合同；最终成员回归重做并保持相同。
+
+### 只有一份待审配置；距离采集还差什么
+
+配置状态为`PENDING_REVIEW_NOT_EXECUTABLE`，执行commit为null，拒绝将旧Engineering/Formal
+改role作为新Pilot。固定512/每样本输出2，batch1/2/4、w3/r1、仅自然P1，三个顺序
+`1→2→4 / 2→4→1 / 4→1→2`；9个新进程/9profile，只称位置平衡。主要比较每完整block
+的B4−B1 COE绝对signed差；B2、占比、全部单次值、GPU/API/同步/补集和实际kernel分支
+一并展示。同窗API count/sum/union及correlation/stream timeline不能少给。
+统计单位是完整block，不将kernel或batch样本当重复，不拼接不完整block；三block仅作
+结构与波动筛查，不冻结repeat/精度，不授P0性能、算法优越性或新Formal。
+
+必需剩余事项仅为：
+
+- 将新Pilot角色、batch2和仅Prefill的消费分派接入未来producer/receipt路径；现有batch_load入口明确只允许
+  Engineering batch1/4，不能直接复用其角色或给B2复制声明。输入/内容/实际token/逐request
+  检查需要接线，但同支持域的batch中点不自动要求完整Q0。B2尚无目标机实物资格。
+- 固定未来执行版本与实际输入/模型内容绑定并交协调审查；本配置已经锁定已保存512输入
+  的内容digest及模型inventory，不以复制期望值代替目标机实测。服务器当前checkout和
+  空间仍未知，不能由旧回执假定；待准备交付时一次核对即可。
+- 显式批准采集后才能执行；本轮不打包、不生成服务器命令。新run中Decode缺口只有被
+  证明局限于首token之后、不能破坏Prefill依赖时才可隔离，否则硬停保留partial/NOT_RUN。
+
+成本仅估计：按旧profile约33秒，9次采集本体约5分钟，部署/模型启动/导出/分析/传输另计；
+规划总操作15～30分钟但不是承诺，沿300秒/profile上限仅采集本体最多45分钟。临时预留
+12GiB；服务器长期总占用目标<50GiB，当前实际余量不明，不能据此承诺可执行，也不在
+本轮清理。新输出不得覆盖原件，归档审查后才能另列精确清理清单。
+
+固定预算完成或质量硬失败即停，不重试/替补/按结果补采。零值、反向、不确定或波动本身
+不是质量失败，也不自动否定整个方向；应据其限制对应claim。实证重复性只能回答结构是否
+复现；分析用途必须另指出COE比同信息baseline多完成了哪项可核验的完成语义判断。
+当前没有新的研究语义待裁决，也没有服务器事项；准备工作不等于采集就绪。
