@@ -1,6 +1,58 @@
 # ExposedPath 科研进度清单
 
+## 7.189 已执行512/2048输入轴Pilot：四block离线科学收口（2026-10-17，当前）
+
+当前最高优先级：研究固定P自然完成程序的条件化输入响应；本批已完成，不再等待7.188的
+阶段A或把2048实物写成NOT_RUN。唯一推荐下一阶段为同期512/1024/2048中点Pilot设计，
+**本轮未批准/实施新预算、代码适配或采集**；输出轴另列后移条件，不同时推进。
+
+- [x] 原`coe_input_006d371a41c9_pilot.zip`，57,439,121 bytes，SHA256
+  `1cefbd642591f73e95d94f618524b6f775439396f00150b8aece01877013ea68`；manifest
+  `72998ce8eace51ef89f5222a7a41ddba703fc5962760d42a28f5c154e945b4ca`。
+  复用协调614成员/613项完整CRC/hash与源码绑定；重新核对ZIP身份、消费文件hash和
+  全覆盖安全路径。执行/原分析`006d371a41c936b4cbf517d41e7ac7f89de76a47`不变。
+- [x] 8run/4完整block/16操作/24原A窗口；真实Python3.11.16、P、w3/r1、输入/token/
+  drain/准入证明链复用并核对。Raw成员逐行连接、两模式保存后缀、区间union、精确R、
+  原A/候选预算守恒及phase拆分通过已审证据核查；**不是独立重建全部S或重跑Q0**。
+- [x] 首token四个signed ΔQ为+111.106898/+135.736971/+113.308640/+105.558336ms，
+  预定R为+105.987593/+106.342583/+107.954190/+101.960957ms。G增3.39～3.73倍，
+  Q增12.04～72.04倍；候选E∪Q/Prefill为45.95%～52.16%，Q自身约45.94%～52.15%。
+  不是因较大占比即成功，也不把原A其它内部同步贡献误写成0。
+- [x] 16个末尾sync交集均0；第二tokenΔQ一正三负（+6.879959/−0.158686/−1.679924/
+  −7.243499ms）完整保留，512长值不删。必要GPU活动的phase内copy前/操作内位置
+  逐行列出；首tokenQ/G从2.96%～21.25%变为62.28%～75.44%，增量98.54%～98.90%
+  来自kernel。Raw实际kernel/count/grid与MemOp来源变化另列，不补造数学数据依赖。
+- [x] 公平保留API墙钟、phaseGPU union、同操作GPU union及完整timeline；本批16次
+  同操作union=COE，**不宣称独有数值信息或优于完整依赖时间线**。H/D为同trace钟，
+  H非精确包装成本，D/补集/API/COE不称纯Host阻塞；无P0迁移、稳定收益或硬件因果claim。
+- [x] 收口结论：本批支持phase特异、非比例活动位置响应的限定可证伪命题，值得继续
+  审查中间形状；不是新Formal、普遍单调规律或已成立论文贡献。原件PENDING_REVIEW不改，
+  新审查状态`PILOT_RESPONSE_OBSERVED_WITHIN_BOUND_SUPPORT_NOT_NEW_FORMAL`。
+- [x] 在[现有短稿§12](coe_research_short_note_v0_1.md#12-已执行5122048输入轴pilot响应活动位置及下一项有限问题2026-10-17)
+  补全部16链与8比较；小型[操作CSV](coe_input_pilot_operations_v0_1.csv)、
+  [比较CSV](coe_input_pilot_comparisons_v0_1.csv)、[原A CSV](coe_input_pilot_original_a_v0_1.csv)、
+  [来源/公平baseline JSON](coe_input_pilot_sources_v0_1.json)保留整数ns/来源hash。
+- [x] 本轮本地命令`python .local/analyze_coe_input_pilot_closeout.py`与
+  `python .local/publish_coe_input_closeout.py`均exit0；前者仅消费保存结果/只读Raw连接，
+  后者只汇总，不重跑完整analyzer。`python .local/check_coe_input_closeout.py`核对全部16行
+  展示/8精确比较/24原A、来源hash、Markdown链接及DOCX身份，exit0；`git diff --check`通过。
+  小回执见本地`coe_input_pilot_closeout_v0_1/consistency_final.json`；
+  本地Python3.12.7，不新增CPU测试或将其当目标GPU资格。生产代码/合同未变。
+- [ ] 下一批仅设计：512/1024/2048、3完整位置平衡block、9P1，约30～45分钟、临时12GiB，
+  新增保留估0.8～1.5GiB。1024须新有限输入/mask/身份及顺序/汇总版本接线，不重写S/A/B。
+  第二token全保留；实际准入失败即停，不试跑、补槽、扩hook。预算/执行尚未授权。
+- [ ] 输出轴后移：当前输出2只含一次Decode；固定512、输出2/16配对设计及真实16token
+  缓存/身份/完成锚点、历史前缀、逐token分母/去重资格未实现，不能直接授输出16/32。
+
+计划调整：7.188已从本地交付进入已执行Pilot的离线科研收口，后续优先中点而非扩大端点/
+引擎/collector。三个中点block只审查响应形状，不保证精度或识别精确阈值；旧数据不拼接为
+新重复。历史总占用UNKNOWN、长期<50,000,000,000 bytes尚未证明，不清理或遍历ACL。
+Gate13限定PASS/Gate14 NOT_RUN、旧Formal/Raw、B2/旧七槽BLOCKED、参数支线停止及
+UNKNOWN/NOT_ASSESSED均保持；用户DOCX和大型原件不纳入提交。
+
 ## 7.188 固定P输入轴512/2048 Pilot本地接线及两阶段待审交付（2026-10-17）
+
+> 历史发布记录：下文“待A/2048 NOT_RUN”是交付时状态；实际静态和8P1已回传，当前结论见7.189。
 
 用户批准既定四个完整配对block、8P1/8profile预算；本轮仅本地实现、CPU和交付准备。
 依据仍v7.1/v2.1及独立COE候选，生产S/A/B/registry、旧Formal及历史判定不改。

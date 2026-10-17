@@ -1,0 +1,1315 @@
+{
+  "schema_version": "coe-input-pilot-local-review/0.1.0",
+  "scientific_status": "PILOT_RESPONSE_OBSERVED_WITHIN_BOUND_SUPPORT_NOT_NEW_FORMAL",
+  "execution_commit": "006d371a41c936b4cbf517d41e7ac7f89de76a47",
+  "source_archive": "coe_input_006d371a41c9_pilot.zip",
+  "archive": {
+    "zip_bytes": 57439121,
+    "zip_sha256": "1cefbd642591f73e95d94f618524b6f775439396f00150b8aece01877013ea68",
+    "manifest_sha256": "72998ce8eace51ef89f5222a7a41ddba703fc5962760d42a28f5c154e945b4ca",
+    "members": 614,
+    "manifest_entries": 613,
+    "archive_crc_and_all_hashes": "PASS",
+    "delivery_static_source_binding": "PASS"
+  },
+  "coordinator_files": {
+    "archive_review.json": "bb75acddab11cd754370bc642eaec9412c760c05ac32ff9e368ab1e05a9bb680",
+    "budgets.csv": "c69f3c4c15be0d4efd2186f20738ea4168dce271ff376a5bbe7deb40b6358080",
+    "comparisons.json": "3bdb8f6910c0c06cadd3064069acb6a46b687f7a5d5b36907126cf9c3a0c2dff",
+    "operations.csv": "ff0734dce964d63d7aad5f327be5133c1ade5c643b22102906aa6dbf758a7731",
+    "review.json": "a7cb9e89c46f1183a6c1dc5b06e8ce98899afb375ed465674a362cc3bc21fe87",
+    "review_saved.py": "e26968993316d80db4d60bb7a6089d70cb6bd5f9fc47de1275c5df35525e7989",
+    "source_reviews.json": "cc43ae67ad90337fa29b346ed8eeee6fca12f450aa040ce23479703575ade2fb"
+  },
+  "consumed_member_hashes": {
+    "receipt.json": "f60067cc470b7e9da9f53edecf35f55a86872b876540e05662688d634de5185e",
+    "delivery.json": "1f6853b9a4cfdeaa63f07dc115d94337fa47760b21aecd1ce71a91ab2926a597",
+    "07_eight_p1.exit.json": "c58bb122e4a42d801a3c5384feaaedbf34370178c1a3e7be11547c4805a97acd",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b1-G2048P-pass1/collection/analyzed/sensitivity.json": "8049b483377667417d14cbcbbd2415560ac1bfacfec3db627cd28cfce6c1fcb0",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b1-G2048P-pass1/collection/input_receipt.json": "9bf7957c1a51cc35e627f21e9d56ed19624fa8e942d62efa64b895b2bf6f3b7c",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b1-G2048P-pass1/collection/diagnostic/engineering_execution.json": "525d2701d9942c5283812d5c45414a5b98ce7a5e21b14bd970af603dd8ba4378",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b1-G2048P-pass1/driver/process.json": "65fe4d12cd5a1d393bfc6629eb36db67761d744818fa49c04cebbe3562bd952d",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b1-G2048P-pass1/collection/collection_report.json": "4789d54753345eed823b90e3eadd5b65ffc0f3d326adf6ae9b7d13d1eab3090d",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b1-G512P-pass1/collection/analyzed/sensitivity.json": "c2929ac1409234ad7f81c1515efc1d14cd6d16758e4a3a914332762526120011",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b1-G512P-pass1/collection/input_receipt.json": "60d6de8c54f43555540afe0c229f94dcc8ee182334b27c466c3723a0ad2795cc",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b1-G512P-pass1/collection/diagnostic/engineering_execution.json": "061fb73d34cdbb331a168da8fd28568142473dce698ab1e0e8b1ef5544cc009f",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b1-G512P-pass1/driver/process.json": "5ff27b5b3cebeddc54b95d1b987dc669d66937b1efbed9107c845adce8457d89",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b1-G512P-pass1/collection/collection_report.json": "8bbaafa32d47754815489dee8e5295db09e46ff736c35270022b4fcbe3a90f72",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b2-G2048P-pass1/collection/analyzed/sensitivity.json": "d3fc04e800b7c56f9f31d6342b5fe2516b7f0143001046eddf7f54df9ef79209",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b2-G2048P-pass1/collection/input_receipt.json": "f4891df87429e8f7b37469694c358e579375ab17420e41394ae764edf144521b",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b2-G2048P-pass1/collection/diagnostic/engineering_execution.json": "57c14a99d5294fc92bc3fc81b33a09d5139e4bd3d777d9bdd23c9ae197d1e460",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b2-G2048P-pass1/driver/process.json": "7edeb969646ef6c9af929a9184d4f8dda1db0dbb456abddb0a4ea20c44f3ecf5",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b2-G2048P-pass1/collection/collection_report.json": "8f9ddf4612d0313ffaaf932824f359f25317e6cc15ea9fbb8b75e698707c8d05",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b2-G512P-pass1/collection/analyzed/sensitivity.json": "fbecd759458553648a960f06d60d2a8a5aa773092409e12ba27dc345f5b5b13d",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b2-G512P-pass1/collection/input_receipt.json": "bab36bc0ca9d10b5efcab6b58dae167ea1889d1b2b057d389df2bc4e909cb26e",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b2-G512P-pass1/collection/diagnostic/engineering_execution.json": "164e5a750f53ee50d5e9d3eaf8be74943031c10abfce3612be8cd9503e414b59",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b2-G512P-pass1/driver/process.json": "e3938990a457ee6997860b9a301592237ca50b46c5c1775fe0390abf5920db9d",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b2-G512P-pass1/collection/collection_report.json": "5b0448ddc4c820a06d6de0ccbc3e7d22739f350d65213a7f9b5f52bb2890c0e6",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b3-G2048P-pass1/collection/analyzed/sensitivity.json": "29d4d7a9fca111a39cd3f0ab2cde4e499a3c4ac39770b2c90ccc4f306b703bb1",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b3-G2048P-pass1/collection/input_receipt.json": "5e36c234491c32cb688629fafaf1821df790e8a6169e6eb801ba08a343e0d74b",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b3-G2048P-pass1/collection/diagnostic/engineering_execution.json": "1d4e2ea267c6c2d69dda26194520415f88bed85d9b02affe848952207862d777",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b3-G2048P-pass1/driver/process.json": "9beffe440dc74ba079ce3439940a25fa3ebb86be416442e19cdc8d5dd6b3c9b6",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b3-G2048P-pass1/collection/collection_report.json": "703df27cde72605503e23c512a14a30fada62ef1f41973a8b7cdfaeaf5684553",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b3-G512P-pass1/collection/analyzed/sensitivity.json": "91c923f119d11699be2c9e487ae0e1de1a39e426b5229da53d798d74c4b27598",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b3-G512P-pass1/collection/input_receipt.json": "ad8350ecb7a5711b0237b107b33a8602a6d3bff7409ba6d0dde922e104290a79",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b3-G512P-pass1/collection/diagnostic/engineering_execution.json": "002d9f64015fbca7ad201b106849628d5ac2d0958734a63baff97e44cb6b84f5",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b3-G512P-pass1/driver/process.json": "a5c5c0a6fa8560b25f8e2889e3fdecfffd7100707bb99db265423da3dda78e00",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b3-G512P-pass1/collection/collection_report.json": "d767c378dd6d66599ccb67f2c1b944c5f10dfa3794410b867dbc394bc6551527",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b4-G2048P-pass1/collection/analyzed/sensitivity.json": "6e167d1fd88bcb5ca43014ba85f70e54115e3cd359f9786ad8e65060bdfe45ee",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b4-G2048P-pass1/collection/input_receipt.json": "93432de0f224912dc2c0c124a13514a3d97c9007187aca35cfa4661fca034914",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b4-G2048P-pass1/collection/diagnostic/engineering_execution.json": "9d8dc88765e1e300ca9805dbcca2174418d975670dacacb0d0c8a43d6d316a6a",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b4-G2048P-pass1/driver/process.json": "5fb9ab804dd6fd73fbdd2079d072b1092682314049dde446edcf541b1fff304f",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b4-G2048P-pass1/collection/collection_report.json": "bfd0422f96bf7d37c2f822ec1756e2b6dd0957e979040b6c382b91331212ebc9",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b4-G512P-pass1/collection/analyzed/sensitivity.json": "802836099355b92c27de883d612e47d81ecb8bdc5c053168fff1e59a134d2b9f",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b4-G512P-pass1/collection/input_receipt.json": "0600ac85e0c561b60a007978429d9206b5b66eff34b8a24b50621cbf06b0b437",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b4-G512P-pass1/collection/diagnostic/engineering_execution.json": "6c4b9020543f0f48309ded7d05891f5c79964256a6a2d173cae00e19e853ebc4",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b4-G512P-pass1/driver/process.json": "eb2cee24b628066deb9f90deeac0993c9e310eb7fe8cca267d775711f4876a17",
+    "experiment/batch/coe-input-006d371a41c9-four-block-b4-G512P-pass1/collection/collection_report.json": "8744605155f3df65330a0e6549ac0298390b7c9853b8bb6f9be71b89ce9dcb7a"
+  },
+  "review_scope": "COORDINATOR_CRC_FULL_HASH_AND_SAVED_QUALIFICATION_REUSED; CONSUMED_FILE_HASH_RAW_MEMBER_AND_KERNEL_POSITION_JOIN",
+  "full_analyzer_or_S_rebuild_rerun": false,
+  "production_code_modified": false,
+  "data_role": "Pilot",
+  "complete_block_unit_count": 4,
+  "run_count": 8,
+  "operation_count": 16,
+  "original_a_window_count": 24,
+  "source_statuses_preserved": true,
+  "measurement_validity": "NOT_ASSESSED",
+  "dropped_records_status": "UNKNOWN",
+  "pure_host_stall_ns": null,
+  "formal_eligible": false,
+  "physical_b_qualified": false,
+  "files": [
+    {
+      "path": "coe_input_pilot_operations_v0_1.csv",
+      "rows": 16,
+      "sha256": "6afd0a1c089874dfdb55190891c1d51ac018b164d4badae3d859896844999489"
+    },
+    {
+      "path": "coe_input_pilot_comparisons_v0_1.csv",
+      "rows": 8,
+      "sha256": "e7f264a7f8a98ea0478e61b2dafd368d0966ddd89739f8bee4640ac00cd87d33"
+    },
+    {
+      "path": "coe_input_pilot_original_a_v0_1.csv",
+      "rows": 24,
+      "sha256": "c1a418fbb73e86bb9104d20265bf13d7eb2e86a8beed87f11cedd657f1a8270a"
+    }
+  ],
+  "runs": [
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G2048P-pass1",
+      "block": 1,
+      "position": 2,
+      "input_tokens": 2048,
+      "driver_elapsed_seconds": 198.40599999995902,
+      "capture_elapsed_seconds": 34.07799999997951,
+      "token_ids": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "status": "COE_INPUT_BOTH_TOKENS_PENDING_REVIEW"
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G512P-pass1",
+      "block": 1,
+      "position": 1,
+      "input_tokens": 512,
+      "driver_elapsed_seconds": 158.1720000000205,
+      "capture_elapsed_seconds": 34.20299999997951,
+      "token_ids": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "status": "COE_INPUT_BOTH_TOKENS_PENDING_REVIEW"
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G2048P-pass1",
+      "block": 2,
+      "position": 1,
+      "input_tokens": 2048,
+      "driver_elapsed_seconds": 185.53100000019185,
+      "capture_elapsed_seconds": 33.42200000002049,
+      "token_ids": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "status": "COE_INPUT_BOTH_TOKENS_PENDING_REVIEW"
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G512P-pass1",
+      "block": 2,
+      "position": 2,
+      "input_tokens": 512,
+      "driver_elapsed_seconds": 166.5779999999795,
+      "capture_elapsed_seconds": 34.389999999897555,
+      "token_ids": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "status": "COE_INPUT_BOTH_TOKENS_PENDING_REVIEW"
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G2048P-pass1",
+      "block": 3,
+      "position": 1,
+      "input_tokens": 2048,
+      "driver_elapsed_seconds": 180.0779999999795,
+      "capture_elapsed_seconds": 33.89100000006147,
+      "token_ids": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "status": "COE_INPUT_BOTH_TOKENS_PENDING_REVIEW"
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G512P-pass1",
+      "block": 3,
+      "position": 2,
+      "input_tokens": 512,
+      "driver_elapsed_seconds": 157.0460000000894,
+      "capture_elapsed_seconds": 33.28099999995902,
+      "token_ids": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "status": "COE_INPUT_BOTH_TOKENS_PENDING_REVIEW"
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G2048P-pass1",
+      "block": 4,
+      "position": 2,
+      "input_tokens": 2048,
+      "driver_elapsed_seconds": 181.78100000019185,
+      "capture_elapsed_seconds": 33.437999999849126,
+      "token_ids": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "status": "COE_INPUT_BOTH_TOKENS_PENDING_REVIEW"
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G512P-pass1",
+      "block": 4,
+      "position": 1,
+      "input_tokens": 512,
+      "driver_elapsed_seconds": 163.85900000017136,
+      "capture_elapsed_seconds": 32.53099999995902,
+      "token_ids": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "status": "COE_INPUT_BOTH_TOKENS_PENDING_REVIEW"
+    }
+  ],
+  "baseline": [
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G2048P-pass1",
+      "token": 0,
+      "phase": "prefill",
+      "api": {
+        "count": 4782,
+        "sum_ns": 194392163,
+        "union_ns": 194392163,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 2,
+        "status": "KNOWN",
+        "sum_ns": 321169,
+        "union_ns": 321169
+      },
+      "kernel": {
+        "count": 1762,
+        "sum_ns": 170971993,
+        "union_ns": 170971993,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1793,
+        "sum_ns": 173663399,
+        "union_ns": 173663399,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 112979942
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G2048P-pass1",
+      "token": 1,
+      "phase": "decode",
+      "api": {
+        "count": 4580,
+        "sum_ns": 77403657,
+        "union_ns": 77403657,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 1,
+        "status": "KNOWN",
+        "sum_ns": 44096,
+        "union_ns": 44096
+      },
+      "kernel": {
+        "count": 1590,
+        "sum_ns": 16189493,
+        "union_ns": 16189493,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1592,
+        "sum_ns": 16258901,
+        "union_ns": 16258901,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 7520493
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G512P-pass1",
+      "token": 0,
+      "phase": "prefill",
+      "api": {
+        "count": 4922,
+        "sum_ns": 44336898,
+        "union_ns": 44336898,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 2,
+        "status": "KNOWN",
+        "sum_ns": 112298,
+        "union_ns": 112298
+      },
+      "kernel": {
+        "count": 1818,
+        "sum_ns": 45207146,
+        "union_ns": 45207146,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1905,
+        "sum_ns": 46519299,
+        "union_ns": 46519299,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 1873044
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G512P-pass1",
+      "token": 1,
+      "phase": "decode",
+      "api": {
+        "count": 4580,
+        "sum_ns": 36344423,
+        "union_ns": 36344423,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 1,
+        "status": "KNOWN",
+        "sum_ns": 68252,
+        "union_ns": 68252
+      },
+      "kernel": {
+        "count": 1590,
+        "sum_ns": 11770781,
+        "union_ns": 11770781,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1592,
+        "sum_ns": 11872861,
+        "union_ns": 11872861,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 640534
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G2048P-pass1",
+      "token": 0,
+      "phase": "prefill",
+      "api": {
+        "count": 4782,
+        "sum_ns": 238907523,
+        "union_ns": 238907523,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 2,
+        "status": "KNOWN",
+        "sum_ns": 2746719,
+        "union_ns": 2746719
+      },
+      "kernel": {
+        "count": 1762,
+        "sum_ns": 193602747,
+        "union_ns": 193602747,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1793,
+        "sum_ns": 196216553,
+        "union_ns": 196216553,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 148029117
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G2048P-pass1",
+      "token": 1,
+      "phase": "decode",
+      "api": {
+        "count": 4580,
+        "sum_ns": 39153279,
+        "union_ns": 39153279,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 1,
+        "status": "KNOWN",
+        "sum_ns": 24366,
+        "union_ns": 24366
+      },
+      "kernel": {
+        "count": 1590,
+        "sum_ns": 33352809,
+        "union_ns": 33352809,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1592,
+        "sum_ns": 33353929,
+        "union_ns": 33353929,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 548701
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G512P-pass1",
+      "token": 0,
+      "phase": "prefill",
+      "api": {
+        "count": 4922,
+        "sum_ns": 59008573,
+        "union_ns": 59008573,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 2,
+        "status": "KNOWN",
+        "sum_ns": 711681,
+        "union_ns": 711681
+      },
+      "kernel": {
+        "count": 1818,
+        "sum_ns": 56984925,
+        "union_ns": 56984925,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1905,
+        "sum_ns": 57858553,
+        "union_ns": 57858553,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 12292146
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G512P-pass1",
+      "token": 1,
+      "phase": "decode",
+      "api": {
+        "count": 4580,
+        "sum_ns": 44097660,
+        "union_ns": 44097660,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 1,
+        "status": "KNOWN",
+        "sum_ns": 110465,
+        "union_ns": 110465
+      },
+      "kernel": {
+        "count": 1590,
+        "sum_ns": 27374744,
+        "union_ns": 27374744,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1592,
+        "sum_ns": 27495415,
+        "union_ns": 27495415,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 707387
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G2048P-pass1",
+      "token": 0,
+      "phase": "prefill",
+      "api": {
+        "count": 4782,
+        "sum_ns": 192757036,
+        "union_ns": 192757036,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 2,
+        "status": "KNOWN",
+        "sum_ns": 1321573,
+        "union_ns": 1321573
+      },
+      "kernel": {
+        "count": 1762,
+        "sum_ns": 170547292,
+        "union_ns": 170547292,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1793,
+        "sum_ns": 172452210,
+        "union_ns": 172452210,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 115294859
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G2048P-pass1",
+      "token": 1,
+      "phase": "decode",
+      "api": {
+        "count": 4580,
+        "sum_ns": 35408543,
+        "union_ns": 35408543,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 1,
+        "status": "KNOWN",
+        "sum_ns": 30486,
+        "union_ns": 30486
+      },
+      "kernel": {
+        "count": 1590,
+        "sum_ns": 21089017,
+        "union_ns": 21089017,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1592,
+        "sum_ns": 21090105,
+        "union_ns": 21090105,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 627996
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G512P-pass1",
+      "token": 0,
+      "phase": "prefill",
+      "api": {
+        "count": 4922,
+        "sum_ns": 39509523,
+        "union_ns": 39509523,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 2,
+        "status": "KNOWN",
+        "sum_ns": 736971,
+        "union_ns": 736971
+      },
+      "kernel": {
+        "count": 1818,
+        "sum_ns": 45274126,
+        "union_ns": 45274126,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1905,
+        "sum_ns": 46661669,
+        "union_ns": 46661669,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 1986219
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G512P-pass1",
+      "token": 1,
+      "phase": "decode",
+      "api": {
+        "count": 4580,
+        "sum_ns": 46069887,
+        "union_ns": 46069887,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 1,
+        "status": "KNOWN",
+        "sum_ns": 31317,
+        "union_ns": 31317
+      },
+      "kernel": {
+        "count": 1590,
+        "sum_ns": 17019993,
+        "union_ns": 17019993,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1592,
+        "sum_ns": 17020985,
+        "union_ns": 17020985,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 2307920
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G2048P-pass1",
+      "token": 0,
+      "phase": "prefill",
+      "api": {
+        "count": 4782,
+        "sum_ns": 178250494,
+        "union_ns": 178250494,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 2,
+        "status": "KNOWN",
+        "sum_ns": 143395,
+        "union_ns": 143395
+      },
+      "kernel": {
+        "count": 1762,
+        "sum_ns": 170500047,
+        "union_ns": 170500047,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1793,
+        "sum_ns": 171880071,
+        "union_ns": 171880071,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 107044278
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G2048P-pass1",
+      "token": 1,
+      "phase": "decode",
+      "api": {
+        "count": 4580,
+        "sum_ns": 30616385,
+        "union_ns": 30616385,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 1,
+        "status": "KNOWN",
+        "sum_ns": 27861,
+        "union_ns": 27861
+      },
+      "kernel": {
+        "count": 1590,
+        "sum_ns": 20020679,
+        "union_ns": 20020679,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1592,
+        "sum_ns": 20105671,
+        "union_ns": 20105671,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 1058655
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G512P-pass1",
+      "token": 0,
+      "phase": "prefill",
+      "api": {
+        "count": 4922,
+        "sum_ns": 49609226,
+        "union_ns": 49609226,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 2,
+        "status": "KNOWN",
+        "sum_ns": 314669,
+        "union_ns": 314669
+      },
+      "kernel": {
+        "count": 1818,
+        "sum_ns": 49518734,
+        "union_ns": 49518734,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1905,
+        "sum_ns": 50243498,
+        "union_ns": 50243498,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 1485942
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G512P-pass1",
+      "token": 1,
+      "phase": "decode",
+      "api": {
+        "count": 4580,
+        "sum_ns": 80706455,
+        "union_ns": 80706455,
+        "status": "KNOWN"
+      },
+      "synchronization_api": {
+        "count": 1,
+        "status": "KNOWN",
+        "sum_ns": 35654,
+        "union_ns": 35654
+      },
+      "kernel": {
+        "count": 1590,
+        "sum_ns": 24774377,
+        "union_ns": 24774377,
+        "status": "KNOWN"
+      },
+      "gpu_activity": {
+        "count": 1592,
+        "sum_ns": 24814984,
+        "union_ns": 24814984,
+        "status": "KNOWN"
+      },
+      "same_operation_gpu_union_ns": 8302154
+    }
+  ],
+  "operation_memops": [
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G512P-pass1",
+      "block": 1,
+      "input_tokens": 512,
+      "token": 0,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 768,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        347
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G512P-pass1",
+      "block": 1,
+      "input_tokens": 512,
+      "token": 0,
+      "kind": "MEMSET",
+      "intersect_count": 2,
+      "operation_union_ns": 177343,
+      "observed_bytes": [
+        4,
+        768
+      ],
+      "source_rowids": [
+        342,
+        343
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G512P-pass1",
+      "block": 1,
+      "input_tokens": 512,
+      "token": 1,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 416,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        348
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G512P-pass1",
+      "block": 1,
+      "input_tokens": 512,
+      "token": 1,
+      "kind": "MEMSET",
+      "intersect_count": 1,
+      "operation_union_ns": 101664,
+      "observed_bytes": [
+        4
+      ],
+      "source_rowids": [
+        344
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G2048P-pass1",
+      "block": 1,
+      "input_tokens": 2048,
+      "token": 0,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 768,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        347
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G2048P-pass1",
+      "block": 1,
+      "input_tokens": 2048,
+      "token": 0,
+      "kind": "MEMSET",
+      "intersect_count": 19,
+      "operation_union_ns": 1800211,
+      "observed_bytes": [
+        4,
+        1536
+      ],
+      "source_rowids": [
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G2048P-pass1",
+      "block": 1,
+      "input_tokens": 2048,
+      "token": 1,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 512,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        348
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b1-G2048P-pass1",
+      "block": 1,
+      "input_tokens": 2048,
+      "token": 1,
+      "kind": "MEMSET",
+      "intersect_count": 1,
+      "operation_union_ns": 68896,
+      "observed_bytes": [
+        4
+      ],
+      "source_rowids": [
+        120
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G2048P-pass1",
+      "block": 2,
+      "input_tokens": 2048,
+      "token": 0,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 42623,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        347
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G2048P-pass1",
+      "block": 2,
+      "input_tokens": 2048,
+      "token": 0,
+      "kind": "MEMSET",
+      "intersect_count": 22,
+      "operation_union_ns": 1666387,
+      "observed_bytes": [
+        4,
+        1536
+      ],
+      "source_rowids": [
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G2048P-pass1",
+      "block": 2,
+      "input_tokens": 2048,
+      "token": 1,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 768,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        348
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G2048P-pass1",
+      "block": 2,
+      "input_tokens": 2048,
+      "token": 1,
+      "kind": "MEMSET",
+      "intersect_count": 1,
+      "operation_union_ns": 352,
+      "observed_bytes": [
+        4
+      ],
+      "source_rowids": [
+        120
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G512P-pass1",
+      "block": 2,
+      "input_tokens": 512,
+      "token": 0,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 544,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        347
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G512P-pass1",
+      "block": 2,
+      "input_tokens": 512,
+      "token": 0,
+      "kind": "MEMSET",
+      "intersect_count": 16,
+      "operation_union_ns": 140096,
+      "observed_bytes": [
+        4,
+        768
+      ],
+      "source_rowids": [
+        328,
+        329,
+        330,
+        331,
+        332,
+        333,
+        334,
+        335,
+        336,
+        337,
+        338,
+        339,
+        340,
+        341,
+        342,
+        343
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G512P-pass1",
+      "block": 2,
+      "input_tokens": 512,
+      "token": 1,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 512,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        348
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b2-G512P-pass1",
+      "block": 2,
+      "input_tokens": 512,
+      "token": 1,
+      "kind": "MEMSET",
+      "intersect_count": 1,
+      "operation_union_ns": 120159,
+      "observed_bytes": [
+        4
+      ],
+      "source_rowids": [
+        344
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G2048P-pass1",
+      "block": 3,
+      "input_tokens": 2048,
+      "token": 0,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 512,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        347
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G2048P-pass1",
+      "block": 3,
+      "input_tokens": 2048,
+      "token": 0,
+      "kind": "MEMSET",
+      "intersect_count": 20,
+      "operation_union_ns": 1469560,
+      "observed_bytes": [
+        4,
+        1536
+      ],
+      "source_rowids": [
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G2048P-pass1",
+      "block": 3,
+      "input_tokens": 2048,
+      "token": 1,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 768,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        348
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G2048P-pass1",
+      "block": 3,
+      "input_tokens": 2048,
+      "token": 1,
+      "kind": "MEMSET",
+      "intersect_count": 1,
+      "operation_union_ns": 320,
+      "observed_bytes": [
+        4
+      ],
+      "source_rowids": [
+        120
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G512P-pass1",
+      "block": 3,
+      "input_tokens": 512,
+      "token": 0,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 544,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        347
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G512P-pass1",
+      "block": 3,
+      "input_tokens": 512,
+      "token": 0,
+      "kind": "MEMSET",
+      "intersect_count": 2,
+      "operation_union_ns": 116639,
+      "observed_bytes": [
+        4,
+        768
+      ],
+      "source_rowids": [
+        342,
+        343
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G512P-pass1",
+      "block": 3,
+      "input_tokens": 512,
+      "token": 1,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 672,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        348
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b3-G512P-pass1",
+      "block": 3,
+      "input_tokens": 512,
+      "token": 1,
+      "kind": "MEMSET",
+      "intersect_count": 1,
+      "operation_union_ns": 320,
+      "observed_bytes": [
+        4
+      ],
+      "source_rowids": [
+        344
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G512P-pass1",
+      "block": 4,
+      "input_tokens": 512,
+      "token": 0,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 736,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        347
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G512P-pass1",
+      "block": 4,
+      "input_tokens": 512,
+      "token": 0,
+      "kind": "MEMSET",
+      "intersect_count": 1,
+      "operation_union_ns": 320,
+      "observed_bytes": [
+        4
+      ],
+      "source_rowids": [
+        343
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G512P-pass1",
+      "block": 4,
+      "input_tokens": 512,
+      "token": 1,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 512,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        348
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G512P-pass1",
+      "block": 4,
+      "input_tokens": 512,
+      "token": 1,
+      "kind": "MEMSET",
+      "intersect_count": 1,
+      "operation_union_ns": 40095,
+      "observed_bytes": [
+        4
+      ],
+      "source_rowids": [
+        344
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G2048P-pass1",
+      "block": 4,
+      "input_tokens": 2048,
+      "token": 0,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 768,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        347
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G2048P-pass1",
+      "block": 4,
+      "input_tokens": 2048,
+      "token": 0,
+      "kind": "MEMSET",
+      "intersect_count": 19,
+      "operation_union_ns": 1157529,
+      "observed_bytes": [
+        4,
+        1536
+      ],
+      "source_rowids": [
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G2048P-pass1",
+      "block": 4,
+      "input_tokens": 2048,
+      "token": 1,
+      "kind": "MEMCPY",
+      "intersect_count": 1,
+      "operation_union_ns": 544,
+      "observed_bytes": [
+        8
+      ],
+      "source_rowids": [
+        348
+      ]
+    },
+    {
+      "run_id": "coe-input-006d371a41c9-four-block-b4-G2048P-pass1",
+      "block": 4,
+      "input_tokens": 2048,
+      "token": 1,
+      "kind": "MEMSET",
+      "intersect_count": 1,
+      "operation_union_ns": 84448,
+      "observed_bytes": [
+        4
+      ],
+      "source_rowids": [
+        120
+      ]
+    }
+  ],
+  "local_commands": [
+    "python .local/analyze_coe_input_pilot_closeout.py",
+    "python .local/publish_coe_input_closeout.py"
+  ],
+  "local_python": "3.12.7",
+  "target_python": "3.11.16",
+  "statistical_notes": [
+    "4 complete blocks; token/kernel are not independent replicates",
+    "all signed differences retained; no significance or precision claim",
+    "R uses exact frozen Fraction denominator; no epsilon",
+    "no P0 or uninstrumented-performance transfer",
+    "old Engineering/Formal exploratory data not pooled"
+  ]
+}
