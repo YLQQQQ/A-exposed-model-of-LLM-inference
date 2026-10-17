@@ -1,5 +1,57 @@
 # ExposedPath 科研进度清单
 
+## 7.180 新B2参数诊断零捕获收口；仅修正离线失败退出码（2026-10-17）
+
+本轮Engineering原件只读核验/小型CPU修复，无服务器、CUDA、模型、Nsight、重采或新包。
+当前集中依据：[可行性/收口稿0.7](memset_parameter_feasibility_v0_1.md#2026-10-17增补新b2零捕获当前普通共享入口路线收口-07当前)。
+**当前普通共享入口方案覆盖FAIL；新B2和原Pilot仍BLOCKED。按预先停止条件关闭该参数采集
+路线，不扩hook、不恢复旧B2或七槽，不将零捕获归因于具体库/runtime或count0。**
+
+输入`memset_prefill_63ca05178b80_b2_once.zip`，3,962,993bytes，
+SHA256 `80b6b72b4234112c9c5d75a0c2f52590d285f1c88f96a03395ca54d21424596e`。
+本轮CRC、安全唯一82成员/81项清单、全部长度/hash/全覆盖通过；manifest SHA
+`69750f2d845c7741610ad0e7f178aad5ebe4896be3648dc68658d9a532026e4e`。
+新展开`.local/diagnostics/memset_prefill_b2_closeout_v0_1/source`，同目录review.json、参数NVTX
+摘录和逐Prefill runtime引用保留；只读SQL复核，不重跑完整analyzer/Q0或旧B2 SQLite。
+28源实字节/封存runner与63ca051 Git、已审A receipt/build/DLL、侧记录/manifest/producer/
+entry创建实例、input/mask/token和模块文件hash均相符。该绑定不证明所有实际调用经由该导出。
+
+实物：模型PID4788/TID49924、FILETIME134366848005075190，模型/profile/export成功、token
+`[[29184,29184],[6556,6556]]`符合功能参考；3warmup及measured COMPLETE。原源码在drain前
+安装、成功drain后begin、原first Host token后end、Decode后detach；五生命周期/错误码均0，
+side完成时间与Host首token锚点一致。Raw DomainCreate在drain前，但无调用range；side calls=[]。
+此证据只支持“本次方案零捕获”，没有每条目标调用时的hook内部执行/enable指令级证明。
+Prefill 113次成功同目标runtime、84缺MEMSET；Decode85次、84缺MEMSET（本就不在记录范围）。
+参数/count/native stream实例值UNKNOWN；不是NVTX -1返回适配再次失效，不授零payload规则。
+具体内部原因UNKNOWN，不断言cuBLAS/private/static/PTSZ/patch干扰等来源，不再追索。
+
+真实叶拒绝`MEMSET_PREFILL_NO_TARGET_CALLS_NOT_DISCRIMINATING`；分析进程exit1/8.437s。
+collection异常仅写error，状态保留DIAGNOSTIC_COLLECTED_NOT_QUALIFIED导致driver exit0；
+外层结果门最终拒绝为MEMSET_PREFILL_COLLECTION_RESULT，原attempt仍BLOCKED。
+最小5行修改仅在新参数路径捕获分析/文件异常后置BLOCKED，返回1；成功采集/export事实及
+原error/独立stderr保留，不改旧诊断-only退出语义。原ZIP/collection_report/Raw不覆盖，
+也不为部署该控制修复新增模型任务；新分析代码不为本次数据补出参数或资格。
+
+CPU先修正测试fixture缺字段/错pass，随后有效红灯为2failed/3passed：分析拒绝和缺结果均错误
+exit0。最小修复后实际最终命令：
+`python -m pytest -q -p no:cacheprovider tests/test_memset_prefill_failure_exit.py tests/test_memset_prefill.py tests/test_memset_prefill_files.py tests/test_gate8_diagnostic_collect.py tests/test_batch_load_scope_failure.py --basetemp .local/mp_failure_final --junitxml .local/diagnostics/memset_prefill_b2_closeout_v0_1/final.xml --tb=short -ra`
+**56passed/0failed/0skipped，102.88s，Python3.12.7**。新5项涵盖实际main写回执/退出（采集、
+模型、export、分析执行边界明确CPU替身）、合法成功、缺结果、历史退出兼容、零捕获不能当
+零参数；复用原参数/Canonical文件链、旧拒绝和进程回执回归，无目标机新编译/GPU资格。
+`python -m compileall -q exposedpath analysis scripts/gate8_diagnostic_collect.py`、diff检查通过。
+
+研究决策：四token独立操作验证、12个G32/G512的24链、旧同批B1/B4局部Prefill及d6957de单个
+B1合格Pilot槽继续按原角色/支持假设使用；不因本次新入口失败将其推翻，也不升级成新Formal。
+缺失的是可信B2 COE、完整位置平衡block、B4−B1重复差/中间点/普遍负载关系；0完整block，
+不能拼接Engineering/Pilot/旧Formal补重复。零参逻辑规则尚无真实B2资格，W/terminal未进入后续
+审查。完整依赖timeline仍可解释同样完成结构，COE不获得纯Host阻塞/可优化时延解释。
+
+唯一建议/停点：**不再追加当前参数采集设施或九槽补齐预算**；已有资料没有能保证命中的
+另一个有界入口，增加同配置样本不能解决实例覆盖。保留已有支持域和失败的适用边界事实，
+仅继续既有证据的有限分析用途/公平baseline论证。任何新工程投入需另有现存入口事实及明确
+成本后集中裁决，不是本轮待办。生产A/B/COE/registry、旧Formal/Raw/BLOCKED、UNKNOWN/
+NOT_ASSESSED、Gate13限定PASS/Gate14 NOT_RUN及用户DOCX/未跟踪大型ZIP均保持。
+
 ## 7.179 新B2 Prefill参数记录/零逻辑节点最小实现与待审A交付（2026-10-17）
 
 依据用户批准0.5，本轮只本地实现/CPU/打包准备，未操作服务器或运行模型、CUDA程序、Nsight。

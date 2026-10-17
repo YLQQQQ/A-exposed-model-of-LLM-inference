@@ -1,6 +1,88 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-17增补：新B2 Prefill参数诊断实现 0.6（当前，目标机待验证）
+## 2026-10-17增补：新B2零捕获，当前普通共享入口路线收口 0.7（当前）
+
+**裁决：本次参数覆盖FAIL；新B2及原Pilot仍BLOCKED。按预定条件停止当前普通共享入口方案，
+不重采、不扩hook、不恢复旧七槽。** 这不是COE定义、已合格案例或整个研究方向被证明无效，
+但当前没有支持继续扩建参数采集工程的实例依据，不制作后续部署包。
+
+### 原件及范围/加载/记录链
+
+原件`memset_prefill_63ca05178b80_b2_once.zip`，3,962,993bytes，SHA256
+`80b6b72b4234112c9c5d75a0c2f52590d285f1c88f96a03395ca54d21424596e`。
+本轮CRC、安全唯一82成员/81项清单、全部长度/hash及覆盖通过；manifest SHA256
+`69750f2d845c7741610ad0e7f178aad5ebe4896be3648dc68658d9a532026e4e`。
+新展开在忽略的`.local/diagnostics/memset_prefill_b2_closeout_v0_1/source`，原ZIP/报告不改。
+只读审查脚本、review.json、逐Prefill runtime清单及NVTX摘录在同一诊断目录关联；不运行完整分析。
+
+- 执行/原分析`63ca05178b802fc986278467364f21524591ad41`，28项源码实字节与Git一致，
+  封存runner副本与执行blob一致。新run `980654293f9b47ea9ac79de52b04fc76`，模型PID4788/
+  请求TID49924，入口/side/producer的创建FILETIME均134366848005075190，模型入口exit0。
+- 已审A receipt SHA `ad94f07a1ab6e0e07a528807d7dfc7d49cb51a0ac360cf6f542aadf9ca14ba90`
+  与本B回执绑定；本轮核对A包CRC/hash/build引用，不重跑其CPU/编译。实际记录器DLL SHA
+  `2084570aa1c1ed0ea2fed63e25e349939fc2ee205fd96b249ab9536f332b316d`与A产物/manifest/
+  side一致；指定普通CUDART SHA为`f95273031fc5ea44cdb37e0a696a1b15b9d84a4ee977299a6f6e652ef4d790cf`，
+  与本次文件回执/加载路径检查相符。这证明所检查模块身份，不证明全部实际CUDA调用来自该导出。
+- 原源码顺序是三次warmup→窗前安装→原成功drain→begin→原Prefill→首Host token→end，
+  Decode后finally detach/落盘。三次warmup和measured COMPLETE，实际`[2,512]`及mask摘要
+  已绑定，输出`[[29184,29184],[6556,6556]]`符合功能参考；不升级旧B2。
+- attach/begin/end/detach/recorder_error均0，completion_observed=true；side完成时间
+  2066840628952000与原Host首token锚点一致。没有独立的begin指令级时间戳，因此不能把源码/
+  成功回执说成逐指令证明hook在每次目标调用时均有效。
+- Raw中DomainCreate row1在28013835075ns；成功drain runtime37486为
+  `28252671522..28252723990`；Prefill `28253195594..28398917859`，Decode
+  `28398917859..28490458213`（均trace ns，不与Host时钟相减）。DomainCreate早于drain；
+  参数domain没有任何调用级闭合range，side `calls=[]`。这不是再次误拒绝NVTX的-1/-1。
+
+| 本次Raw窗口 | 成功同目标PID/TID的cudaMemsetAsync | 缺关联MEMSET效果 | 侧参数调用/调用NVTX |
+|---|---:|---:|---:|
+| Prefill | 113 | 84 | 0 / 0 |
+| Decode（不在记录范围） | 85 | 84 | 不据此要求覆盖 |
+
+Prefill不是“没有目标调用”，而是**目标调用存在但本方案零捕获**；全部113次参数（不只84次）
+的count、实际native stream等均未取得。29次有MEMSET效果也不能补齐另84次的参数或顺序。
+加载/生命周期成功、domain存在均不能替代双向实例覆盖。具体内部原因仍UNKNOWN：不能认定
+cuBLAS/private/static runtime、PTSZ、后续patch机制或count0；本轮不继续追索这些可能性。
+零字节消费规则及后续局部成员/依赖/terminal证明尚未执行，不能说其已被真实B2验证。
+
+### 与采集成功分开的退出码缺陷（仅本地修复）
+
+profile exit0/38.047s、export PASS、模型成功。参数分析进程exit1/8.437s，原stderr明确
+`MEMSET_PREFILL_NO_TARGET_CALLS_NOT_DISCRIMINATING`。其上层保留
+`PARAMETER_OFFLINE_DRIVER_FAILED_SEE_ORIGINAL_LOG`，但collection status仍为
+`DIAGNOSTIC_COLLECTED_NOT_QUALIFIED`，被历史诊断成功状态列表当成exit0；外层随后通过结果
+合同拒绝为`MEMSET_PREFILL_COLLECTION_RESULT`。两者都不是模型失败，后者也不是叶根因。
+
+[collection消费者](../../scripts/gate8_diagnostic_collect.py)仅对新
+`--memset-prefill-parameters`路径将已捕获的分析/结果文件异常状态改为BLOCKED，返回非零；
+保留采集/导出成功事实、原error和分析stderr。未修改旧诊断-only退出合同、身份或准入门。
+CPU先复现分析拒绝/缺结果两种exit0错误，再修复；同时保留成功分支、历史诊断退出语义和
+零捕获不能冒充零payload的反例。实际验证命令/数量见科研进度7.180。原回传报告不重写，
+此次补丁无需部署，不为验证它再运行模型。
+
+### 后续研究决策：保留什么，缺什么，停止什么
+
+| 既有证据 | 仍可使用的角色/判断 | 不能补出的结论 |
+|---|---|---|
+| [四token受控原件](completion_operation_controlled_validation_v0_1.md) | 操作配对、预定必要成员/terminal及区间算术的独立依据；Engineering | 自然PyTorch内部调用覆盖、参数取证成功 |
+| [G32/G512 12run/24链](completion_operation_candidate_review_v0_1.md)及[复用记录](completion_operation_reuse_validation_v0_1.json) | 原合格输入上事后探索性COE；原Formal只按原签署口径保留 | 新Formal COE、纯Host阻塞/可消除时延、普遍batch响应 |
+| [旧同批B1/B4局部Prefill](completion_operation_batch_prefill_review_v0_1.md) | 各自已闭合的局部Engineering COE个案；旧B4未解决调用在该首token之后的原证明保留 | B4 Request/Decode准入，或当前B2/B4运行也没有Prefill缺口 |
+| d6957de Pilot B1 | 其合格Prefill单个Pilot槽，原始样本保留 | 完整block、B4−B1重复差或batch1/2/4规律 |
+| 旧B2与本次参数诊断 | 执行事实/缺映射/零捕获的Engineering证据 | 可信B2 COE、零payload、合法零暴露、完整A/B或任何缺口已解决 |
+
+**推荐：停止这条参数覆盖支线及九槽Pilot补齐的工程投入，按既有合格支持域保全/解释COE。**
+当前缺的是同次实例参数覆盖及其后的合法依赖证明，不是多几个同配置样本；增加重复不能填补。
+现有源码/导入资料没有指出可保证命中的另一个有界入口，微例PASS也已证明不能推广。因此没有
+据此推荐新hook、工具链或collector预算。未来若另有实际入口证据和明确成本，须另行裁决，
+不是本轮待办。当前可继续的本地研究工作只限已有案例的分析用途与公平timeline对照，不把
+“当前手段不覆盖”包装为对所有负载/所有完成操作的科学否定或论文贡献成立。
+
+旧B2和七槽、原Raw/ZIP/BLOCKED/UNKNOWN保持，生产A/B/COE定义及原Formal/Gate不变。
+本轮无服务器、采集、CUDA、模型或新交付包；Gate13限定PASS保持，Gate14不启动。
+
+<a id="2026-10-17增补新b2-prefill参数诊断实现-06当前目标机待验证"></a>
+
+## 2026-10-17增补：新B2 Prefill参数诊断实现 0.6（历史交付，后续零捕获见0.7）
 
 **最小实现与本地CPU验证完成；只交付待审阶段A，不授予模型覆盖、A或COE资格。** 用户接受下文
 0.5窄域方案后，本轮实现独立Engineering profile与参数消费者。0.5保留为设计时历史，旧微例

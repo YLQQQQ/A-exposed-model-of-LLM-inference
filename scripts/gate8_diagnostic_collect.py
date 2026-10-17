@@ -337,6 +337,11 @@ def main():
                     a_admission='NOT_ASSESSED',coe_admission='NOT_ASSESSED')
     except (ValueError,OSError,KeyError) as exc:
         record_analysis_error(report,exc)
+        if args.memset_prefill_parameters:
+            # This diagnostic requires the offline parameter evidence, not only
+            # a successful capture/export. Do not retain the legacy exit0
+            # diagnostic-only status after an analysis/result-file failure.
+            report['status']='BLOCKED'
     (output/'collection_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(report['status'])
     return 0 if report['status'] in ('MEMSET_PREFILL_EVIDENCE_COMPLETE_PENDING_REVIEW','COE_PILOT_PREFILL_ONLY_PENDING_REVIEW','PREFILL_LOCAL_ENGINEERING_ONLY','DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW','FORMAL_RUN_COMPLETE_PENDING_REVIEW') else 1
