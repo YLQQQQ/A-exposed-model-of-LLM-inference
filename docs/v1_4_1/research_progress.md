@@ -42,6 +42,13 @@ tests/test_batch_load_diagnostic.py tests/test_n1_preprofile_identity.py`，118 
 8进程/8profile、临时12GiB，最终新增/保留估计1～3GiB；均为预算估计而非实测。
 用户DOCX和未跟踪大型原ZIP保持且不纳入提交，原研究设计/冻结语义/数据角色不变。
 
+收尾绑定：执行/分析`2d0d88e7553b11587d66132ec51f5956092a87e6`，已正常推送。
+唯一待审`observation_2d0d88e7553b_delivery.zip`，129029 bytes，SHA256
+`3203f043ca93764c139488d762e9bd1464f6d296fdfb241dbf72ebb6d3f402ab`；12成员/11项
+全覆盖清单、CRC/hash、bundle verify及379项Git源码表示核验通过，未包含用户DOCX/Raw。
+准确私有传输路径、A整段命令和B新回执启用条件集中在忽略的`.local/OBSERVATION_DELIVERY.md`。
+控制文档后续提交不替代该执行身份；新A/B均仍未执行。
+
 ## 7.183 24条自然链竞争解释核对；暂缓8次纯Prefill重复（2026-10-17）
 
 本轮只做用户授权的本地只读时间位置分析与待审设计；未改生产代码、测量定义、质量门或
