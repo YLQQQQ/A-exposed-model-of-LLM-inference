@@ -17,7 +17,8 @@ def require(ok,reason):
 
 
 def active(value):
-    return isinstance(value,dict) and value.get('version')==VERSION
+    from .memset_prefill import active as parameter_active
+    return (isinstance(value,dict) and value.get('version')==VERSION) or parameter_active(value)
 
 
 def schedule(batch_id):
@@ -30,6 +31,8 @@ def schedule(batch_id):
 
 
 def validate_binding(value):
+    from . import memset_prefill as parameters
+    if parameters.active(value):return parameters.validate_binding(value)
     require(isinstance(value,dict),'BINDING')
     require(any(value==r and all(type(value[k]) is type(v) for k,v in r.items())
         for r in schedule(value.get('batch_id'))),'BINDING')
@@ -37,6 +40,8 @@ def validate_binding(value):
 
 
 def minimal_fields(binding):
+    from . import memset_prefill as parameters
+    if parameters.active(binding):return parameters.minimal_fields(binding)
     validate_binding(binding)
     from .gate8_engineering_contract import declaration
     from exposedpath_v141.gate9_domain import G1,declaration as domain
@@ -51,6 +56,8 @@ def minimal_fields(binding):
 
 
 def validate(manifest):
+    from . import memset_prefill as parameters
+    if parameters.active(manifest.get('batch_load')):return parameters.validate(manifest)
     b=validate_binding(manifest.get('batch_load'))
     require(not any(k in manifest for k in ('pilot','formal','n1_model','n1_model_execution','gate10_workload')),'ROLE_OR_DOMAIN')
     if 'completion_path' in manifest:
@@ -122,6 +129,8 @@ def validate_tokens(path,manifest,ledger,execution,manifest_path,producer_path):
     b=validate(manifest);validate_actual_requests(manifest,ledger)
     from .completion_path import EXECUTION_VERSION as completion_execution
     version=completion_execution if 'completion_path' in manifest else EXECUTION_VERSION
+    from . import memset_prefill as parameters
+    if parameters.active(b):version=parameters.EXECUTION_VERSION
     require(execution.get('schema_version')==version and execution.get('batch_load')==b
         and execution.get('batch_tokens_sha256')==sha(path),'EXECUTION_TOKEN_HASH')
     value=read(path)
@@ -145,6 +154,10 @@ def execution_extension(manifest,ledger,execution,execution_path,manifest_path,p
     require(token_path is not None and Path(token_path).resolve()==Path(execution_path).resolve().parent/'batch_tokens.json','TOKEN_PATH')
     path=Path(token_path)
     validate_tokens(path,manifest,ledger,execution,manifest_path,producer_path)
+    from . import memset_prefill as parameters
+    if parameters.active(manifest.get('batch_load')):
+        require(execution.get('memset_parameters_sha256')==sha(Path(execution_path).parent/'memset_parameters.json'),'PARAMETER_FILE_HASH')
+        return {'batch_load','batch_tokens_sha256','memset_parameters_sha256'},parameters.EXECUTION_VERSION
     if 'completion_path' in manifest:
         from .completion_path import validate_calls,EXECUTION_VERSION as completion_version
         validate_calls(manifest,ledger,execution)
@@ -153,6 +166,8 @@ def execution_extension(manifest,ledger,execution,execution_path,manifest_path,p
 
 
 def validate_prepared(manifest,prepared,root):
+    from . import memset_prefill as parameters
+    if parameters.active(manifest.get('batch_load')):return parameters.validate_prepared(manifest,prepared,root)
     validate(manifest)
     require(sha(Path(prepared)/'prompt.json')==manifest['prompt_tokens_sha256']
         and sha(Path(root)/'exposedpath/runner.py')==manifest['runner_source_sha256'],'INPUT_HASH')

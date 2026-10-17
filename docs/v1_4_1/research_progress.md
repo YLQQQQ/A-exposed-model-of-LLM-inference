@@ -1,5 +1,56 @@
 # ExposedPath 科研进度清单
 
+## 7.179 新B2 Prefill参数记录/零逻辑节点最小实现与待审A交付（2026-10-17）
+
+依据用户批准0.5，本轮只本地实现/CPU/打包准备，未操作服务器或运行模型、CUDA程序、Nsight。
+当前集中依据：[原可行性稿0.6](memset_parameter_feasibility_v0_1.md#2026-10-17增补新b2-prefill参数诊断实现-06当前目标机待验证)。
+0.5历史设计及7.178保留；生产A/B/S/COE/registry、旧Formal和原报告不改。
+
+新独立Engineering profile固定B2/512/2/warmup3/repeat1，复用verified模型入口与真实
+prepare→seal→profile argv→producer/receipt→Canonical/局部Prefill检查；完整batch输入与mask
+digest、实际token、模块实字节、process creation及run/request身份均绑定。仅一个未来新run，
+无P0/Cpre/Pilot旧槽。记录器安装在原final drain之前，成功drain后启用，原首Host token后
+关闭；不加CUDA查询/同步/复制/切流，不移动原completion。源码AST行为身份不变。
+
+普通共享导出Detours范围记录4096预分配槽/自动call_id，精确uint64 count、别名、value/return/
+LastError、PID/TID；窗外原转发，重入/外线程/overflow保留原调用但参数准入拒绝。消费者枚举
+全部Prefill同类runtime，side↔闭合唯一NVTX↔runtime双向唯一，未覆盖/PTSZ/private不泛用。
+`MEMSET-ZERO-LOGICAL/0.1`独立参数支持规则保留API墙钟和逻辑顺序、不造activity；正长度
+必须真实合法MEMSET。零长度仍须原drain/局部门、实际设备/context/流桥、全部真实FIFO成员/
+依赖、成功sync/Host token、两模式成员/边/terminal不变；缺闭包继续拒绝。原Canonical不改，
+临时验证视图只处理已证零payload的缺正activity断言，原A输入保留全部API但不发布A结果。
+成功仅`MEMSET_PREFILL_EVIDENCE_COMPLETE_PENDING_REVIEW`；A/COE NOT_ASSESSED，Request/
+Decode NOT_ACCEPTED，不给零调用物理区间或完整W/B资格。
+
+Tests-first经历缺实现/错误接线负例红灯后修复。最终本地真实PS5.1整段A演练命令：
+`python -X utf8 .local/diagnostics/memset_prefill_v0_1/rehearse_a.py`。
+实际CPU子命令（清除插件配置，CUDA_VISIBLE_DEVICES=-1，build路径指向本次Host构建）：
+`python -X utf8 -m pytest -q -ra -p no:cacheprovider tests/test_memset_prefill.py tests/test_memset_prefill_native.py tests/test_memset_prefill_entry.py tests/test_memset_prefill_files.py tests/test_memset_prefill_delivery.py --basetemp .local/mpa1/Y/diagnostics/memset_prefill_aaaaaaaaaaaa_cpu_tmp --junitxml .local/mpa1/Y/diagnostics/memset_prefill_aaaaaaaaaaaa_static/cpu.xml`。
+**64 passed/0 failed/0 skipped，31.93s**；本地Python3.12.7、MSVC14.44/SDK26100，真实CUDA12.4
+头编译/链接、真实Detours Host替身/ctypes ABI，未执行CUDA程序。PS5.1→控制器→编译→pytest→
+ZIP CRC/全hash/回执实际完成，退出0。Git部署/HEAD、测试中的模型/设备/collector边界明确替身；
+不是服务器A或GPU验证。第一次深嵌套演练59passed/5failed（Windows路径长度）原件保留；
+新短路径演练未改测试预期。证据`.local/mpa1/audit.json`及其static ZIP/原始CPU日志。
+
+未改组件复用既有微例0.4/110项资格；只补旧路径相关回归：
+`python -m pytest -q -p no:cacheprovider tests/test_batch_load_diagnostic.py -k "old_engineering_and_formal or prepare_finalizes or actual_producer_reads" tests/test_gate8_target_python.py tests/test_gate8_diagnostic_entry.py --basetemp .local/memset_prefill_legacy --junitxml .local/diagnostics/memset_prefill_v0_1/legacy.xml --tb=short -ra`
+为9passed/74deselected（全局-k，不能说整个目标入口测试集通过）。另显式运行real_entry_argparse、
+real_file_entry、pre_model_failure、model_failure、direct_cpu_probe五项，5passed/0skipped。
+合计14项相关旧路径检查，不重跑54/110/Q0或完整analyzer；本地与目标3.11.16/14.38/SDK20348
+差异保留，目标实际普通入口覆盖仍NOT_PROVEN。
+
+交付策略：先提交实现，再由Git已提交内容生成增量bundle与精确源码/依赖索引，避免自引用。
+前置002f3ae9fcc22f04356dbd22092dcddd8c63a460来自已核验微例原回执，原BLOCKED不改判。
+复用固定依赖，无安装/升级；默认A仅部署/编译/CPU/新鲜资源检查，B必须另经真实A回执审查、
+精确SHA显式启动。本轮只给A命令。future单次预算约15分钟/2GiB临时，profile300s/export180s/
+readiness60s/analysis300s、driver900s硬限；一次失败或完成即停，无重试/替补/自动追加。
+历史YLQ总量null/UNKNOWN、长期50,000,000,000bytes目标未证明；不扫旧目录、ACL或清理。
+
+唯一后续：先审本地实现/新A包；以后一次新B2成功可回答普通入口完整覆盖及零payload/正效果/
+闭包是否成立，供另审参数辅助局部COE，不自动PASS。失败即具体原因停止，不扩hook或重编。
+旧B2/Pilot BLOCKED、7 NOT_RUN/0block、Gate13限定PASS/Gate14 NOT_RUN及UNKNOWN/
+NOT_ASSESSED保持；用户DOCX和未提交大型原ZIP保留。本轮不升级旧数据或原Formal。
+
 ## 7.178 真实PyTorch memset覆盖审查与零payload逻辑节点消费草案（2026-10-17）
 
 本轮为Engineering准备/合同设计，仅本地源码、第一方接口和既有小回执核对；无新记录器/消费者

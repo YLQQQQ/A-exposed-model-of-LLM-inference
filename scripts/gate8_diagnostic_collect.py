@@ -133,15 +133,25 @@ def profile_argv(nsys,python,prepared,output,root=ROOT):
     if manifest.exists() and measurement_pass(json.loads(manifest.read_text(encoding='utf-8')))!='pass1':
         raise ValueError('ENGINEERING_PAIR_PROFILE_PASS')
     kill='true' if sys.platform=='win32' else 'sigkill'
+    from exposedpath.memset_prefill import active as parameter_active
+    duration=300 if manifest.exists() and parameter_active(json.loads(manifest.read_text(encoding='utf-8')).get('batch_load')) else 120
     return [str(nsys),'profile','--trace=cuda,nvtx','--sample=none','--cpuctxsw=none',
         '--cuda-memory-usage=false','--cuda-trace-scope=process-tree','--isr=false',
-        '--duration=120','--kill='+kill,'--output='+str(output/'capture'),
+        '--duration='+str(duration),'--kill='+kill,'--output='+str(output/'capture'),
         *target_argv(python,prepared,output,root)]
 
 
 def analyze_receipt(manifest,receipt,execution,output):
     from exposedpath import coe_pilot
-    if coe_pilot.active(manifest.get('pilot')):
+    from exposedpath.memset_prefill import active as parameter_active
+    if parameter_active(manifest.get('batch_load')):
+        r=run_once([sys.executable,'-X','utf8','-u','-m','analysis.memset_prefill','--receipt',str(receipt),
+            '--execution',str(execution),'--output',str(output)],Path(output).with_name(Path(output).name+'_parameters_driver'),
+            timeout_seconds=300,progress=True)
+        if r['status']!='COMPLETE' or r['timed_out'] or r['exit_code']!=0:raise ValueError('PARAMETER_OFFLINE_DRIVER_FAILED_SEE_ORIGINAL_LOG')
+        result=Path(output)/'parameters.json'
+        value=json.loads(result.read_text(encoding='utf8'))
+    elif coe_pilot.active(manifest.get('pilot')):
         from analysis.coe_pilot import process
         result=process(receipt,execution,output)
         value=json.loads(result.read_text(encoding='utf8'))
@@ -212,7 +222,10 @@ def analyze_model(output,prepared,collector_version):
         **{k:root/v for k,v in names.items()}))
     result,value=analyze_receipt(manifest,receipt,root/'engineering_execution.json',output/'analyzed')
     from exposedpath.coe_pilot import active
-    if active(manifest.get('pilot')):
+    from exposedpath.memset_prefill import active as parameter_active
+    if parameter_active(manifest.get('batch_load')):
+        if value['status']!='MEMSET_PREFILL_EVIDENCE_COMPLETE_PENDING_REVIEW':raise ValueError('PARAMETER_SCOPE_BLOCKED')
+    elif active(manifest.get('pilot')):
         if value['status']!='COE_PILOT_PREFILL_ONLY_PENDING_REVIEW':raise ModelScopeBlocked(result,value)
     elif 'completion_path' in manifest:
         if value['status']!='PREFILL_LOCAL_ENGINEERING_ONLY':raise ModelScopeBlocked(result,value)
@@ -228,11 +241,14 @@ def main():
     parser.add_argument('--engineering-a-only','--engineering-domain',dest='engineering_a_only',action='store_true')
     parser.add_argument('--pilot',action='store_true',help='Require prospective G11 Pilot declaration (no role relabelling)')
     parser.add_argument('--signed-formal-protocol',action='store_true',help='Explicit opt-in; exact external human approval is required')
+    parser.add_argument('--memset-prefill-parameters',action='store_true',help='Explicit one-new-B2 Engineering parameter diagnostic only')
     args=parser.parse_args()
     if args.pilot and not args.engineering_a_only:
         raise ValueError('PILOT_DOMAIN_ENTRY_REQUIRED')
     if args.signed_formal_protocol and (args.pilot or not args.engineering_a_only):
         raise ValueError('FORMAL_DOMAIN_ENTRY_REQUIRED')
+    if args.memset_prefill_parameters and (not args.engineering_a_only or args.pilot or args.signed_formal_protocol):
+        raise ValueError('PARAMETER_DOMAIN_ENTRY_REQUIRED')
     output=args.output.resolve()
     if output.exists(): raise FileExistsError(output)
     if not args.engineering_a_only and args.python.resolve()!=(ROOT/'.venv/Scripts/python.exe').resolve():
@@ -245,6 +261,9 @@ def main():
         from exposedpath_v141.gate8_qualification import validate_tool_version
         manifest=json.loads((args.prepared/'manifest.json').read_text(encoding='utf-8'))
         validate_declaration(manifest)
+        from exposedpath.memset_prefill import active as parameter_active
+        if args.memset_prefill_parameters!=parameter_active(manifest.get('batch_load')):
+            raise ValueError('PARAMETER_COLLECTION_OPT_IN_CONFLICT')
         if args.pilot != ('pilot' in manifest):
             raise ValueError('PILOT_COLLECTION_OPT_IN_CONFLICT')
         if args.signed_formal_protocol!=('formal' in manifest):
@@ -313,11 +332,14 @@ def main():
                     report.update(status='COE_PILOT_PREFILL_ONLY_PENDING_REVIEW',schema_version='coe-pilot-collection/0.1.0')
             if args.signed_formal_protocol:
                 report.update(status='FORMAL_RUN_COMPLETE_PENDING_REVIEW',schema_version='gate12-formal-collection/0.1.0')
+            if args.memset_prefill_parameters:
+                report.update(status='MEMSET_PREFILL_EVIDENCE_COMPLETE_PENDING_REVIEW',schema_version='memset-prefill-collection/0.1.0',
+                    a_admission='NOT_ASSESSED',coe_admission='NOT_ASSESSED')
     except (ValueError,OSError,KeyError) as exc:
         record_analysis_error(report,exc)
     (output/'collection_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(report['status'])
-    return 0 if report['status'] in ('COE_PILOT_PREFILL_ONLY_PENDING_REVIEW','PREFILL_LOCAL_ENGINEERING_ONLY','DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW','FORMAL_RUN_COMPLETE_PENDING_REVIEW') else 1
+    return 0 if report['status'] in ('MEMSET_PREFILL_EVIDENCE_COMPLETE_PENDING_REVIEW','COE_PILOT_PREFILL_ONLY_PENDING_REVIEW','PREFILL_LOCAL_ENGINEERING_ONLY','DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW','FORMAL_RUN_COMPLETE_PENDING_REVIEW') else 1
 
 
 if __name__=='__main__': raise SystemExit(main())

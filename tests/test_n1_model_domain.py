@@ -77,6 +77,34 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
                          for i in range(batch_binding['batch_size'])])
             write_json(args['prompt_path'],prompt)
             manifest.update(model_id=str(model),prompt_tokens_sha256=sha(args['prompt_path']))
+            from exposedpath import memset_prefill as parameters
+            if parameters.active(batch_binding):
+                manifest.pop('domain_qualification',None)
+                monkeypatch.setattr(coe_pilot,'software_identity',lambda _:dict(coe_pilot.SOFTWARE))
+                manifest['memset_input']=parameters.validate_input(prompt,json.loads((model/'config.json').read_text()))
+                # Explicit Host recorder double for this producer->SQLite test;
+                # actual Detours/ABI tests live in test_memset_prefill_native.
+                import threading
+                columns={r[1] for r in db.execute('PRAGMA table_info(NVTX_EVENTS)')}
+                if 'domainId' not in columns:db.execute('ALTER TABLE NVTX_EVENTS ADD COLUMN domainId INTEGER DEFAULT 0')
+                tid=threading.get_native_id();pid=os.getpid()
+                class ParameterDouble:
+                    def __init__(self,b):
+                        self.b=b;self.active=False;self.calls=[]
+                        db.execute('INSERT INTO NVTX_EVENTS(start,end,eventType,text,globalTid,domainId) VALUES (0,0,75,?,?,2)',
+                            ('EP_MEMSET_PREFILL',(pid<<24)|tid))
+                    def install(self,identity):self.identity=identity
+                    def begin(self,identity):self.active=True;self.identity=identity
+                    def end(self,completed_ns):self.active=False
+                    def close(self,path):
+                        from tests.test_memset_prefill import evidence
+                        side,_,_=evidence();side.update(run_id=self.b['run_id'],pid=pid,tid=tid,identity=self.identity,
+                            runtime_sha256=self.b['runtime']['sha256'],recorder_sha256=self.b['recorder']['sha256'],
+                            calls=self.calls,completion_observed=True)
+                        write_json(path,side)
+                        entrydir=path.parent.with_name('diagnostic-entry');entrydir.mkdir()
+                        write_json(entrydir/'started.json',dict(pid=pid,creation_filetime=123,role='CPU_OS_DOUBLE'))
+                monkeypatch.setattr(parameters,'Recorder',ParameterDouble)
         manifest.update(gpu_uuid=UUID,gpu_pci_bus_id='0000:E1:00.0')
         write_json(args['manifest_path'],manifest)
         write_json(args['preflight_path'],dict(physical_gpu_index=3,logical_gpu_index=0,
@@ -137,13 +165,26 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
             a,b,c=backend.api('cudaMemcpyAsync_v3020')
             db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_MEMCPY VALUES (?,?,0,1,NULL,?,?,?,4,2,2,1,NULL)',
                 (b,b+2,stream_id(),c,os.getpid()<<24))
-            if coe:
+            if coe or (batch_binding is not None and parameters.active(batch_binding)):
                 db.execute('UPDATE CUPTI_ACTIVITY_KIND_MEMCPY SET bytes=?,dstKind=0 WHERE correlationId=?',(8*batched['batch_size'],c))
             sync(); return cpu(token)
         monkeypatch.setattr(_FakeToken,'cpu',read)
         def model(*a,**kw):
             result=load(*a,**kw)
             for i in (0,15): result[0].model.layers[i].forward=lambda x:launch()
+            if batch_binding is not None and parameters.active(batch_binding):
+                def first(x):
+                    # Find the actually constructed scoped recorder via a
+                    # constructor wrapper; no device parameter is inferred.
+                    r=parameter_instance[0]
+                    if r.active:
+                        label='EP_MEMSET_PREFILL:'+batch_binding['run_id']+':1'
+                        cuda.nvtx.range_push(label);backend.api('cudaMemsetAsync_v3020');cuda.nvtx.range_pop()
+                        db.execute('UPDATE NVTX_EVENTS SET domainId=2 WHERE text=?',(label,))
+                        r.calls=[dict(call_id=1,pid=os.getpid(),tid=__import__('threading').get_native_id(),count=0,value=123,
+                            stream_hex='0',pointer_alias=1,return_code=0,forwards=1,completed=True,push_level=-1,pop_level=-1)]
+                    return launch()
+                result[0].model.layers[0].forward=first
             if internal:
                 def first(x):
                     launch(); sync()  # Framework internal call, no intervention marker.
@@ -155,6 +196,11 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
                 result[0].model.layers[0].forward=allocate_then_launch
             return result
         monkeypatch.setattr(runner,'load_model',model)
+        if batch_binding is not None and parameters.active(batch_binding):
+            parameter_instance=[];constructor=parameters.Recorder
+            def create_parameter(b):
+                r=constructor(b);parameter_instance.append(r);return r
+            monkeypatch.setattr(parameters,'Recorder',create_parameter)
         if default_prefix:
             # Setup work in NULL stream, finished before warmup/request drain.
             # It is NOT in the explicit nonblocking stream's physical W.
@@ -221,7 +267,7 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
             db.execute("DELETE FROM NVTX_EVENTS WHERE text LIKE '%natural_token_ready%'")
         if coe and damage=='pair':
             db.execute("DELETE FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE correlationId=(SELECT MIN(correlationId) FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION WHERE syncType=3)")
-        if coe:
+        if coe or (batch_binding is not None and parameters.active(batch_binding)):
             db.execute('CREATE TABLE ENUM_CUDA_MEM_KIND(id INTEGER,name TEXT,label TEXT)')
             db.executemany('INSERT INTO ENUM_CUDA_MEM_KIND VALUES (?,?,?)',[(0,'CUDA_MEMOPR_MEMORY_KIND_PAGEABLE','Pageable'),(2,'CUDA_MEMOPR_MEMORY_KIND_DEVICE','Device')])
             db.execute('CREATE TABLE ENUM_CUDA_MEMCPY_OPER(id INTEGER,name TEXT,label TEXT)')

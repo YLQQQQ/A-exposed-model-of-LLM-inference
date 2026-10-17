@@ -258,6 +258,7 @@ def run_one_invocation(
     gate8_recorder=None,
     drain_recorder=None,
     completion_controller=None,
+    parameter_recorder=None,
 ) -> Dict:
     """Execute a single inference invocation with NVTX annotation.
 
@@ -273,6 +274,10 @@ def run_one_invocation(
     range_push = (lambda _label: None) if gate8_pass0 else torch.cuda.nvtx.range_push
     range_pop = (lambda: None) if gate8_pass0 else torch.cuda.nvtx.range_pop
 
+    # Install diagnostic Host/NVTX machinery before the *existing* final drain,
+    # never between a successful drain and its closed request prefix.
+    if parameter_recorder is not None:parameter_recorder.install(token_ready_identity_base)
+
     # ---- Final drain before timing ----
     if drain_recorder is None:
         torch.cuda.synchronize()
@@ -280,6 +285,8 @@ def run_one_invocation(
         if torch.cuda.current_device() != drain_recorder.payload['logical_device']:
             raise ValueError('DRAIN_CURRENT_DEVICE_CONFLICT')
         drain_recorder.observe(torch.cuda.synchronize)
+
+    if parameter_recorder is not None:parameter_recorder.begin(token_ready_identity_base)
 
     # ==================== NVTX: invocation ====================
     range_push(nvtx_invocation_label)
@@ -316,6 +323,7 @@ def run_one_invocation(
         )
     ]
     t_first_token_ns = token_ready_boundaries[0].completed_ns
+    if parameter_recorder is not None:parameter_recorder.end(t_first_token_ns)
 
     range_pop()  # prefill
 
@@ -409,7 +417,7 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                        clock_ns=time.perf_counter_ns, record_drains=False,
                        record_stages=False, model_setup=None, record_load_tasks=False,
                        setup_observer=None, allow_load_fallback=True, invocation_observer=None,
-                       n1_controller=None, completion_controller=None,input_observer=None):
+                       n1_controller=None, completion_controller=None,input_observer=None,parameter_recorder=None):
     """Explicit local Gate8 producer API over already-resident inputs.
 
     Not enabled by the legacy CLI/launcher. The caller supplies preflight-bound
@@ -424,6 +432,13 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
 
     if pass_fields.get("pid") != os.getpid():
         raise ValueError("IDENTITY_CONFLICT: producer PID must be current process")
+    if parameter_recorder is not None:
+        from exposedpath.memset_prefill import active,validate_binding
+        if (not active(pass_fields.get('batch_load')) or pass_fields.get('run_role')!='ENGINEERING'
+            or pass_fields.get('pass_id')!='pass1' or n1_controller is not None or completion_controller is not None
+            or model_setup is None or not record_stages or not record_drains or record_load_tasks):
+            raise ValueError('MEMSET_PREFILL_PROFILE_REQUIRED')
+        validate_binding(pass_fields['batch_load'])
     if completion_controller is not None and (n1_controller is not None or model_setup is None
             or not record_stages or not record_drains or record_load_tasks or pass_fields['pass_id']!='pass1'):
         raise ValueError('COMPLETION_PATH_VERIFIED_SETUP_REQUIRED')
@@ -607,6 +622,7 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                 gate8_recorder=recorder,
                 drain_recorder=drain_recorder,
                 completion_controller=completion_controller,
+                parameter_recorder=parameter_recorder,
             )
             invocation = lambda:invoke_model(model) if n1_controller is None else n1_controller.run(
                 model,entry['identity'],invoke_model)

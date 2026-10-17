@@ -126,6 +126,7 @@ def model_entry():
     import traceback
     p=argparse.ArgumentParser(add_help=False,allow_abbrev=False)
     p.add_argument('--output-dir',required=True)
+    p.add_argument('--manifest-path')
     args,_=p.parse_known_args(sys.argv[2:])
     output=Path(args.output_dir).resolve()
     entry=output.with_name(output.name+'-entry')
@@ -133,6 +134,14 @@ def model_entry():
     report=dict(schema_version='exposedpath-target-entry/0.1.0',status='STARTED',
         pid=os.getpid(),parent_pid=os.getppid(),executable=str(Path(sys.executable).resolve()),
         argv=list(sys.argv),environment=environment(),exit_code=None)
+    instance_error=None
+    if args.manifest_path:
+        try:
+            from exposedpath.memset_prefill import active,creation_filetime
+            manifest=json.loads(Path(args.manifest_path).read_text(encoding='utf8'))
+            if active(manifest.get('batch_load')):report['creation_filetime']=creation_filetime()
+        except Exception as exc:
+            instance_error=exc;report['process_instance_error']=type(exc).__name__+':'+str(exc)
     def persist(name,value):
         with (entry/name).open('x',encoding='utf-8') as handle:
             json.dump(value,handle,indent=2,sort_keys=True); handle.flush(); os.fsync(handle.fileno())
@@ -142,6 +151,7 @@ def model_entry():
         from exposedpath.process_origin import recording
         with contextlib.redirect_stdout(stdout),contextlib.redirect_stderr(stderr):
             try:
+                if instance_error is not None:raise instance_error
                 with recording(entry/'subprocess_origin.jsonl'):
                     from exposedpath.gate8_diagnostic import main as model
                     sys.argv[1:2]=['run']

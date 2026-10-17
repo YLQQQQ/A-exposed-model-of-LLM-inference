@@ -1,6 +1,88 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-17增补：真实PyTorch覆盖桥接与参数消费规则草案 0.5（当前）
+## 2026-10-17增补：新B2 Prefill参数诊断实现 0.6（当前，目标机待验证）
+
+**最小实现与本地CPU验证完成；只交付待审阶段A，不授予模型覆盖、A或COE资格。** 用户接受下文
+0.5窄域方案后，本轮实现独立Engineering profile与参数消费者。0.5保留为设计时历史，旧微例
+PASS、旧B2/Pilot BLOCKED、7槽NOT_RUN/0完整block及原UNKNOWN/NOT_ASSESSED均保持。
+
+### 实际接线与版本边界
+
+- 新声明`MEMSET-PYTORCH-PREFILL-PARAMS/0.1`、profile
+  `MEMSET_PREFILL_PARAMETER_DIAGNOSTIC/0.1`、side/receipt/execution独立0.1.0；不是旧G1/Pilot
+  的batch2扩容。manifest严格绑定新run/commit、完整`[2,512]`输入及mask摘要、实际两样本两token、
+  三次warmup、repeat1、普通CUDART与记录器DLL实字节。旧batch版本仍不接受B2。
+- [verified入口](../../exposedpath/gate8_diagnostic.py)复用原解释器、prepare→seal→model-run、
+  模型inventory、设备UUID/PCI、真实软件配置及producer链。记录器**在原最终drain之前安装**，
+  原成功drain后只启用预分配记录；原first Host-readable token时间戳之后关闭记录，Decode前停用。
+  `.cpu()`、completion锚点、流、同步、请求边界和token-ready helper内容不改。落盘/拆除在窗外。
+- [native recorder](../../scripts/native_memset_probe/prefill_recorder.cpp)仅hook已核验绝对路径的
+  共享普通`cudaMemsetAsync`。一次Detours事务纳入既存同进程线程；4096预分配槽、自动call_id、
+  uint64 count、指针地址别名、原value/return/LastError。命中时恰好一次原参数转发，无新CUDA
+  查询/复制/同步、堆分配或磁盘I/O。别名不证明allocation生命周期；PTSZ/private不自动覆盖。
+- [consumer](../../analysis/memset_prefill.py)枚举整个Prefill的目标runtime，不按旧84条或邻近时间
+  配对。side↔闭合唯一NVTX domain/range↔同PID/TID/runtime严格双向唯一；实际process creation
+  FILETIME另与入口started.json绑定。负返回仅复用已验`-1/-1`情况且仍要求真实完整范围。
+  非零必须唯一合法MEMSET效果；零参正效果、未知效果、漏记、重入、外线程、溢出均拒绝。
+
+### 零payload消费：独立实现，不是生产准入豁免
+
+规则`MEMSET-ZERO-LOGICAL/0.1`仅用于这个未来新Engineering profile。保留原API墙钟/submit
+类别、逻辑身份、真实提交顺序和原Canonical，不创建0ns或其他device activity。
+临时验证视图仅去除已被参数证明count0的“必须有正activity”断言，再调用原局部Prefill门；
+原始A输入仍含这些API预算，内部A不发布。随后必须独立满足同次drain、设备/context/native-
+trace流桥、Host token、成功sync、所有真实成员/相邻FIFO边、terminal及LEGACY/PTDS必要后缀
+一致。已完成历史和已完成必要成员保留；操作内D2H包含，sync提交边界之后工作不纳入。
+
+允许的两种有限关系只是“Host零调用”或“同一隔离FIFO内空节点”；二者不得改变真实成员、
+真实依赖和后续D2H terminal。零调用必须在该实际后续提交之前。pending历史、事件/graph/
+跨流依赖、未知context/入口、模式相关歧义或terminal缺失仍拒绝；不声称已排除所有未记录依赖，
+不授完整物理W/B。若真实B2不能证明这些条件，就停止，不扩hook或改合同追绿。
+
+输出`parameters.json`包括原始实例参数、原API预算、效果引用、全部源hash、局部门事实及零节点
+证明，成功仅称`MEMSET_PREFILL_EVIDENCE_COMPLETE_PENDING_REVIEW`。A/COE仍NOT_ASSESSED，
+Request/Decode NOT_ACCEPTED。当前没有新模型trace或新可信A/COE结果。
+
+### 本地验证与明确限制
+
+定向新检查64项：参数/范围/覆盖反例，独立FIFO成员与terminal正反例，实际prepare→seal→profile
+argv→verified producer→Canonical→参数消费文件链，阶段A/B显式分派与失败封包。运行环境
+Python3.12.7；目标Python3.11.16尚待阶段A，未把本地AST或替身称为目标验证。
+
+真实CUDA12.4头文件编译/链接与真实Detours **Host替身**转发执行已完成；本地工具链14.44/
+SDK26100，目标既有14.38/SDK20348仍须实际编译验证。测试包含64位大count、原错误码/LastError、
+容量溢出仍原转发、重入/外线程/错误入口、ctypes真实ABI与落盘；不运行CUDA程序。
+旧路径另有14项相关检查通过（9项定向选择、5项入口检查），不是重跑全110/Q0。
+
+整段本地演练实际运行PS5.1→控制器→头文件编译/Host Detours→64项CPU→单ZIP及CRC/hash；
+Git部署/HEAD是明确替身，模型/设备/collector只在测试边界用替身。第一次深目录演练59通过/
+5失败，原因为Windows路径长度，失败现场保留；改用新短路径后重跑，不修改测试期望或身份门。
+最终命令、结果和回执位置见唯一科研进度7.179。未重跑旧SQLite/完整analyzer、旧54/110或Q0。
+
+### 唯一待审交付与停止条件
+
+增量前置以已核验微例回执的执行`002f3ae9fcc22f04356dbd22092dcddd8c63a460`绑定，
+而非猜测服务器HEAD。复用固定Detours4.0.1/NVTX3.1.0/SDK12.4头文件；无安装/升级。
+包索引绑定提交后实际执行/分析commit、全部新增接线实字节、输入/模型引用及历史功能token参考，
+不把旧B2功能值参考解释为旧准入通过。实际包和阶段A整段命令见本地handoff交付入口。
+
+阶段A仅部署、头文件编译链接、Host CPU检查、源码/运行库身份与新鲜空间回执；不运行模型/
+CUDA程序/Nsight。阶段B必须另经真实A回执审查、绑定其精确SHA后显式启用；本轮不提供B命令。
+只允许一个全新B2/512/2/warmup3/repeat1、1模型进程/1profile，无P0/Cpre/旧槽恢复。
+安装/记录会扰动执行，该次只作参数/支持域诊断，不作自然性能或Pilot重复。
+
+未来单次预算估计15分钟；profile300s、export180s（另readiness60s）、离线300s、driver900s硬
+上限，无重试/替补/自动追加。启动实际输出/临时/归档卷分别检查且同卷不重复计数，2GiB预留；
+历史YLQ总量null/UNKNOWN、长期50,000,000,000bytes目标未证明，不扫描ACL或自动清理。
+
+**新B2成功**只意味着普通入口确实完整覆盖这次Prefill、参数/效果及有限局部依赖证据可审，
+可以决定是否另审参数辅助COE；不自动恢复9组Pilot或发布A。**失败**则定位普通入口缺覆盖、
+非零缺效果、参数/身份/范围或依赖/terminal不闭合的具体项并停止；不回填旧168次实例，
+不恢复旧B2和7槽，不扩大hook/工具链。生产A/B/COE/registry、原Formal/Gate判定均未改变。
+
+<a id="2026-10-17增补真实pytorch覆盖桥接与参数消费规则草案-05当前"></a>
+
+## 2026-10-17增补：真实PyTorch覆盖桥接与参数消费规则草案 0.5（历史设计）
 
 **裁决：GO，限进入一个新B2 Engineering参数诊断的最小本地实现准备；不是模型覆盖/COE准入已通过。**
 参数完整后存在合法的窄域解决路径：正长度继续要求真实效果；零长度保留逻辑调用和已证依赖，
