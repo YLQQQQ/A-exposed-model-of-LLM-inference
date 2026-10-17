@@ -1,5 +1,45 @@
 # ExposedPath 科研进度清单
 
+## 7.181 COE独立研究短稿：全部24链、公平baseline与技术报告裁决（2026-10-17）
+
+本轮按用户授权只做COE科研成文和小型CSV连接/描述统计；未改生产代码、合同、registry、
+数据角色或旧报告，无服务器、模型/CUDA/Nsight、新预算、采集包/命令、测试或完整分析。
+参数取证路线7.180已结束，不恢复七槽、引擎或hook。
+当前产物：[COE独立短稿0.1](coe_research_short_note_v0_1.md)，与旧A/B核心稿分开；
+[12个完整block内比较](coe_research_block_comparisons_v0_1.csv)保留24条原链的全部值和来源。
+
+明确RQ：在同一自然Host-readable完成政策下，输入长度变化时，首/第二token的哪些必要
+设备活动仍落在copy→成功sync完成子包络内；常规参照能否回答同样问题。仍只测完成操作内
+必要活动，不称纯Host阻塞/近似阻塞/可优化时延。W由原同步/提交/流序证据取得，不从重叠选；
+candidate边界固定，不改生产A/B。原Formal角色与事后COE探索角色分开，未升级为新Formal。
+
+六block/12run/24链全展示：首token G512−G32 signed差依次
+`+0.705755,+0.976280,+0.979512,+0.995095,+1.090264,+0.876154`ms，配对差中位数+0.977896ms；
+第二token`−0.649627,−0.604444,−0.601531,+0.194398,−0.856154,−0.574620`ms，中位数−0.6029875ms。
+G512第二token五条仅0.416～0.448µs D2H，block4有kernel，全部保留；没有把token/kernel当
+独立重复，无bootstrap、显著性检验或P0迁移。复用既有24链图，不重复区间演算或读取Raw。
+
+公平比较结果：原配对sync交集24条全0；copy API墙钟已经复现12个输入长度差的全部同号
+方向，COE没有新增方向判别。phase GPU union与COE在第二token的block4/5出现反向，支持
+“总量与完成操作内时间位置不同”的描述，但不证明COE优越。给予普通union相同I/必要集合
+时数值可等价；完整依赖timeline可恢复相同解释。新增的是可核验的完成语义/成员来源查询，
+不是独占的Raw信息。长输入组P1阶段总长中位数反而更短的事实也披露，不选有利趋势。
+
+四token独立验证仅用于成员/terminal/区间关系；旧同批B1/B4只作局部Engineering个案，Cpre
+只作改变完成政策的机制对照，不与六block拼接或作为自然纯等待真值。零捕获B2及旧批次
+继续BLOCKED，0完整batch1/2/4 block、不发布可信B2 COE。UNKNOWN/NOT_ASSESSED保持。
+
+裁决：**当前最合适是技术报告（采用探索性测量案例结构）**。有具体RQ、独立计算依据及
+正反实物，但公平强baseline下尚未建立新方法、非冗余实证或分析任务收益；不因Gate PASS、
+较大交集、自动化或守恒宣布创新，也不将未证新颖性写成已证明毫无价值。未指定venue，不
+保证发表或学位充分性。当前不建议任何新的GPU/工程预算，下一项不自动生成实验任务。
+
+实际轻量核对：CSV键覆盖24链/12run/6block、与既有candidate和独立复用记录逐值相符；
+baseline按相同run/block/phase连接，signed差由整数ns相减；小型来源hash和统计在忽略的
+`.local/diagnostics/coe_short_note_v0_1/summary.json`，非新测量。复用原图并人工查看；文档
+相对链接、表格值、diff和原CSV/DOCX未改检查，不新增测试充当研究证据。用户DOCX/Raw及
+历史报告均保留。Gate13限定PASS、Gate14 NOT_RUN、旧A/B/COE定义及Formal不变。
+
 ## 7.180 新B2参数诊断零捕获收口；仅修正离线失败退出码（2026-10-17）
 
 本轮Engineering原件只读核验/小型CPU修复，无服务器、CUDA、模型、Nsight、重采或新包。
