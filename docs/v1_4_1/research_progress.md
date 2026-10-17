@@ -37,14 +37,23 @@ tests/test_coe_input_delivery.py tests/test_coe_input_midpoint.py tests/test_coe
 未修改测试追绿或放宽身份/依赖门；额外`tests/test_observation_delivery.py`旧Engineering
 launcher定向回归10 passed/0 failed/0 skipped、22.48s，非重复GPU/全Q0。
 
-唯一包身份在实现commit后追加绑定；机器计划
+固定执行/分析`4da800d2e8d270fdc2e25e07ab3511a73066df46`；最近可信服务器前置
+`006d371a41c936b4cbf517d41e7ac7f89de76a47`，由已审静态/八槽终态绑定，新A仍须核对实际HEAD。
+唯一待审包`coe_input_midpoint_4da800d2e8d2_delivery.zip`，104,899 bytes，SHA256
+`70b2083420dd9c3f6947353ddee466b3e14eb9396520f7bc801e02a260bdc483`；manifest SHA256
+`9f5ae764cd050e01f7b1efa66c4a360e63d13b039953655e21b5ef255878e527`。
+独立回读17成员/16项清单、CRC/hash全覆盖、389源码表示、三输入独立摘要、bundle、真实
+PS5.1语法及10项未变测量组件通过；新A/1024GPU仍NOT_RUN。原包不因后续文档HEAD重制，
+控制层提交不替代4da800执行身份。本地准确命令/路径见handoff，不含本轮B命令。
+
+机器计划
 [三点Pilot](../../configs/coe_input_midpoint_pilot_v0_1.json)，执行说明补入
 [当前短稿§12.6](coe_research_short_note_v0_1.md#126-三点pilot本地执行准备2026-10-17目标执行仍not_run)。
 预算30～45分钟/临时12GiB/保留0.8～1.5GiB为估计，实际沿用profile300s、单run driver900s，
 无新增全批超时放宽。旧Formal、Gate13限定PASS/Gate14 NOT_RUN、B2/七槽BLOCKED、
 参数/引擎支线停止、UNKNOWN/NOT_ASSESSED、用户DOCX与大型原件均保留。
 
-## 7.189 已执行512/2048输入轴Pilot：四block离线科学收口（2026-10-17，当前）
+## 7.189 已执行512/2048输入轴Pilot：四block离线科学收口（2026-10-17，历史收口）
 
 当前最高优先级：研究固定P自然完成程序的条件化输入响应；本批已完成，不再等待7.188的
 阶段A或把2048实物写成NOT_RUN。唯一推荐下一阶段为同期512/1024/2048中点Pilot设计，
