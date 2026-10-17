@@ -17,8 +17,9 @@ def require(ok,reason):
 
 
 def active(value):
+    from .observation_preparation import active as preparation_active
     from .memset_prefill import active as parameter_active
-    return (isinstance(value,dict) and value.get('version')==VERSION) or parameter_active(value)
+    return (isinstance(value,dict) and value.get('version')==VERSION) or parameter_active(value) or preparation_active(value)
 
 
 def schedule(batch_id):
@@ -31,6 +32,8 @@ def schedule(batch_id):
 
 
 def validate_binding(value):
+    from . import observation_preparation as preparation
+    if preparation.active(value):return preparation.validate_binding(value)
     from . import memset_prefill as parameters
     if parameters.active(value):return parameters.validate_binding(value)
     require(isinstance(value,dict),'BINDING')
@@ -40,6 +43,8 @@ def validate_binding(value):
 
 
 def minimal_fields(binding):
+    from . import observation_preparation as preparation
+    if preparation.active(binding):return preparation.minimal_fields(binding)
     from . import memset_prefill as parameters
     if parameters.active(binding):return parameters.minimal_fields(binding)
     validate_binding(binding)
@@ -56,6 +61,8 @@ def minimal_fields(binding):
 
 
 def validate(manifest):
+    from . import observation_preparation as preparation
+    if preparation.active(manifest.get('batch_load')):return preparation.validate(manifest)
     from . import memset_prefill as parameters
     if parameters.active(manifest.get('batch_load')):return parameters.validate(manifest)
     b=validate_binding(manifest.get('batch_load'))
@@ -113,6 +120,8 @@ def observation(identity,result,batch):
 
 
 def validate_actual_requests(manifest,ledger):
+    from . import observation_preparation as preparation
+    if preparation.active(manifest.get('batch_load')):return preparation.validate_actual_requests(manifest,ledger)
     b=validate(manifest)
     from .completion_path import PASS_VERSION as completion_pass
     version=completion_pass if 'completion_path' in manifest else PASS_VERSION
@@ -126,6 +135,9 @@ def validate_actual_requests(manifest,ledger):
 
 
 def validate_tokens(path,manifest,ledger,execution,manifest_path,producer_path):
+    from . import observation_preparation as preparation
+    if preparation.active(manifest.get('batch_load')):
+        return preparation.validate_tokens(path,manifest,ledger,execution,manifest_path,producer_path)
     b=validate(manifest);validate_actual_requests(manifest,ledger)
     from .completion_path import EXECUTION_VERSION as completion_execution
     version=completion_execution if 'completion_path' in manifest else EXECUTION_VERSION
@@ -151,6 +163,9 @@ def validate_tokens(path,manifest,ledger,execution,manifest_path,producer_path):
 
 
 def execution_extension(manifest,ledger,execution,execution_path,manifest_path,producer_path,token_path):
+    from . import observation_preparation as preparation
+    if preparation.active(manifest.get('batch_load')):
+        return preparation.execution_extension(manifest,ledger,execution,execution_path,manifest_path,producer_path,token_path)
     require(token_path is not None and Path(token_path).resolve()==Path(execution_path).resolve().parent/'batch_tokens.json','TOKEN_PATH')
     path=Path(token_path)
     validate_tokens(path,manifest,ledger,execution,manifest_path,producer_path)
@@ -166,6 +181,8 @@ def execution_extension(manifest,ledger,execution,execution_path,manifest_path,p
 
 
 def validate_prepared(manifest,prepared,root):
+    from . import observation_preparation as preparation
+    if preparation.active(manifest.get('batch_load')):return preparation.validate_prepared(manifest,prepared,root)
     from . import memset_prefill as parameters
     if parameters.active(manifest.get('batch_load')):return parameters.validate_prepared(manifest,prepared,root)
     validate(manifest)

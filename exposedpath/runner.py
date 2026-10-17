@@ -259,6 +259,7 @@ def run_one_invocation(
     drain_recorder=None,
     completion_controller=None,
     parameter_recorder=None,
+    observation_preparation=None,
 ) -> Dict:
     """Execute a single inference invocation with NVTX annotation.
 
@@ -277,6 +278,11 @@ def run_one_invocation(
     # Install diagnostic Host/NVTX machinery before the *existing* final drain,
     # never between a successful drain and its closed request prefix.
     if parameter_recorder is not None:parameter_recorder.install(token_ready_identity_base)
+    ready=observe_token_ready_boundary
+    if observation_preparation is not None:
+        if completion_controller is not None or parameter_recorder is not None:
+            raise ValueError('OBS_PREP_MIXED_CONTROLLER')
+        ready=observation_preparation.prepare(token_ready_identity_base,output_len,sys.modules[__name__])
 
     # ---- Final drain before timing ----
     if drain_recorder is None:
@@ -311,7 +317,7 @@ def run_one_invocation(
     past_key_values = outputs.past_key_values
 
     token_ready_boundaries = [
-        observe_token_ready_boundary(
+        ready(
             next_token,
             token_index=0,
             identity_base=token_ready_identity_base,
@@ -348,7 +354,7 @@ def run_one_invocation(
         past_key_values = outputs.past_key_values
         actual_output_tokens += 1
 
-        boundary = observe_token_ready_boundary(
+        boundary = ready(
             next_token,
             token_index=step_i,
             identity_base=token_ready_identity_base,
@@ -417,7 +423,8 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                        clock_ns=time.perf_counter_ns, record_drains=False,
                        record_stages=False, model_setup=None, record_load_tasks=False,
                        setup_observer=None, allow_load_fallback=True, invocation_observer=None,
-                       n1_controller=None, completion_controller=None,input_observer=None,parameter_recorder=None):
+                       n1_controller=None, completion_controller=None,input_observer=None,parameter_recorder=None,
+                       observation_preparation=None):
     """Explicit local Gate8 producer API over already-resident inputs.
 
     Not enabled by the legacy CLI/launcher. The caller supplies preflight-bound
@@ -623,6 +630,7 @@ def run_gate8_requests(*, model=None, input_ids=None, attention_mask=None, outpu
                 drain_recorder=drain_recorder,
                 completion_controller=completion_controller,
                 parameter_recorder=parameter_recorder,
+                observation_preparation=observation_preparation,
             )
             invocation = lambda:invoke_model(model) if n1_controller is None else n1_controller.run(
                 model,entry['identity'],invoke_model)

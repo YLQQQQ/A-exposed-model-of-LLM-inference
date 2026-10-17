@@ -251,11 +251,21 @@ def analyze_files(receipt_path, canonical_path, output):
     require(producer['status']=='COMPLETE','PRODUCER_INCOMPLETE')
     source=paths['runner_source'].read_text(encoding='utf-8-sig')
     from exposedpath import coe_pilot
+    from exposedpath import observation_preparation as preparation
+    preparing=preparation.active(mf.get('batch_load'))
+    if preparing:
+        preparation.validate_prepared(mf,paths['wmpc_manifest'].parent,code_root)
+        saved=paths['runner_source'].with_name('preparation_source.py')
+        require(sha(saved)==mf['preparation_source_sha256'],'EXECUTED_PREPARATION_SOURCE_HASH')
+        hashes[str(saved)]=sha(saved)
+        source_files.add(code_root/'exposedpath/observation_preparation.py')
+        hashes[str(code_root/'exposedpath/observation_preparation.py')]=sha(code_root/'exposedpath/observation_preparation.py')
     # The prospective runner retains the later Cpre hook, but this domain
     # forbids a completion controller. The natural .cpu()/anchor path is the
     # same; legacy profiles still accept ONLY their own reviewed structure.
     helper_identity=validate_helper_source(source,
-        'COE_PILOT_NATURAL' if coe_pilot.active(mf.get('pilot')) else 'LEGACY_NATURAL')
+        'COE_PILOT_NATURAL' if coe_pilot.active(mf.get('pilot')) or preparing else 'LEGACY_NATURAL')
+    if preparing:helper_identity['preparation_source_sha256']=mf['preparation_source_sha256']
     require(not any(k in mf for k in ('n1_model','completion_path')) and mf['execution_mode']=='eager','NATURAL_PROFILE_OUT_OF_SCOPE')
     require(mf['inference_framework_version']=='torch2.6.0+cu124' and mf['attention_backend']=='sdpa'
             and mf['dtype_and_quantization']=='fp16','SOFTWARE_PROFILE_OUT_OF_SCOPE')
@@ -270,6 +280,7 @@ def analyze_files(receipt_path, canonical_path, output):
     if coe_pilot.active(mf.get('pilot')):
         require(token_key=='pilot_tokens','PILOT_TOKEN_SOURCE')
         token_version=coe_pilot.TOKEN_VERSION
+    if preparing:token_version=preparation.TOKEN_VERSION
     require(token['schema_version']==token_version,'TOKEN_VERSION')
     binding_key={'formal_tokens':'formal','pilot_tokens':'pilot','batch_tokens':'batch_load'}[token_key]
     require(token[binding_key]==mf[binding_key],'TOKEN_ROLE_BINDING')

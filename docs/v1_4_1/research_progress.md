@@ -1,5 +1,47 @@
 # ExposedPath 科研进度清单
 
+## 7.184 观测准备位置消融：本地最小实现/验证及待审交付（2026-10-17）
+
+用户已批准32/512、batch1、输出2、w3/r1、O/P两个完整四条件block/8P1的Engineering
+测量敏感性验证。本轮仅本地接线、CPU和打包准备；没有服务器、模型/CUDA/Nsight、新
+样本或旧数据重算。新实验NOT_RUN，Gate13限定PASS、Gate14 NOT_RUN、B2/旧七槽及
+历史UNKNOWN/BLOCKED不变。不是原8次仅Prefill重复，也不是恢复负载矩阵或纯阻塞路线。
+
+- [x] [版本化合同](observation_preparation_engineering_v0_1.md)及
+  [机器计划](../../configs/observation_preparation_engineering_v0_1.json)：顺序32O/32P/512P/512O
+  及反向；O原helper直接调用，AST与bbbb468完全相同，结构指纹205ef13d…c1f。
+  P仅在既有最终drain之前校验/编码不变的run/request/token标签，缓存绑定进程/线程与
+  一次消费。NVTX、CUDA、动态状态、Host读取和完成clock均不前移。
+- [x] 直接CPU证据：每token O现场身份构造/编码各1次，P现场各0次、窗前各1次；两token
+  标签在仅区分预定run_id后逐字段等价，Host read→clock→recorder/pop同序。
+  新Engineering O不冒充旧Formal校验分支成本；H不是精确包装开销。
+- [x] prepare→严格seal→实际profile argv边界，及真实producer文件→Canonical→两token
+  S/A闭合→COE→小结果/consumer/hash回归；外部设备/Git/模型/collector为明确CPU替身。
+  两token采用既有完整request闭合检查，不添加Decode豁免；旧角色/版本/门槛不扩大。
+  新模块实际源码随run归档、manifest/hash/独立schema绑定，不复用旧seal。
+- [x] 每token/block固定signed P−O、512−32及差的差；保留H/D、必要成员/提交、COE、
+  kernel/MemOp、copy/sync/补集、原A与公平baseline。完整block为单位，无拼接/填零。
+  H均下降仅screen标签；D/结构共同变化仍须审查，混合/准备未有效改变为不可判别，
+  不加样本、不保证稳定性/精度/因果或论文创新。
+- [x] 两阶段PowerShell5.1入口：默认A只部署/相关CPU/新鲜参与卷空间；B需新A真实
+  receipt SHA显式启用，旧A不解锁。低/未知空间、源码/回执冲突或硬失败停止。
+  复用12GiB启动预留；不遍历历史YLQ/ACL。长期目标<50,000,000,000 bytes仍null/UNKNOWN，
+  不自动清理；旧安全pack拒绝UNKNOWN writer时保留现场，不强行封包。
+- [ ] 新静态回执及8P1目标实物：待交付审查后由用户执行，不能由CPU替身授予资格。
+
+验证命令/结果：`python -m pytest -q -p no:cacheprovider tests/test_observation_preparation.py
+tests/test_observation_delivery.py --basetemp=.local/test_obs_release2 --junitxml=.local/obs_release.xml`
+结果48 passed、0 failed、0 skipped（81.12s）；另运行`tests/test_coe_pilot.py tests/test_runner_token_ready.py
+tests/test_batch_load_diagnostic.py tests/test_n1_preprofile_identity.py`，118 passed、0 failed、
+0 skipped。`compileall -q exposedpath analysis scripts/observation_preparation_batch.py`及
+`git diff --check`通过。未重跑完整Q0/全量测试或已完成GPU实验；本地Python3.12.7，目标
+3.11.16的新变更仍待静态阶段复验，先前真实3.11身份只作历史依据。
+
+最高优先级：审查固定新执行/分析commit的单一待审ZIP；前置取最后可信63ca051目标
+回执，不猜当前checkout。A默认不初始化CUDA；B回执审查后启用。预计25～45分钟、
+8进程/8profile、临时12GiB，最终新增/保留估计1～3GiB；均为预算估计而非实测。
+用户DOCX和未跟踪大型原ZIP保持且不纳入提交，原研究设计/冻结语义/数据角色不变。
+
 ## 7.183 24条自然链竞争解释核对；暂缓8次纯Prefill重复（2026-10-17）
 
 本轮只做用户授权的本地只读时间位置分析与待审设计；未改生产代码、测量定义、质量门或

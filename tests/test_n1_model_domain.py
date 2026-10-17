@@ -6,6 +6,7 @@ launches + D2H sequence, not the analyzer. No target CUDA qualification.
 import json
 from copy import deepcopy
 import os
+from pathlib import Path
 from types import SimpleNamespace
 import pytest
 from qualification_fixture import capture
@@ -72,12 +73,19 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
                 manifest.update(minimal_fields(completion_binding))
             model=tmp_path/'batch-model';model.mkdir()
             write_json(model/'config.json',dict(model_type='qwen2',vocab_size=100,max_position_embeddings=4096))
-            prompt=dict(schema_version='exposedpath-prompt-tokens/1',tokenizer_id='synthetic',fixed_input_tokens=512,
-                samples=[dict(sample_index=i,input_ids=[7]*512,attention_mask=[1]*512)
+            length=batch_binding['input_tokens']
+            prompt=dict(schema_version='exposedpath-prompt-tokens/1',tokenizer_id='synthetic',fixed_input_tokens=length,
+                samples=[dict(sample_index=i,input_ids=[7]*length,attention_mask=[1]*length)
                          for i in range(batch_binding['batch_size'])])
             write_json(args['prompt_path'],prompt)
             manifest.update(model_id=str(model),prompt_tokens_sha256=sha(args['prompt_path']))
             from exposedpath import memset_prefill as parameters
+            from exposedpath import observation_preparation as preparation
+            if preparation.active(batch_binding):
+                manifest.pop('domain_qualification',None)
+                manifest.update(runner_git_commit=batch_binding['execution_commit'],**coe_pilot.SOFTWARE,
+                    preparation_source_sha256=sha(Path(preparation.__file__)))
+                monkeypatch.setattr(coe_pilot,'software_identity',lambda _:dict(coe_pilot.SOFTWARE))
             if parameters.active(batch_binding):
                 manifest.pop('domain_qualification',None)
                 monkeypatch.setattr(coe_pilot,'software_identity',lambda _:dict(coe_pilot.SOFTWARE))
@@ -165,7 +173,7 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
             a,b,c=backend.api('cudaMemcpyAsync_v3020')
             db.execute('INSERT INTO CUPTI_ACTIVITY_KIND_MEMCPY VALUES (?,?,0,1,NULL,?,?,?,4,2,2,1,NULL)',
                 (b,b+2,stream_id(),c,os.getpid()<<24))
-            if coe or (batch_binding is not None and parameters.active(batch_binding)):
+            if coe or (batch_binding is not None and (parameters.active(batch_binding) or preparation.active(batch_binding))):
                 db.execute('UPDATE CUPTI_ACTIVITY_KIND_MEMCPY SET bytes=?,dstKind=0 WHERE correlationId=?',(8*batched['batch_size'],c))
             sync(); return cpu(token)
         monkeypatch.setattr(_FakeToken,'cpu',read)
@@ -232,7 +240,7 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         if damage=='graph': db.execute('UPDATE CUPTI_ACTIVITY_KIND_KERNEL SET graphId=7')
         if damage=='blocking_flag': db.execute('UPDATE TARGET_INFO_CUDA_STREAM SET flag=1 WHERE streamId=3')
         if damage=='null_measured': db.execute('UPDATE TARGET_INFO_CUDA_CONTEXT_INFO SET nullStreamId=3')
-        if (completion_binding is not None or coe) and damage in ('future_gap','prefill_gap'):
+        if (completion_binding is not None or coe or (batch_binding is not None and preparation.active(batch_binding))) and damage in ('future_gap','prefill_gap'):
             points=db.execute('SELECT start FROM NVTX_EVENTS WHERE eventType=34 ORDER BY start').fetchall()
             low,high=(points[1][0],points[2][0]) if damage=='future_gap' else (points[0][0],points[1][0])
             corr=db.execute('SELECT correlationId FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE start>=? AND end<=? AND nameId IN (SELECT id FROM StringIds WHERE value=?) ORDER BY start LIMIT 1',
@@ -267,7 +275,7 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
             db.execute("DELETE FROM NVTX_EVENTS WHERE text LIKE '%natural_token_ready%'")
         if coe and damage=='pair':
             db.execute("DELETE FROM CUPTI_ACTIVITY_KIND_RUNTIME WHERE correlationId=(SELECT MIN(correlationId) FROM CUPTI_ACTIVITY_KIND_SYNCHRONIZATION WHERE syncType=3)")
-        if coe or (batch_binding is not None and parameters.active(batch_binding)):
+        if coe or (batch_binding is not None and (parameters.active(batch_binding) or preparation.active(batch_binding))):
             db.execute('CREATE TABLE ENUM_CUDA_MEM_KIND(id INTEGER,name TEXT,label TEXT)')
             db.executemany('INSERT INTO ENUM_CUDA_MEM_KIND VALUES (?,?,?)',[(0,'CUDA_MEMOPR_MEMORY_KIND_PAGEABLE','Pageable'),(2,'CUDA_MEMOPR_MEMORY_KIND_DEVICE','Device')])
             db.execute('CREATE TABLE ENUM_CUDA_MEMCPY_OPER(id INTEGER,name TEXT,label TEXT)')

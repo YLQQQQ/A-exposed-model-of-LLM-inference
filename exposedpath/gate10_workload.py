@@ -23,6 +23,8 @@ def input_length(manifest):
     if 'batch_load' in manifest:
         from .batch_load import validate
         validate(manifest)
+        from .observation_preparation import active
+        if active(manifest['batch_load']):return manifest['batch_load']['input_tokens']
         return 512
     if 'formal' in manifest:
         from .formal_protocol import validate

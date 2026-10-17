@@ -124,7 +124,9 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
         raise ValueError('N1_PREPARE_PROFILE')
     content = verify_model_inventory(model_path, inventory_path, inventory_sha256, rehash=True)
     prompt = load_prompt_tokens(Path(prompt_path))
-    length=512 if batch_binding is not None or coe else 32 if gate10_input_tokens is None else gate10_input_tokens
+    from . import observation_preparation as preparation
+    preparing=preparation.active(batch_binding)
+    length=batch_binding['input_tokens'] if preparing else 512 if batch_binding is not None or coe else 32 if gate10_input_tokens is None else gate10_input_tokens
     if prompt['fixed_input_tokens'] != length or _sha(prompt_path) != prompt_sha256.lower():
         raise ValueError('DIAGNOSTIC_PROMPT_IDENTITY')
     if gate10_input_tokens is not None:
@@ -135,7 +137,8 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     if batch_binding is not None:
         from .batch_load import validate_input
         from . import memset_prefill as parameters
-        if parameters.active(batch_binding):
+        if preparing:preparation.validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')),length)
+        elif parameters.active(batch_binding):
             memset_input=parameters.validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')))
         else:validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')),batch_binding['batch_size'])
     if coe:
@@ -190,6 +193,7 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     if batch_binding is not None:
         from .batch_load import minimal_fields
         manifest.update(minimal_fields(batch_binding))
+        if preparing:manifest['preparation_source_sha256']=_sha(Path(__file__).with_name('observation_preparation.py'))
         if parameters.active(batch_binding):manifest['memset_input']=memset_input
     if completion_binding is not None:
         from .completion_path import minimal_fields
@@ -229,11 +233,15 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     batch='batch_load' in manifest
     from . import memset_prefill as parameters
     parameter_profile=parameters.active(manifest.get('batch_load'))
+    from . import observation_preparation as preparation
+    preparing=preparation.active(manifest.get('batch_load'))
+    if preparing:preparation.validate_prepared(manifest,manifest_path.parent,project_root)
     if parameter_profile:parameters.validate_prepared(manifest,manifest_path.parent,project_root)
     from . import coe_pilot
     coe=coe_pilot.active(pilot)
     if coe:coe_pilot.validate_software(coe_pilot.software_identity(runner.torch),manifest)
     if parameter_profile:parameters.validate_target_software(coe_pilot.software_identity(runner.torch),manifest)
+    if preparing:coe_pilot.validate_software(coe_pilot.software_identity(runner.torch),manifest)
     if formal:
         import platform
         # Already imported framework / interpreter facts, no auxiliary commands
@@ -290,7 +298,10 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
             coe_pilot.validate_prepared(manifest,manifest_path.parent,project_root)
         elif batch:
             from .batch_load import validate_input as batch_input
-            if parameter_profile:
+            if preparing:
+                preparation.validate_input(json.loads(prompt_path.read_text(encoding='utf-8')),
+                    json.loads((Path(manifest['model_id'])/'config.json').read_text(encoding='utf-8')),length)
+            elif parameter_profile:
                 parameters.validate_input(json.loads(prompt_path.read_text(encoding='utf-8')),
                     json.loads((Path(manifest['model_id'])/'config.json').read_text(encoding='utf-8')))
             else:batch_input(json.loads(prompt_path.read_text(encoding='utf-8')),
@@ -318,6 +329,9 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     if completion is not None:
         fields['completion_path']=manifest['completion_path']
     output_dir.mkdir(parents=True, exist_ok=False)
+    if preparing:
+        with (output_dir/'preparation_source.py').open('xb') as handle:
+            handle.write(Path(preparation.__file__).read_bytes())
     if claim is not None:
         isolated_gate.write_new(output_dir/'isolated_preflight_target.json',claim)
     if runtime is not None:
@@ -387,6 +401,9 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
             # ranges. No Tensor operation, D2H or synchronization here.
             if coe:
                 observed_tokens.append(coe_pilot.observation(identity,result,manifest,actual_input))
+            elif preparing:
+                observed_tokens.append(preparation.observation(identity,result,manifest))
+                preparation_result.update(preparation_controller.finish(identity))
             elif batch:
                 from .batch_load import observation
                 observed_tokens.append(observation(identity,result,manifest['batch_size']))
@@ -397,6 +414,8 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         dict(request_id='warmup-0',repeat_id='warmup-0',request_role='warmup'),
         dict(request_id='request-0',repeat_id='0',request_role='measured')]
     parameter_recorder=parameters.Recorder(manifest['batch_load']) if parameter_profile else None
+    preparation_controller=preparation.Execution(manifest['batch_load']) if preparing else None
+    preparation_result={}
     try:
         path = runner.run_gate8_requests_to_files(
         output_dir=output_dir/'producer', output_len=2,
@@ -410,15 +429,18 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
                          physical_gpu_index=manifest['gpu_index_physical'], batch_size=manifest['batch_size'] if batch or coe else 1,
                          manifest_path=output_dir/'manifest.json'),
         request_plan=plan,**({'input_observer':observe_input} if coe or parameter_profile else {}),
+        **({'observation_preparation':preparation_controller} if preparing else {}),
         **({'parameter_recorder':parameter_recorder} if parameter_profile else {}))
+        # Prepared cache contains no Tensor or dynamic completion state.
     finally:
         if parameter_recorder is not None:parameter_recorder.close(output_dir/'memset_parameters.json')
+        if preparation_controller is not None:preparation_controller.invalidate()
     producer = json.loads(path.read_text(encoding='utf-8'))
     if pilot is not None:
         with (output_dir/('batch_tokens.json' if batch else 'formal_tokens.json' if formal else 'pilot_tokens.json')).open('x',encoding='utf-8') as handle:
             from .formal_protocol import TOKEN_VERSION
             from .batch_load import TOKEN_VERSION as batch_token_version
-            json.dump(dict(schema_version=coe_pilot.TOKEN_VERSION if coe else batch_token_version if batch else TOKEN_VERSION if formal else 'exposedpath-pilot-tokens/0.1.0',**{('batch_load' if batch else 'formal' if formal else 'pilot'):pilot},
+            json.dump(dict(schema_version=preparation.TOKEN_VERSION if preparing else coe_pilot.TOKEN_VERSION if coe else batch_token_version if batch else TOKEN_VERSION if formal else 'exposedpath-pilot-tokens/0.1.0',**{('batch_load' if batch else 'formal' if formal else 'pilot'):pilot},
                 manifest_sha256=_sha(manifest_path),producer_receipt_sha256=_sha(path),
                 requests=observed_tokens),handle,indent=2,sort_keys=True)
     if n1 is not None:
@@ -445,6 +467,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
             if batch:
                 from .batch_load import EXECUTION_VERSION as batch_execution
                 execution.update(schema_version=batch_execution,batch_load=pilot,batch_tokens_sha256=_sha(output_dir/'batch_tokens.json'))
+                if preparing:execution.update(schema_version=preparation.EXECUTION_VERSION,observation_preparation=preparation_result)
                 if parameter_profile:
                     execution.update(schema_version=parameters.EXECUTION_VERSION,memset_parameters_sha256=_sha(output_dir/'memset_parameters.json'))
                 if completion is not None:

@@ -81,6 +81,8 @@ def validate_shape(kind, value):
         definition=schema['$defs']['pass_identity']
         definition['properties'].update(schema_version={'const':PASS_VERSION},batch_load={'type':'object'})
         definition['required'].append('batch_load')
+        from .observation_preparation import active as preparation_active,PASS_VERSION as preparation_pass
+        if preparation_active(value['batch_load']):definition['properties']['schema_version']={'const':preparation_pass}
         if 'completion_path' in value:
             from .completion_path import validate_binding,PASS_VERSION as completion_pass
             validate_binding(value['completion_path'])
@@ -198,6 +200,8 @@ def make_gate8_pass_identity(*, requests, **pass_fields):
         validate_binding(pass_fields['batch_load'])
         if pilot is not None or formal_binding is not None:raise ValueError('BATCH_LOAD_MIXED_ROLE')
         result['schema_version']=PASS_VERSION
+        from .observation_preparation import active as preparation_active,PASS_VERSION as preparation_pass
+        if preparation_active(pass_fields['batch_load']):result['schema_version']=preparation_pass
         if 'completion_path' in pass_fields:
             from .completion_path import validate_binding,PASS_VERSION as completion_pass
             validate_binding(pass_fields['completion_path'])
