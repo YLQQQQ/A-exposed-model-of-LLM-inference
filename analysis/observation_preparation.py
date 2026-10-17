@@ -74,6 +74,16 @@ def process(receipt_path,execution_path,output):
         if driver_status!='OBSERVED_TABLE':baseline['driver_api']=dict(count=None,sum_ns=None,union_ns=None,status=driver_status)
         windows.append(dict(phase=op['phase'],projection=p,a=a,baseline=baseline))
     contract.require(all(sha(p)==h for p,h in hashes.items()),'SOURCE_CHANGED')
+    with analysis_stage('preparation_independent_candidate_budget'):
+        from . import coe_budget_preview as preview_module
+        preview=preview_module.calculate_preview(candidate,local,records)
+        preview.update(candidate_sha256=sha(candidate_path),input_receipt_sha256=sha(receipt_path),
+            canonical_manifest_sha256=sha(canonical),analysis_sources={
+                'analysis/observation_preparation.py':sha(Path(__file__)),
+                'analysis/coe_budget_preview.py':sha(Path(preview_module.__file__)),
+                'analysis/coe_candidate.py':sha(Path(__file__).with_name('coe_candidate.py'))})
+        # Separate versioned artifact; never replace the saved original a_records.
+        write_new(out/'candidate_budget_preview.json',preview)
     result=dict(schema_version=contract.RESULT_VERSION,status=contract.STATUS,binding=binding,token_ids=tokens,
         analysis_code_sha256=sha(Path(__file__)),
         input_receipt_sha256=sha(receipt_path),execution_receipt_sha256=sha(execution_path),candidate_sha256=sha(candidate_path),

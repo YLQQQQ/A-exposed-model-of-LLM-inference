@@ -1,5 +1,55 @@
 # ExposedPath 科研进度清单
 
+## 7.187 COE候选预算最小接线、现有非比例响应及512/2048待审设计（2026-10-17）
+
+本轮用户授权本地代码/相关CPU及已有小结果分析，未授权新GPU预算。当前依据仍研究设计
+v7.1、Pre-Pilot协议v2.1、既有RouteA限定冻结及独立COE候选；不改旧Formal测量/判定。
+不画图、打包、操作服务器、启动模型/CUDA/Nsight或恢复引擎/hook/B2/旧七槽。
+
+- [x] 先核对并复用coe_candidate的逐token身份配对、FIFO必要集合/coverage及已有
+  preview_budget的union迁移；新analysis/coe_budget_preview.py仅连接已准入原A、
+  Canonical和两默认流模式一致的S成员证明，逐类核对旧A后再迁移，不按重叠选W。
+  [独立合同0.2](contracts/coe_budget_preview_v0_2.json)；缺成员/重复、未覆盖API、
+  错身份/source、模式证明不一致/无效准入继续拒绝，unknown不得未经解决迁移。
+- [x] observation_preparation.process在既有两token链完成后自动另写
+  candidate_budget_preview.json；独立已存结果离线入口复用同连接器，不改原candidate CLI。
+  原A及子类不改，候选completion_exposure与原Device wait分开；逐片段保留API/活动/
+  sync/operation来源，Request/phase去重守恒，不跨sync B求和。
+- [x] 先红后绿：新功能缺失及实际producer不输出预览分别复现，另用遗漏Canonical API
+  的反例识别清单覆盖缺口；补严后通过。真实source→producer→Canonical→局部准入→
+  候选输出使用CPU外部替身，不冒充目标GPU验证。最终相关命令和数量见下。
+- [x] 新目录coe_response_preview_v0_6消费同一封存8run：16链/24原A窗口/阶段关系均与
+  原件匹配，成员copy前/操作内union、H/D、原sync/补集及迁移来源可追溯；单run约2.4～
+  6.4s，无完整analyzer/Q0重跑。旧24链及四token/反例复用已有资格和本轮相关回归，
+  旧12个成块比较仅小CSV连接，保留角色，不再恢复旧Raw/重新演算其集合。
+- [x] [现有短稿§11](coe_research_short_note_v0_1.md#11-候选预算接线与输入轴主线有限的非比例响应待检验2026-10-17)
+  给出8个新配对G/Q倍数、扩展预算pp、H/D及位置；另有旧12配对，同存
+  coe_load_response_comparisons_v0_1.csv但不合并样本。固定P首token的G倍数1.8466/2.2009，
+  Q倍数2.2378/6.0972，扩展预算+1.9131/+3.7896pp；仅可追溯非比例线索，不是稳定/因果结论。
+- [x] config内容核验：官方660字节配置SHA98d2ff8c…bf670与封存model_inventory一致，
+  max_position_embeddings=32768，2048+2静态未越界；不是显存、API分支或资格PASS。
+  当前runner仍只接受32/512，不放宽旧profile或声称2048已可运行。
+- [x] 唯一[待审机器设计](../../configs/coe_input_axis_proposal_v0_1.json)：P包装下512/2048、
+  batch1/输出2/w3/r1，顺序AB/BA/BA/AB，4完整block/8P1；仅待审，无执行commit/入口。
+  同期512作配对，不复用旧512作新重复，不机械重跑32。预计35～60min、临时12GiB、
+  保留1～3GiB，均非2048实测。首/第二token全审，主比较首tokensigned ΔQ并对照同比例
+  G缩放；混合/近比例/单block主导为不支持或不确定，硬失败或固定预算即停，不追采。
+
+本轮没有把个位数否定或把增长当贡献。可证伪候选为固定完成/观测政策下首token操作内
+必要活动是否相对phase活动量超比例增长；公平同操作union/timeline同样能回答，分析用途
+不等于算法优越。H/D、kernel分支和第二token限制保留；旧B1/B4与W11只作各自角色线索。
+下一步需用户只审查上述8P1预算；批准后才接新有限输入/身份域和交付，当前不要求服务器。
+
+验证：`python -m pytest -q -p no:cacheprovider tests/test_coe_budget_preview.py
+tests/test_coe_candidate.py tests/test_completion_operation_candidate.py tests/test_observation_preparation.py
+--basetemp=.local/coe_release_final3 --junitxml=.local/coe_release_final3.xml`，127 passed、0 failed、
+0 skipped（63.59s）；
+另新模块/文件链17 passed、0 failed/skipped（19.83s），与总回归重叠不相加。
+`python -m compileall -q analysis/coe_candidate.py analysis/coe_budget_preview.py analysis/observation_preparation.py`
+通过。Python3.12.7，本轮无目标3.11复验，不把既有3.11证据扩大；只做相关CPU及文档/数值检查。
+用户DOCX及大型原件不纳入提交；Gate13限定PASS、Gate14 NOT_RUN及UNKNOWN/NOT_ASSESSED/
+历史BLOCKED均保持。执行计划调整不影响已冻结或旧Formal数据，handoff同步本项。
+
 ## 7.186 参考执行对象/P0包装澄清与全部A/COE结果图（2026-10-17）
 
 本轮按用户要求只梳理既有证据和作图，直接补[现有COE短稿§10](coe_research_short_note_v0_1.md#10-执行对象包装与结果图固定后续观测实现的条件2026-10-17)，
