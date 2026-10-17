@@ -3,7 +3,8 @@
 COE研究短稿0.1，2026-10-17；同日追加贡献差异核验（§4.1、§6.1、§7）、竞争解释核对（§8）
 及已完成O/P消融科学收口（§9）、执行对象/P0梳理与全部预算图（§10）、
 候选预算最小接线/非比例响应与待审输入轴（§11，历史），
-以及已执行512/2048四block Pilot的Raw位置复核与科学收口（§12，当前）。
+以及已执行512/2048四block Pilot的Raw位置复核与科学收口（§12.1～12.5）、
+三点Pilot的1024适用性失败收口（§12.7，当前）。
 §8、§11.3的待执行状态为当时发布记录；§12记录后来获批并执行后的实际结果，不覆盖原件。
 独立于[旧A/B核心稿](exposedpath_core_manuscript_v0_1.md)。
 本文是事后探索性技术报告，不是新Formal结果、生产A改版或已证明的方法创新。
@@ -1052,7 +1053,11 @@ Request/Decode候选预算以片段union去重，单sync B不跨调用求和。�
 验证。未重跑完整analyzer/Q0/测试或任何GPU；汇总检查覆盖原值/全部signed差、统计单位、
 分母/多比较及顺序限制、无后验删样本/阈值、无P0迁移/因果过读。没有为“完全收敛”再加前置。
 
-### 12.6 三点Pilot本地执行准备（2026-10-17，目标执行仍NOT_RUN）
+<a id="126-三点pilot本地执行准备2026-10-17目标执行仍not_run"></a>
+
+### 12.6 三点Pilot本地执行准备（2026-10-17，历史发布：当时目标执行NOT_RUN）
+
+> 实际已执行的局部批次及1024拒绝见§12.7；本节只保留交付时的设计/验证记录，不表示待续跑。
 
 用户接受§12.5输入轴及9P1预算并授权本地适配/验证/打包，未授权本轮服务器或GPU操作。
 [机器计划](../../configs/coe_input_midpoint_pilot_v0_1.json)固定
@@ -1087,6 +1092,61 @@ Canonical→两token准入→COE/预算→完整block消费；身份/token、缺
 没有把估计时间当全批硬deadline，也未提高超时。任一硬失败/9槽完成即停，无重试、
 替补、试跑、降级输入、追趋势、自动续采或清理。具体包身份在真实实现commit后绑定，
 机器绝对路径只保存在本地交付说明/handoff，避免源码commit自引用。
+
+### 12.7 三点Pilot失败收口：1024不可评估（2026-10-17，当前）
+
+**裁决：现有封存证据不能合法补齐1024 Prefill的84次提交效果，批次保持BLOCKED；
+1024的合格COE和候选预算不可评估，不填零。本轮没有合同内可实施的consumer修复。**
+
+本批执行/原分析为`4da800d2e8d270fdc2e25e07ab3511a73066df46`，角色为
+`COE-INPUT-P-PILOT/0.2`。实际槽位：block1的512完成；1024模型/profile/export成功，
+但离线两token准入拒绝；其余7槽未运行，0完整block。不是OOM、模型执行异常或统计负结果。
+原批次错误`OBS_PREP_BOTH_TOKEN_ADMISSION:['ENGINEERING_SCOPE_SUBMIT_MAPPING']`保留，
+不能用外层driver错误代替原因，也不能因为采集成功便授予COE有效性。
+
+**现有证据及停止依据。** 消费协调`midpoint_failure_review_rjy6pdf4/review.json`及
+`missing_effect_instances.csv`，复用其全包CRC/hash、全部Raw/Canonical核心字段及替代
+关联审查；本轮另复核归档身份、清单覆盖和15个消费成员hash、全部84行Raw/CSV/Canonical
+调用，以及对应correlation在KERNEL/MEMCPY/MEMSET三表的命中情况。不是重跑完整analyzer
+或重新独立恢复全部S。1024实际输入[1,1024]、每样本输出2、token为29184/6556、非early EOS，
+producer/drain有完成记录；这些事实不能代替缺失的设备效果证明。
+
+- 84条`cudaMemsetAsync_v3020`身份/相关号各自唯一，均成功返回。全部处于trace同钟Prefill
+  半开区间`[26091659866,26236489659)`ns，末条在首token完成前56.763854ms结束。
+  首条runtime row36193/correlation169869、PID30488/TID27172，起点为26094590660ns，
+  即Prefill开始后2.930794ms；因此不能仅因后续有Decode就隔离这项缺口。
+- 84个目标correlation在三类效果表中均无命中；已审材料无driver表/嵌套driver替代桥，
+  目标runtime表不含count或native stream实参，原包也没有参数sidecar。Raw/Canonical一致，
+  没有证据表明这是已有活动被parser过滤；但缺活动本身也不能证明没有设备提交。
+- 当前无法判定实际count=0、非零效果缺失或其它未观测关系。成功返回、无activity、相邻
+  kernel、84次规律、框架可能代码路径或最终token正确，都不能补出实例参数/效果关系。
+  [已有零字节消费方案](memset_parameter_feasibility_v0_1.md#053-参数消费草案memset-zero-logical01-draft)
+  还要求同次实参、唯一覆盖、实际scope及依赖/terminal闭包，本包不满足，不能借其豁免。
+  原普通共享入口取证支线已结束，本轮不重开。
+
+**对研究结果及下一阶段的影响。** 本批512两token的候选交集2.649075/0.545149ms仅作为
+该次合格Pilot记录保留；不是完整block，不替换或拼入旧重复。本批既不能计算预定中点比较，
+也没有完整端点对照可计算ΔQ/R；不发布1024可信COE、Request/phase候选预算或猜测比例。
+
+§12.1～12.4已有四block512/2048端点结果、全部第二token反向值和解释限制均保留；
+这次缺口不否定它们，也不使其升级为Formal。但2048通过不蕴含1024适用，已审端点不能
+证明中间输入的映射/依赖资格。因此“同期三点响应形状/转折”仍未完成，不能删掉失败点后
+接出一条曲线，或借旧2048补本批block。缺口限定在本次1024的观测适用性，不证明该负载
+物理不可运行、所有1024永远不适用或整个COE计算关系错误。
+
+**当前停点：** 收口这次三点Pilot，保留完整失败点和未运行槽位；不重采、不恢复七槽、不扩
+hook、不改submit分类/依赖门、不制作新包。下一阶段可据现有端点证据继续限定结果论证，
+但中点/曲线主张暂不能推进；若未来重议1024，须先取得能改变准入判断的独立实例证据，
+不是增加同配置重复。本轮不安排这一新取证或GPU预算，也不绕去输出轴/引擎来掩盖缺口。
+
+原包`coe_input_4da800d2e8d2_pilot.zip`11,285,611 bytes，SHA256
+`8d4accd2c4d0077a1ca9bfd3f485f3afc137f4fd0e227a1e5f75542941859784`；180成员/179清单，
+manifest SHA256`7fabac4029307c935fada06d8d1f26d28c3002f0dc2893bc4bc13e4cd8d40803`。
+SQLite SHA256`eeca2c95450bd0dba00a86f5342802aa849cffdcf469bd21a095b1b08b7aca83`；
+84项索引SHA256`b4e37c810241b4652f1a6885daec827f2801b958ed7afd26f033afffebece372`。
+本地新复核记录`.local/diagnostics/coe_midpoint_failure_closeout_v0_1/review.json`绑定上述
+原审查及逐成员来源；原ZIP/Raw/BLOCKED/UNKNOWN/NOT_ASSESSED不改。仅文档与只读来源核对，
+无生产代码修改、测试重跑、完整分析/Q0或GPU；旧Gate和数据角色、用户DOCX均保持。
 
 ## 来源与复查说明
 

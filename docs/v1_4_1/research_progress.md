@@ -1,6 +1,51 @@
 # ExposedPath 科研进度清单
 
-## 7.190 固定P三点输入轴Pilot：0.2有限合同、本地接线及两阶段待审交付（2026-10-17，当前）
+## 7.191 三点输入轴Pilot失败收口：1024 Prefill缺效果、零完整block（2026-10-17，当前）
+
+当前裁决：本批`BLOCKED`，1024合格COE/候选预算不可评估；这是已观察的提交效果证据缺口，
+不是模型执行失败、OOM或已证实的parser遗漏。最高优先级是保留这一适用边界，并以7.189的
+已闭合512/2048四block结果为现有研究依据；不恢复本批七槽，不重采、不重开hook或制作新包。
+
+- [x] 消费协调审查`midpoint_failure_review_rjy6pdf4/review.json`及84行
+  `missing_effect_instances.csv`；原ZIP、清单及实际消费成员绑定复核。CRC/全部文件hash及
+  389项静态源码绑定复用协调审查；本轮独立核对15个消费成员hash、全部84个Raw/CSV/
+  Canonical调用身份和核心字段、实际Prefill边界及目标correlation的三类效果表。
+- [x] 执行/原分析`4da800d2e8d270fdc2e25e07ab3511a73066df46`，有限角色0.2不变。
+  原批次1个512槽COMPLETE、1个1024槽BLOCKED、7槽NOT_RUN、0完整block；三个预定block
+  均未完成。1024模型exit0、profile COMPLETE/exit0、export PASS；driver exit1、无超时，
+  真实拒绝`OBS_PREP_BOTH_TOKEN_ADMISSION:['ENGINEERING_SCOPE_SUBMIT_MAPPING']`保留。
+- [x] 84次`cudaMemsetAsync_v3020`均在request开始至首token完成的Prefill内，不是可隔离的
+  Decode缺口。首条runtime row36193/correlation169869，PID30488/TID27172；Raw与Canonical
+  一致，成功返回不构成零长度/无提交证明。KERNEL/MEMCPY/MEMSET的合法候选关联无命中，
+  没有driver表或可用参数sidecar；现有材料不能补出count、实际效果和必要依赖闭包。
+  不按邻近kernel、84次规律、源代码可能路径或最终token正确填补。零字节规则的实参/
+  双向覆盖及闭包前提未满足，不适用；不更改submit分类或把缺效果记为零。
+- [x] 本批512的两token候选交集2.649075/0.545149ms保留为单次Pilot记录，不是一个完整
+  block，不替补旧重复、不并入7.189；1024不发布合格COE或推测预算，不作本批ΔQ/R。
+  旧512/2048四block及原signed结果不变，但只支持其已审端点/阶段；不授1024适用性、
+  中点响应、曲线形状或精确转折。
+- [x] [现有短稿§12.7](coe_research_short_note_v0_1.md#127-三点pilot失败收口1024不可评估2026-10-17当前)
+  与本地handoff同步。下一阶段三点曲线/中点比较暂不能成立：不得删去1024后拼曲线、
+  借旧2048补本批block或以相同配置重采替代缺证。若未来重议该点，须先有能改变准入
+  判断的独立实例证据；当前不安排该取证、GPU预算或实现支线。原计划/失败槽位均保留。
+- [ ] 本批三完整block、中点比较和响应形状：未完成，因上述硬证据缺口停止；不是已完成
+  或一般统计不显著。1024真实参数/设备效果仍未知，既未证明零payload，也未证明非零丢失。
+
+原回传`coe_input_4da800d2e8d2_pilot.zip`11,285,611 bytes，SHA256
+`8d4accd2c4d0077a1ca9bfd3f485f3afc137f4fd0e227a1e5f75542941859784`；180成员/179清单，
+manifest SHA256`7fabac4029307c935fada06d8d1f26d28c3002f0dc2893bc4bc13e4cd8d40803`。
+诊断review SHA256`f9b3f8d070f60c7d606e57037c51182a23f5fd8b949a252c2f3c29b9207d6de8`，
+84项CSV SHA256`b4e37c810241b4652f1a6885daec827f2801b958ed7afd26f033afffebece372`；
+1024 SQLite SHA256`eeca2c95450bd0dba00a86f5342802aa849cffdcf469bd21a095b1b08b7aca83`。
+新本地复核仅写`.local/diagnostics/coe_midpoint_failure_closeout_v0_1/review.json`；
+未改生产代码/合同/原报告，未运行测试、完整analyzer/Q0、服务器或GPU。仅执行定向只读
+来源/实例核对及文档一致性检查，不将其写成独立完整S重建或新资格。Gate13限定PASS、
+Gate14 NOT_RUN、旧Formal/Pilot/Engineering角色、UNKNOWN/NOT_ASSESSED及用户DOCX保持。
+
+## 7.190 固定P三点输入轴Pilot：0.2有限合同、本地接线及两阶段待审交付（2026-10-17，历史发布）
+
+> 下文NOT_RUN/待A是交付时状态。实际已回传1完成/1拒绝/7未运行，0完整block；当前失败收口
+> 见7.191，不继续使用本项的待启动指令，也不改写原回执。
 
 用户批准512/1024/2048、三个完整block、9P1/9profile的本地准备和预算；本轮不操作服务器。
 当前最高优先级：完成新阶段A真实回执审查后才可显式启动该批B；1024实际目标准入NOT_RUN。
