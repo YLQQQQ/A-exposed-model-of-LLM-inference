@@ -1,5 +1,41 @@
 # ExposedPath 科研进度清单
 
+## 7.178 真实PyTorch memset覆盖审查与零payload逻辑节点消费草案（2026-10-17）
+
+本轮为Engineering准备/合同设计，仅本地源码、第一方接口和既有小回执核对；无新记录器/消费者
+实现、CPU测试/编译、包、服务器命令或CUDA/Nsight/model执行。复用7.177限定微例PASS，
+不重复Q0/54项/110项，也不再查旧B2的84/168条SQLite实例。
+当前集中裁决：[可行性稿0.5](memset_parameter_feasibility_v0_1.md#2026-10-17增补真实pytorch覆盖桥接与参数消费规则草案-05当前)。
+
+**GO仅指一个未来新B2 Engineering参数诊断具备具体、有限的准备路径；PyTorch覆盖与新准入
+仍NOT_PROVEN，参数完整本身不等于COE合格。** 历史目标PE原件及其清单hash表明：c10_cuda导入
+共享CUDART，但torch_cuda/c10_cuda均无cudaMemsetAsync/PTSZ直接导入。不能据此认定实际来源
+是cuBLAS、private或静态副本；也不能由微例PASS推导模型命中。未来必须以本次Prefill全部目标
+runtime↔侧记录↔闭合唯一NVTX/call_id/PID/TID双向一一覆盖为门，不能按旧rowid/84次或时间邻近。
+
+设计最小调整：范围通知接原成功drain后、forward前到首个真实Host token；自动call_id/有界
+4096槽、实际pointer别名、多线程安装事务/外线程拒绝、窗外转发和异常关闭，均尚未实现。
+不加CUDA查询/同步/复制/切流；普通导出以外的入口、重入、遗漏/重复、跨界及溢出即停，不扩hook。
+
+消费规则MEMSET-ZERO-LOGICAL/0.1-DRAFT：count0保留submit API墙钟、逻辑调用及已证顺序/依赖，
+不造device activity，不宣称无顺序作用。仅新窄域主线程/同流/closed-prior局部Prefill，在实际
+context/stream桥、全部正活动、成功sync/Host completion完整且有限合法关系下的真实成员/依赖/
+terminal不变时，才可考虑去除“每次submit必有正activity”的条件；该规则尚未批准生效/编码。
+count>0继续要求唯一合法效果；缺效果/矛盾/映射未知BLOCKED，实际读回和成功返回不能替代。
+独立预期已写9类正反例，含已完成前缀、跨流空操作歧义、未知scope/terminal、零参正效果、
+非零缺效果、配对/入口/容量、质量失败；本轮仅设计，未运行，不冒称目标机资格。
+
+唯一后续建议：先审/实现该窄域增量，再考虑1新B2、512输入×batch2、每样本输出2、warmup3/
+repeat1、1进程/1profile，原自然完成路径，无P0/Cpre/旧槽续跑。它只判断普通入口是否完整覆盖，
+以及缺口实际是零payload、合法正效果或非零缺效果；不能命中/依赖不闭合即停，不制作追绿批次。
+预算估计15分钟/2GiB临时，profile300s/export180s/离线300s硬上限；未授权执行、未假定新空间。
+历史总占用UNKNOWN及长期50,000,000,000bytes目标保持，不盘点/清理。
+
+本轮验证限文档链接/差异、三份实际消费PE小资料的清单hash及微例既有派生绑定；无新CPU/CUDA
+验证。计划调整不改冻结测量/统计、生产A/B/COE/registry、原Formal或数据角色。旧B2/Pilot
+BLOCKED、7槽NOT_RUN/0完整block、Gate13限定PASS/Gate14 NOT_RUN、原UNKNOWN/NOT_ASSESSED
+及用户DOCX/全部原件保持。最高优先级是该单项模型覆盖/参数消费的最小本地准备，不恢复旧批次。
+
 ## 7.177 NVTX返回值消费者修复；同一0/64微例离线限定PASS（2026-10-16）
 
 仅本地封存副本/CPU修复与复核，不部署、不运行CUDA/Nsight/模型、不重采或发新包。

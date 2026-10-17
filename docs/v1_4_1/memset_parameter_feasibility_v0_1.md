@@ -1,6 +1,151 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-16增补：NVTX返回值适配与封存微例离线裁决 0.4（当前）
+## 2026-10-17增补：真实PyTorch覆盖桥接与参数消费规则草案 0.5（当前）
+
+**裁决：GO，限进入一个新B2 Engineering参数诊断的最小本地实现准备；不是模型覆盖/COE准入已通过。**
+参数完整后存在合法的窄域解决路径：正长度继续要求真实效果；零长度保留逻辑调用和已证依赖，
+不伪造activity，并只在局部依赖闭包不受未定顺序语义影响时消除“必需正activity”这一拒绝。
+若共享普通入口不能覆盖、出现非零缺效果或依赖不闭合，就在这一条路线停止，不扩hook。
+本轮只审查/设计，未实现新记录器/消费者、未测试/编译、未发包或服务器命令，未运行任何GPU程序。
+
+Material Passport：ARS experiment-agent / bounded plan；日期2026-10-17；本节DRAFT、未实施；
+来源为当前源码、固定第一方接口和既有封存事实，不是新实验/新资格。当前研究设计v7.1、
+实验协议v2.1与限定签署路线均不改；0.4微例PASS和旧B2/批次BLOCKED并存且含义不同。
+
+### 0.5.1 真实调用覆盖：已有依据与尚不能证明的部分
+
+微例已证明目标Torch目录内**共享CUDART普通导出**可被此Detours实现命中，并在一次Nsight
+采集中与runtime/效果关联；目标运行库实际SHA256为
+`f95273031fc5ea44cdb37e0a696a1b15b9d84a4ee977299a6f6e652ef4d790cf`，不是本地SDK归档DLL的hash。
+不能由相同文件名、同版CUDA、微例成功推导PyTorch全部调用命中。
+
+已有目标机PE原件（2026-09-27）在本轮按自身清单核对：
+`torch_cuda.dll.imports.txt` SHA256 `608df902abc49982e4b3f9faa30c0c90977725324fb7fae59af86f5fd4855148`，
+`c10_cuda.dll.imports.txt` SHA256 `0449388f81783840444f030227dcf11513cb129e7ff2e7867316480f9a36c51c`。
+**c10_cuda导入cudart64_12.dll；两份导入表都没有cudaMemsetAsync或PTSZ直接导入；torch_cuda
+另导入cuBLAS/cuBLASLt等native库。** 这既不证明缺口来自某vendor，也不证明一定是私有runtime；
+动态解析、静态/私有副本及vendor内部路径尚未排除。该历史PE不冒充未来进程的实际加载事实。
+
+固定执行链可读到：`gate8_diagnostic.model_run`核验解释器/输入/设备后，复用
+[runner](../../exposedpath/runner.py)的setup→三次warmup→成功窗前drain→Prefill forward/argmax→
+自然`detach().cpu().reshape(-1).tolist()`→实际Host token锚点；本轮不改该链。
+保存的Transformers SDPA调用进入`torch.nn.functional.scaled_dot_product_attention`；
+[PyTorch2.6 CUDABlas](https://github.com/pytorch/pytorch/blob/v2.6.0/aten/src/ATen/cuda/CUDABlas.cpp)
+说明BLAS调用路径，[FillKernel](https://github.com/pytorch/pytorch/blob/v2.6.0/aten/src/ATen/native/cuda/FillKernel.cu)
+使用gpu_kernel，均不能给旧168次实例指定真实callsite或count。**精确实例来源仍未知，拟用同次
+动态覆盖判定，而不是继续源码猜测。** 本轮不查询旧SQLite或追索84条参数。
+
+未来覆盖集合T预先定义为：已绑定目标进程/创建实例、原Prefill半开窗口内全部同类runtime，
+包括合法数字版本后缀；另外审列PTSZ/其他入口和外线程，不能先过滤后宣布全覆盖。
+T与侧记录R必须双向一一对应：run/request/phase、PID/TID、call_id、真实模块/导出、闭合唯一
+NVTX domain范围、唯一完整runtime及原返回码全部一致；不是按旧rowid、次数84或最近时间配对。
+PTSZ/private副本、漏记、范围跨界、重复、重入、外线程、容量溢出、未支持诊断一律BLOCKED。
+
+### 0.5.2 从双case记录器到模型所需的最小调整（尚未实现）
+
+1. **范围而非逐case arm。** 保留现有微例接口/角色；新增独立
+   `MEMSET-PYTORCH-PREFILL-PARAMS/0.1` Engineering声明和侧记录版本，不把B2伪装旧G1/Pilot。
+   复用verified模型入口与prepare/seal/输入/实际batch/token门，新源码/运行库/DLL另绑定新执行身份。
+2. **窗口通知。** 在原成功drain之后、forward之前启用记录；首个Host token完成后停用，Decode
+   前关闭，异常finally关闭。开始/完成仍取原锚点，不把NVTX或hook返回当completion。
+   仅`before_copy`不够：它漏掉forward阶段调用。暖机/窗外调用原样转发、不误报“未arm”；
+   Prefill内不允许不记录。只新增诊断Host/NVTX工作，不新增CUDA查询、同步、复制或切流。
+3. **多调用但有上限。** 预分配4096记录及消息槽，自动单调uint64 call_id，不假定实例数；
+   每个真实命中自动记录count/value/native stream/原return、调用线程与run内pointer别名。
+   别名不能继续用“非空全部等于1”，也不记录内存内容。边界内无分配/磁盘I/O；溢出标错、
+   仍恰好一次原转发，不覆写旧槽或重试。uint64 count/原LastError等复用已验ABI/转发纪律。
+4. **安装与线程安全。** 仅同一绝对路径/实际模块普通导出，不改全API hook或第二subscriber。
+   不能把微例的`DetourUpdateThread(current)`直接当多线程安全证明；安装/拆除在无在途调用的
+   窗外，按[Detours事务接口](https://github.com/microsoft/Detours/wiki/Using-Detours)一次性纳入
+   本进程可能受影响的既存线程，失败即停，不做常驻线程监控/权限升级。边界内外线程调用
+   必须留故障事实并拒绝，不能静默略过；不得以只记录主线程掩盖其他线程的runtime。
+5. **落盘/消费。** 原Host完成后保存完整侧记录、装载/attach/detach状态、原始NVTX返回值及
+   捕获/漏记计数；真实导出范围仍是记录证明。Canonical不改写，新增参数证据sidecar引用
+   原API/source hash；所有目标API统一审查。独立新profile消费后才能调用原局部投影/COE，
+   不调用旧失败批次入口、不伪造`coe_pilot.process`成功。当前双caseconsumer不能直接用于模型。
+
+### 0.5.3 参数消费草案：MEMSET-ZERO-LOGICAL/0.1-DRAFT
+
+这是一项**仅未来新Engineering profile的准入增量草案，尚未批准生效/编码**，不是旧A/B或COE
+公式改版。依据[CUDA12.4.1 memset规范](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__MEMORY.html)
+的count字节范围及[stream completion](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__STREAM.html)，
+count0只证明请求的字节写入范围为空，成功不证明工作完成/无内部命令/无顺序影响。
+
+|实例证据|拟保留的事实与处置|不能推导|
+|---|---|---|
+|count=0、成功、完整实例覆盖|逻辑submit调用节点z、原API墙钟、原ordinal/native stream/context证据；没有设备记录就不创建device activity，状态ZERO_PAYLOAD_LOGICAL_ONLY；须再满足下面闭包条件|非阻塞、没有队列/顺序作用、全capture零丢失、自动COE通过|
+|count>0、成功、唯一合法MEMSET效果|保留实际bytes/value/device/context/stream及correlation桥，沿原活动/依赖规则；首版只支持已验单MEMSET，value按字节语义核对，原int值不丢|最终token正确即可补关联；多效果求和/替代kernel自动获资格|
+|count>0但缺效果，或count/身份/关联未知|具体NONZERO_EFFECT_MISSING或PARAMETER/PAIR/SCOPE原因，BLOCKED|填零、改non-submit/Host、借相邻活动；不能再用同配置重采追绿|
+
+**零长度的有限可证明条件：**
+
+- z保持API身份和真实同线程提交顺序；`host_call_order`不是GPU依赖边。已有流FIFO、event边、
+  成功drain闭合的历史、已完成必要前缀以及所有后续真实成员全部保留；不删先行工作。
+- native handle不直接当trace ID。必须复用同次成功drain/自然sync的物理scope、实际设备/主线程
+  stream记录以及完整已支持调用序列，唯一约束z所在context/stream；仅阶段前后handle相同、
+  或表里只看到一个context不足。context/device切换、未知入口或生命周期不明时继续BLOCKED。
+- 首版限定已批准的**主线程、同一自然流、成功drain后的局部Prefill、无新incoming event/跨流/
+  graph依赖**。所有正活动/正提交均完整映射且由实际copy/成功sync及Host token完成界定。
+  完整必要成员截止于该sync捕获的提交边界，含copy内部D2H，不截在copy入口。
+- 不宣称z实际入队或被跳过。分别保留“仅Host零长度调用”与“可能承担同流顺序的逻辑空操作”
+  的未定关系；并沿既有LEGACY/PTDS审查。此处只比较文档流序语义和这两种零payload表示
+  所构成的有限候选关系，不要求排除所有未观测内部机制。只有在**这些候选关系均不改变
+  真实活动成员、真实成员间必要依赖及被观测terminal证据**时，才可消去z的几何贡献，继续局部投影。
+  同一隔离FIFO内两种关系都保留相同先行活动是成立实例；不能仅比较A数值相同或守恒。
+- 若z可能携入别流工作、成为无法被后续已观测必要效果界定的完成前沿，或终端/closure依赖
+  未定关系，拒绝；不能以sync返回为z造GPU终止时间，不能给z造零ns activity或B barrier。
+  已观测的正效果与count0矛盾也拒绝，未知效果不填零。
+
+逻辑节点的设备区间是**不存在的观测对象**，不是“测得0ns”。A仍计原CUDA submit API墙钟；
+COE只与被恢复为必要成员的真实GPU区间相交。内部未分离时间/空隙不改成纯等待，单sync B
+保持原义且不因本草案获得完整物理资格。baseline也保留原API count/sum/union，将“参数证明
+零payload”与“未解决缺映射”分栏，不能把两者一起改为mapped或零成本。
+
+### 0.5.4 预先固定的独立预期/反例（设计，未运行）
+
+|手工构造|独立预期|
+|---|---|
+|同S提交K，z(count0)，L，D2H，成功sync(S)；K已在sync前完成|W中的真实成员仍K/L/D2H；z保留逻辑序号，无activity；已完成K不删除，terminal为后续已证D2H；零关系投影不改真实依赖|
+|别流Q工作可经legacy默认流空操作z影响后续S，缺少该关系证明|两种关系可能改变W，BLOCKED，即使count0、返回成功、最终token正确|
+|z位于未映射context/stream，或只知stage前后handle0|BLOCKED，不复制相邻调用scope|
+|z是末端可能完成节点，没有后续已观测效果约束|terminal未闭合，BLOCKED，不用sync.end造z终点|
+|count0却关联正bytes MEMSET或未支持效果|冲突/BLOCKED；不按零参数过滤证据|
+|count64→同次唯一64-byte MEMSET/正确scope，全部其他门完整|按原必要活动规则继续；不由读值代替映射|
+|count64成功但无效果，或bytes/value/scope冲突|BLOCKED；这会否定“该实例仅因零payload缺activity”的解释|
+|侧记录少/多一条、重复runtime、PTSZ/private未覆盖、外线程或第4097次命中|覆盖/容量明确失败，原调用仍转发；不得靠已有84条清单选择实例或扩大hook|
+|零值合法但未知诊断、失败drain、pending历史或token冲突|独立质量门仍拒绝，不因为参数齐全而放行|
+
+### 0.5.5 唯一后续建议及决策价值（待批准实现，非执行授权）
+
+若继续，只实现上述最小调整与CPU文件链负例，再审一个**新B2 Engineering参数诊断**：现有
+Windows/4090、固定1.5B/FP16/eager/SDPA、相同512输入复制两份、每样本输出2、warmup3/
+repeat1、自然Host-readable路径；1新模型进程/1profile，无P0/Cpre/其他负载/旧槽续跑。
+安装在窗外，记录仅主请求Prefill；模型仍按原定义完成Decode，Decode不准入也不追参数。
+reuse未改的解释器/模型/输入/device检查，role与新源码精确绑定，不沿用旧seal。
+这不是预先承诺旧B2的scope可复用：所需context/stream桥和有限关系不变性必须由新run事实
+与已支持语义逐项建立；缺少任何一项，即使全部count为0也仍BLOCKED。
+
+一次运行要同时回答两项有可判别后果的问题，而非为获得更多样本：
+**共享入口是否完整覆盖本次Prefill？缺映射实例究竟是零payload、合法正效果，还是非零缺效果？**
+双向覆盖及新草案所有前提均成立，才可另作参数辅助局部准入审查；普通入口未命中/部分命中、
+非零缺效果、context/default依赖或terminal不闭合任一成立，就停止该路径，无重试、补样、
+hook private/PTSZ、PyTorch重编或工具链更换。不要求新实例重现84次，不回填旧B2。
+
+本地实现仍受原1～2工作日上限约束，先复用已验ABI/Detours/微例与既有S能力，只补模型
+范围通知、多调用覆盖/容量、逻辑节点投影和实际文件链的独立CPU反例；不重跑完整Q0/110项。
+未来目标预算建议：profile硬上限300s（含setup/warmup）、export180s、离线300s，整个流程
+预留15分钟是估计，不是成功承诺；临时预留2GiB，预计新增保留20～100MiB（不含既有权重/
+环境），不生成巨型domain。实际fresh空间待后续静态回执，长期YLQ<50,000,000,000bytes
+仍未证明；本轮不盘点、清理或假定当前checkout。固定单次/硬失败即停，无自动追加。
+
+**当前停点：覆盖审查和规则/反例草案完成，可继续这一窄域本地实现；真实PyTorch覆盖与
+新规则资格未完成。** 若不接受上述窄域逻辑节点消费条件，则仅得到参数不能关闭准入，
+不应为此制作采集包。旧B2/Pilot BLOCKED、7槽NOT_RUN/0完整block、旧A/B/COE、Formal/
+UNKNOWN/历史Gate和全部原件均保持；0.4微例结论不升级。
+
+<a id="2026-10-16增补nvtx返回值适配与封存微例离线裁决-04当前"></a>
+
+## 2026-10-16增补：NVTX返回值适配与封存微例离线裁决 0.4（历史微例审查）
 
 **限定0/64-byte同次微例Engineering复核PASS；原attempt仍BLOCKED，旧B2/批次仍BLOCKED。**
 这是对已采原件的消费者0.1.1离线修复，不是新采集、模型覆盖或COE资格。下文0.3保留交付时状态。
