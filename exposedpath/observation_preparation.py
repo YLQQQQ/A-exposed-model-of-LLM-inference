@@ -99,15 +99,19 @@ class PreparedToken:
 class Execution:
     """Single request cache; only invariant identity/encoding runs before drain."""
     def __init__(self,binding):
-        self.binding=deepcopy(validate_binding(binding));self.closed=True;self.used=[]
+        from . import coe_input_pilot as axis
+        self.axis=axis.active(binding)
+        self.binding=deepcopy(axis.validate_binding(binding) if self.axis else validate_binding(binding))
+        self.variant='P' if self.axis else binding['variant']
+        self.closed=True;self.used=[]
 
     def prepare(self,identity,output_len,runner):
         require(self.closed and not self.used and identity['run_id']==self.binding['run_id']
             and identity['request_id']=='request-0' and identity['repeat_id']=='0'
-            and identity['run_role']=='ENGINEERING' and identity['pass_id']=='pass1' and output_len==2,'CACHE_BINDING')
+            and identity['run_role']==('PILOT' if self.axis else 'ENGINEERING') and identity['pass_id']=='pass1' and output_len==2,'CACHE_BINDING')
         self.identity=tuple(sorted(identity.items()));self.pid=os.getpid();self.tid=threading.get_native_id()
         self.closed=False;self.prepared=()
-        if self.binding['variant']=='O':return runner.observe_token_ready_boundary
+        if self.variant=='O':return runner.observe_token_ready_boundary
         self.prepared=tuple(PreparedToken(i,phase,runner.make_structured_nvtx_label(
             runner.make_natural_token_ready_identity(identity,phase=phase,token_index=i,
                 callsite_id=f'{phase}.token_ready',sync_ordinal=i,token_ready_mechanism=runner.TOKEN_READY_MECHANISM)))
@@ -135,13 +139,13 @@ class Execution:
 
     def finish(self,identity):
         require(not self.closed and tuple(sorted(identity.items()))==self.identity,'CACHE_FINISH')
-        require(self.used==([0,1] if self.binding['variant']=='P' else []),'CACHE_USE_COUNT')
+        require(self.used==([0,1] if self.variant=='P' else []),'CACHE_USE_COUNT')
         self.closed=True
         # O call count is a source-contract fact, not a sampled measurement.
-        return dict(version=VERSION,binding=self.binding,identity=dict(self.identity),pid=self.pid,tid=self.tid,
+        return dict(version=self.binding['version'],binding=self.binding,identity=dict(self.identity),pid=self.pid,tid=self.tid,
             prepared_count=len(self.prepared),consumed_token_indices=list(self.used),
             prepared_labels=[p.label for p in self.prepared],closed=True,
-            preparation_position='BEFORE_FINAL_DRAIN' if self.binding['variant']=='P' else 'ORIGINAL_HELPER_ONSITE',
+            preparation_position='BEFORE_FINAL_DRAIN' if self.variant=='P' else 'ORIGINAL_HELPER_ONSITE',
             dynamic_operations_moved=False)
 
 

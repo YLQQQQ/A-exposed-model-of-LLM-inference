@@ -142,10 +142,11 @@ def profile_argv(nsys,python,prepared,output,root=ROOT):
 
 
 def analyze_receipt(manifest,receipt,execution,output):
+    from exposedpath import coe_input_pilot as axis
     from exposedpath.observation_preparation import active as preparation_active
     from exposedpath import coe_pilot
     from exposedpath.memset_prefill import active as parameter_active
-    if preparation_active(manifest.get('batch_load')):
+    if preparation_active(manifest.get('batch_load')) or axis.active(manifest.get('pilot')):
         from analysis.observation_preparation import process
         result=process(receipt,execution,output)
         value=json.loads(result.read_text(encoding='utf8'))
@@ -229,7 +230,10 @@ def analyze_model(output,prepared,collector_version):
     from exposedpath.coe_pilot import active
     from exposedpath.observation_preparation import active as preparation_active,STATUS as preparation_status
     from exposedpath.memset_prefill import active as parameter_active
-    if preparation_active(manifest.get('batch_load')):
+    from exposedpath import coe_input_pilot as axis
+    if axis.active(manifest.get('pilot')):
+        if value['status']!=axis.STATUS:raise ModelScopeBlocked(result,value)
+    elif preparation_active(manifest.get('batch_load')):
         if value['status']!=preparation_status:raise ModelScopeBlocked(result,value)
     elif parameter_active(manifest.get('batch_load')):
         if value['status']!='MEMSET_PREFILL_EVIDENCE_COMPLETE_PENDING_REVIEW':raise ValueError('PARAMETER_SCOPE_BLOCKED')
@@ -341,8 +345,11 @@ def main():
                 q0_status='NOT_RUN',dropped_records_status='UNKNOWN',measurement_validity='NOT_ASSESSED')
             if args.pilot:
                 report.update(status='PILOT_RUN_COMPLETE_PENDING_REVIEW',schema_version='gate11-pilot-collection/0.1.0')
+                from exposedpath import coe_input_pilot as axis
                 from exposedpath.coe_pilot import active
-                if active(manifest['pilot']):
+                if axis.active(manifest['pilot']):
+                    report.update(status=axis.STATUS,schema_version='coe-input-pilot-collection/0.1.0')
+                elif active(manifest['pilot']):
                     report.update(status='COE_PILOT_PREFILL_ONLY_PENDING_REVIEW',schema_version='coe-pilot-collection/0.1.0')
             if args.signed_formal_protocol:
                 report.update(status='FORMAL_RUN_COMPLETE_PENDING_REVIEW',schema_version='gate12-formal-collection/0.1.0')
@@ -355,14 +362,15 @@ def main():
                     batch_load=manifest['batch_load'])
     except (ValueError,OSError,KeyError) as exc:
         record_analysis_error(report,exc)
-        if args.memset_prefill_parameters or args.observation_preparation:
+        from exposedpath.coe_input_pilot import active as input_active
+        if args.memset_prefill_parameters or args.observation_preparation or input_active(manifest.get('pilot')):
             # This diagnostic requires the offline parameter evidence, not only
             # a successful capture/export. Do not retain the legacy exit0
             # diagnostic-only status after an analysis/result-file failure.
             report['status']='BLOCKED'
     (output/'collection_report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(report['status'])
-    return 0 if report['status'] in ('OBSERVATION_PREPARATION_BOTH_TOKENS_PENDING_REVIEW','MEMSET_PREFILL_EVIDENCE_COMPLETE_PENDING_REVIEW','COE_PILOT_PREFILL_ONLY_PENDING_REVIEW','PREFILL_LOCAL_ENGINEERING_ONLY','DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW','FORMAL_RUN_COMPLETE_PENDING_REVIEW') else 1
+    return 0 if report['status'] in ('COE_INPUT_BOTH_TOKENS_PENDING_REVIEW','OBSERVATION_PREPARATION_BOTH_TOKENS_PENDING_REVIEW','MEMSET_PREFILL_EVIDENCE_COMPLETE_PENDING_REVIEW','COE_PILOT_PREFILL_ONLY_PENDING_REVIEW','PREFILL_LOCAL_ENGINEERING_ONLY','DIAGNOSTIC_COLLECTED_NOT_QUALIFIED','A_SCOPE_ENGINEERING_ONLY','N1_MODEL_ENGINEERING_ONLY','PILOT_RUN_COMPLETE_PENDING_REVIEW','FORMAL_RUN_COMPLETE_PENDING_REVIEW') else 1
 
 
 if __name__=='__main__': raise SystemExit(main())

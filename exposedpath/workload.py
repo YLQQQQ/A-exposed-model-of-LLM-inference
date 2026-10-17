@@ -73,7 +73,7 @@ def get_batch_inputs(
         from .coe_pilot import validate_binding,input_identity,require
         b=validate_binding(coe_binding)
         require(run_role=='PILOT' and b['batch_size']==batch_size,'INPUT_DOMAIN')
-        input_identity(prompt_tokens)
+        input_identity(prompt_tokens,binding=b)
         approved_coe=True
     ok, msg = check_batch_sample_distinctness(samples, batch_size)
     if not ok:

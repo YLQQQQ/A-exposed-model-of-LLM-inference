@@ -51,15 +51,22 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
         coe=coe_pilot.active(pilot_binding)
         batched=batch_binding if batch_binding is not None else pilot_binding if coe else None
         if coe:
+            from exposedpath import coe_input_pilot as axis
+            input_axis=axis.active(pilot_binding)
+            length=pilot_binding['input_tokens'] if input_axis else 512
             manifest.pop('domain_qualification',None)
             model=tmp_path/'coe-model';model.mkdir()
             write_json(model/'config.json',dict(model_type='qwen2',vocab_size=100,max_position_embeddings=4096))
-            prompt=dict(schema_version='exposedpath-prompt-tokens/1',tokenizer_id='synthetic',fixed_input_tokens=512,
-                samples=[dict(sample_index=i,input_ids=[7]*512,attention_mask=[1]*512)
+            prompt=dict(schema_version='exposedpath-prompt-tokens/1',tokenizer_id='synthetic',fixed_input_tokens=length,
+                samples=[dict(sample_index=i,input_ids=[7]*length,attention_mask=[1]*length)
                          for i in range(batched['batch_size'])])
             write_json(args['prompt_path'],prompt)
-            manifest.update(model_id=str(model),prompt_tokens_sha256=sha(args['prompt_path']),coe_input=coe_pilot.input_identity(prompt),
+            manifest.update(model_id=str(model),prompt_tokens_sha256=sha(args['prompt_path']),coe_input=coe_pilot.input_identity(prompt,binding=pilot_binding),
                 runner_git_commit=pilot_binding['execution_commit'],**coe_pilot.SOFTWARE)
+            if input_axis:
+                from exposedpath import observation_preparation
+                manifest.update(preparation_source_sha256=sha(Path(observation_preparation.__file__)),
+                    input_pilot_source_sha256=sha(Path(axis.__file__)))
             monkeypatch.setattr(coe_pilot,'software_identity',lambda _:dict(coe_pilot.SOFTWARE)) # external runtime double
             if collector_contract is not None:
                 from exposedpath_v141 import gate8_target_python as target

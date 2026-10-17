@@ -18,14 +18,17 @@ def process(receipt_path,execution_path,output):
     from exposedpath_v141.a_api_classification import VERSION as registry_version
     from .coe_candidate import analyze_files
     receipt,paths,declared,execution=base._inputs(receipt_path,execution_path)
-    mf=read(paths['wmpc_manifest']);binding=contract.validate(mf)
-    contract.validate_prepared(mf,paths['wmpc_manifest'].parent,Path(__file__).resolve().parents[1])
+    from exposedpath import coe_input_pilot as axis,coe_pilot
+    mf=read(paths['wmpc_manifest']);input_axis=axis.active(mf.get('pilot'))
+    binding=axis.validate(mf) if input_axis else contract.validate(mf)
+    validator=coe_pilot if input_axis else contract
+    validator.validate_prepared(mf,paths['wmpc_manifest'].parent,Path(__file__).resolve().parents[1])
     hashes={Path(p):sha(p) for p in (receipt_path,execution_path,*paths.values())}
     out=Path(output).resolve()
     contract.require(not any(p.resolve().is_relative_to(out) for p in hashes),'OUTPUT_CONTAINS_INPUT')
     out.mkdir(parents=True,exist_ok=False)
     with analysis_stage('preparation_canonical_projection'):
-        canonical=convert_sqlite_to_canonical(paths['sqlite'],out/'canonical','Engineering',raw_sha256=sha(paths['raw']),
+        canonical=convert_sqlite_to_canonical(paths['sqlite'],out/'canonical',mf['data_role'],raw_sha256=sha(paths['raw']),
             collector_version=receipt['collector_version'],gate8_sources={k:paths[k] for k in ('pass_identity','preflight','cuda_probe')})
         scope=out/'projection/scope.json';project_completion_scopes(canonical,paths['host_ledger'],scope)
         diagnostic=write_diagnostic_scope(paths['sqlite'],paths['pass_identity'],out/'diagnostics.json')
@@ -50,7 +53,7 @@ def process(receipt_path,execution_path,output):
             and all(o['operation_validity']=='VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS' for o in ops),
             'OPERATIONS:'+str([dict(token=o.get('token_index'),reasons=o.get('reasons')) for o in ops]))
         contract.require(not any(c['status']=='UNRESOLVED_OR_OUT_OF_SCOPE' for c in candidate['coverage']),'COVERAGE')
-    tokens=contract.validate_tokens(paths['batch_tokens'],mf,read(paths['pass_identity']),execution,paths['wmpc_manifest'],paths['producer_receipt'])
+    tokens=validator.validate_tokens(paths['pilot_tokens' if input_axis else 'batch_tokens'],mf,read(paths['pass_identity']),execution,paths['wmpc_manifest'],paths['producer_receipt'])
     records=bundle['records'];activities={r['record_id']:r for r in records['device_activity']}
     apis={r['record_id']:r for r in records['cuda_api']};drivers,driver_status=_driver_records(paths['sqlite'])
     drain=apis[local['facts']['drain_api_id']];windows=[]
@@ -84,9 +87,11 @@ def process(receipt_path,execution_path,output):
                 'analysis/coe_candidate.py':sha(Path(__file__).with_name('coe_candidate.py'))})
         # Separate versioned artifact; never replace the saved original a_records.
         write_new(out/'candidate_budget_preview.json',preview)
-    result=dict(schema_version=contract.RESULT_VERSION,status=contract.STATUS,binding=binding,token_ids=tokens,
+    result=dict(schema_version=axis.RESULT_VERSION if input_axis else contract.RESULT_VERSION,
+        status=axis.STATUS if input_axis else contract.STATUS,binding=binding,token_ids=tokens,
         analysis_code_sha256=sha(Path(__file__)),
         input_receipt_sha256=sha(receipt_path),execution_receipt_sha256=sha(execution_path),candidate_sha256=sha(candidate_path),
+        candidate_budget_preview_sha256=sha(out/'candidate_budget_preview.json'),
         operations=ops,windows=windows,local_admission=local,coverage=candidate['coverage'],
         preparation=execution['observation_preparation'],formal_eligible=False,physical_b_qualified=False,
         H_is_exact_preparation_cost=False,pure_host_stall_ns=None,dropped_records_status='UNKNOWN',measurement_validity='NOT_ASSESSED')

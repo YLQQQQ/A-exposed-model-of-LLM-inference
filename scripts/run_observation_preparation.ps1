@@ -1,8 +1,11 @@
-param([switch]$CollectReviewedEngineering,[string]$ReviewedStaticReceiptSHA256='')
+param([switch]$CollectReviewedEngineering,[switch]$CollectReviewedInputPilot,[string]$ReviewedStaticReceiptSHA256='')
 # A is the default. B is never invoked by deployment, packing or failure recovery.
 $ErrorActionPreference='Stop'
 $C=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'delivery.json') -Raw | ConvertFrom-Json
-if ($C.schema_version -ne 'observation-preparation-delivery/0.1' -or $C.commit -ne $C.analysis_commit -or
+$InputPilot=$C.schema_version -eq 'coe-input-pilot-delivery/0.1'
+$Collect=$CollectReviewedEngineering -or $CollectReviewedInputPilot
+if (($InputPilot -and $CollectReviewedEngineering) -or (!$InputPilot -and $CollectReviewedInputPilot)) {throw 'Explicit role opt-in conflict'}
+if ($C.schema_version -notin @('observation-preparation-delivery/0.1','coe-input-pilot-delivery/0.1') -or $C.commit -ne $C.analysis_commit -or
     $C.model_process_budget -ne 8 -or $C.profile_budget -ne 8) {throw 'Delivery conflict'}
 function Hash([string]$P) {return (Get-FileHash -LiteralPath $P -Algorithm SHA256).Hash.ToLowerInvariant()}
 function Safe([string]$Root,[string]$Relative) {
@@ -30,13 +33,16 @@ function VerifyManifest([string]$Root) {
 }
 VerifyManifest $PSScriptRoot
 if ((Hash $PSCommandPath) -ne $C.launcher_sha256) {throw 'Launcher identity conflict'}
+if ($InputPilot -and ((Hash (Join-Path $PSScriptRoot 'plan.json')) -ne $C.plan_sha256)) {throw 'Plan identity conflict'}
 $Code=$C.code_root;$Target=$C.commit;$Python=Join-Path $Code '.venv\Scripts\python.exe'
-$Static=Safe $C.server_root ('logs\observation_'+$Target.Substring(0,12)+'_static')
-$Kind=if ($CollectReviewedEngineering) {'engineering'} else {'static'}
-$Out=if ($CollectReviewedEngineering) {Safe $C.server_root ('evidence\observation_preparation\'+$C.batch_id)} else {$Static}
-$Zip=Safe $C.server_root ('transfer\observation_'+$Target.Substring(0,12)+'_'+$Kind+'.zip')
+$Prefix=if ($InputPilot) {'coe_input_'} else {'observation_'}
+$Static=Safe $C.server_root ('logs\'+$Prefix+$Target.Substring(0,12)+'_static')
+$Kind=if ($Collect) {if ($InputPilot) {'pilot'} else {'engineering'}} else {'static'}
+$Evidence=if ($InputPilot) {'evidence\coe_input_pilot\'} else {'evidence\observation_preparation\'}
+$Out=if ($Collect) {Safe $C.server_root ($Evidence+$C.batch_id)} else {$Static}
+$Zip=Safe $C.server_root ('transfer\'+$Prefix+$Target.Substring(0,12)+'_'+$Kind+'.zip')
 if ((Test-Path -LiteralPath $Out) -or (Test-Path -LiteralPath $Zip)) {throw 'No overwrite/resume/retry'}
-if ($CollectReviewedEngineering) {
+if ($Collect) {
     if ($ReviewedStaticReceiptSHA256 -notmatch '^[0-9a-fA-F]{64}$' -or
         (Hash (Join-Path $Static 'receipt.json')) -ine $ReviewedStaticReceiptSHA256) {throw 'Reviewed Stage A receipt hash required'}
     VerifyManifest $Static
@@ -94,7 +100,7 @@ try {
     Set-Location -LiteralPath $Code
     $env:CUDA_DEVICE_ORDER='PCI_BUS_ID';$env:CUDA_VISIBLE_DEVICES='-1';$env:PYTHONDONTWRITEBYTECODE='1'
     $env:HF_HUB_OFFLINE='1';$env:TRANSFORMERS_OFFLINE='1'
-    if (!$CollectReviewedEngineering) {
+    if (!$Collect) {
         Tree $C.prerequisite
         $Bundle=Safe $PSScriptRoot $C.bundle
         if ((Hash $Bundle) -ne $C.bundle_sha256 -or (Get-Item -LiteralPath $Bundle).Length -ne $C.bundle_bytes) {throw 'Bundle conflict'}
@@ -104,12 +110,15 @@ try {
         if ($LASTEXITCODE -ne 0 -or $Fetched -ne $Target) {throw 'Bundle target conflict'}
         Run 'git' @('-c','core.autocrlf=false','checkout','--detach',$Target) '03_checkout'
         Tree $Target;Sources;Storage
-        $CpuTemp=Join-Path $C.server_root ('diagnostics\observation_'+$Target.Substring(0,12)+'_cpu')
+        $CpuTemp=Join-Path $C.server_root ('diagnostics\'+$Prefix+$Target.Substring(0,12)+'_cpu')
         if (Test-Path -LiteralPath $CpuTemp) {throw 'CPU output exists'}
-        Run $Python @('-X','utf8','-m','pytest','-q','-ra','-p','no:cacheprovider','--basetemp',$CpuTemp,
-            '--junitxml',(Join-Path $Out 'cpu_results.xml'),'tests/test_observation_preparation.py','tests/test_observation_delivery.py') '04_cpu'
-        Run $Python @('-X','utf8','-m','py_compile','exposedpath/observation_preparation.py',
-            'analysis/observation_preparation.py','scripts/observation_preparation_batch.py') '05_compile'
+        $Tests=if ($InputPilot) {@('tests/test_coe_input_pilot.py','tests/test_coe_input_delivery.py')} else {@('tests/test_observation_preparation.py','tests/test_observation_delivery.py')}
+        Run $Python (@('-X','utf8','-m','pytest','-q','-ra','-p','no:cacheprovider','--basetemp',$CpuTemp,
+            '--junitxml',(Join-Path $Out 'cpu_results.xml'))+$Tests) '04_cpu'
+        $Compile=@('-X','utf8','-m','py_compile','exposedpath/observation_preparation.py',
+            'analysis/observation_preparation.py','scripts/observation_preparation_batch.py')
+        if ($InputPilot) {$Compile+=@('exposedpath/coe_input_pilot.py','analysis/coe_budget_preview.py')}
+        Run $Python $Compile '05_compile'
         Tree $Target;$Status='STATIC_READY_FOR_REVIEW'
     } else {
         Tree $Target;Sources;Storage
@@ -121,18 +130,21 @@ try {
         $C | Add-Member -NotePropertyName seed_input -NotePropertyValue (Join-Path $Out 'prompt_512.json')
         $C | Add-Member -NotePropertyName inventory -NotePropertyValue (Join-Path $Out 'model_sha256.csv')
         $RunConfig=Join-Path $Out 'run_config.json';$C | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $RunConfig -Encoding utf8
+        $Switch=if ($InputPilot) {'--collect-reviewed-input-pilot'} else {'--collect-reviewed-preparation'}
         Run $Python @('-X','utf8','-u','scripts/observation_preparation_batch.py','--config',$RunConfig,
-            '--output',(Join-Path $Out 'experiment'),'--collect-reviewed-preparation') '07_eight_p1'
+            '--output',(Join-Path $Out 'experiment'),$Switch) '07_eight_p1'
         $BR=Get-Content -LiteralPath (Join-Path $Out 'experiment\batch\batch_report.json') -Raw | ConvertFrom-Json
-        if ($BR.status -ne 'FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW' -or $BR.runs.Count -ne 8 -or $BR.blocks.Count -ne 2) {throw 'Incomplete batch'}
-        Tree $Target;$Status='FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW'
+        $ExpectedStatus=if ($InputPilot) {'FIXED_EIGHT_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW'} else {'FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW'}
+        $ExpectedBlocks=if ($InputPilot) {4} else {2}
+        if ($BR.status -ne $ExpectedStatus -or $BR.runs.Count -ne 8 -or $BR.blocks.Count -ne $ExpectedBlocks) {throw 'Incomplete batch'}
+        Tree $Target;$Status=$ExpectedStatus
     }
 } catch {$Failure=$_.ToString();Write-Host ('STOP: '+$Failure)}
 finally {
     $StorageHash=if (Test-Path -LiteralPath (Join-Path $Out 'storage.json')) {Hash (Join-Path $Out 'storage.json')} else {$null}
     $SourceHash=if (Test-Path -LiteralPath (Join-Path $Out 'source_bytes.json')) {Hash (Join-Path $Out 'source_bytes.json')} else {$null}
     [ordered]@{status=$Status;error=$Failure;execution_commit=$Target;analysis_commit=$Target;
-        delivery_sha256=(Hash (Join-Path $PSScriptRoot 'delivery.json'));role='Engineering';automatic_retry=$false;
+        delivery_sha256=(Hash (Join-Path $PSScriptRoot 'delivery.json'));role=$(if ($InputPilot) {'Pilot'} else {'Engineering'});automatic_retry=$false;
         storage_sha256=$StorageHash;source_bytes_sha256=$SourceHash;actual_phase=$Kind;
         historical_ylq_total_bytes=$null;long_term_status='UNKNOWN_NOT_PROVEN';long_term_target_exclusive_bytes=50000000000;
         stage_a_model_processes=0;stage_a_profiles=0;stage_a_cuda_initializations=0;

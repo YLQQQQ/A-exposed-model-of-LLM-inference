@@ -253,19 +253,26 @@ def analyze_files(receipt_path, canonical_path, output):
     from exposedpath import coe_pilot
     from exposedpath import observation_preparation as preparation
     preparing=preparation.active(mf.get('batch_load'))
-    if preparing:
-        preparation.validate_prepared(mf,paths['wmpc_manifest'].parent,code_root)
+    from exposedpath import coe_input_pilot as axis
+    input_axis=axis.active(mf.get('pilot'))
+    if preparing or input_axis:
+        (coe_pilot if input_axis else preparation).validate_prepared(mf,paths['wmpc_manifest'].parent,code_root)
         saved=paths['runner_source'].with_name('preparation_source.py')
         require(sha(saved)==mf['preparation_source_sha256'],'EXECUTED_PREPARATION_SOURCE_HASH')
         hashes[str(saved)]=sha(saved)
         source_files.add(code_root/'exposedpath/observation_preparation.py')
         hashes[str(code_root/'exposedpath/observation_preparation.py')]=sha(code_root/'exposedpath/observation_preparation.py')
+        if input_axis:
+            saved_axis=paths['runner_source'].with_name('input_pilot_source.py')
+            require(sha(saved_axis)==mf['input_pilot_source_sha256'],'EXECUTED_INPUT_PILOT_SOURCE_HASH')
+            for p in (saved_axis,code_root/'exposedpath/coe_input_pilot.py'):
+                source_files.add(p);hashes[str(p)]=sha(p)
     # The prospective runner retains the later Cpre hook, but this domain
     # forbids a completion controller. The natural .cpu()/anchor path is the
     # same; legacy profiles still accept ONLY their own reviewed structure.
     helper_identity=validate_helper_source(source,
         'COE_PILOT_NATURAL' if coe_pilot.active(mf.get('pilot')) or preparing else 'LEGACY_NATURAL')
-    if preparing:helper_identity['preparation_source_sha256']=mf['preparation_source_sha256']
+    if preparing or input_axis:helper_identity['preparation_source_sha256']=mf['preparation_source_sha256']
     require(not any(k in mf for k in ('n1_model','completion_path')) and mf['execution_mode']=='eager','NATURAL_PROFILE_OUT_OF_SCOPE')
     require(mf['inference_framework_version']=='torch2.6.0+cu124' and mf['attention_backend']=='sdpa'
             and mf['dtype_and_quantization']=='fp16','SOFTWARE_PROFILE_OUT_OF_SCOPE')

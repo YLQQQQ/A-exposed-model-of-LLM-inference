@@ -11,7 +11,7 @@ if ($TopTry.Count -ne 1) {throw 'CPU boundary mismatch'}
 $Boundary=@'
 $Python=$env:OBS_TEST_PYTHON
 $script:CpuHead=$C.prerequisite
-if ($CollectReviewedEngineering) {$script:CpuHead=$Target}
+if ($CollectReviewedEngineering -or $CollectReviewedInputPilot) {$script:CpuHead=$Target}
 function global:git {
     $A=@($args);$global:LASTEXITCODE=0
     if ($A -contains 'rev-parse') {
@@ -21,20 +21,24 @@ function global:git {
 function Run([string]$Exe,[string[]]$Argv,[string]$Name) {
     if ($Name -in @('01_bundle','02_fetch','03_checkout','04_cpu','05_compile','06_nsys_version')) {
         if ($Name -eq '03_checkout') {$script:CpuHead=$Target}
-        if ($Name -eq '04_cpu' -and (($Argv[-2..-1] -join '|') -ne 'tests/test_observation_preparation.py|tests/test_observation_delivery.py')) {throw 'CPU check scope drift'}
+        $Tests=if ($InputPilot) {'tests/test_coe_input_pilot.py|tests/test_coe_input_delivery.py'} else {'tests/test_observation_preparation.py|tests/test_observation_delivery.py'}
+        if ($Name -eq '04_cpu' -and (($Argv[-2..-1] -join '|') -ne $Tests)) {throw 'CPU check scope drift'}
         if ($Name -eq '06_nsys_version' -and ($Argv -join '|') -ne '--version') {throw 'Collector scope drift'}
         Write-Host ('CPU_PROCESS_BOUNDARY '+$Name)
     } elseif ($Name -eq 'storage') {
         & $Python $env:OBS_TEST_STORAGE @($Argv | Select-Object -Skip 3)
         if ($LASTEXITCODE -ne 0) {throw 'CPU storage check failed'}
     } elseif ($Name -eq '07_eight_p1') {
+        $Flag=if ($InputPilot) {'--collect-reviewed-input-pilot'} else {'--collect-reviewed-preparation'}
         $Expected=@('-X','utf8','-u','scripts/observation_preparation_batch.py','--config',(Join-Path $Out 'run_config.json'),
-            '--output',(Join-Path $Out 'experiment'),'--collect-reviewed-preparation')
+            '--output',(Join-Path $Out 'experiment'),$Flag)
         if (($Argv -join '|') -ne ($Expected -join '|')) {throw 'Unexpected batch argv'}
         [IO.File]::WriteAllText((Join-Path $C.server_root 'model_boundary_called'),'CPU_DOUBLE_NOT_MODEL')
         if ($env:OBS_TEST_SCENARIO -eq 'batch_fail') {throw 'CPU hard quality failure'}
         $P=Join-Path $Out 'experiment/batch';New-Item -ItemType Directory -Path $P | Out-Null
-        @{status='FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW';runs=@(1..8);blocks=@(1..2)} |
+        $Status=if ($InputPilot) {'FIXED_EIGHT_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW'} else {'FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW'}
+        $Count=if ($InputPilot) {4} else {2}
+        @{status=$Status;runs=@(1..8);blocks=@(1..$Count)} |
             ConvertTo-Json | Set-Content -LiteralPath (Join-Path $P 'batch_report.json') -Encoding utf8
     } else {throw ('Unexpected process in CPU boundary: '+$Name)}
 }
@@ -43,5 +47,8 @@ $Source=$Source.Insert($TopTry[0].Extent.StartOffset,$Boundary+"`n")
 $Context="`n`$PSScriptRoot='"+([IO.Path]::GetDirectoryName($Launcher).Replace("'","''"))+"'`n`$PSCommandPath='"+$Launcher.Replace("'","''")+"'`n"
 $Source=$Source.Insert($Ast.ParamBlock.Extent.EndOffset,$Context)
 $Params=@{}
-if ($env:OBS_TEST_COLLECT -eq '1') {$Params.CollectReviewedEngineering=$true;$Params.ReviewedStaticReceiptSHA256=$env:OBS_TEST_REVIEWED}
+if ($env:OBS_TEST_COLLECT -eq '1') {
+    if ($env:OBS_TEST_INPUT_PILOT -eq '1') {$Params.CollectReviewedInputPilot=$true} else {$Params.CollectReviewedEngineering=$true}
+    $Params.ReviewedStaticReceiptSHA256=$env:OBS_TEST_REVIEWED
+}
 & ([scriptblock]::Create($Source)) @Params

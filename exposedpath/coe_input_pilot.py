@@ -1,0 +1,176 @@
+"""Finite prospective P-wrapped 512/2048 Pilot. Not a Formal extension."""
+from copy import deepcopy
+from fractions import Fraction
+import hashlib
+import json
+from pathlib import Path
+import re
+
+from .gate8_isolated_preflight import read,sha,write_new
+
+VERSION='COE-INPUT-P-PILOT/0.1'
+PROFILE='COE_INPUT_P_BOTH_TOKENS/0.1'
+RESULT_VERSION='coe-input-pilot-result/0.1.0'
+STATUS='COE_INPUT_BOTH_TOKENS_PENDING_REVIEW'
+ORDERS=((512,2048),(2048,512),(2048,512),(512,2048))
+
+
+def require(ok,reason):
+    if not ok:raise ValueError('COE_INPUT_'+reason)
+
+
+def active(v):return isinstance(v,dict) and v.get('version')==VERSION
+
+
+def schedule(batch_id,commit):
+    require(isinstance(batch_id,str) and re.fullmatch('[A-Za-z0-9_-]{1,60}',batch_id),'BATCH_ID')
+    require(isinstance(commit,str) and re.fullmatch('[0-9a-f]{40}',commit),'COMMIT')
+    return [dict(version=VERSION,batch_id=batch_id,execution_commit=commit,block=b,position=p,
+        condition=f'G{n}P',input_tokens=n,batch_size=1,output_tokens=2,variant=None,observation_variant='P',
+        pass_id='pass1',pair_id=f'{batch_id}-b{b}',run_id=f'{batch_id}-b{b}-G{n}P-pass1',
+        warmup_count=3,repeat_count=1,purpose='CANDIDATE_INPUT_RESPONSE_PILOT_ONLY',
+        declaration_role='PRE_EXECUTION',formal_eligible=False)
+        for b,order in enumerate(ORDERS,1) for p,n in enumerate(order,1)]
+
+
+def validate_binding(v):
+    require(isinstance(v,dict),'BINDING')
+    require(any(v==b and all(type(v[k]) is type(x) for k,x in b.items())
+        for b in schedule(v.get('batch_id'),v.get('execution_commit'))),'BINDING')
+    return v
+
+
+def minimal_fields(binding):
+    b=validate_binding(binding)
+    from .gate8_engineering_contract import declaration
+    scope=declaration('sdpa');scope['profile']=PROFILE
+    return dict(pilot=deepcopy(b),run_role='PILOT',data_role='Pilot',run_id=b['run_id'],
+        fixed_input_tokens=b['input_tokens'],fixed_output_tokens=2,batch_size=1,warmup_count=3,repeat_count=1,
+        execution_mode='eager',attention_backend='sdpa',dtype_and_quantization='fp16',
+        sampling_config={'do_sample':False},study_mode='G1_NATURAL',n1_intervention=None,engineering_scope=scope)
+
+
+def input_identity(prompt):
+    n=prompt.get('fixed_input_tokens');samples=prompt.get('samples')
+    require(type(n) is int and n in (512,2048) and isinstance(samples,list) and len(samples)==1,'INPUT_SHAPE')
+    s=samples[0];ids=s.get('input_ids');mask=s.get('attention_mask')
+    require(type(s.get('sample_index')) is int and s['sample_index']==0 and isinstance(ids,list)
+        and len(ids)==n and all(type(i) is int and i>=0 for i in ids),'INPUT_VALUES')
+    require(mask==[1]*n and all(type(i) is int for i in mask),'MASK')
+    digest=lambda v:hashlib.sha256(json.dumps(v,separators=(',',':'),ensure_ascii=False).encode('utf8')).hexdigest()
+    return dict(schema_version='coe-input-axis-identity/0.1.0',shape=[1,n],sample_indices=[0],
+        input_ids_sha256=digest([ids]),attention_mask_sha256=digest([mask]),
+        batch_sha256=digest(dict(shape=[1,n],sample_indices=[0],input_ids=[ids],attention_mask=[mask])),
+        algorithm='SHA256_COMPACT_UTF8_JSON_IN_ORDER')
+
+
+def validate_input(prompt,config,batch):
+    identity=input_identity(prompt);n=prompt['fixed_input_tokens']
+    require(type(batch) is int and batch==1,'BATCH')
+    require(config.get('model_type')=='qwen2' and type(config.get('vocab_size')) is int
+        and type(config.get('max_position_embeddings')) is int and n+2<=config['max_position_embeddings'],'MODEL_CONFIG')
+    ids=prompt['samples'][0]['input_ids']
+    require(all(i<config['vocab_size'] for i in ids) and ids==ids[:32]*(n//32),'TOKEN_RANGE_OR_CONSTRUCTION')
+    specials=set()
+    for source in (config,prompt.get('special_tokens',{})):
+        for key in ('bos_token_id','eos_token_id','pad_token_id'):
+            v=source.get(key)
+            if isinstance(v,list):specials.update(v)
+            elif v is not None:specials.add(v)
+    require(not specials.intersection(ids),'SPECIAL_TOKEN')
+    return identity
+
+
+def validate(manifest):
+    b=validate_binding(manifest.get('pilot'))
+    require(not any(k in manifest for k in ('formal','batch_load','completion_path','n1_model',
+        'n1_model_execution','engineering_pair','domain_qualification','gate10_workload')),'MIXED_DOMAIN')
+    require(all(type(manifest.get(k)) is type(v) and manifest[k]==v for k,v in minimal_fields(b).items()),'DECLARATION')
+    require(manifest.get('runner_git_commit')==b['execution_commit'] and manifest.get('runner_git_dirty') is False,'COMMIT')
+    i=manifest.get('coe_input',{})
+    require(set(i)=={'schema_version','shape','sample_indices','input_ids_sha256','attention_mask_sha256','batch_sha256','algorithm'}
+        and i['schema_version']=='coe-input-axis-identity/0.1.0' and i['shape']==[1,b['input_tokens']]
+        and i['sample_indices']==[0] and i['algorithm']=='SHA256_COMPACT_UTF8_JSON_IN_ORDER'
+        and all(isinstance(i[k],str) and re.fullmatch('[0-9a-f]{64}',i[k]) for k in
+            ('input_ids_sha256','attention_mask_sha256','batch_sha256')),'INPUT_BINDING')
+    return b
+
+
+def make_inputs(seed,expected_sha,output):
+    require(sha(seed)==expected_sha,'SEED_HASH');v=read(seed)
+    require(v['fixed_input_tokens']==512,'SEED_LENGTH');input_identity(v)
+    ids=v['samples'][0]['input_ids'];require(ids==ids[:32]*16,'SEED_CONSTRUCTION')
+    out=Path(output);out.mkdir(parents=True,exist_ok=False);paths={}
+    for n in (512,2048):
+        p=deepcopy(v);p['fixed_input_tokens']=n
+        p['samples']=[dict(sample_index=0,input_ids=ids[:32]*(n//32),attention_mask=[1]*n)]
+        p['construction']=dict(rule='CYCLE_SEALED_SAMPLE0_32',source_sha256=expected_sha)
+        paths[n]=out/f'input_{n}.json';write_new(paths[n],p)
+    return paths
+
+
+def validate_preparation(manifest,ledger,execution,tokens):
+    b=validate(manifest);p=execution['observation_preparation'];r=tokens['requests'][0]
+    require(p['version']==VERSION and p['binding']==b and p['identity']==r['identity']
+        and p['pid']==ledger['pid'] and type(p['tid']) is int and p['tid']>0 and p['closed'] is True
+        and p['prepared_count']==2 and p['consumed_token_indices']==[0,1]
+        and p['preparation_position']=='BEFORE_FINAL_DRAIN' and p['dynamic_operations_moved'] is False,'PREPARATION_RECEIPT')
+    from .nvtx import make_natural_token_ready_identity,make_structured_nvtx_label
+    from .results import TOKEN_READY_MECHANISM
+    expected=[make_structured_nvtx_label(make_natural_token_ready_identity(r['identity'],phase=phase,token_index=i,
+        callsite_id=f'{phase}.token_ready',sync_ordinal=i,token_ready_mechanism=TOKEN_READY_MECHANISM))
+        for i,phase in enumerate(('prefill','decode'))]
+    require(p['prepared_labels']==expected,'PREPARATION_CONTENT')
+
+
+def block_contrasts(rows):
+    require(len(rows)==2 and all(s['status']=='COMPLETE' for s in rows),'INCOMPLETE_BLOCK')
+    bs=[validate_binding(s['binding']) for s in rows]
+    require(len({(b['batch_id'],b['execution_commit'],b['block']) for b in bs})==1,'BLOCK_IDENTITY')
+    values={s['binding']['input_tokens']:s['result'] for s in rows}
+    require(set(values)=={512,2048},'BLOCK_CONDITIONS');answer=[]
+    for token,phase in enumerate(('prefill','decode')):
+        require(all(len(values[n]['operations'])==2 for n in values),'TOKEN_COVERAGE')
+        q={n:values[n]['operations'][token]['candidate_ns'] for n in values}
+        require(all(values[n]['operations'][token]['token_index']==token
+            and values[n]['operations'][token]['phase']==phase and type(q[n]) is int and q[n]>=0 for n in values),'OPERATION')
+        windows={n:[w for w in values[n]['windows'] if w['phase']==phase] for n in values}
+        require(all(len(windows[n])==1 for n in windows),'BLOCK_WINDOW_COVERAGE')
+        gpu={n:windows[n][0]['baseline']['gpu_activity'] for n in windows}
+        g={n:gpu[n]['union_ns'] for n in gpu}
+        valid=all(gpu[n]['status']=='KNOWN' and type(g[n]) is int and g[n]>=0 for n in g) and g[512]>0
+        residual=Fraction(q[2048])-Fraction(q[512]*g[2048],g[512]) if valid else None
+        answer.append(dict(token_index=token,phase=phase,primary=token==0,coe_ns=q,phase_gpu_union_ns=g,
+            delta_coe_ns=q[2048]-q[512],R_ns=float(residual) if residual is not None else None,
+            R_exact=dict(numerator=residual.numerator,denominator=residual.denominator) if residual is not None else None,
+            R_status='DEFINED_SIGNED' if valid else 'UNDEFINED_INVALID_PHASE_GPU_DENOMINATOR',
+            denominator='SAME_PHASE_GPU_UNION_NOT_CUMULATIVE_W',
+            interpretation='OBSERVED_PROGRAM_STRUCTURE_NOT_PURE_WAIT_OR_P0_PERFORMANCE'))
+    return dict(block=bs[0]['block'],per_token=answer)
+
+
+def run_batch(batch_id,commit,output,collect):
+    out=Path(output);out.mkdir(parents=True,exist_ok=False)
+    r=dict(schema_version=VERSION,status='BLOCKED',run_role='PILOT',data_role='Pilot',
+        model_process_budget=8,profile_budget=8,automatic_retry=False,replacement=False,formal_eligible=False,
+        runs=[dict(binding=b,status='NOT_RUN') for b in schedule(batch_id,commit)],blocks=[],incomplete_blocks=[1,2,3,4],
+        measurement_validity='NOT_ASSESSED',dropped_records_status='UNKNOWN')
+    def persist():
+        p=out/'batch_report.pending.json';write_new(p,r);p.replace(out/'batch_report.json')
+    persist();tokens={}
+    for slot in r['runs']:
+        b=slot['binding'];print(f"[input-pilot] block={b['block']} position={b['position']} {b['condition']} pass1 START",flush=True)
+        try:
+            v=collect(b,out/b['run_id']);require(v['status']==STATUS and v['binding']==b,'RESULT_BINDING')
+            ids=v['token_ids'];require(isinstance(ids,list) and len(ids)==2 and all(isinstance(t,list) and len(t)==1
+                and type(t[0]) is int and t[0]>=0 for t in ids),'ACTUAL_TOKENS')
+            n=b['input_tokens'];require(n not in tokens or tokens[n]==ids,'SAME_INPUT_TOKEN_PARITY');tokens[n]=ids
+            slot.update(status='COMPLETE',result=v)
+            rows=[s for s in r['runs'] if s['binding']['block']==b['block']]
+            if all(s['status']=='COMPLETE' for s in rows):
+                r['blocks'].append(block_contrasts(rows));r['incomplete_blocks'].remove(b['block'])
+        except Exception as exc:
+            slot.update(status='BLOCKED',error=f'{type(exc).__name__}: {exc}');persist();break
+        persist()
+    else:r['status']='FIXED_EIGHT_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW';persist()
+    return r

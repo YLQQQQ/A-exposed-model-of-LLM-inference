@@ -23,7 +23,8 @@ def require(ok,reason):
 
 
 def active(value):
-    return isinstance(value,dict) and value.get('version')==VERSION
+    from .coe_input_pilot import active as input_active
+    return (isinstance(value,dict) and value.get('version')==VERSION) or input_active(value)
 
 
 def software_identity(torch):
@@ -48,6 +49,8 @@ def schedule(batch_id,commit):
 
 
 def validate_binding(value):
+    from . import coe_input_pilot as axis
+    if axis.active(value):return axis.validate_binding(value)
     require(isinstance(value,dict),'BINDING')
     require(any(value==b and all(type(value[k]) is type(v) for k,v in b.items())
         for b in schedule(value.get('batch_id'),value.get('execution_commit'))),'BINDING')
@@ -55,6 +58,8 @@ def validate_binding(value):
 
 
 def minimal_fields(binding):
+    from . import coe_input_pilot as axis
+    if axis.active(binding):return axis.minimal_fields(binding)
     b=validate_binding(binding)
     from .gate8_engineering_contract import declaration
     scope=declaration('sdpa');scope['profile']=PROFILE
@@ -65,7 +70,9 @@ def minimal_fields(binding):
         engineering_scope=scope)
 
 
-def input_identity(prompt):
+def input_identity(prompt,*,binding=None):
+    from . import coe_input_pilot as axis
+    if axis.active(binding):axis.validate_binding(binding);return axis.input_identity(prompt)
     samples=prompt['samples'];n=len(samples)
     require(n in (1,2,4) and prompt['fixed_input_tokens']==512,'INPUT_SHAPE')
     require([s.get('sample_index') for s in samples]==list(range(n)),'SAMPLE_IDENTITY')
@@ -80,7 +87,9 @@ def input_identity(prompt):
         algorithm='SHA256_COMPACT_UTF8_JSON_IN_ORDER')
 
 
-def validate_input(prompt,config,batch):
+def validate_input(prompt,config,batch,*,binding=None):
+    from . import coe_input_pilot as axis
+    if axis.active(binding):axis.validate_binding(binding);return axis.validate_input(prompt,config,batch)
     from .gate10_workload import validate_input as single
     identity=input_identity(prompt)
     require(identity['shape']==[batch,512],'INPUT_SHAPE')
@@ -89,6 +98,8 @@ def validate_input(prompt,config,batch):
 
 
 def validate(manifest):
+    from . import coe_input_pilot as axis
+    if axis.active(manifest.get('pilot')):return axis.validate(manifest)
     b=validate_binding(manifest.get('pilot'))
     require(not any(k in manifest for k in ('formal','batch_load','completion_path','n1_model',
         'n1_model_execution','engineering_pair','gate10_workload','domain_qualification')),'MIXED_DOMAIN')
@@ -111,7 +122,11 @@ def validate_prepared(manifest,prepared,root):
     require(sha(Path(prepared)/'prompt.json')==manifest['prompt_tokens_sha256']
         and sha(Path(root)/'exposedpath/runner.py')==manifest['runner_source_sha256'],'INPUT_HASH')
     require(validate_input(read(Path(prepared)/'prompt.json'),read(Path(manifest['model_id'])/'config.json'),
-        b['batch_size'])==manifest['coe_input'],'BATCH_CONTENT')
+        b['batch_size'],binding=b)==manifest['coe_input'],'BATCH_CONTENT')
+    from . import coe_input_pilot as axis
+    if axis.active(b):
+        require(manifest.get('preparation_source_sha256')==sha(Path(root)/'exposedpath/observation_preparation.py')
+            and manifest.get('input_pilot_source_sha256')==sha(Path(root)/'exposedpath/coe_input_pilot.py'),'PREPARATION_SOURCE_HASH')
 
 
 def validate_actual_requests(manifest,ledger):
@@ -127,6 +142,11 @@ def validate_actual_requests(manifest,ledger):
 
 
 def observation(identity,result,manifest,actual_input):
+    from . import coe_input_pilot as axis
+    if axis.active(manifest.get('pilot')):
+        from .observation_preparation import observation as prepared_observation
+        require(actual_input==manifest['coe_input'],'ACTUAL_INPUT_IDENTITY')
+        return dict(prepared_observation(identity,result,manifest),input_identity=deepcopy(actual_input))
     from .batch_load import observation as batch_observation
     require(actual_input==manifest['coe_input'],'ACTUAL_INPUT_IDENTITY')
     return dict(batch_observation(identity,result,manifest['batch_size']),input_identity=deepcopy(actual_input))
@@ -144,19 +164,27 @@ def validate_tokens(path,manifest,ledger,execution,manifest_path,producer_path):
     require(len(t['requests'])==1,'TOKEN_REQUESTS');r=t['requests'][0];n=b['batch_size']
     require(set(r)=={'identity','actual_input_shape','sample_indices','token_ids',
         'actual_output_tokens_per_sample','early_eos','input_identity'}
-        and r['identity']==ledger['requests'][-1]['identity'] and r['actual_input_shape']==[n,512]
+        and r['identity']==ledger['requests'][-1]['identity'] and r['actual_input_shape']==[n,b['input_tokens']]
         and r['sample_indices']==list(range(n)) and r['actual_output_tokens_per_sample']==[2]*n
         and r['early_eos'] is False and r['input_identity']==manifest['coe_input'],'TOKEN_IDENTITY_SHAPE')
     ids=r['token_ids']
     require(isinstance(ids,list) and len(ids)==2 and all(isinstance(t,list) and len(t)==n
         and all(type(v) is int and v>=0 for v in t) for t in ids),'TOKEN_VALUES')
+    from . import coe_input_pilot as axis
+    if axis.active(b):axis.validate_preparation(manifest,ledger,execution,t)
     return ids
 
 
 def execution_extension(manifest,ledger,execution,execution_path,manifest_path,producer_path,token_path):
     require(token_path is not None and Path(token_path).resolve()==Path(execution_path).resolve().parent/'pilot_tokens.json','TOKEN_PATH')
     validate_tokens(token_path,manifest,ledger,execution,manifest_path,producer_path)
-    return {'pilot','run_role','data_role','pilot_tokens_sha256'},EXECUTION_VERSION
+    fields={'pilot','run_role','data_role','pilot_tokens_sha256'}
+    from . import coe_input_pilot as axis
+    if axis.active(manifest.get('pilot')):
+        require(sha(Path(execution_path).parent/'preparation_source.py')==manifest['preparation_source_sha256'],'EXECUTED_PREPARATION_SOURCE_HASH')
+        require(sha(Path(execution_path).parent/'input_pilot_source.py')==manifest['input_pilot_source_sha256'],'EXECUTED_INPUT_PILOT_SOURCE_HASH')
+        fields.add('observation_preparation')
+    return fields,EXECUTION_VERSION
 
 
 def make_inputs(seed,expected_sha,output):

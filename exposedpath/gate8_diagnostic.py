@@ -95,7 +95,9 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
         n1_variant=formal_binding['variant']
         if formal_binding['condition']=='G512': gate10_input_tokens=512
     from . import coe_pilot
+    from . import coe_input_pilot as input_pilot
     coe=coe_pilot.active(pilot_binding)
+    input_axis=input_pilot.active(pilot_binding)
     if pilot_binding is not None:
         from .gate11_pilot import minimal_fields
         pilot_fields=minimal_fields(pilot_binding)
@@ -104,7 +106,7 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
         if engineering_attention_backend!='sdpa' or not target_python or not site_root:
             raise ValueError('PILOT_VERIFIED_ENTRY_REQUIRED')
         n1_variant=pilot_binding['variant']
-        if pilot_binding['condition']=='G512': gate10_input_tokens=512
+        if not coe and pilot_binding['condition']=='G512': gate10_input_tokens=512
     from exposedpath.gate8_engineering_contract import declaration
     declared = None if engineering_attention_backend is None else declaration(engineering_attention_backend)
     if output.exists():
@@ -126,7 +128,7 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     prompt = load_prompt_tokens(Path(prompt_path))
     from . import observation_preparation as preparation
     preparing=preparation.active(batch_binding)
-    length=batch_binding['input_tokens'] if preparing else 512 if batch_binding is not None or coe else 32 if gate10_input_tokens is None else gate10_input_tokens
+    length=pilot_binding['input_tokens'] if input_axis else batch_binding['input_tokens'] if preparing else 512 if batch_binding is not None or coe else 32 if gate10_input_tokens is None else gate10_input_tokens
     if prompt['fixed_input_tokens'] != length or _sha(prompt_path) != prompt_sha256.lower():
         raise ValueError('DIAGNOSTIC_PROMPT_IDENTITY')
     if gate10_input_tokens is not None:
@@ -142,7 +144,7 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
             memset_input=parameters.validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')))
         else:validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')),batch_binding['batch_size'])
     if coe:
-        coe_input=coe_pilot.validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')),pilot_binding['batch_size'])
+        coe_input=coe_pilot.validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')),pilot_binding['batch_size'],binding=pilot_binding)
     observed = TorchBackend().identity()
     preflight = dict(physical_gpu_index=physical_gpu, logical_gpu_index=0,
                      gpu_uuid=observed['gpu_uuid'], gpu_pci_bus_id=observed['pci_bus_id'])
@@ -185,6 +187,9 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
         manifest.pop('gate10_workload',None)
         manifest.update(pilot_fields)
         if coe: manifest['coe_input']=coe_input
+        if input_axis:
+            manifest.update(preparation_source_sha256=_sha(root/'exposedpath/observation_preparation.py'),
+                input_pilot_source_sha256=_sha(root/'exposedpath/coe_input_pilot.py'))
         from .gate11_pilot import validate
         validate(manifest)
     if formal_binding is not None:
@@ -239,6 +244,9 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     if parameter_profile:parameters.validate_prepared(manifest,manifest_path.parent,project_root)
     from . import coe_pilot
     coe=coe_pilot.active(pilot)
+    from . import coe_input_pilot as input_pilot
+    input_axis=input_pilot.active(pilot)
+    if input_axis:coe_pilot.validate_prepared(manifest,manifest_path.parent,project_root)
     if coe:coe_pilot.validate_software(coe_pilot.software_identity(runner.torch),manifest)
     if parameter_profile:parameters.validate_target_software(coe_pilot.software_identity(runner.torch),manifest)
     if preparing:coe_pilot.validate_software(coe_pilot.software_identity(runner.torch),manifest)
@@ -329,9 +337,11 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     if completion is not None:
         fields['completion_path']=manifest['completion_path']
     output_dir.mkdir(parents=True, exist_ok=False)
-    if preparing:
+    if preparing or input_axis:
         with (output_dir/'preparation_source.py').open('xb') as handle:
             handle.write(Path(preparation.__file__).read_bytes())
+        if input_axis:
+            with (output_dir/'input_pilot_source.py').open('xb') as handle:handle.write(Path(input_pilot.__file__).read_bytes())
     if claim is not None:
         isolated_gate.write_new(output_dir/'isolated_preflight_target.json',claim)
     if runtime is not None:
@@ -391,7 +401,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     def observe_input(batch):
         actual_input.update(coe_pilot.input_identity(dict(fixed_input_tokens=batch['fixed_input_tokens'],samples=[
             dict(sample_index=i,input_ids=ids,attention_mask=mask)
-            for i,(ids,mask) in enumerate(zip(batch['input_ids'],batch['attention_mask']))])))
+            for i,(ids,mask) in enumerate(zip(batch['input_ids'],batch['attention_mask']))]),binding=pilot))
         coe_pilot.require(actual_input==manifest['memset_input' if parameter_profile else 'coe_input'],'ACTUAL_INPUT_IDENTITY')
     def observe_invocation(identity,result):
         observed_workload.append(dict(identity=identity,**{k:result[k] for k in (
@@ -401,6 +411,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
             # ranges. No Tensor operation, D2H or synchronization here.
             if coe:
                 observed_tokens.append(coe_pilot.observation(identity,result,manifest,actual_input))
+                if input_axis:preparation_result.update(preparation_controller.finish(identity))
             elif preparing:
                 observed_tokens.append(preparation.observation(identity,result,manifest))
                 preparation_result.update(preparation_controller.finish(identity))
@@ -414,7 +425,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         dict(request_id='warmup-0',repeat_id='warmup-0',request_role='warmup'),
         dict(request_id='request-0',repeat_id='0',request_role='measured')]
     parameter_recorder=parameters.Recorder(manifest['batch_load']) if parameter_profile else None
-    preparation_controller=preparation.Execution(manifest['batch_load']) if preparing else None
+    preparation_controller=preparation.Execution(pilot) if preparing or input_axis else None
     preparation_result={}
     try:
         path = runner.run_gate8_requests_to_files(
@@ -429,7 +440,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
                          physical_gpu_index=manifest['gpu_index_physical'], batch_size=manifest['batch_size'] if batch or coe else 1,
                          manifest_path=output_dir/'manifest.json'),
         request_plan=plan,**({'input_observer':observe_input} if coe or parameter_profile else {}),
-        **({'observation_preparation':preparation_controller} if preparing else {}),
+        **({'observation_preparation':preparation_controller} if preparing or input_axis else {}),
         **({'parameter_recorder':parameter_recorder} if parameter_profile else {}))
         # Prepared cache contains no Tensor or dynamic completion state.
     finally:
@@ -482,6 +493,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
                 from .gate11_pilot import versions
                 execution.update(schema_version=versions(pilot)[1],**role,pilot=pilot,
                     pilot_tokens_sha256=_sha(output_dir/'pilot_tokens.json'))
+                if input_axis:execution['observation_preparation']=preparation_result
         with (output_dir/'engineering_execution.json').open('x',encoding='utf-8') as handle:
             json.dump(execution,handle,indent=2,sort_keys=True)
     result = dict(schema_version='gate8-qwen-diagnostic/0.1.0',

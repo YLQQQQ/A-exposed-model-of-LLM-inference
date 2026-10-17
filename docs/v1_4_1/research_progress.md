@@ -1,5 +1,52 @@
 # ExposedPath 科研进度清单
 
+## 7.188 固定P输入轴512/2048 Pilot本地接线及两阶段待审交付（2026-10-17）
+
+用户批准既定四个完整配对block、8P1/8profile预算；本轮仅本地实现、CPU和交付准备。
+依据仍v7.1/v2.1及独立COE候选，生产S/A/B/registry、旧Formal及历史判定不改。
+当前最高优先级：审查新阶段A真实回执后才可显式启动B；目标2048实际准入NOT_RUN。
+
+- [x] 新有限合同`COE-INPUT-P-PILOT/0.1`与PROFILE：512/2048、batch1/输出2、w3/r1、
+  FP16/eager/SDPA、固定P与自然Host-readable。共享COE Pilot原结构envelope显式分派，
+  旧batch1/2/4及O/P Engineering声明不扩域；新输入只进入新角色。
+- [x] 完整输入/mask矩阵摘要与预备文件字节绑定；交付前离线生成固定输入，目标运行必须
+  匹配预定字节及摘要，不把即时sha作为期望。模型沿用原inventory/内容，不部署新模型。
+- [x] 复用现有P helper，源字节及实际两token cache消费绑定manifest/producer/receipt；
+  新增的只是角色与2048接线。没有移动动态状态、clock、NVTX发射、Host读取或CUDA调用，
+  不插Cpre、不切流。seal前发现缺少新合同分派，补精确版本而非绕过身份门。
+- [x] prepare→seal→真实profile argv边界、实际producer文件→Canonical→两token完整
+  原准入→COE→独立预算→报告hash消费，以明确外部OS/设备/collector替身验证。
+  原A和独立候选三窗口继续分开；Request/phase/操作union去重、原类别迁移和来源不变；
+  无domain巨型输出，Decode缺口不能以Prefill-only规则绕过。
+- [x] AB/BA/BA/AB固定8槽新进程；首token主比较signed ΔQ及
+  `R=Q2048-Q512*(G2048/G512)`，保存精确有理数及ns。G是对应phase GPU union，
+  第二token累计必要集合不充当Decode新增量；分母无效R=null/UNDEFINED，不加epsilon。
+  第二token/原A/候选E∪Q/COE/分母/成员/H/D/同窗baseline全保留，完整block才配对。
+  负、零、混合结果不拒绝；硬失败/固定8槽即停，无额外2048试跑、补槽或降级输入。
+- [x] 默认A复用原launcher部署、源码实字节核对、相关CPU、compile与参与卷新鲜12GiB
+  空闲检查。B另需新A回执精确hash及显式角色开关，仍复查clean/source/新鲜资源。
+  不遍历历史YLQ/ACL、不自动清理；历史总量null/UNKNOWN，长期目标<50,000,000,000字节
+  未证明。最近可信服务器前置来自已核验2d0d88e静态及八run终态回执，不假定实时checkout。
+- [ ] 新目标阶段A及8槽GPU实际执行/准入：本轮均未运行，不能把CPU替身写成2048资格。
+
+最终定向命令：`python -m pytest -q -p no:cacheprovider tests/test_coe_input_pilot.py
+tests/test_coe_input_delivery.py --basetemp=.local/input_release --junitxml=.local/input_final.xml`：
+44 passed、0 failed、0 skipped，75.23s。更广受影响回归（同两文件及旧observation、delivery、
+budget、coe_pilot）139 passed/0 failed/0 skipped，156.07s，与44重叠不相加。
+定向compileall和真实PowerShell5.1入口/分派检查通过；本地Python3.12.7，目标3.11.16为
+既有证据，新增代码仍待新静态回执。中间复验因分析期间改动受hash保护源码触发
+COE_SOURCE_CHANGED；未放宽该门，冻结本地文件后最终44项全部通过。
+
+已验证有限输入/角色/源码/hash/Token/缺drain与依赖/第二token缺映射/错误出口等拒绝，
+含独立手算R=-3、零分母null、全预算负差和失败保留未运行槽位。不是完整Q0/新CUDA资格。
+交付在实现真实commit后绑定执行/分析版本，不自引用hash；准确包身份见本机handoff。
+预计35～60分钟、临时12GiB、最终1～3GiB是估计，不保证2048可行；任何新API分支、
+映射/依赖/诊断等硬缺证仍停。阶段A回传后集中审查，暂不交B启动命令。
+
+计划调整：7.187待审预算已获本轮批准，新增有限执行域，不是新Formal冻结或原合同改写。
+Gate13限定PASS、Gate14 NOT_RUN，旧B2/七槽BLOCKED、参数支线停止及UNKNOWN/NOT_ASSESSED
+保持。用户DOCX、大型原件不纳入提交；没有服务器/GPU/Nsight/新模型或引擎/hook操作。
+
 ## 7.187 COE候选预算最小接线、现有非比例响应及512/2048待审设计（2026-10-17）
 
 本轮用户授权本地代码/相关CPU及已有小结果分析，未授权新GPU预算。当前依据仍研究设计

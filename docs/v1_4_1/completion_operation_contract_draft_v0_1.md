@@ -126,3 +126,26 @@
   在现有短稿固定唯一待审点位/完整block/预算/停止条件，不生成执行包或服务器命令。
 
 这是一项既有流程的有界实现计划，不新增资格层、独立collector或新测量定义。
+
+## 7. 固定P输入轴Pilot最小接线（2026-10-17，用户批准本地实现及待审交付）
+
+采用writing-plans的有界任务顺序，在当前main保留用户修改，不另建worktree或评审文件：
+先独立手算/失败文件链，再接有限角色和输入，继而核对launcher和包。没有新S/A/B公式。
+合同`COE-INPUT-P-PILOT/0.1`仅接受512/2048、batch1、输出2、w3/r1、FP16/eager/SDPA，
+自然Host-readable完成和既有P准备不变；旧COE batch Pilot及O/P Engineering版本不扩域。
+Envelope沿用已支持COE Pilot pass/producer/token/input 0.1.0的原结构，新增执行字段
+observation_preparation仅对上述精确声明开放，必须验证实际cache消费及源码字节。
+
+- [x] tests-first：有限绑定/输入和mask摘要、完整两token生产文件及准入、错误传播；最终验证见进度7.188。
+- [x] 新输入模块及显式分派；复用P helper，准备前移内容不增不减，保留实际warmup/drain。
+- [x] 分析器复用原两token闭合准入、COE和独立预算连接器，原A不覆盖，无巨型domain。
+- [x] 完整block有符号ΔQ和`R=Q2048-Q512*(G2048/G512)`；G是对应phase union，不是累计W。
+  R保留精确有理数及ns展示；G512为零、缺失、非合法数时R为null/UNDEFINED，不加epsilon。
+  首token主要，第二token必报；null/零/反向不是自动追加或拒绝合法样本的理由。
+- [x] AB/BA/BA/AB八个新P1编排，失败/完成即停，无额外2048试跑、不降级、不补槽；未执行。
+- [x] 独立新阶段A实现（部署/CPU/参与卷新鲜空闲），真实回执审查及显式开关后才可B；目标A未执行。
+  复用最近可信2d0d88e执行回执作前置；当前checkout须实查，不能用本地文档HEAD代替。
+
+2048只有model config容量静态依据，没有目标机实际准入。预计35～60分钟、临时12GiB、
+最终保留1～3GiB均为估计；长期目标50,000,000,000字节与启动资源分开，历史总量UNKNOWN。
+本批只筛查固定带包装参考程序的非比例响应，不授纯等待、P0收益、稳定性、Formal或论文成功。
