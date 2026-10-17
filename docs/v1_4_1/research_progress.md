@@ -1,5 +1,49 @@
 # ExposedPath 科研进度清单
 
+## 7.190 固定P三点输入轴Pilot：0.2有限合同、本地接线及两阶段待审交付（2026-10-17，当前）
+
+用户批准512/1024/2048、三个完整block、9P1/9profile的本地准备和预算；本轮不操作服务器。
+当前最高优先级：完成新阶段A真实回执审查后才可显式启动该批B；1024实际目标准入NOT_RUN。
+旧7.189的“尚未授权本地准备”是当时状态，原数据与判定不改。
+
+- [x] 新有限角色`COE-INPUT-P-PILOT/0.2`、profile0.2及矩阵身份schema0.2；保留0.1的
+  默认行为、两点/四block/八槽及输入拒绝。1024只在新角色下进入，旧G1/Engineering/
+  Formal和其它Pilot不扩域。新文件字节、全batch input/mask及源码身份逐层绑定。
+- [x] 复用原prepare/seal/采集argv、producer/Canonical、两token准入、COE和预算连接器。
+  P helper、runner、Host读取/同步/drain边界、S/A/B/registry及候选公式无变化。
+  仅共享COE角色adapter按已验证binding版本分派输入；采集前验证器显式识别0.2。
+- [x] 九槽顺序512→1024→2048、1024→2048→512、2048→512→1024，三个位置各一次；
+  不声称消除全部顺序/漂移。每run新进程、只P1、batch1/o2/w3/r1，自然路径无Cpre。
+  固定预算或硬失败即停，完整block为比较单位，partial/失败/未运行槽位保留，无补采/替补。
+- [x] 主比较仍首token端点ΔQ和原R；两相邻输入的signed ΔQ/精确R为预定中点描述。
+  端点R不意外依赖中点分母，无效分母null不加epsilon，Q/G显式保存。第二token全部保留，
+  累计W不当Decode新增量；零/负/非单调/混合不是质量门。原A与候选去重预算仍独立。
+- [x] 独立手算覆盖端点R=-3、两中点R=+4/-15、零分母及中点UNKNOWN与端点隔离；
+  实际producer→Canonical→两token→预算→三完整block真实文件消费由CPU外部替身验证，
+  另覆盖1024实际prepare/seal/profile边界、错角色/hash/token/drain/依赖/预算及硬失败停槽。
+  这些不是目标CUDA/1024资格，未重跑完整Q0或无关大测试。
+- [x] launcher默认A仅部署/源码/定向CPU/compile/新鲜资源；新B必须精确绑定新静态回执
+  和独立显式开关。继续新鲜12GiB参与卷检查，同卷去重，不遍历历史YLQ/ACL或自动清理；
+  历史总量null/UNKNOWN及长期<50,000,000,000 bytes未证明的状态不变。
+- [ ] 新目标阶段A和9槽P1：NOT_RUN，交付审查不等于目标准入；本轮不提供B命令。
+
+最终定向命令：`python -m pytest -q -ra -p no:cacheprovider tests/test_coe_input_pilot.py
+tests/test_coe_input_delivery.py tests/test_coe_input_midpoint.py tests/test_coe_midpoint_delivery.py
+--basetemp=.local/midpoint_final_release --junitxml=.local/midpoint_final.xml`：
+75 passed、0 failed、0 skipped，147.34s。本地3.12.7；目标旧回执3.11.16，新代码仍待新A。
+实际九run CPU producer文件另核对27窗口原/候选预算union守恒、父子及phase相加一致，
+不作为新增GPU/Q0证据。定向compileall及真实PS5.1入口/参数分派通过；红灯阶段已见
+缺版本接口、缺0.2部署分派、缺Q/G输出、端点误依赖中点分母等对应断言，错输入hash仍拒绝。
+未修改测试追绿或放宽身份/依赖门；额外`tests/test_observation_delivery.py`旧Engineering
+launcher定向回归10 passed/0 failed/0 skipped、22.48s，非重复GPU/全Q0。
+
+唯一包身份在实现commit后追加绑定；机器计划
+[三点Pilot](../../configs/coe_input_midpoint_pilot_v0_1.json)，执行说明补入
+[当前短稿§12.6](coe_research_short_note_v0_1.md#126-三点pilot本地执行准备2026-10-17目标执行仍not_run)。
+预算30～45分钟/临时12GiB/保留0.8～1.5GiB为估计，实际沿用profile300s、单run driver900s，
+无新增全批超时放宽。旧Formal、Gate13限定PASS/Gate14 NOT_RUN、B2/七槽BLOCKED、
+参数/引擎支线停止、UNKNOWN/NOT_ASSESSED、用户DOCX与大型原件均保留。
+
 ## 7.189 已执行512/2048输入轴Pilot：四block离线科学收口（2026-10-17，当前）
 
 当前最高优先级：研究固定P自然完成程序的条件化输入响应；本批已完成，不再等待7.188的

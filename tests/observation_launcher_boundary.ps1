@@ -22,13 +22,15 @@ function Run([string]$Exe,[string[]]$Argv,[string]$Name) {
     if ($Name -in @('01_bundle','02_fetch','03_checkout','04_cpu','05_compile','06_nsys_version')) {
         if ($Name -eq '03_checkout') {$script:CpuHead=$Target}
         $Tests=if ($InputPilot) {'tests/test_coe_input_pilot.py|tests/test_coe_input_delivery.py'} else {'tests/test_observation_preparation.py|tests/test_observation_delivery.py'}
-        if ($Name -eq '04_cpu' -and (($Argv[-2..-1] -join '|') -ne $Tests)) {throw 'CPU check scope drift'}
+        if ($Midpoint) {$Tests+='|tests/test_coe_input_midpoint.py|tests/test_coe_midpoint_delivery.py'}
+        if ($Name -eq '04_cpu' -and ((@($Argv | Where-Object {$_ -like 'tests/*'}) -join '|') -ne $Tests)) {throw 'CPU check scope drift'}
         if ($Name -eq '06_nsys_version' -and ($Argv -join '|') -ne '--version') {throw 'Collector scope drift'}
         Write-Host ('CPU_PROCESS_BOUNDARY '+$Name)
     } elseif ($Name -eq 'storage') {
         & $Python $env:OBS_TEST_STORAGE @($Argv | Select-Object -Skip 3)
         if ($LASTEXITCODE -ne 0) {throw 'CPU storage check failed'}
-    } elseif ($Name -eq '07_eight_p1') {
+    } elseif ($Name -in @('07_eight_p1','07_nine_p1')) {
+        if (($Midpoint -and $Name -ne '07_nine_p1') -or (!$Midpoint -and $Name -ne '07_eight_p1')) {throw 'Batch stage conflict'}
         $Flag=if ($InputPilot) {'--collect-reviewed-input-pilot'} else {'--collect-reviewed-preparation'}
         $Expected=@('-X','utf8','-u','scripts/observation_preparation_batch.py','--config',(Join-Path $Out 'run_config.json'),
             '--output',(Join-Path $Out 'experiment'),$Flag)
@@ -38,7 +40,9 @@ function Run([string]$Exe,[string[]]$Argv,[string]$Name) {
         $P=Join-Path $Out 'experiment/batch';New-Item -ItemType Directory -Path $P | Out-Null
         $Status=if ($InputPilot) {'FIXED_EIGHT_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW'} else {'FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW'}
         $Count=if ($InputPilot) {4} else {2}
-        @{status=$Status;runs=@(1..8);blocks=@(1..$Count)} |
+        $Slots=8
+        if ($Midpoint) {$Status='FIXED_NINE_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW';$Count=3;$Slots=9}
+        @{status=$Status;runs=@(1..$Slots);blocks=@(1..$Count)} |
             ConvertTo-Json | Set-Content -LiteralPath (Join-Path $P 'batch_report.json') -Encoding utf8
     } else {throw ('Unexpected process in CPU boundary: '+$Name)}
 }

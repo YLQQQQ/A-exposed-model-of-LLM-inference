@@ -72,7 +72,7 @@ def minimal_fields(binding):
 
 def input_identity(prompt,*,binding=None):
     from . import coe_input_pilot as axis
-    if axis.active(binding):axis.validate_binding(binding);return axis.input_identity(prompt)
+    if axis.active(binding):axis.validate_binding(binding);return axis.input_identity(prompt,version=binding['version'])
     samples=prompt['samples'];n=len(samples)
     require(n in (1,2,4) and prompt['fixed_input_tokens']==512,'INPUT_SHAPE')
     require([s.get('sample_index') for s in samples]==list(range(n)),'SAMPLE_IDENTITY')
@@ -89,7 +89,7 @@ def input_identity(prompt,*,binding=None):
 
 def validate_input(prompt,config,batch,*,binding=None):
     from . import coe_input_pilot as axis
-    if axis.active(binding):axis.validate_binding(binding);return axis.validate_input(prompt,config,batch)
+    if axis.active(binding):axis.validate_binding(binding);return axis.validate_input(prompt,config,batch,version=binding['version'])
     from .gate10_workload import validate_input as single
     identity=input_identity(prompt)
     require(identity['shape']==[batch,512],'INPUT_SHAPE')

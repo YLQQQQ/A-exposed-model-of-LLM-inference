@@ -2,11 +2,14 @@ param([switch]$CollectReviewedEngineering,[switch]$CollectReviewedInputPilot,[st
 # A is the default. B is never invoked by deployment, packing or failure recovery.
 $ErrorActionPreference='Stop'
 $C=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'delivery.json') -Raw | ConvertFrom-Json
-$InputPilot=$C.schema_version -eq 'coe-input-pilot-delivery/0.1'
+$Midpoint=$C.schema_version -eq 'coe-input-pilot-delivery/0.2'
+$InputPilot=$C.schema_version -in @('coe-input-pilot-delivery/0.1','coe-input-pilot-delivery/0.2')
+$Budget=if ($Midpoint) {9} else {8}
 $Collect=$CollectReviewedEngineering -or $CollectReviewedInputPilot
 if (($InputPilot -and $CollectReviewedEngineering) -or (!$InputPilot -and $CollectReviewedInputPilot)) {throw 'Explicit role opt-in conflict'}
-if ($C.schema_version -notin @('observation-preparation-delivery/0.1','coe-input-pilot-delivery/0.1') -or $C.commit -ne $C.analysis_commit -or
-    $C.model_process_budget -ne 8 -or $C.profile_budget -ne 8) {throw 'Delivery conflict'}
+if ($C.schema_version -notin @('observation-preparation-delivery/0.1','coe-input-pilot-delivery/0.1','coe-input-pilot-delivery/0.2') -or $C.commit -ne $C.analysis_commit -or
+    $C.model_process_budget -ne $Budget -or $C.profile_budget -ne $Budget -or
+    ($Midpoint -and $C.input_contract_version -ne 'COE-INPUT-P-PILOT/0.2')) {throw 'Delivery conflict'}
 function Hash([string]$P) {return (Get-FileHash -LiteralPath $P -Algorithm SHA256).Hash.ToLowerInvariant()}
 function Safe([string]$Root,[string]$Relative) {
     $Base=[IO.Path]::GetFullPath($Root).TrimEnd('\')+'\'
@@ -113,6 +116,7 @@ try {
         $CpuTemp=Join-Path $C.server_root ('diagnostics\'+$Prefix+$Target.Substring(0,12)+'_cpu')
         if (Test-Path -LiteralPath $CpuTemp) {throw 'CPU output exists'}
         $Tests=if ($InputPilot) {@('tests/test_coe_input_pilot.py','tests/test_coe_input_delivery.py')} else {@('tests/test_observation_preparation.py','tests/test_observation_delivery.py')}
+        if ($Midpoint) {$Tests+=@('tests/test_coe_input_midpoint.py','tests/test_coe_midpoint_delivery.py')}
         Run $Python (@('-X','utf8','-m','pytest','-q','-ra','-p','no:cacheprovider','--basetemp',$CpuTemp,
             '--junitxml',(Join-Path $Out 'cpu_results.xml'))+$Tests) '04_cpu'
         $Compile=@('-X','utf8','-m','py_compile','exposedpath/observation_preparation.py',
@@ -131,12 +135,14 @@ try {
         $C | Add-Member -NotePropertyName inventory -NotePropertyValue (Join-Path $Out 'model_sha256.csv')
         $RunConfig=Join-Path $Out 'run_config.json';$C | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $RunConfig -Encoding utf8
         $Switch=if ($InputPilot) {'--collect-reviewed-input-pilot'} else {'--collect-reviewed-preparation'}
+        $BatchStage=if ($Midpoint) {'07_nine_p1'} else {'07_eight_p1'}
         Run $Python @('-X','utf8','-u','scripts/observation_preparation_batch.py','--config',$RunConfig,
-            '--output',(Join-Path $Out 'experiment'),$Switch) '07_eight_p1'
+            '--output',(Join-Path $Out 'experiment'),$Switch) $BatchStage
         $BR=Get-Content -LiteralPath (Join-Path $Out 'experiment\batch\batch_report.json') -Raw | ConvertFrom-Json
         $ExpectedStatus=if ($InputPilot) {'FIXED_EIGHT_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW'} else {'FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW'}
         $ExpectedBlocks=if ($InputPilot) {4} else {2}
-        if ($BR.status -ne $ExpectedStatus -or $BR.runs.Count -ne 8 -or $BR.blocks.Count -ne $ExpectedBlocks) {throw 'Incomplete batch'}
+        if ($Midpoint) {$ExpectedStatus='FIXED_NINE_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW';$ExpectedBlocks=3}
+        if ($BR.status -ne $ExpectedStatus -or $BR.runs.Count -ne $Budget -or $BR.blocks.Count -ne $ExpectedBlocks) {throw 'Incomplete batch'}
         Tree $Target;$Status=$ExpectedStatus
     }
 } catch {$Failure=$_.ToString();Write-Host ('STOP: '+$Failure)}
@@ -148,7 +154,7 @@ finally {
         storage_sha256=$StorageHash;source_bytes_sha256=$SourceHash;actual_phase=$Kind;
         historical_ylq_total_bytes=$null;long_term_status='UNKNOWN_NOT_PROVEN';long_term_target_exclusive_bytes=50000000000;
         stage_a_model_processes=0;stage_a_profiles=0;stage_a_cuda_initializations=0;
-        model_process_budget=8;profile_budget=8;measurement_validity='NOT_ASSESSED';dropped_records_status='UNKNOWN'} |
+        model_process_budget=$Budget;profile_budget=$Budget;measurement_validity='NOT_ASSESSED';dropped_records_status='UNKNOWN'} |
         ConvertTo-Json | Set-Content -LiteralPath (Join-Path $Out 'receipt.json') -Encoding utf8
     Stop-Transcript | Out-Null
 }

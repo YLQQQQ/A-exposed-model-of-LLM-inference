@@ -1,4 +1,4 @@
-"""Opt-in fixed eight P1 Engineering sensitivity screen. No automatic retry."""
+"""Explicit finite O/P Engineering or versioned input Pilot; never retry."""
 import argparse
 from pathlib import Path
 import sys
@@ -62,19 +62,29 @@ def run(config,output,*,execute=False,input_pilot=False):
     contract.require(execute,'OPT_IN_REQUIRED')
     from exposedpath import coe_input_pilot as axis
     rules=axis if input_pilot else contract
-    contract.require(config.get('schema_version')==('coe-input-pilot-delivery/0.1' if input_pilot else 'observation-preparation-delivery/0.1')
-        and config.get('model_process_budget')==config.get('profile_budget')==8
+    version=axis.VERSION
+    schema=config.get('schema_version')
+    if input_pilot and schema=='coe-input-pilot-delivery/0.2':
+        version=axis.MIDPOINT_VERSION
+        contract.require(config.get('input_contract_version')==version,'DELIVERY_CONTRACT_VERSION')
+    expected_schema=('coe-input-pilot-delivery/0.2' if version==axis.MIDPOINT_VERSION else 'coe-input-pilot-delivery/0.1') if input_pilot else 'observation-preparation-delivery/0.1'
+    budget=axis.specification(version)['budget'] if input_pilot else 8
+    contract.require(schema==expected_schema
+        and type(config.get('model_process_budget')) is int and type(config.get('profile_budget')) is int
+        and config.get('model_process_budget')==config.get('profile_budget')==budget
         and config.get('commit')==config.get('analysis_commit'),'DELIVERY_CONTRACT')
     from exposedpath.platform_adapter import git
     contract.require(git(['-C',str(ROOT),'rev-parse','HEAD']).strip()==config['commit']
         and not git(['-C',str(ROOT),'status','--porcelain']).strip(),'CLEAN_EXECUTION')
     contract.require(sha(config['nsys'])==config['nsys_sha256'],'COLLECTOR_HASH')
     out=Path(output);out.mkdir(parents=True,exist_ok=False)
-    prompts=rules.make_inputs(config['seed_input'],config['prompt_512_sha256'],out/'inputs')
+    kwargs={'version':version} if input_pilot else {}
+    prompts=rules.make_inputs(config['seed_input'],config['prompt_512_sha256'],out/'inputs',**kwargs)
     if input_pilot:
+        axis.require(set(config.get('input_bindings',{}))=={str(n) for n in prompts},'EXECUTION_INPUT_SET')
         for n,p in prompts.items():
             expected=config.get('input_bindings',{}).get(str(n),{})
-            axis.require(expected==dict(file_sha256=sha(p),identity=axis.input_identity(read(p))),
+            axis.require(expected==dict(file_sha256=sha(p),identity=axis.input_identity(read(p),version=version)),
                 'EXECUTION_INPUT_BINDING:'+str(n))
     from exposedpath.gate8_diagnostic import prepare_diagnostic
     from scripts.gate8_diagnostic_collect import run_once
@@ -99,7 +109,7 @@ def run(config,output,*,execute=False,input_pilot=False):
         contract.require(p['status']=='COMPLETE' and type(p['exit_code']) is int and p['exit_code']==0
             and p['timed_out'] is False,'PROFILE_DRIVER')
         return consume_collection(target,b,config['commit'])
-    return rules.run_batch(config['batch_id'],config['commit'],out/'batch',collect)
+    return rules.run_batch(config['batch_id'],config['commit'],out/'batch',collect,**kwargs)
 
 
 def main():
@@ -111,7 +121,7 @@ def main():
     a=p.parse_args();r=run(read(a.config),a.output,execute=a.collect_reviewed_preparation or a.collect_reviewed_input_pilot,
         input_pilot=a.collect_reviewed_input_pilot)
     print(r['status'],flush=True)
-    return 0 if r['status'] in ('FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW','FIXED_EIGHT_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW') else 1
+    return 0 if r['status'] in ('FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW','FIXED_EIGHT_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW','FIXED_NINE_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW') else 1
 
 
 if __name__=='__main__':raise SystemExit(main())

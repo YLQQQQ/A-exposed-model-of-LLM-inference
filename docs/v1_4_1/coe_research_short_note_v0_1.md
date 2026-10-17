@@ -989,7 +989,7 @@ D则从2.323～19.498ms变为136.887～196.785ms。该事实与“Host较早到�
 尚未确定中间曲线、转折区间、分支切换与该分布的关系、跨prompt适用性，以及无插桩迁移。
 新增样本可审查重复性与中间形状，不能单凭加样本解决API内部不可识别或方法新颖性问题。
 
-### 12.5 唯一下一阶段推荐：先输入轴，暂不实施
+### 12.5 唯一下一阶段推荐：先输入轴（设计时状态；本地准备见§12.6）
 
 **只推荐下一批同期512/1024/2048、三个完整block、9P1/9profile的有限Pilot。** 固定P、
 batch1、输出2、w3/r1及当前完成政策/模型/栈，不插Cpre。三个次序预定为
@@ -1048,6 +1048,42 @@ Request/Decode候选预算以片段union去重，单sync B不跨调用求和。�
 本轮为AI辅助本地分析：复用协调全包/S资格，独立连接消费来源与Raw/算术，不声称独立同行
 验证。未重跑完整analyzer/Q0/测试或任何GPU；汇总检查覆盖原值/全部signed差、统计单位、
 分母/多比较及顺序限制、无后验删样本/阈值、无P0迁移/因果过读。没有为“完全收敛”再加前置。
+
+### 12.6 三点Pilot本地执行准备（2026-10-17，目标执行仍NOT_RUN）
+
+用户接受§12.5输入轴及9P1预算并授权本地适配/验证/打包，未授权本轮服务器或GPU操作。
+[机器计划](../../configs/coe_input_midpoint_pilot_v0_1.json)固定
+512→1024→2048、1024→2048→512、2048→512→1024三个完整block；
+每条件在各位置各一次，不代表消除全部顺序/漂移。只P1，P/batch1/输出2/w3/r1，
+相同模型内容、FP16/eager/SDPA及原Host-readable政策，所有点同期新采，旧数据不补重复。
+
+有限角色`COE-INPUT-P-PILOT/0.2`、profile`COE_INPUT_P_BOTH_TOKENS/0.2`、
+输入矩阵身份`coe-input-axis-identity/0.2.0`新增1024；0.1默认函数、512/2048输入域、
+四block/八槽、原schema/历史读取仍保留，1024不能改标0.1通过。
+producer/receipt/Canonical及两token结果的字段结构未变，仍使用各自原结构schema，
+但必须精确验证新角色/版本/源码/hash，未因此泛化旧Engineering或Formal支持域。
+P helper、runner、completion、S/A/B、registry、COE及预算迁移实现不改；
+只增加有限版本分派、1024预备文件/全矩阵hash、9槽与三条件汇总、两阶段launcher适配。
+
+主要比较保持首token端点ΔQ与原R；新增512→1024和1024→2048的signed ΔQ/精确有理数R
+只作预定中点描述，端点R不依赖中点分母。所有无效分母null/未定义，不加epsilon；
+新增各点Q/G摘要，第二token完整保留。原A、候选三窗口预算、成员/提交来源、活动位置、
+H/D、API/GPU union和完整Raw仍保存；kernel名称/count由Canonical、grid由同次SQLite
+原行号复查，不把grid当tensor shape。没有巨型domain或新的collector。
+中点靠近任一端、非单调、零、负或混合均保留，不是质量拒绝条件。
+
+真实Python/PowerShell入口CPU替身覆盖prepare→seal→profile argv边界及producer文件→
+Canonical→两token准入→COE/预算→完整block消费；身份/token、缺drain/依赖/映射、
+结果/预算hash冲突及失败传播拒绝保留，不借Decode隔离绕过本批两token准入。
+局部回归不授1024实际GPU资格或Formal资格；目标阶段A仍需新真实CPU/源码/空间回执。
+
+默认A仅部署、源码校验、定向CPU、compile及参与卷新鲜12GiB资源核验；不遍历旧YLQ/ACL，
+历史总量null/UNKNOWN和长期<50e9未证明的状态保留。B须A回执审查和精确SHA后显式启动，
+本轮不提供B命令。最近可信前置来自已审006d371的实际静态/8槽终态，不声称实时checkout已知。
+预计30～45分钟、保留0.8～1.5GiB，均为估计；实际沿用profile 300s、单run driver 900s，
+没有把估计时间当全批硬deadline，也未提高超时。任一硬失败/9槽完成即停，无重试、
+替补、试跑、降级输入、追趋势、自动续采或清理。具体包身份在真实实现commit后绑定，
+机器绝对路径只保存在本地交付说明/handoff，避免源码commit自引用。
 
 ## 来源与复查说明
 
