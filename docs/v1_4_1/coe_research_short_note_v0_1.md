@@ -1,7 +1,8 @@
 # 自然token完成操作内的必要设备活动：单GPU PyTorch的探索性测量
 
 COE研究短稿0.1，2026-10-17；同日追加贡献差异核验（§4.1、§6.1、§7）、竞争解释核对（§8）
-及已完成O/P消融科学收口（§9，当前）。§8的待执行状态保留为历史，以§9为准；
+及已完成O/P消融科学收口（§9）、执行对象/P0梳理与全部预算图（§10，当前）。
+§8的待执行状态保留为历史，以§9～10为准；
 独立于[旧A/B核心稿](exposedpath_core_manuscript_v0_1.md)。
 本文是事后探索性技术报告，不是新Formal结果、生产A改版或已证明的方法创新。
 原研究设计v7.1、Pre-Pilot协议v2.1和限定签署G12-ROUTEA/0.1.1各自身份保持；本稿不修改它们。
@@ -563,6 +564,151 @@ CSV逐行保留run、result/SQLite归档成员、SHA256、记录身份及相对�
 本节仅把这些原值转换ns→ms，并独立重算signed差、组成/守恒与原A父子/阶段关系；
 未覆盖原件、原BLOCKED/UNKNOWN、旧Formal或生产输出，没有新Raw查询、代码或实验。
 
+
+## 10. 执行对象、包装与结果图：固定后续观测实现的条件（2026-10-17）
+
+本节只补解释与作图：消费§9同一批小结果，不改输入、原A/COE、排除、测量代码或历史判定。
+**O/P都是带研究包装的PyTorch参考实现；P不是Cpre，也未证明等价于无插桩时序。**
+“自然”在这里仅表示没有在既定Host-readable路径外插入Cpre式额外同步，不能泛称所有
+PyTorch程序、未插桩应用或生产推理引擎的自然时序。§9.6的负载主张仍是候选，不由本节升级。
+
+### 10.1 我们研究的目标程序，而不只是模型名称
+
+当前能够直接指向的程序是：固定Windows/4090和软件/模型内容，Qwen2.5-1.5B-Instruct、
+FP16/eager/SDPA、batch1；输入和mask已在GPU，warmup3与成功final drain在窗外；
+手写forward/KV-cache循环、greedy argmax，每个token执行Host读取，输出2，EOS按既定规则检查。
+没有测量用户请求排队、tokenization、模型加载、窗前H2D、文本编码或网络流式发送。
+它不是直接调用通用`generate()`的全部默认行为，也不是只运行GPU forward的吞吐程序。
+
+必须分开三层（图10-1）：
+
+- 模型计算：Prefill/Decode forward、KV cache、GPU argmax，决定要提交哪些计算。
+- 完成政策：**我们选择**每token通过`.detach().cpu().reshape(-1).tolist()`取得实际Host ID，
+  转为整数tuple后取完成时间。固定栈的复制helper及原件表现为copy随后stream sync；
+  这是该程序/栈路径，不是凭API名称宣称所有复制都阻塞，也不是模型架构强制每token这样做。
+- 观测包装：身份校验、标签编码、NVTX、边界recorder及clock。它们用于观测，但会占Host
+  关键路径并可能改变copy入口前设备已推进的程度；不是模型运算或用户侧发送。
+
+![图10-1 计算、完成政策与观测包装的分层流程](figures/observation_preparation_v0_1/execution_layers.png)
+
+**图10-1。** 分层示意，不按时间比例绘制。每token均须经过完成链和相应包装，再继续下一次
+forward；不是蓝色两次forward直接相连就跳过Host完成。完整调用顺序为：
+
+```text
+窗外 setup/输入上GPU/warmup → P预备身份与标签（O不预备） → 既有final drain成功
+→ Tstart → request recorder
+→ Prefill forward → argmax → O现场身份/编码 或 P现场cache绑定/消费检查
+→ token NVTX push（P1） → .cpu()〔copy → paired stream sync〕
+→ Host reshape/tolist/整数ID → T0 → boundary recorder → token NVTX pop
+→ Decode forward(KV cache) → argmax → 同样的token完成链 → Tlast
+→ 最后boundary recorder/pop → 窗外持久化
+```
+
+Request=[Tstart,Tlast)，Prefill=[Tstart,T0)，Decode=[T0,Tlast)。T0之后的首token记录/point等
+工作可进入Decode预算；Tlast之后的最终记录不进入本request时间。NVTX point晚于实际完成
+clock，范围标签和Host/trace钟映射沿已有夹界证据处理，不能把point当同步或直接跨钟相减。
+COE仅取copy runtime入口至配对sync返回，是上述链的子区间；不覆盖全部`.cpu()`/Host ID
+取得，更不是实际测得CPU从哪一刻开始等待。
+
+O忠实使用现有Engineering helper，现场构造身份/编码；P在既有final drain前准备不变身份
+与标签，但现场仍有run/request/token/PID/TID/cache状态检查、NVTX和同一个recorder。
+P只改变观测准备位置，不新增Cpre同步；Cpre则改变首次完成政策，本批没有Cpre组。
+两组模型/输入和CUDA调用的声明语义一致，**不意味着各次提交时间、kernel耗时或进度相同**。
+
+### 10.2 P0不是无插桩参考：固定源码核对
+
+本轮直接回读`99f3bae966f2fb794073ff4d7468233b6b8dd2ac`的冻结源码，并与本批
+`2d0d88e`路径对照；不是只靠函数docstring。可复查入口为
+[runner](../../exposedpath/runner.py)、[准备adapter](../../exposedpath/observation_preparation.py)、
+[边界recorder](../../exposedpath/gate8_boundary.py)及[身份/编码](../../exposedpath/nvtx.py)。
+
+| 关键路径 | 旧Formal P0 | 本批O/P P1 |
+|---|---|---|
+| Nsight/实际NVTX发射 | 无；pass0禁用marker sink，range push/pop为空操作 | 有；两组都保留实际范围和point |
+| copy前token身份构造 | 有，`observe_token_ready_boundary`先无条件make identity；Formal分支校验仍发生 | O现场构造/编码；P窗前构造/编码，现场严格检查cache |
+| token同步范围label编码 | `emit_nvtx=False`不执行这一项 | O现场编码；P使用已绑定label |
+| boundary payload、校验、JSON编码和clock | 有；`Gate8BoundaryRecorder.observe`仅发射受marker_sink控制，其余仍执行 | 有；O/P均保留，不在本次消融范围内 |
+| `.cpu()`/实际Host token与完成clock | 保留 | 保留；不以NVTX替代完成 |
+
+精确冻结位置：`99f3bae:runner.py`93～110行先构造identity再判断emit；268～270行关闭P0范围
+发射，576～587行仍创建recorder并传入invocation；`gate8_boundary.py`24～46行先校验/编码，
+仅39～40行的实际mark受marker_sink控制。当前对应runner82/274/614行起、recorder24行起。
+所以旧P0测得的是**同完成政策、未profile但保留研究包装的参考程序性能**，不是无包装真值。
+P1−P0不能消掉二者共有的包装影响，也不能统一从A/COE扣除。
+本批只有P1，既没有P的新P0配对，也没有无包装U组；旧Formal P0不能跨角色/版本直接充当它们。
+
+这不是新发现的冻结违例：原签署路线规定P0/P1采用共同执行封套，原结果对该参考程序仍有效。
+需纠正的是对外解释“未开Nsight=无插桩”，而不是删除记录、改边界或追认P具备无扰动资格。
+
+### 10.3 原A五类与COE的绝对值和占比：全部样本
+
+![图10-2 原A五类全部24窗口的绝对值和逐窗口占比](figures/observation_preparation_v0_1/original_a_absolute_and_percent.png)
+
+**图10-2。** 本批8个run各有Request/Prefill/Decode，共24个窗口，左侧为绝对ms，右侧为
+各类别/本窗口总长×100%。虚线只分隔block；显示顺序按输入/包装排列，实际运行顺序见§9.1。
+不平均两个block，不合并成总体预算比例，不绘制把token当重复的误差条。
+原五类全部保留，CUDA API含submit/non-submit（原值见§9.4）；小量Device wait/residual按真实
+比例画出，没有人为抬高。unattributed原值全部0，不是省略未知或把它摊入Host。
+不同phase的左图横轴范围不同，不用条形长度跨panel直接比较绝对时间。
+
+便于辨认细条，各窗口占比的**范围而非均值**如下；所有逐窗口绝对值和百分比都在图源JSON：
+
+| 窗口（各8个） | Host % | CUDA API % | Device wait % | residual % | unattributed % |
+|---|---|---|---|---|---|
+| Request | 51.079～61.384 | 38.097～48.551 | 0.007651～0.042705 | 0.059961～0.498906 | 0 |
+| Prefill | 48.733～60.421 | 38.643～51.003 | 0.015744～0.079990 | 0.094160～0.897884 | 0 |
+| Decode | 50.265～62.492 | 37.468～49.702 | 0 | 0.027938～0.042759 | 0 |
+
+Host不是CPU busy，CUDA API不是纯CPU计算；A预算不提供API内部等待的精确拆分。
+本批Decode原Device wait全0和COE正值并不矛盾，它们采用不同区间，不能据此把COE加进旧A。
+
+![图10-3 COE全部16链绝对值及对应phase占比](figures/observation_preparation_v0_1/coe_absolute_and_phase_percent.png)
+
+**图10-3。** 首、第二token分开，上/下各8条；左为COE绝对ms，右为COE/对应Prefill或Decode
+总长×100%，不是COE/操作墙钟，更不是Host阻塞率。蓝色O、橙色斜纹P；保留所有零/反向
+差和block1/512P第二token的大值，不按其是否符合预期筛选。COE与原A独立展示、无预算迁移。
+本批绝对值0.538846～3.803826ms，占对应phase的0.759242～4.610423%；分母变化可改变比例，
+仍以§9预定的signed绝对差为主，不能按这幅图事后更换主要比较。
+
+图源与重现：小型[chart_values.json](figures/observation_preparation_v0_1/chart_values.json)
+记录24窗口五类ns/百分比、16链、原CSV哈希与执行身份；
+[绘图脚本](figures/observation_preparation_v0_1/plot_figures.py)仅读§9.4整数等价值及原
+operations.csv，核对逐phase值、Request相加、类别守恒后作图，不导入runner/analyzer。
+代码仅为图表重现，不是推理实现或新的验证设施；SVG同名可放大。
+Figure trace：图10-1来自上述固定源码调用顺序（定性、不按时长）；图10-2来自§9.4原A；
+图10-3来自§9.2/固定哈希operations.csv；三图的变换/单位/分母均在脚本和本节图注中声明。
+它们不支持因果、无插桩等价、稳定性或新颖性claim，不替代独立依赖资格。
+
+### 10.4 处置与唯一最小下一步：先固定目标，不先补负载
+
+**现有证据已足以把O/P各自声明为一个带包装、逐token Host-readable的限定参考程序，
+并研究其P1观测执行内的结构；不足以认定P更接近无包装时序或自动成为最终baseline。**
+这一区别不要求恢复所有驱动/复制内部等待，也不否定既有原A、COE的定义内计算。
+
+建议后续目标明确为“版本化PyTorch参考程序在固定完成政策、固定观测实现下的P1结构”，
+P0只报告相同执行封套的未profile性能，不承担无包装自然程序的精确组成迁移。
+选择O还是P应依据要保留的程序合同、校验位置和可追溯实现，而不是哪一组COE更大或更稳；
+本轮不替用户冻结其中之一，不新增Pilot/Formal授权。P可以是减少现场不变准备的待审候选，
+其现场cache检查、边界编码及NVTX仍属于被测程序，不能称“已消除包装影响”。
+
+对这一**有限目标**，当前8run已经提供准备内容/时序接线、token等价、CUDA/成员结构及
+局部准入的目标机实物，不需要再加一轮同型Engineering来证明“能运行”。固定实现后，
+真正缺的是独立完整block对**预定输入响应关系**的确认，同时保留两个token、GPU union、
+API/COE及H/D；这属于后续负载研究本身，不是先做一轮新的底层资格或把本批补到显著。
+首/第二token旧反向不再是预定事实；重复数、输入点和预算仍须为具体命题另定，本轮不启动。
+
+若仍要把结论迁移到“无研究包装的目标推理程序”，则有一个额外且当前未满足的必需条件：
+须在同输入、forward/argmax、逐token Host读取和drain政策下，取得**少包装参考与拟固定实现的
+受控对照**，区分共同包装与Nsight扰动；至少比较真实token、实际调用/提交结构、Host完成
+时长和研究所依赖的输入响应，而不是只测空标签耗时或比较P1−旧P0。
+少包装参考本身仍需要最小计时/身份，不冒称绝对零扰动；没有trace时不能伪造它的COE。
+若需要trace才能看结构，trace版本仍是观测执行，只能界定这部分敏感性，不能证明绝对等价。
+这条对照仅针对迁移claim才需要，**不是本轮默认新任务**；本轮建议不作该迁移claim，
+也不生成U组代码、采集包或服务器命令。这样可停止把“证明所有包装无影响”变成无限前置。
+
+本节收口：先准确命名并固定被研究程序，再谈输入长度响应；当前工程可用性和敏感性
+观察成立，科学增量仍按§9.6保留。没有新质量失败或需要重开Gate的证据。用户DOCX、
+生产代码、Raw、历史UNKNOWN/BLOCKED及旧Formal结果均不修改。
 
 ## 来源与复查说明
 

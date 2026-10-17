@@ -1,5 +1,37 @@
 # ExposedPath 科研进度清单
 
+## 7.186 参考执行对象/P0包装澄清与全部A/COE结果图（2026-10-17）
+
+本轮按用户要求只梳理既有证据和作图，直接补[现有COE短稿§10](coe_research_short_note_v0_1.md#10-执行对象包装与结果图固定后续观测实现的条件2026-10-17)，
+不新增评审流程、推理实现、测试、包/服务器命令或采集。7.185混合/不可判别科学裁决保持。
+
+- [x] 分层流程图及实际调用顺序：forward/argmax是计算，逐token`.cpu()`→实际Host ID
+  是我们选定的完成政策，身份/标签/NVTX/recorder/clock是研究包装。模型/输入上GPU、
+  warmup和final drain在窗外；T0后的point/record工作可进入Decode，NVTX不是GPU完成。
+  O/P均带包装；P仅前移不变准备，仍有现场检查/记录，不是Cpre或已证明的无插桩时序。
+- [x] 回读99f3bae冻结runner/recorder和2d0d88e当前路径：P0仅禁用Nsight/NVTX发射，
+  copy前身份仍构造；recorder即使marker_sink=None仍校验/编码payload并采时钟。
+  故旧P0是共同封套未profile性能，不是无包装真值，P1−P0不能消掉共同包装影响。
+  这是解释澄清，不是冻结违例或旧Formal失效；本批没有P0/U不能补造其组成。
+- [x] 三幅可视化及图源：原A24窗口五类绝对值和各自百分比；COE16链绝对值及对应
+  phase百分比，全部block/run保留，不合并总体比例、不将COE加进旧Device wait。
+  图、PNG/SVG、图源JSON及只读绘图脚本在figures/observation_preparation_v0_1/。
+  原值与§9.4及协调CSV核对，类别守恒/阶段相加，数据角色不变。
+- [x] 最小缺证分离：限定目标若是固定带包装P1参考程序，既有实物可复用逻辑/适用性，
+  不需再做同型“能运行”资格；固定实现后真正缺的是独立block验证预定输入响应。
+  若额外主张迁移到无包装程序，才须少包装参考与拟选实现的受控对照，且不能冒称绝对
+  零扰动/无trace COE。本轮建议不作该迁移claim，不默认P已最终冻结，不自动增加U组。
+
+执行的唯一数据处理命令为`python docs/v1_4_1/figures/observation_preparation_v0_1/plot_figures.py`：
+最终8run/24A窗口/16COE链作图，原CSV hash一致；不导入producer/analyzer，不读巨型domain。
+初次绘图的报告列数检查拒绝后，按实际11列修正图表读取器；另消除字体缺字，未改原数据。
+最终只做图源数值/比例、图片视觉、链接和diff核对，无pytest、compileall、GPU或实验。
+本地Python3.12.7/matplotlib3.9.2仅为绘图环境，不冒充目标机资格。
+
+当前优先级：明确限定参考程序和观测实现，再为可证伪输入响应安排研究；当前无需用户
+操作服务器、不重开Gate或恢复已暂停支线。Gate13限定PASS/Gate14 NOT_RUN、旧Formal、
+历史UNKNOWN/NOT_ASSESSED/BLOCKED及用户DOCX/大型原件保持。handoff同步。
+
 ## 7.185 O/P八次实物科学收口：操纵有效，独立效应不可判别（2026-10-17）
 
 用户回传8P1原件及协调review/operations/Raw引用复核，本轮只做本地证据核对与现有报告
