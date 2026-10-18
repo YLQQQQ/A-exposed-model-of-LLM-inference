@@ -21,6 +21,8 @@
   MSVC14.38/SDK10.0.20348；不称目标构建/GPU验证。不重跑旧110项或完整Q0。
 - [ ] 固定实现commit后的唯一A包发布身份待本轮收口绑定；目标A构建/CPU/库及B实际订阅、
   参数/设备效果均NOT_RUN。仅A可交审，无B命令，需真实新A原件审查后才另行授权微例。
+  本地首次包装在Git源码清单预检查发现不存在的tests/__init__.py，尚无ZIP/bundle发布；
+  三个新测试文件不导入tests共享helper，移除该错误依赖项，不新增全局测试包或放宽源码门。
 - [ ] 本版并非完整Canonical provider；微例成功不能直接接回S/A/COE，不拼接旧Nsight实例。
   完整同次模型scope/kernel/Memcpy/ownership/drain/依赖/terminal的返回路径仍未实现/授资格；
   若需要扩大provider，先作独立投入决定，不将窄域工具滚动扩建。旧1024仍BLOCKED。

@@ -15,7 +15,7 @@ CUPTI_ARCHIVE_SHA='6ad8df634d60e4bc96cf6914af71a5708f6460a25a39d0183780c6bdebfa6
 CUPTI_DLL_SHA='560a36596b6c6db6ecb44bbdc1b9d3bbf34965e919d13e7285f4d1c3542916ce'
 SOURCES=['scripts/independent_cupti_stage.py','scripts/package_independent_cupti.py',
     'scripts/run_independent_cupti_a.ps1','scripts/memset_micro.py','scripts/coe_startup_storage.py',
-    'analysis/independent_cupti_memset.py','tests/__init__.py',
+    'analysis/independent_cupti_memset.py',
     'tests/test_independent_cupti_memset.py','tests/test_independent_cupti_native.py',
     'tests/test_independent_cupti_delivery.py',
     *['scripts/native_cupti_memset/'+x for x in ('core.h','micro.cpp','host_test.cpp','host_client_test.cpp')]]
