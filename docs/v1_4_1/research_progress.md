@@ -1,6 +1,34 @@
 # ExposedPath 科研进度清单
 
-## 7.197 独立CUPTI微例本地实现与A-only交付（2026-10-18，当前）
+## 7.198 独立CUPTI交付协调审查：隔离入口缺checkout导入绑定，A执行暂不通过（2026-10-18，当前）
+
+仅审查已发布f1ba8fb阶段A包，未修改业务代码、未执行服务器或GPU。发现一个本地可复现
+阻塞：launcher以`python -I`运行随包bootstrap；bootstrap未在调用`startup_resources`
+前将已核验checkout接入模块解析，support的`resources`却要导入
+`scripts.coe_startup_storage`。本地真实隔离子进程/随包原文件复现ModuleNotFoundError，
+失败发生在空间检查，早于SDK构建与CPU。目标3.11未运行；不能依赖偶然安装的同名包。
+
+- [x] 包15968398 bytes及所给SHA256一致；13成员/12项清单、13源码表示、118 SDK/
+  377 CUPTI成员、全部hash/CRC/安全路径核对通过；bundle verify及PS入口解析通过。
+- [x] 未改随包bootstrap/support的`-I`复现exit1；只在外部诊断脚本加入已审本地checkout
+  路径后，相同真实空间函数exit0，模块来源指向本仓库。未运行模型/vendor库或profile，
+  外部诊断边界改动不是已实施生产修复，也不证明目标版本运行通过。
+- [x] 找到测试覆盖缺口：已有A文件链测试替换`startup_resources`，随包support测试仅
+  导入support，不调用真实资源依赖；原65项通过不能替代此启动链检查，未无意义重跑65项。
+- [ ] 下一步交主窗口最小修复：保持`-I`，在checkout/源码身份验证后绑定真实模块来源，
+  防止从旧checkout或第三方同名scripts解析；补实际随包bootstrap→真实resources导入
+  路径及错误模块来源反例，OS/编译/Git边界替身须明确。不可仅取消隔离、改PYTHONPATH、
+  屏蔽ModuleNotFoundError或将空间检查再替换掉。
+- [ ] 修复后重新固定execution commit/源码/包hash，并重审A；当前f1ba8fb包暂不执行，
+  不在服务器删除/覆盖旧现场。当前没有B命令/授权；目标A/B仍NOT_RUN。
+
+原f1ba8fb包保持不可变，0.12历史实现记录不重写为测试失败。审查原件/隔离stdout/stderr
+索引：`.local/diagnostics/independent_cupti_coordination_review_v0_1/package_audit.json`、
+`without_checkout.stderr`、`verified_checkout_path_only.stdout`。取证稿0.13及handoff同步。
+此次只新增交付启动链阻塞，不改变参数语义/原S/A/B/COE、旧1024 BLOCKED或Gate13限定PASS；
+用户DOCX、Raw/UNKNOWN及长期容量政策不变，Gate14 NOT_RUN，未生成新包。
+
+## 7.197 独立CUPTI微例本地实现与A-only交付（2026-10-18，历史；当前协调审查见7.198）
 
 用户批准0.11范围：仅无模型0/64-byte窄域客户端、本地CPU/真实头文件编译链接和阶段A包。
 不运行服务器、GPU、Nsight或模型，不恢复旧七槽/多点；旧定义、角色、Raw及历史判定不变。

@@ -1,6 +1,38 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-18增补：独立CUPTI微例本地实现 0.12（当前，目标未运行）
+## 2026-10-18增补：f1ba8fb交付启动链协调审查 0.13（当前，暂不执行A）
+
+**协调审查发现可复现的隔离导入缺口，原包暂不执行；不是GPU微例或1024又失败。**
+ZIP为15,968,398 bytes、SHA256
+`a8952447b034715efa3657cf339676e2cfcebf781d026c260d569057e064934b`；13成员/12项清单、
+13源码路径、118 SDK/377 CUPTI成员的路径/CRC/hash与执行commit绑定均通过，bundle及
+PowerShell解析通过。下面阻塞不靠修改原包复现。
+
+`run_independent_cupti_a.ps1`明确以`python -I`启动随包
+`independent_cupti_stage.py`；该bootstrap读取并核验checkout源码后，调用
+`startup_resources`→`micro_support.resources`，后者直接导入
+`scripts.coe_startup_storage`。但bootstrap没有把已核验checkout绑定到模块解析。
+本地用随包原文件、真实`-I`子进程调用相同函数：exit1、
+`ModuleNotFoundError: No module named 'scripts.coe_startup_storage'`。
+本地偶然可见的scripts namespace实际来自第三方目录，不是本仓库。目标3.11未运行，
+不能假定目标site-packages有正确模块，也不能用普通非隔离测试证明这条启动链可用。
+
+定位对照仅在外部诊断脚本接入本地已审checkout，原bootstrap/support不改，真实资源函数
+即exit0，模块来源是本仓库。这个对照只定位根因；没有在生产修复，没有GPU/vendor库加载。
+原A模拟测试替换了`startup_resources`；support清单测试只调用support导入，没有走其
+资源依赖。这解释了为什么既有65项CPU通过仍漏掉该问题；本轮不重复同一测试堆叠。
+
+给实现窗口的最小修复要求：保留`-I`和全部身份门，在使用仓库资源模块之前绑定**已核验**
+checkout与实际模块来源；第三方同名包/旧checkout不得冒充。新增实际随包bootstrap到
+真实resources导入路径的正反例，分别覆盖无PYTHONPATH、错误/同名模块及失败回执；
+不要仅关掉隔离、依赖当前工作目录或再次mock掉此资源函数。修复后建立新执行身份和包，
+重新审查，不改旧ZIP/hash、目标前置仍需核验9c78e355bb43/clean。
+
+审计索引在本地`.local/diagnostics/independent_cupti_coordination_review_v0_1/`：
+`package_audit.json`及原始隔离stdout/stderr。科研进度7.198同步；本轮仅审查与文档，
+没有业务代码/新包、服务器动作或新CPU/GPU资格；旧定义、Raw及用户DOCX保持。
+
+## 2026-10-18增补：独立CUPTI微例本地实现 0.12（历史交付；当前审查见0.13）
 
 **本地实现完成；仅可交付A构建/CPU审查，不是1024修复、CUPTI目标资格或COE放行。**
 按用户批准的0.11实现，不恢复Nsight来源包、共享入口hook、旧七槽或多点矩阵。
