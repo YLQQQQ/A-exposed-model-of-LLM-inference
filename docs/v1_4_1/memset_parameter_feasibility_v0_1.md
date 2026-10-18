@@ -1,6 +1,42 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-18增补：1024原生调用栈有限实现与交付准备 0.9（当前，目标NOT_RUN）
+## 2026-10-18增补：真实A权限与CLI能力双重阻塞 0.10（当前）
+
+**本次A为BLOCKED，不能仅换管理员窗口重跑。** 封存静态ZIP为77,013 bytes、SHA256
+`d4ceeae555ec0f5b146821aba40133e2d7df6e6cc61aaeff1cbed3dcd5d96b4b`；25成员、24项清单、
+CRC/路径/全部哈希通过。359项科研源码实字节表示匹配，交付配置/实际入口与原包相同。
+原receipt及ZIP只读保留，不补写成功终态。
+
+实际`capability.json`同时记录administrator=false及required_options中
+`--cudabacktrace`=false；Windows及其它四项选项为true。目标确为2026.2.1.210，完整
+profile默认帮助没有该选项。bundle、fetch、checkout、version/help均exit0，已经过3.11.16
+前置门与源码/空间检查，空闲373,423,542,272 bytes。本次CPU/compile尚未开始，
+模型/CUDA初始化/profile均未运行；不能把交付前CPU结果写成目标本次CPU通过。
+
+这里有两个必须分开的限制：
+
+1. 目标令牌不是管理员，Windows process-tree采样前提不满足。
+2. 综合[官方UserGuide的选项说明](https://docs.nvidia.com/nsight-systems/UserGuide/index.html#cli-profile-command-switch-options)
+   不能证明该目标Windows CLI具有相同选项。先前仅以综合文档及CPU替身形成接口级GO的
+   审查不充分；本次真实能力门正确停止，不能删门或将普通采样栈按时间附近匹配为API栈。
+
+补充本地反例：已装的Windows 2026.1.1及2025.6.1分别执行普通帮助、backtrace分类帮助及
+`profile --cudabacktrace=all:0 --help`，无application参数。前两项exit0但不列该选项，
+后一项均exit1并报unrecognised option；未运行profile或GPU。**这是本地其它版本，
+不是目标2026.2.1解析实测；目标默认帮助缺项也不足以证明所有Windows接口不可行。**
+
+裁决与后续：暂停现有来源采集方案，先核实固定Windows可用的逐调用来源入口，再审最小
+诊断路径。当前不制作新包、不要求管理员原样重跑、不改ACL/安装栈，不提供B命令或扩大
+hook/CUPTI。B的原预算/风险条件不是执行授权，旧七槽不恢复。此处没有证明1024不可修复，
+也没有补齐count、设备效果或S/A/COE资格；旧原因仍UNKNOWN，原定义/数据角色保持。
+
+审查脚本及机器索引位于本地
+`.local/diagnostics/memset_callsite_stage_a_review_v0_1/`：
+`audit_receipt.py`逐项核验sealed原件、源码表示及状态，`adjudication.json`保存结果，
+`local_cli_help.json`及六组原始stdout/stderr保留其它版本反例。本轮无生产代码修改、
+模型/CUDA实验或新回归测试，科研进度7.195与本地handoff同步。
+
+## 2026-10-18增补：1024原生调用栈有限实现与交付准备 0.9（历史；真实A见0.10）
 
 用户批准继续完成通用分析适用性目标。本轮实现0.8已选的来源诊断；**还没有取得目标机
 调用栈、count或设备效果，不能称1024已经修复。** 256和四点研究准备保留，旧失败不重写。

@@ -1,6 +1,35 @@
 # ExposedPath 科研进度清单
 
-## 7.194 1024真实来源诊断：有限入口与只读消费实现完成，目标NOT_RUN（2026-10-18，当前）
+## 7.195 1024来源诊断A回执：权限及目标CLI选项双重阻塞，B未运行（2026-10-18，当前）
+
+已审用户回传的真实静态ZIP：77,013 bytes，SHA256
+`d4ceeae555ec0f5b146821aba40133e2d7df6e6cc61aaeff1cbed3dcd5d96b4b`。
+25成员/24项清单、CRC、路径与全部哈希通过；359项源码符合封存表示，执行入口与原交付
+字节一致。目标已checkout到`9c78e355bb43`，不再以旧4da800d作为下一入口的当前状态假设。
+
+- [x] 真实`capability.json`：Windows=true、administrator=false；`--cudabacktrace`不在
+  目标2026.2.1.210默认profile帮助中，其余四项必需选项存在。报错是两个门同时失败，
+  不能只归因权限，也不能通过删除选项检查或改成普通周期采样直接授予逐调用来源能力。
+- [x] bundle/fetch/checkout及NSys version/help均exit0；3.11.16前置门与源码核验已越过。
+  空间检查成功，观察空闲373,423,542,272 bytes；长期总量仍UNKNOWN。
+  capability在CPU/compile之前，故本次30项CPU、compile均NOT_RUN，不能复述为目标通过。
+- [x] 本地已装Windows 2026.1.1与2025.6.1只做帮助及参数解析：普通帮助和backtrace
+  分类帮助都不列该选项；`profile --cudabacktrace=all:0 --help`均exit1/unrecognised。
+  没有application参数、模型或profile。这是其它版本反例，不冒充目标2026.2.1解析实测。
+- [ ] 固定Windows目标可用的逐CUDA调用来源入口仍未闭合。最高优先级先做本地平台能力
+  复核，再决定最小方案；不要求用户管理员原样重跑A，不清理/覆盖旧输出，不提供B命令。
+  默认help缺项尚不等于目标解析器已测拒绝，也不证明所有Windows接口均不可行。
+
+计划调整：7.193/7.194的综合文档接口依据未证明固定Windows CLI实际可用，当前路线的
+接口级GO需暂停，不能凭既有CPU替身验证继续交付采集。原A回执保持BLOCKED；B、来源、
+实际count/效果、S/A/COE资格均未获得。旧1024缺效果原因和旧hook零捕获仍UNKNOWN，
+不据此认定1024不可修复；256及多点研究准备保留，旧七槽不恢复。
+本轮仅只读封存审查/本地其它版本help解析及文档更新，无生产代码、服务器操作或新包；
+不重跑已有回归。Raw、用户DOCX、Gate13限定PASS和既有定义不变，Gate14 NOT_RUN。
+可复查索引：`.local/diagnostics/memset_callsite_stage_a_review_v0_1/adjudication.json`、
+同目录`audit_receipt.py`与`local_cli_help.json`；详见取证审查0.10。
+
+## 7.194 1024真实来源诊断：有限入口与只读消费实现完成（2026-10-18，历史交付；目标状态见7.195）
 
 用户接受继续完成“同一规则覆盖不同长度”的目标；本轮落实7.193已选原生栈诊断的本地
 实现与交付准备，不将1024假定零长度或跳过。最高优先级是审查新A真实回执，再由用户显式
