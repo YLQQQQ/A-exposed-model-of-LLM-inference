@@ -1,6 +1,37 @@
 # ExposedPath 科研进度清单
 
-## 7.196 1024后续顺序：先评审独立CUPTI窄域微例实现，模型及多点不启动（2026-10-18，当前）
+## 7.197 独立CUPTI微例本地实现与A-only交付（2026-10-18，当前）
+
+用户批准0.11范围：仅无模型0/64-byte窄域客户端、本地CPU/真实头文件编译链接和阶段A包。
+不运行服务器、GPU、Nsight或模型，不恢复旧七槽/多点；旧定义、角色、Raw及历史判定不变。
+
+- [x] `scripts/native_cupti_memset`独立API22客户端：ENTRY参数复制、EXIT原返回，普通/PTSZ
+  明确分开（微例资格只含普通），保留PID/TID/context/native stream及domain/correlation。
+  driver桥由动态调用栈与同domain API activity建立，MEMSET按driver ID，不按邻近时间猜配。
+- [x] 有界Host缓冲/记录槽及flush、drop、overflow、关闭状态；缺参数、非零缺效果、
+  subscriber冲突、重入/跨线程/歧义均拒绝。固定0/64-byte独立读回，零字节不授顺序豁免。
+- [x] 独立版本化审核器和native writer→文件消费；Host与目标源分开，库实字节及外部run
+  绑定不匹配拒绝。原S/A/B/COE、registry及旧数据入口无修改，不靠参数齐全自动授准入。
+- [x] A-only默认入口：只部署、SDK/源码/库PE/导出检查、构建链接和CPU；无采集开关。
+  前置绑定已审9c78e355bb43回执，不再假定4da800d。源码允许的LF/CRLF表示由commit预定，
+  记录实际字节，不用实际hash替换期望。失败返回非零、保留新receipt/未覆盖旧现场。
+- [x] 本地定向62 passed/0 failed/0 skipped，8.88s，`.local/cupti_final_v2.xml`；包含真实
+  MSVC/匹配SDK编译链接及Host替身、PE导出、PS5.1实际分派、身份/失败传播。GPU微例未运行，
+  Host EXE没有加载vendor库。Python3.12.7/MSVC14.44/SDK10.0.26100不同于目标3.11.16/
+  MSVC14.38/SDK10.0.20348；不称目标构建/GPU验证。不重跑旧110项或完整Q0。
+- [ ] 固定实现commit后的唯一A包发布身份待本轮收口绑定；目标A构建/CPU/库及B实际订阅、
+  参数/设备效果均NOT_RUN。仅A可交审，无B命令，需真实新A原件审查后才另行授权微例。
+- [ ] 本版并非完整Canonical provider；微例成功不能直接接回S/A/COE，不拼接旧Nsight实例。
+  完整同次模型scope/kernel/Memcpy/ownership/drain/依赖/terminal的返回路径仍未实现/授资格；
+  若需要扩大provider，先作独立投入决定，不将窄域工具滚动扩建。旧1024仍BLOCKED。
+
+实现与解释集中[取证审查0.12](memset_parameter_feasibility_v0_1.md#2026-10-18增补独立cupti微例本地实现-012当前目标未运行)。
+当前最高优先级仅为交审新A包；估2～5分钟、临时2GiB，不初始化CUDA；历史占用仍UNKNOWN，
+长期<50e9目标不以不可读部分为零。未来B仅1 tiny进程/120s/0 Nsight profile，非本轮授权。
+本地compile/导入、diff/测量代码未变与DOCX保全检查通过。Gate13限定PASS/Gate14 NOT_RUN、
+Formal、旧BLOCKED/UNKNOWN/NOT_ASSESSED和256准备保持，不新增GPU/模型预算。
+
+## 7.196 1024后续顺序：先评审独立CUPTI窄域微例实现，模型及多点不启动（2026-10-18，历史方案）
 
 用户询问下一项具体工作。本轮只读复核已有匹配SDK/CPU原型、Windows入口事实及
 单subscriber限制，计划收敛到取证审查0.11；没有实现、测试重跑、新包或服务器操作。

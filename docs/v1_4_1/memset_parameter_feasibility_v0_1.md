@@ -1,6 +1,62 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-18增补：下一项工作的顺序与止损条件 0.11（方案，未实施）
+## 2026-10-18增补：独立CUPTI微例本地实现 0.12（当前，目标未运行）
+
+**本地实现完成；仅可交付A构建/CPU审查，不是1024修复、CUPTI目标资格或COE放行。**
+按用户批准的0.11实现，不恢复Nsight来源包、共享入口hook、旧七槽或多点矩阵。
+固定CUDA12.4.127/API22，目标可信checkout为9c78e355bb43，非旧4da800d。
+
+实现集中于`native_cupti_memset/{core.h,micro.cpp}`、独立审核器
+`analysis/independent_cupti_memset.py`和A-only launcher/controller：
+
+- 独立进程动态加载显式路径/预定SHA256的官方CUPTI和共享CUDART，加载后再核实际路径、
+  API22/runtime12040，结束复核文件未变；不借Nsight私有DLL。原生入口拒绝已知注入环境/
+  已加载CUPTI及模型profiler客户端，订阅失败保留实际返回码，不共用subscriber。
+- ENTRY即复制size_t/count、value、指针及native stream，EXIT只复制实际cudaError_t/
+  CUresult，不再次读取参数。普通51与PTSZ235使用各自真实结构，身份明确分开；微例
+  profile首版仅接受普通入口，PTSZ有记录也不能静默授予同等资格。无转发hook、无包装内
+  CUDA查询/同步/磁盘I/O，记录原PID/TID/native context/contextUid和correlation。
+  API身份按固定domain/CBID确定；保留observed_name，另在回调外通过cuptiGetCallbackName
+  核对SDK元数据名，允许明确入口名或该精确名称，不猜版本前缀、也不丢原始名称。
+- driver回调只消费两条目标runtime动态栈内的调用，以ENTRY/EXIT栈恢复父子关系，不按
+  时间邻近。runtime/driver API activity的ID各自匹配；MEMSET4依据匹配SDK的**driver**
+  correlation连接，再核context/stream/device/bytes/value。相同数字不能替代domain。
+  微例使用一条显式nonblocking流，CUPTI查询在目标回调外绑定native handle与stream ID。
+- 固定8×64KiB Host缓冲、64个callback、4096个API、128个MEMSET槽，耗尽、溢出、丢失、
+  解析/查询失败及未返回缓冲均拒绝；这是客户端容量，不声称限制CUPTI内部总内存。
+  保存注册、enable、两次forced flush、disable、unsubscribe/finalize状态及丢失查询。
+  Context/stream保留至flush/drop查询完成，未知不填零。重入/额外线程超出微例域即拒绝。
+- 固定独立参考：同一64-byte buffer初始化58；请求count0/value123后读回64字节均为58，
+  count64/value123后均为123。两条逻辑调用与API记录均保留；非零必须有唯一合法设备效果。
+  零字节参数/正确读回不证明无依赖、顺序豁免、旧调用count0或A/COE准入。
+- Native JSON与独立reader分别版本化0.1.0，区分HOST_CALLBACK_DOUBLE/TARGET_GPU。
+  真实目标源还需外部已审run/库hash绑定；不允许只改role/source升级Host替身。
+
+**实际本地验证：** Python3.12.7、现有MSVC14.44/SDK10.0.26100；使用匹配12.4.127/API22
+真实头文件编译并链接完整微例及两个Host harness，三个EXE均无静态CUDA/CUPTI导入。
+只运行Host harness，没有加载CUDA/CUPTI、初始化GPU或运行微例。
+手算正反例、真实native JSON→reader、缓冲耗尽/丢失/解析错误、参数突变后快照、PTSZ分派、
+同数不同domain、缺效果/错scope/错父子/错返回、A-only真实PS5.1分派及失败回执/封包均覆盖。
+定向最终62 passed/0 failed/0 skipped（8.88s），JUnit`.local/cupti_final_v2.xml`；
+本地14.44/3.12结果**不冒充**目标14.38/3.11.16构建或GPU覆盖。
+修正了真实编译发现的SDK重复include及明确ABI对齐警告，未修改vendor头或使用stub；
+PS5.1子进程按仓库已有测试方式固定其自身Modules目录，不继承PS7模块路径。
+
+交付A仅验证前置/固定bundle/源码实字节、SDK/库PE文件身份及所需导出，真实构建/链接、
+上述CPU和新鲜参与卷空间；无B开关，不初始化CUDA，不安装依赖/升级工具链，不遍历历史
+YLQ/ACL或清理。估2～5分钟、临时预留2GiB；长期<50,000,000,000字节仍UNKNOWN。
+目标必须重新取得A原件后才另给B命令；目标微例最多1进程/120s、0 Nsight profile，尚NOT_RUN。
+交付由实际实现commit绑定，包/hash另记进度和本地handoff，避免hash自引用。
+
+**同次证据链的真实缺口：** 本版只启用runtime/driver/MEMSET，既无模型scope/producer、
+完整kernel/Memcpy/NVTX，也未获得Canonical provider/ownership/drain/必要集合/terminal资格。
+所以**不能直接接回生产S/A/COE**，更不能拼接新CUPTI参数与旧Nsight。微例通过仅允许再评估
+一次真实PyTorch覆盖诊断的价值；若最终需要完整新provider或更多观测设施，先另审代价与
+科研收益，不自动实施。微例未闭合则停在模型前；旧1024及原因UNKNOWN/BLOCKED不变。
+
+<a id="2026-10-18增补下一项工作的顺序与止损条件-011方案未实施"></a>
+
+## 2026-10-18增补：下一项工作的顺序与止损条件 0.11（原方案，本地实现见0.12）
 
 **下一项是取得可靠的调用参数证据路径，不是重跑1024，也不是扩负载矩阵。** 本轮只读
 复核匹配SDK、已有原型及已封存能力证据，没有新实现、测试、打包或服务器命令。
