@@ -1,4 +1,4 @@
-"""Versioned finite P-wrapped input Pilots. Neither is a Formal extension."""
+"""Versioned finite P-wrapped input Pilots; none extends Formal qualification."""
 from copy import deepcopy
 from fractions import Fraction
 import hashlib
@@ -15,17 +15,24 @@ STATUS='COE_INPUT_BOTH_TOKENS_PENDING_REVIEW'
 ORDERS=((512,2048),(2048,512),(2048,512),(512,2048))
 MIDPOINT_VERSION='COE-INPUT-P-PILOT/0.2'
 MIDPOINT_ORDERS=((512,1024,2048),(1024,2048,512),(2048,512,1024))
+EXTENDED_VERSION='COE-INPUT-P-PILOT/0.3'
+EXTENDED_ORDERS=((256,512,2048,1024),(512,1024,256,2048),
+                 (1024,2048,512,256),(2048,256,1024,512))
 
 
 def require(ok,reason):
     if not ok:raise ValueError('COE_INPUT_'+reason)
 
 
-def active(v):return isinstance(v,dict) and v.get('version') in (VERSION,MIDPOINT_VERSION)
+def active(v):return isinstance(v,dict) and v.get('version') in (VERSION,MIDPOINT_VERSION,EXTENDED_VERSION)
 
 
 def specification(version):
-    require(version in (VERSION,MIDPOINT_VERSION),'BINDING_VERSION')
+    require(version in (VERSION,MIDPOINT_VERSION,EXTENDED_VERSION),'BINDING_VERSION')
+    if version==EXTENDED_VERSION:
+        return dict(orders=EXTENDED_ORDERS,lengths=(256,512,1024,2048),budget=16,
+            profile='COE_INPUT_P_BOTH_TOKENS/0.3',input_schema='coe-input-axis-identity/0.3.0',
+            status='FIXED_SIXTEEN_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW')
     orders=ORDERS if version==VERSION else MIDPOINT_ORDERS
     return dict(orders=orders,lengths=(512,2048) if version==VERSION else (512,1024,2048),
         budget=sum(map(len,orders)),profile=PROFILE if version==VERSION else 'COE_INPUT_P_BOTH_TOKENS/0.2',
@@ -161,13 +168,14 @@ def block_contrasts(rows):
             R_status='DEFINED_SIGNED' if valid else 'UNDEFINED_INVALID_PHASE_GPU_DENOMINATOR',
             denominator='SAME_PHASE_GPU_UNION_NOT_CUMULATIVE_W',
             interpretation='OBSERVED_PROGRAM_STRUCTURE_NOT_PURE_WAIT_OR_P0_PERFORMANCE')
-        if bs[0]['version']==MIDPOINT_VERSION:
+        if bs[0]['version'] in (MIDPOINT_VERSION,EXTENDED_VERSION):
             result['coe_over_phase_gpu']={n:q[n]/g[n] if gpu[n]['status']=='KNOWN' and type(g[n]) is int and g[n]>0 else None for n in lengths}
-            result['midpoint_contrasts']=[]
-            for low,high in ((512,1024),(1024,2048)):
+            key='midpoint_contrasts' if bs[0]['version']==MIDPOINT_VERSION else 'input_contrasts'
+            result[key]=[]
+            for low,high in zip(lengths,lengths[1:]):
                 valid_pair=all(gpu[n]['status']=='KNOWN' and type(g[n]) is int and g[n]>=0 for n in (low,high)) and g[low]>0
                 r=Fraction(q[high])-Fraction(q[low]*g[high],g[low]) if valid_pair else None
-                result['midpoint_contrasts'].append(dict(lower_input=low,higher_input=high,delta_coe_ns=q[high]-q[low],
+                result[key].append(dict(lower_input=low,higher_input=high,delta_coe_ns=q[high]-q[low],
                     R_ns=float(r) if r is not None else None,R_exact=dict(numerator=r.numerator,denominator=r.denominator) if r is not None else None,
                     R_status='DEFINED_SIGNED' if valid_pair else 'UNDEFINED_INVALID_PHASE_GPU_DENOMINATOR'))
         answer.append(result)

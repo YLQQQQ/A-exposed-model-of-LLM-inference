@@ -1,6 +1,58 @@
 # ExposedPath 科研进度清单
 
-## 7.191 三点输入轴Pilot失败收口：1024 Prefill缺效果、零完整block（2026-10-17，当前）
+## 7.192 输入轴继续扩展：256有限接线完成，1024实例来源缺口保留（2026-10-18，当前）
+
+本轮用户批准本地适配/定向CPU/1024来源诊断/方案准备，未批准服务器、GPU或新批次预算。
+当前最高优先级：推进256独立准备及同期比较设计，不把1024缺证当整个研究停止；同时不
+强行输出1024、不恢复旧七槽。原研究设计v7.1、Pre-Pilot协议v2.1、签署路线A及旧数据角色保持。
+
+- [x] [有限输入合同](../../exposedpath/coe_input_pilot.py)新增0.3及矩阵身份0.3.0，支持未来
+  256/512/1024/2048声明；旧0.1/0.2不放宽。256沿封存32token循环8次、全1 mask，
+  实际文件字节/完整矩阵摘要/模型范围和角色严格检查；采集前分派增加精确0.3。
+  原P helper/runner/completion、S/A/B、registry及COE/预算计算实现不变。
+- [x] 256真实CPU文件链接通prepare→seal→采集argv边界、producer→Canonical→两token
+  准入→候选预算→报告消费；外部模型/设备/collector均为明确替身。错字节/mask/角色/
+  版本、缺drain/依赖/映射、token/结果hash冲突仍拒绝。四点完整block汇总保留signed
+  及null分母；1024失败反例保留未运行槽位/原原因，不能删点补block。旧入口仍拒绝
+  0.3 delivery schema，尚无可启动的新服务器入口，不把本地功能完成写成GPU资格。
+- [x] 1024比较成功/失败调用来源及覆盖，复用7.191全部效果搜索结论，不重搜84个
+  correlation。封存同批512 Prefill有85次该API均已映射；1024有29映射/84缺效果。
+  所有callchain均null；runner/P helper/input adapter及软件内容相同，API名/主线程
+  不能确定实际callee。既有历史PE也未绑定实例入口，普通共享hook零捕获保持。
+  没有可验证的新解析修复或不同真实入口方案；1024模型成功、分析不可评估，不称输入
+  不支持，不推断零字节/无提交，不制作仅微例有效的模型取证包。具体来源仍UNKNOWN。
+- [x] [机器可读四点方案](../../configs/coe_input_extension_pilot_plan_v0_1.json)及
+  [现有报告§12.8](coe_research_short_note_v0_1.md#128-继续输入轴256独立适配与1024来源对照2026-10-18当前)
+  固定4位置平衡block/16P1/16profile、每点4次，旧数据不并入；估55～80分钟，临时12GiB，
+  保留1.5～3GiB。四次不保证精度/显著性；全样本/两token、原A/候选预算、Q/G、API/
+  sync及活动位置等公平参照保留，零/负/非单调不是质量失败。1024闭合前四点交付BLOCKED。
+- [x] 不让1024阻断所有准备：另建议同期256/512/2048、3完整block/9P1，估30～45分钟、
+  临时12GiB、保留0.8～1.5GiB；仅检验低侧与端点，1024仍明列未解决。它须独立预算/
+  有限合同，不是临场删点或恢复旧批次；本轮未接新采集入口、未打包、未提供服务器命令。
+- [ ] 256实际GPU准入NOT_RUN；1024真实count/效果/调用覆盖及依赖闭包仍BLOCKED；
+  完整四点同期研究未完成。制作包前须先确定独立矩阵/预算、真实commit/输入/源码绑定及
+  对应launcher；四点还须闭合1024。只有新A实际回执审查通过才可显式B。只查新鲜空间，
+  不扫历史YLQ/ACL、不自动清理；历史占用UNKNOWN及长期<50e9目标保留。
+
+定向验证：先新增测试见16 failed/1 passed（缺0.3版本，`.local/input_extension_red.xml`）；
+最小实现后初步17/0/0。补充严格prepared字节/角色/schema和固定预算验证后，最终命令
+`python -m pytest -q -ra -p no:cacheprovider tests/test_coe_input_extension.py
+tests/test_coe_input_midpoint.py tests/test_coe_input_pilot.py --basetemp=.local/input_extension_final
+--junitxml=.local/input_extension_final.xml`：74 passed、0 failed、0 skipped，115.17s（10月17日
+本地运行，10月18日继续收口），不与初步重叠数量相加。本地Python3.12.7；目标既有3.11.16，
+新代码未做目标机验证。新增摘要有独立字面量答案，实际GPU/S资格仍复用旧证据，不重跑Q0。
+来源对照回执`.local/diagnostics/coe_input_extension_v0_1/call_origin_review.json`，8个消费成员
+按原清单核对；模型/输入身份事实与未知callee/参数分开。`python -m compileall -q exposedpath
+analysis scripts/gate7_smoke_validation.py`、16槽/位置/相邻顺序与配置一致性、来源/新增链接及
+`git diff --check`通过。内联代码审查未发现需修改测量语义的冲突；不是独立同行/GPU验证。
+
+计划调整：用户明确继续输入轴，替代7.191“仅保留端点”的优先级；不否定该失败收口或消除
+1024缺口。四点合同和256本地实现不是签署新Formal协议。旧A/B/候选角色、Gate13限定PASS、
+Gate14 NOT_RUN、Raw、旧BLOCKED/UNKNOWN/NOT_ASSESSED及用户DOCX/大型原件均保持。
+
+## 7.191 三点输入轴Pilot失败收口：1024 Prefill缺效果、零完整block（2026-10-17，历史收口）
+
+> 失败结论不变；用户后来明确授权独立256适配与四点准备，当前优先级见7.192。
 
 当前裁决：本批`BLOCKED`，1024合格COE/候选预算不可评估；这是已观察的提交效果证据缺口，
 不是模型执行失败、OOM或已证实的parser遗漏。最高优先级是保留这一适用边界，并以7.189的
