@@ -1,6 +1,130 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-17增补：新B2零捕获，当前普通共享入口路线收口 0.7（当前）
+## 2026-10-18增补：1024来源定位优先，先用Nsight原生CUDA调用栈 0.8（当前）
+
+**裁决：1024能执行，当前不能完成的是分析准入；尚未证明它不可修复。优先准备一次真实
+1024 PyTorch的原生调用栈诊断，不再盲改共享入口hook。独立CUPTI参数/效果路线保留为
+尚未完成目标验证的候选，不与本次Nsight诊断并行、不自动接续。** 用户本轮仅授权本地
+调查/必要CPU原型与方案，未授权服务器、GPU或恢复旧七槽；256已完成准备原样保留，
+三点采集包暂缓。研究设计v7.1、协议v2.1、已签路线A、原A/B/COE均不变。
+
+### 三个不同的问题，不能合成一个根因
+
+|问题|已证明的事实|仍未证明|
+|---|---|---|
+|1024为什么被拒绝|模型/profile/export成功；Prefill的113次目标API中29次已有映射、84次缺效果，Raw/Canonical一致，submit mapping门拒绝；见进度7.191/7.192|缺效果调用是否count0、未记录正效果、库内特殊路径或其它原因|
+|设备效果为什么缺失|现存关联/替代桥已审，不能由时间邻近kernel补齐；本轮直接复用，不重搜旧correlation|真实count、native stream、实际callee/调用来源，以及缺失原因|
+|旧记录器为什么零捕获|真实B2中113次Prefill目标API存在，已绑定普通共享导出hook却无调用侧记录/调用NVTX；微例可命中|实际调用是否经过该地址、是否有其它入口/副本或注入交互；不是已经认定private/PTSZ/cuBLAS|
+
+把1024设为512的两倍，是合法的**工作量变量改变**，不是底层执行轨迹按比例复制。
+[PyTorch v2.6固定源码](https://raw.githubusercontent.com/pytorch/pytorch/v2.6.0/torch/nn/functional.py)
+的SDPA说明明确允许根据输入选择实现；本地[已有Raw分支事实](coe_research_short_note_v0_1.md)
+也显示512/2048实际Softmax/GEMM名称、次数和grid改变。矩阵维度、临时空间和launch实现
+可能改变，但**这些事实没有证明1024缺效果的具体原因**。目前是观测/准入缺口，不是模型
+不支持1024，也不是输入响应研究已被否定。
+
+### 固定版本能力核对：可定位，不等于已测参数
+
+以目标安装原件为主，未用滚动新版本能力替换固定Windows栈：
+
+- 已封存UserGuide SHA256
+  `5b100930126f3a3a819f13dd8335efc0bc2cd7f8bf0207a7063d57acb4c33e7c`，L805–818及
+  L1292–1307：`--cudabacktrace=memory:0`可请求memory类别全部时长的API栈，必须启用CPU
+  sampling；默认阈值1000ns会漏掉所关心的短调用，不能沿用默认后宣称全覆盖。参数实际
+  接受情况仍须目标build帮助/诊断验证，不支持时停，不改阈值追绿。
+- 同份文档L441要求Windows CLI管理员权限；未来A只记录实际权限/能力，不自动提权。
+  `--python-backtrace=cuda`仅支持x86 Linux/SBSA，不放进本Windows方案；原生CUDA API栈
+  与Python栈不是同一功能。不额外启用torch.profiler或自动PyTorch标记。
+- 已封存AnalysisGuide SHA256
+  `bdcf574189e7eb687d4dc7c52bcebacae9c700c5a93a9e3aed8ff674960cbb11`，L4006–4015、
+  L4126–4135及L6247起示例给出直接关系：runtime.callchainId→CUDA_CALLCHAINS.id，
+  每帧含stackDepth、symbol、module、unresolved和originalIP；StringIds解析模块/符号。
+  [官方分析指南同类查询](https://docs.nvidia.com/nsight-systems/AnalysisGuide/#select-cuda-calls-with-backtraces)
+  可作交叉核对。读原SQLite即可，不要求生产Canonical先支持新增栈表，不改Raw表做ALTER。
+- 以每条runtime原始身份/PID/TID/phase及callchainId建立连接，不靠邻近时间配栈，不对ID
+  作历史off-by-one修补。同一个栈ID可以合法复用于多条调用，不能误判成重复调用。
+  未解析符号但有可信module+originalIP时保留地址级定位；缺模块绑定、悬空ID、重复depth、
+  缺失/截断的有用调用者帧均保持不确定。连续depth不证明整个真实调用栈完整。
+  原始IP不是已证明的callee函数入口，缺装载基址时不伪造RVA，栈也不提供count/设备效果。
+
+本轮直接访问2026.2在线归档和12.4 API页面失败，目标版本判断来自上述已核验安装文档/
+SDK原件，不把网页不可访问说成工具不支持。在线PyTorch v2.6 raw源码及官方分析指南读取
+成功；文档允许某能力不等于目标实测已通过。
+
+### 两条路线的重新比较与唯一优先项
+
+1. **优先：Nsight自己的native CUDA API backtrace，分析仅限目标memset。** 不增加subscriber或新hook，
+   最小变更仅为独立Engineering诊断角色/argv/来源消费接线；保留原模型/固定1024输入、
+   P/w3/batch1/输出2、自然Host-readable完成政策。原`--sample=none`改为
+   `--sample=process-tree`、`--sampling-frequency=200`，去掉原`--cpuctxsw=none`（实际调度
+   采集将随sample为process-tree），增加
+   `--cudabacktrace=all:0`，其余CUDA/NVTX采集政策不改。虽有memory类别，但尚无目标build的
+   API分组实测回执；固定all:0是避免分组漏取，不逐类试采。使用平台默认原生栈方式，
+   不套用Linux的fp/dwarf参数。函数名可未知，不下载PDB/升级工具；采样/栈采集可显著扰动
+   执行，所以只作来源诊断，绝不进入性能或负载重复。200Hz仅限制周期CPU采样，不限制
+   API取栈成本。可复用`gate8_source_probe.py`已存在的显式argv/版本/失败保留结构，但其
+   VectorModel只属历史fixture，不执行它代替真实1024覆盖。本轮尚未实现新可采集入口。
+2. **保留候选：独立CUPTI callback+activity。** 既有SDK为12.4.127/API22；header的
+   runtime CBID51为普通cudaMemsetAsync、235为PTSZ，参数结构含size_t count/native
+   stream，callback还可给出ENTRY/EXIT/返回及correlation。现有CPU原型只是结构体复制和
+   关联逻辑，没有实际native subscriber、activity缓冲/flush及真实PyTorch覆盖。
+   该层不依赖普通DLL导出Detours地址，故旧hook失败**不能否定**它；但也不能保证一定捕获
+   实际目标。`cupti_callbacks.h` L679–711的旧接口只允许一个subscriber，遇到Nsight或
+   其它工具冲突必须停；不借用Nsight私有CUPTI、不升级到较新多subscriber栈。独立运行
+   获得的是**另一运行的新实例**，不是同份Nsight实参，不能补旧1024；若未来选它，必须
+   用真实PyTorch API activity清单逐项对照callback覆盖，再审合法效果/依赖，微例不足。
+   [官方接口限制](https://docs.nvidia.com/cupti/12.9/api/group__CUPTI__CALLBACK__API.html)
+   仅作旧接口交叉核对，实际ABI仍取已核验API22头文件。开发缺口比原生栈采集大，本轮不选。
+
+Nsight内存使用曲线不能给调用实参；额外cuBLAS/cuDNN trace范围也不能自动确定每次memset
+入口或count，且当前没有证据先指向某vendor。因此不批量试多个library trace/hook。
+
+### 下一次诊断的唯一问题、预算与停止规则（待审，尚无服务器执行授权）
+
+**唯一问题：一次新的真实1024 Prefill中，正常映射和缺效果的cudaMemsetAsync，能否按
+实例取得可核验的native模块/地址调用链，从而定位参数取证应针对的真实来源？** 允许两类
+调用栈相同，定位成功不以发现不同vendor/零字节为条件，也不以再次出现恰好84次为条件。
+
+- 新诊断仅1个模型进程、1条profile，无P0/配对/重试/微例/旧槽恢复；batch1、1024/2、
+  固定P、warmup3/repeat1及原模型/FP16/eager/SDPA/Windows/4090保持。预估5～10分钟，
+  profile硬超时300秒、外层含导出/来源审查最多900秒；临时预留12GiB，保留约0.5～2GiB
+  仅为估计，不生成巨型domain。长期50e9/历史UNKNOWN保持，不清理、不扫描历史ACL。
+- 实施前先准备独立Engineering角色/新输出目录及薄argv分派，不能把新诊断冒充旧Pilot
+  或恢复旧报告。A只校验源码/输入/目标build选项帮助、实际权限、新鲜空间和相关CPU接线；
+  不支持/权限不足/版本冲突即停，不启动模型、不自动提权或换工具。只有A真实回执审查后
+  才可显式B，本轮不生成包或命令。
+- [历史来源方案风险](gate8_eager_source_alignment_v0_1.md#111-历史候选有额外风险的profile747暂停非当前待裁决项)
+  仍保留：既往BugCheck 0x133的根因未证实，不能归因本次选项，也不能因minimal profile
+  后续成功而证明新增采样/栈采集无风险。低频、短时、超时或Ctrl+C不保证系统安全。
+  未来真实B须显式审查并接受该组合风险，不由A的CPU通过自动授权，不恢复旧微例attempt。
+- B保存模型/collector/export各自状态、同次producer token/phase/drain、REP/SQLite、
+  完整目标API清单及每条callchain/帧、已观测module/IP/可读模块文件身份；导出不作时间
+  截断。按同次Prefill身份列**全部**目标调用和覆盖，不按旧record ID/时长挑选。已有S门
+  若因缺效果拒绝，仅保留其原拒绝；独立来源报告不伪造S/A/COE成功，也不要求先跑完整分析。
+- 有目标调用且有缺效果组，逐条栈能定位有用调用者模块/地址：只判`CALLSITE_LOCATED`，
+  允许符号UNKNOWN；随后依据实物再选参数路径，不自动hook。栈只有公共工具帧、缺失/
+  无法绑定module、采集/输入身份冲突等：失败或INCONCLUSIVE，原原因保留。
+- 新run若不再出现缺效果组：`NOT_DISCRIMINATING_FOR_MISSING_EFFECT_ORIGIN`，不追认旧
+  实例、不追加重跑；任一必需覆盖/诊断失败或固定单次结束即停。调用栈结果不能回答count
+  或证明无提交，即使定位成功，旧1024及四点研究资格也不自动改变。
+
+### 本地已完成及真正尚缺
+
+本轮复用原Raw/Canonical/关联搜索和旧零捕获结论，未重复旧SQLite查询。核验固定安装
+文档/SDK接口及原native CPU原型，另以一次纯CPU内存SQLite检验官方ID连接：同时段不同栈
+不串配、null/悬空不填零、不完整符号保留module/IP、共享栈ID合法、重复depth拒绝。
+临时原型及回执在忽略的`.local/diagnostics/coe_1024_callsite_feasibility_v0_1/`，不是新collector。
+它没有读取真实参数、加载CUDA或证明Windows展开能力；未重跑完整Q0或已有74项验证。
+
+**当前停点：本地接口级方案成立，可准备这一条来源诊断；目标真实栈覆盖NOT_RUN，设备
+效果缺失与旧hook零捕获的内部原因仍UNKNOWN。** 不说“1024修不好”，也不承诺下一次定位
+一定成功。256准备保留、三点包暂停；原Raw/BLOCKED、A/B/COE、旧Formal/Gate保持。
+
+<a id="2026-10-17增补新b2零捕获当前普通共享入口路线收口-07当前"></a>
+
+## 2026-10-17增补：新B2零捕获，当前普通共享入口路线收口 0.7（历史收口）
+
+> 本方案零捕获和停止结论不改；后续用户授权的新调查/原生栈优先项见0.8，不等于恢复原hook。
 
 **裁决：本次参数覆盖FAIL；新B2及原Pilot仍BLOCKED。按预定条件停止当前普通共享入口方案，
 不重采、不扩hook、不恢复旧七槽。** 这不是COE定义、已合格案例或整个研究方向被证明无效，

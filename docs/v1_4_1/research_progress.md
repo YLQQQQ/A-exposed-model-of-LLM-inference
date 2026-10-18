@@ -1,6 +1,46 @@
 # ExposedPath 科研进度清单
 
-## 7.192 输入轴继续扩展：256有限接线完成，1024实例来源缺口保留（2026-10-18，当前）
+## 7.193 1024来源定位优先：原生CUDA调用栈方案，独立CUPTI候选不否定（2026-10-18，当前）
+
+用户调整优先级：256准备保留，暂缓256/512/2048三点包；重新调查1024真实调用来源。
+本轮仅本地接口/文档/SDK核对及必要CPU原型，没有服务器、GPU、新模型或新采集。
+
+- [x] 分开三个结论：1024模型/profile/export已成功，拒绝因84个Prefill提交缺效果；
+  效果为什么缺、旧记录器为什么零捕获尚UNKNOWN。直接复用既有Raw/Canonical/关联
+  搜索，不重复旧correlation，不把旧普通共享入口失败等同1024不可修复。
+- [x] 核验目标安装UserGuide及AnalysisGuide：原生CUDA API backtrace需CPU sampling，
+  Windows CLI需管理员；`--python-backtrace=cuda`不是本Windows可用替代。
+  官方runtime.callchainId→CUDA_CALLCHAINS.id及module/originalIP关系可用于逐实例来源
+  定位，不是参数或效果证据；共享栈ID可复用，不按时间猜栈。目标实际捕获仍NOT_RUN。
+- [x] 重评已存在的独立CUPTI/API22原型：有实参/返回/correlation接口依据，但未实现目标
+  native订阅/缓冲/flush/模型覆盖；不与Nsight同时订阅，不借私有CUPTI或升级。旧hook失败
+  不能否定这条候选，但其新运行也不能补旧实例，微例不代替模型覆盖。本轮不选为优先。
+- [x] [现有取证审查0.8](memset_parameter_feasibility_v0_1.md#2026-10-18增补1024来源定位优先先用nsight原生cuda调用栈-08当前)
+  固定唯一下一诊断：新1024、batch1/输出2/P/w3/r1的一次真实PyTorch来源采集，
+  固定`--cudabacktrace=all:0`避免未实测API分组漏取，事后仅审查Prefill目标memset。
+  最多1模型进程/1profile，估5～10分钟、profile300s/外层900s，临时12GiB，保留0.5～2GiB
+  为估计。记录全部Prefill目标API、按真实ID连接帧并比较有/无效果组，不依赖旧84条ID。
+  栈相同/不同均可报告；缺栈/只公共工具帧/缺module绑定不宣称定位，不再复现缺口则
+  不可判别。固定单次或硬失败即停，不自动接CUPTI/hook/重采，不输出性能/新资格。
+  周期采样固定200Hz，实际ctxsw随process-tree；复用旧来源argv框架而非执行其向量fixture。
+  历史BugCheck 0x133仍未定因，低频/timeout不保证安全，未来B须单独显式接受新增profile风险。
+- [x] 小型纯CPU内存SQLite原型验证ID连接、null/悬空、符号未解析、合法共享栈及重复depth
+  行为；源码/输出在`.local/diagnostics/coe_1024_callsite_feasibility_v0_1/`。
+  没有生产代码改动、目标DLL加载或新CUDA资格，不重跑全Q0或已有74项CPU。
+- [ ] 目标build选项/权限与实际栈覆盖NOT_RUN。下一步仅准备独立Engineering诊断角色、
+  薄argv分派和来源报告；先做相关CPU/静态审查，A真实回执通过后才能显式B。当前无新包、
+  无服务器命令，预算/执行仍待用户审查。定位成功也不自动授予count、效果、COE或四点资格。
+
+依据：已封存UserGuide SHA256`5b100930126f3a3a819f13dd8335efc0bc2cd7f8bf0207a7063d57acb4c33e7c`；
+AnalysisGuide SHA256`bdcf574189e7eb687d4dc7c52bcebacae9c700c5a93a9e3aed8ff674960cbb11`；
+API22 callback头文件和既有CPU原型。在线2026.2/12.4归档读取失败，未伪称直接核验；
+PyTorch v2.6源码及官方分析页可读，未用新版本多subscriber功能推断目标能力。
+参数/效果与source定位分开，未改变S/A/B/COE、Raw、旧BLOCKED/UNKNOWN/NOT_ASSESSED、
+旧Formal或Gate13限定PASS/Gate14 NOT_RUN，用户DOCX/大型原件不纳入提交。
+
+## 7.192 输入轴继续扩展：256有限接线完成，1024实例来源缺口保留（2026-10-18，历史准备）
+
+> 256实现和验证不变；用户随后暂停三点采集包，当前优先级改为7.193的1024来源诊断。
 
 本轮用户批准本地适配/定向CPU/1024来源诊断/方案准备，未批准服务器、GPU或新批次预算。
 当前最高优先级：推进256独立准备及同期比较设计，不把1024缺证当整个研究停止；同时不

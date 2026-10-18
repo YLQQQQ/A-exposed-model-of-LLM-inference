@@ -37,7 +37,7 @@
     "estimated_final_retained_gib": [1.5, 3.0], "profile_timeout_seconds": 300, "per_run_driver_timeout_seconds": 900,
     "precision_or_significance_guarantee": false},
   "independent_subset_proposal": {
-    "status": "SEPARATE_BUDGET_AND_FINITE_CONTRACT_REQUIRED_NOT_AN_AUTOMATIC_FALLBACK",
+    "status": "PAUSED_PENDING_1024_CALLSITE_DIAGNOSIS_NOT_AUTOMATIC_FALLBACK",
     "input_tokens": [256, 512, 2048],
     "block_orders": [[256, 512, 2048], [512, 2048, 256], [2048, 256, 512]],
     "comparisons": [[256, 512], [512, 2048]],
