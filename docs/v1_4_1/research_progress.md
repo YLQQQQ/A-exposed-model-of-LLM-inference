@@ -1,6 +1,33 @@
 # ExposedPath 科研进度清单
 
-## 7.195 1024来源诊断A回执：权限及目标CLI选项双重阻塞，B未运行（2026-10-18，当前）
+## 7.196 1024后续顺序：先评审独立CUPTI窄域微例实现，模型及多点不启动（2026-10-18，当前）
+
+用户询问下一项具体工作。本轮只读复核已有匹配SDK/CPU原型、Windows入口事实及
+单subscriber限制，计划收敛到取证审查0.11；没有实现、测试重跑、新包或服务器操作。
+旧Nsight来源包仍暂停，不凭管理员权限或综合文档绕过真实能力门。
+
+- [x] 固定CUDA12.4.127/API22的参数、callback/activity关联与单subscriber证据复核；
+  runtime普通/ptsz的memset callback ID为51/235，参数结构独立。SDK关键hash保持。
+  旧原型只有CPU复制/关联验证，不包含真实订阅、缓冲/flush或目标PyTorch覆盖。
+- [ ] 推荐下一项仅为独立CUPTI窄域native微例的本地最小实现/CPU审查；先支持参数、
+  返回、identity、唯一关联及失效停止，不开发通用collector。当前为方案，尚未实施。
+- [ ] 本地验证后另审A构建/CPU；再显式审查一个无模型0/64-byte微例，硬120秒。
+  微例与Nsight独立，失败停在模型前，不自动换版本/重试。目标版本/加载/订阅仍NOT_RUN。
+- [ ] 微例通过后才另审一个新1024真实参数覆盖诊断；不恢复旧七槽，不假定旧84次count。
+  最多两个目标进程是分阶段上限，不是本轮执行授权；未来总体估15分钟/2GiB，尚未实测。
+- [ ] 新参数之后另审同次Raw→S→A/COE的完整返回路径；独立CUPTI参数不能与旧Nsight
+  时间线拼接，不能自动授Canonical/provider资格。若需完整新provider，先审新增工程量
+  和科研收益，不能让窄域取证自动扩大为测量基础设施重建。
+
+阶段/计划调整：仍是Engineering可行性方案，非1024修复完成或新Q0/采集资格。
+当前唯一建议进入上述本地最小实现审查，不再先追调用栈；真实count与效果才是拒绝缺证。
+count0不取消逻辑依赖，非零缺效果仍拒绝；原S/A/B/COE、Raw、用户DOCX、旧BLOCKED及
+UNKNOWN不变，512/2048已审端点保留，256准备及多点计划暂停。Gate13限定PASS保持，
+Gate14 NOT_RUN。本轮没有业务代码或合同修改、无CPU/GPU新测试，不声称目标能力已证明。
+复核索引：`.local/diagnostics/memset_parameter_feasibility_v0_1/feasibility_audit.json`、
+匹配SDK headers/samples及7.195审计；新顺序/失败判据见取证审查0.11。
+
+## 7.195 1024来源诊断A回执：权限及目标CLI选项双重阻塞，B未运行（2026-10-18，历史；下一项见7.196）
 
 已审用户回传的真实静态ZIP：77,013 bytes，SHA256
 `d4ceeae555ec0f5b146821aba40133e2d7df6e6cc61aaeff1cbed3dcd5d96b4b`。
