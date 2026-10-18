@@ -86,6 +86,7 @@ def read_sources(path,scope):
                 if module:bound=module_files[module]['status']=='RAW_NAMED_FILE_READ_AFTER_CAPTURE_NOT_LOAD_PROOF'
                 basename=module.replace('\\','/').rsplit('/',1)[-1].lower() if module else ''
                 tool=any(s in basename for s in ('cudart','cupti','nvcuda','nsight','injection','ntdll','kernelbase','kernel32'))
+                tool=tool or re.fullmatch(r'(?:python\d*(?:_d)?\.(?:exe|dll)|_ctypes.*\.pyd|ucrtbase\.dll|vcruntime.*\.dll|msvcp.*\.dll|concrt.*\.dll|dbghelp\.dll|dbgcore\.dll)',basename) is not None
                 caller=good and bound and not tool;useful=useful or caller
                 frames.append(dict(source_rowid=f['source_rowid'],depth=f['stackDepth'],module=module,symbol=symbol,
                     symbol_unresolved=f['unresolved']==1,original_ip=ip,useful_caller=caller,

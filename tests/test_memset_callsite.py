@@ -56,7 +56,7 @@ def test_real_sqlite_id_join_and_legal_shared_stack(tmp_path):
     assert r['module_files'][str(caller)]['sha256']
 
 
-@pytest.mark.parametrize('damage',['null','dangling','duplicate_depth','missing_module','tools_only','missing_ip'])
+@pytest.mark.parametrize('damage',['null','dangling','duplicate_depth','missing_module','tools_only','python_only','missing_ip'])
 def test_no_invented_stack_or_location(tmp_path,damage):
     path,scope,_=fixture_db(tmp_path)
     with sqlite3.connect(path) as db:
@@ -65,6 +65,10 @@ def test_no_invented_stack_or_location(tmp_path,damage):
         if damage=='duplicate_depth':db.execute('INSERT INTO CUDA_CALLCHAINS VALUES (10,0,2,3,0,12345)')
         if damage=='missing_module':db.execute('UPDATE CUDA_CALLCHAINS SET module=99 WHERE id=10')
         if damage=='tools_only':db.execute('UPDATE CUDA_CALLCHAINS SET module=4 WHERE id=10')
+        if damage=='python_only':
+            generic=tmp_path/'python311.dll';generic.write_bytes(b'CPU generic interpreter frame')
+            db.execute('INSERT INTO StringIds VALUES (?,?)',(6,str(generic)))
+            db.execute('UPDATE CUDA_CALLCHAINS SET module=6 WHERE id=10')
         if damage=='missing_ip':db.execute('UPDATE CUDA_CALLCHAINS SET originalIP=NULL WHERE id=10')
     r=api().read_sources(path,scope)
     assert r['status']=='INCONCLUSIVE' and r['issues']

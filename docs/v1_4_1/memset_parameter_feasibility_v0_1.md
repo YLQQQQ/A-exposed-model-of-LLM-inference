@@ -26,7 +26,8 @@
   不安装依赖或构建native库。实际包身份/路径由忽略的本地交付说明提供；不将CPU替身视为
   目标机权限、profile或参数资格。目标3.11及实际Nsight栈均待新A/B回执。
 
-相关回归242项通过；最后入口29项通过，覆盖重叠不相加，均无失败/跳过。完整producer和
+相关回归242项通过；最后入口30项通过，覆盖重叠不相加，均无失败/跳过。仅通用Python/CRT
+框架不构成有用来源，负例保留。完整producer和
 prepare/seal/consume使用真实文件与共同trace投影，模型/设备/NSys边界是CPU替身；
 Python3.11语法、compileall、PS5.1解析及diff检查通过。本地Python3.12.7，没有GPU实验。
 原始1024/旧BLOCKED仍不可评估；成功时只报CALLSITE_LOCATED，若缺口未复现或栈不足则

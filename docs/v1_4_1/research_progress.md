@@ -27,9 +27,10 @@
   execution commit及封存4da800d静态回执绑定；A通过不自动授B或1024/四点资格。
 
 验证：新增检查先见缺模块/入口、VM串配及超时余量红灯；本地相关回归242 passed/0 failed/
-0 skipped（`.local/callsite_final_regression2.xml`）；最后入口29 passed/0 failed/0 skipped
-（`.local/callsite_target_tests_final.xml`），覆盖重叠不相加。新完整prepare/seal/consume边界
-另单项通过并包含在最后29项。回归中已修正测试替身导入污染，仅调整测试加载，不放宽门。
+0 skipped（`.local/callsite_final_regression2.xml`）；最后入口30 passed/0 failed/0 skipped
+（`.local/callsite_final30.xml`），覆盖重叠不相加。新完整prepare/seal/consume边界
+另单项通过并包含在最后30项。仅Python/CRT等通用框架帧不能判来源已定位，新增负例通过。
+回归中已修正测试替身导入污染，仅调整测试加载，不放宽门。
 本地Python3.12.7；Python3.11语法检查不冒充目标3.11运行。compileall、PS5.1解析及diff检查
 通过；不是新Q0/GPU验证。原始1024/BLOCKED、四block端点、256准备、Raw和用户DOCX均保持。
 Gate13限定PASS、Gate14 NOT_RUN不改。本轮不操作服务器；旧三点/四点采集包继续暂停。
