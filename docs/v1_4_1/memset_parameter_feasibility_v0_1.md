@@ -24,8 +24,13 @@ commit及资源依赖字节→显式绑定该checkout的`namespace + file`→真
 定向74 passed/0 failed/0 skipped（16.47s），JUnit`.local/cupti_import_release.xml`；
 新增前7项失败的红例和原ModuleNotFoundError均保留。native/参数审核器未变，复用此前
 真实头文件编译产物并验证binary hash，执行Host-only回归；本地3.12.7不替代目标3.11.16。
-不重跑完整Q0/旧110项，不运行模型、GPU或Nsight。实现提交后再绑定新包，避免hash自引用；
-新包仍需协调审查，A真实原件审查前没有B命令。原始证据、冻结/旧Formal及1024拒绝不改。
+不重跑完整Q0/旧110项，不运行模型、GPU或Nsight。先取得实现commit再绑定新包，避免hash
+自引用；执行/分析为`cedd70610588d4d5691c5a86cbcb923ef8ea6433`，包及SHA256集中科研进度
+7.199。13成员/12清单、13源码、118 SDK/377 CUPTI成员及全部hash/CRC/bundle核验通过；
+从最终ZIP取bootstrap/support字节，经真实-I/干净临时Git checkout/真实空间函数exit0，
+封包文件未变，详`.local/diagnostics/independent_cupti_import_fix_v0_1/review.json`。临时
+checkout只作本地依赖演练，不冒充目标执行commit或3.11资格。新包仍需协调审查，A真实
+原件审查前没有B命令。原始证据、冻结/旧Formal及1024拒绝不改。
 
 ## 2026-10-18增补：f1ba8fb交付启动链协调审查 0.13（历史，原包暂不执行A）
 

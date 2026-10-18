@@ -22,8 +22,16 @@
   **74 passed / 0 failed / 0 skipped，16.47s**。通过显式CPU配置和已核hash的build.json复用
   未改native编译产物，只运行Host harness、PE字节检查及CPU文件链；不重建未变GPU程序。
   本地Python3.12.7不冒充目标3.11.16；目标A真实构建/CPU仍NOT_RUN。
-- [ ] 提交实现后固定新执行=分析commit，重制唯一A-only包并核CRC/清单/源码/bundle及真实
-  隔离资源路径，再交协调审查；原包永久保留历史，不试跑/解锁原入口。
+- [x] 新执行=分析`cedd70610588d4d5691c5a86cbcb923ef8ea6433`，前置仍为已审9c78e355bb43。
+  唯一新包`independent_cupti_cedd706_delivery.zip`，15,978,375 bytes，SHA256
+  `0c1bb777261affe498a8a4944938796c301eebac29d41344b4af9d7c1d51c892`，manifest SHA256
+  `cb93f55456a563b28fc40b394e5018e92cec7ae04080f75a559b3f9e1a5cee15`。13成员/12清单、
+  13源码、118 SDK/377 CUPTI成员及全部hash/CRC/路径、bundle核验通过；实际从ZIP取两份
+  bootstrap字节，在真实-I/干净临时Git checkout上调用未mock的空间函数exit0，包未改动。
+  此为本地导入/资源演练，不是目标checkout部署或目标Python通过；审计
+  `.local/diagnostics/independent_cupti_import_fix_v0_1/review.json`。后续文档HEAD不替代
+  cedd706执行身份。原包永久保留历史，不试跑/解锁原入口。
+- [ ] 新包仍待协调审查，目标A/B NOT_RUN，不因本地修复直接安排服务器或GPU执行。
 
 最高优先级仅新A交付审查；本轮不安排服务器执行，无B命令或采集授权。仍估A 2～5分钟、
 临时2GiB，历史总量UNKNOWN/长期<50e9目标不变。取证说明增补0.14及本地handoff同步。
