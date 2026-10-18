@@ -1,6 +1,33 @@
 # ExposedPath 科研进度清单
 
-## 7.199 独立CUPTI隔离bootstrap最小修复：绑定已验证checkout模块来源（2026-10-18，当前）
+## 7.200 独立CUPTI修复包协调复核通过，仅可进入目标A（2026-10-18，当前）
+
+本轮只读复核新cedd706交付及隔离入口，无业务代码/测量合同修改。执行=分析仍为
+`cedd70610588d4d5691c5a86cbcb923ef8ea6433`，目标前置9c78e355bb43/clean不变。
+
+- [x] ZIP15,978,375 bytes、SHA256
+  `0c1bb777261affe498a8a4944938796c301eebac29d41344b4af9d7c1d51c892`匹配。
+  13成员/12清单、13源码路径、118 SDK/377 CUPTI成员及全部CRC/路径/hash、bundle verify通过；
+  bootstrap/support/launcher绑定实际commit源码表示，原包及文件集合保持不变。
+- [x] 独立协调复核实际包文件，真实`python -I`、干净本地Git fixture及真实resources，
+  不改sys.path、不用PYTHONPATH、不mock存储，使用实际2GiB空间门。成功绑定仅本仓库资源
+  文件并exit0；错误parent、混合namespace、篡改源码和错误commit四项均非零/明确拒绝。
+  这是5个本地依赖复核情形，不与主窗口74项CPU相加，不冒充目标Python3.11/构建/GPU。
+- [x] 已核现有入口只允许阶段A，构建micro但不执行；CPU只运行Host harness/PE检查，
+  无B开关、无自动提权或Nsight启动。本轮不重复未改native及原74项测试。
+- [ ] 新目标A的Python3.11.16/MSVC14.38/SDK10.0.20348构建、库PE与74项CPU仍NOT_RUN。
+  协调仅同意用户显式运行本次A；目标空间/身份/编译失败即停，保留新回执，不承诺必过。
+- [ ] B实际CUPTI加载/订阅/参数/设备效果仍NOT_RUN，未提供命令或授权。新A原件审查
+  后才可另审无模型tiny；本地通过不授1024、Canonical/provider/S/A/COE资格。
+
+准确机器路径及A整段命令只存忽略的`.local/INDEPENDENT_CUPTI_A_DELIVERY.md`与
+`.local/independent_cupti_cedd706_stage_a.ps1`；回传新A静态ZIP。旧f1ba8fb、9c78来源包及
+失败现场不执行/覆盖，旧七槽/多点不恢复。审计
+`.local/diagnostics/independent_cupti_repair_coordination_v0_1/{audit.json,replay.py}`及stdout/
+stderr可复查；取证稿0.15及handoff同步。服务器尚未操作，原Raw/UNKNOWN/用户DOCX、
+512/2048结果、原A/B/COE及Gate13限定PASS不变，Gate14 NOT_RUN。
+
+## 7.199 独立CUPTI隔离bootstrap最小修复：绑定已验证checkout模块来源（2026-10-18，历史；协调复核见7.200）
 
 本轮仅本地Engineering启动链修复，承接7.198；没有服务器、模型、CUDA/CUPTI加载或Nsight
 运行。原f1ba8fb ZIP和协调拒绝原件保持，不能用新本地通过改写旧BLOCKED或授目标资格。

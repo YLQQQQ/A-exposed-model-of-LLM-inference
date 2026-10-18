@@ -1,5 +1,29 @@
 # Batch4 memset参数取证可行性审查 0.1
 
+## 2026-10-18增补：cedd706修复包仅A协调复核通过 0.15（当前，目标A/B未运行）
+
+**只允许下一步显式运行阶段A，不启动GPU微例或模型。** 新包15,978,375 bytes、SHA256
+`0c1bb777261affe498a8a4944938796c301eebac29d41344b4af9d7c1d51c892`；13成员/12清单、
+13源码、118 SDK/377 CUPTI成员全部CRC/路径/hash及bundle通过，原包不改。
+
+协调独立使用ZIP内实际bootstrap/support及已审干净本地Git fixture，以真实`python -I`
+重走bind_checkout_modules→startup_resources，未mock资源函数，空间门为实际2GiB。
+新包正确绑定已验证checkout/单一namespace/精确资源文件，exit0，严格清单无pycache污染。
+错误parent、混合namespace、篡改源码及错误commit四项均明确非零拒绝。前一次0.13的隔离
+导入阻塞已消除；不是依赖环境刚好有scripts包，也没有通过取消隔离或PYTHONPATH绕过。
+
+这5个协调复核情形仅验证本地依赖/失效路径，不能与主窗口74项CPU叠加为新科学样本。
+目标3.11.16/MSVC14.38/SDK10.0.20348、实际CUPTI订阅及设备仍未验证。A-only入口复核确认
+只部署/核实源码、SDK与库PE、编译链接和Host CPU测试；GPU micro只构建，不执行。
+没有B开关/命令，不需旧Nsight采样路线的管理员权限，不自动提权、安装或清理。
+
+下一步由用户在Windows PowerShell5.1显式执行准确新A命令，并回传新静态ZIP。
+身份、空间或构建/CPU失败即停，原样保留；不能保证目标必过，也不能预先称目标A完成。
+目标前置仍9c78e355bb43/clean；执行身份cedd706，后续审查文档commit不替代它。
+真实A审查后才可另审无模型0/64 tiny；1024、零长度顺序及S/A/COE/provider资格不升级，
+旧原件、Gate13与用户DOCX保持。机器命令和审计索引仅保存在本地交付说明及
+`.local/diagnostics/independent_cupti_repair_coordination_v0_1/`，科研进度7.200同步。
+
 ## 2026-10-18增补：隔离bootstrap模块绑定修复 0.14（当前，仅本地验证）
 
 按0.13复现并修复启动链，不扩大独立CUPTI功能或研究支持域。保留`python -I`及原包，
