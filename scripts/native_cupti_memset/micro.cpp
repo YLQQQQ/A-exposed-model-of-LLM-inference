@@ -92,7 +92,7 @@ void json_write(std::ostream& o,Client& s,const Life& life,const std::string& ru
                 const std::string& cp_hash,int rv,uint32_t cv,uint32_t uid,uint32_t sid,uint32_t device,
                 CUcontext ctx,cudaStream_t stream,const std::array<Reference,2>& refs,const std::string& error,
                 const std::wstring& runtime_path,const std::wstring& cupti_path,
-                const char* source="TARGET_GPU") {
+                const char* source="TARGET_GPU",int binding_status=0) {
     unsigned outstanding=0;for(const auto& b:s.buffers)if(b.busy)++outstanding;
     o<<"{\"schema_version\":\"independent-cupti-memset/0.1.0\",\"source\":\""<<source<<"\","
      <<"\"role\":\"ENGINEERING_PARAMETER_DIAGNOSTIC\",\"run_id\":"<<std::quoted(run)
@@ -115,7 +115,7 @@ void json_write(std::ostream& o,Client& s,const Life& life,const std::string& ru
      <<",\"dropped_query_errors\":"<<s.query_errors.load()<<",\"outstanding_buffers\":"<<outstanding<<'}'
      <<",\"stream_binding\":{\"context_uid\":"<<uid<<",\"native_context\":";
     hex(o,reinterpret_cast<std::uintptr_t>(ctx));o<<",\"native_stream\":";hex(o,reinterpret_cast<std::uintptr_t>(stream));
-    o<<",\"stream_id\":"<<sid<<",\"device_id\":"<<device<<",\"query_status\":"<<(uid && sid?0:-1)<<'}'
+    o<<",\"stream_id\":"<<sid<<",\"device_id\":"<<device<<",\"query_status\":"<<binding_status<<'}'
      <<",\"callbacks\":";write_calls(o,s.core);o<<",\"api_records\":[";
     for(size_t i=0;i<s.core.api_count;++i) {
         const auto& a=s.core.apis[i];if(i)o<<',';
@@ -154,7 +154,7 @@ int wmain(int argc,wchar_t** argv) {
     decltype(&cuptiActivityDisable) disable=nullptr;decltype(&cuptiActivityFlushAll) flush=nullptr;
     const CUpti_ActivityKind kinds[]={CUPTI_ACTIVITY_KIND_RUNTIME,CUPTI_ACTIVITY_KIND_DRIVER,CUPTI_ACTIVITY_KIND_MEMSET};
     size_t enabled=0;std::array<Reference,2> refs{};std::string error,rt_hash,cp_hash;
-    int rv=0;uint32_t cv=0,uid=0,sid=0,device=0;CUcontext context=nullptr;cudaStream_t stream=nullptr;void* ptr=nullptr;
+    int rv=0,binding_status=-1;uint32_t cv=0,uid=0,sid=0,device=0;CUcontext context=nullptr;cudaStream_t stream=nullptr;void* ptr=nullptr;
     try {
         for(const auto* key:{L"CUDA_INJECTION64_PATH",L"NVTX_INJECTION64_PATH",L"NV_COMPUTE_PROFILER_INJECTION_PATH"})
             need(GetEnvironmentVariableW(key,nullptr,0)==0,"EXTERNAL_PROFILER_ENVIRONMENT");
@@ -194,6 +194,7 @@ int wmain(int argc,wchar_t** argv) {
         need(CP(cuptiGetContextId)(context,&uid)==CUPTI_SUCCESS,"CONTEXT_ID");
         need(CP(cuptiGetDeviceId)(context,&device)==CUPTI_SUCCESS,"DEVICE_ID");
         need(CP(cuptiGetStreamIdEx)(context,reinterpret_cast<CUstream>(stream),0,&sid)==CUPTI_SUCCESS,"STREAM_ID");
+        binding_status=0; // ID values (including zero) are not query return codes.
         // The predeclared target scope begins after initialization, not during CUDA startup.
         for(auto id:{CUPTI_RUNTIME_TRACE_CBID_cudaMemsetAsync_v3020,CUPTI_RUNTIME_TRACE_CBID_cudaMemsetAsync_ptsz_v7000})
             need(CP(cuptiEnableCallback)(1,subscriber,CUPTI_CB_DOMAIN_RUNTIME_API,id)==CUPTI_SUCCESS,"ENABLE_RUNTIME_CALLBACK");
@@ -231,7 +232,7 @@ int wmain(int argc,wchar_t** argv) {
          if(!cp_hash.empty())need(hash_file(cp_path)==cp_hash,"CUPTI_CHANGED");}
     catch(const std::exception& e) {error=e.what();}
     std::ostringstream text;json_write(text,*client,life,run,rt_hash,cp_hash,rv,cv,uid,sid,device,
-        context,stream,refs,error,rt_path,cp_path);const auto bytes=text.str();
+        context,stream,refs,error,rt_path,cp_path,"TARGET_GPU",binding_status);const auto bytes=text.str();
     HANDLE f=CreateFileW(out.c_str(),GENERIC_WRITE,0,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
     if(f==INVALID_HANDLE_VALUE)return 2;DWORD written=0;
     const bool saved=WriteFile(f,bytes.data(),static_cast<DWORD>(bytes.size()),&written,nullptr)!=0 && written==bytes.size();

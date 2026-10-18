@@ -37,10 +37,14 @@
 只运行Host harness，没有加载CUDA/CUPTI、初始化GPU或运行微例。
 手算正反例、真实native JSON→reader、缓冲耗尽/丢失/解析错误、参数突变后快照、PTSZ分派、
 同数不同domain、缺效果/错scope/错父子/错返回、A-only真实PS5.1分派及失败回执/封包均覆盖。
-定向最终62 passed/0 failed/0 skipped（8.88s），JUnit`.local/cupti_final_v2.xml`；
+定向最终65 passed/0 failed/0 skipped（9.25s），JUnit`.local/cupti_release_verified.xml`；
 本地14.44/3.12结果**不冒充**目标14.38/3.11.16构建或GPU覆盖。
 修正了真实编译发现的SDK重复include及明确ABI对齐警告，未修改vendor头或使用stub；
 PS5.1子进程按仓库已有测试方式固定其自身Modules目录，不继承PS7模块路径。
+最后真实bootstrap演练复现并修正随包support导入产生pycache导致清单拒绝；没有忽略多余
+文件。另以成功查询状态区分合法的零context/stream ID，不能将数值0自动解释为缺失或默认流。
+首次本地包装误列不存在的tests/__init__.py已移除（新测试无跨tests helper导入）；
+未发布草稿不用于目标执行，最终包只绑定修正后commit。
 
 交付A仅验证前置/固定bundle/源码实字节、SDK/库PE文件身份及所需导出，真实构建/链接、
 上述CPU和新鲜参与卷空间；无B开关，不初始化CUDA，不安装依赖/升级工具链，不遍历历史

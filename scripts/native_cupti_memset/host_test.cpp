@@ -15,6 +15,7 @@ int main(int argc,char** argv) {
     p.devPtr=reinterpret_cast<void*>(0x9000);p.stream=reinterpret_cast<cudaStream_t>(0x5670);
     cudaMemsetAsync_ptsz_v7000_params q{};q.count=p.count;q.value=p.value;q.devPtr=p.devPtr;q.stream=p.stream;
     CUpti_CallbackData d{};d.context=reinterpret_cast<CUcontext>(0x1230);d.contextUid=1;d.correlationId=100;
+    if(mode=="context_uid_zero")d.contextUid=0;
     d.functionName=ptsz?"cudaMemsetAsync_ptsz":"cudaMemsetAsync";
     if(mode=="versioned_name") {s->ordinary_name="cudaMemsetAsync_v3020";d.functionName="cudaMemsetAsync_v3020";}
     if(mode=="wrong_name")d.functionName="not_the_expected_function";
@@ -41,7 +42,7 @@ int main(int argc,char** argv) {
         GetModuleHandleW(L"cupti64_2024.1.1.dll");
     std::cout<<"{\"count\":"<<c.count<<",\"value\":"<<c.value<<",\"native_stream\":";
     ep_cupti::hex(std::cout,c.stream);
-    std::cout<<",\"observed_name\":\""<<c.name<<"\",\"entry_kind\":\""<<(c.ptsz?"PTSZ":"ORDINARY")<<"\",\"return_code\":"<<c.status
+    std::cout<<",\"context_uid\":"<<c.uid<<",\"observed_name\":\""<<c.name<<"\",\"entry_kind\":\""<<(c.ptsz?"PTSZ":"ORDINARY")<<"\",\"return_code\":"<<c.status
         <<",\"callback_error\":"<<s->error<<",\"vendor_dll_loaded\":"<<(loaded?"true":"false")
         <<",\"cuda_calls\":0,\"cupti_calls\":0}\n";
     return loaded?2:0;

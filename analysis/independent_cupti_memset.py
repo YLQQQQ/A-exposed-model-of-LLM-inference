@@ -44,8 +44,8 @@ def review(v, *, expected=None):
          'dropped_records','dropped_query_errors','outstanding_buffers')),'LOSS_OR_OVERFLOW')
     require(integer(loss.get('dropped_queries'),1),'DROPPED_QUERY_UNKNOWN')
     b=v.get('stream_binding',{})
-    require(b.get('query_status')==0 and integer(b.get('context_uid'),1) and
-        integer(b.get('stream_id'),1) and integer(b.get('device_id')) and
+    require(type(b.get('query_status')) is int and b['query_status']==0 and integer(b.get('context_uid')) and
+        integer(b.get('stream_id')) and integer(b.get('device_id')) and
         all(isinstance(b.get(k),str) and b[k].startswith('0x') and int(b[k],16)>0
             for k in ('native_context','native_stream')),'STREAM_BINDING')
     calls={};callback_keys=set()

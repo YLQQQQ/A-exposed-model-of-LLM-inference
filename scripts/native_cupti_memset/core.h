@@ -59,7 +59,7 @@ struct Core {
             if (call_count==CALL_CAP || depth==stack.size()) {++callback_overflow;++error;return;}
             // Single-thread, non-reentrant micro only. Do not flatten nested driver calls.
             if ((rt && depth) || (!rt && (depth!=1 || !calls[stack[0]].runtime))) {++error;return;}
-            if (!data.functionName || !data.correlationId || !data.context || !data.contextUid) {++error;return;}
+            if (!data.functionName || !data.correlationId || !data.context) {++error;return;}
             auto& c=calls[call_count];c.id=call_count+1;c.parent=depth?calls[stack[depth-1]].id:0;
             c.enter=++seq;c.pid=pid;c.tid=tid;c.runtime=rt;c.cbid=cbid;c.uid=data.contextUid;
             c.context=reinterpret_cast<std::uintptr_t>(data.context);c.correlation=data.correlationId;

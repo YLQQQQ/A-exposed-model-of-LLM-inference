@@ -15,7 +15,7 @@
 - [x] A-only默认入口：只部署、SDK/源码/库PE/导出检查、构建链接和CPU；无采集开关。
   前置绑定已审9c78e355bb43回执，不再假定4da800d。源码允许的LF/CRLF表示由commit预定，
   记录实际字节，不用实际hash替换期望。失败返回非零、保留新receipt/未覆盖旧现场。
-- [x] 本地定向62 passed/0 failed/0 skipped，8.88s，`.local/cupti_final_v2.xml`；包含真实
+- [x] 本地定向65 passed/0 failed/0 skipped，9.25s，`.local/cupti_release_verified.xml`；包含真实
   MSVC/匹配SDK编译链接及Host替身、PE导出、PS5.1实际分派、身份/失败传播。GPU微例未运行，
   Host EXE没有加载vendor库。Python3.12.7/MSVC14.44/SDK10.0.26100不同于目标3.11.16/
   MSVC14.38/SDK10.0.20348；不称目标构建/GPU验证。不重跑旧110项或完整Q0。
@@ -23,6 +23,8 @@
   参数/设备效果均NOT_RUN。仅A可交审，无B命令，需真实新A原件审查后才另行授权微例。
   本地首次包装在Git源码清单预检查发现不存在的tests/__init__.py，尚无ZIP/bundle发布；
   三个新测试文件不导入tests共享helper，移除该错误依赖项，不新增全局测试包或放宽源码门。
+  后续真实bootstrap检查复现随包support导入pycache污染，已修正且不忽略多余文件；
+  成功查询的context/stream数值0不再被误判缺失。草稿b306018未发布、不可执行。
 - [ ] 本版并非完整Canonical provider；微例成功不能直接接回S/A/COE，不拼接旧Nsight实例。
   完整同次模型scope/kernel/Memcpy/ownership/drain/依赖/terminal的返回路径仍未实现/授资格；
   若需要扩大provider，先作独立投入决定，不将窄域工具滚动扩建。旧1024仍BLOCKED。

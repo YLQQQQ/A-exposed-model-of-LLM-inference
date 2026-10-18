@@ -123,6 +123,14 @@ def test_observed_name_must_match_fixed_entry_or_official_callback_name():
     with pytest.raises(ValueError,match='^CUPTI_MICRO_CALLBACK_NAME$'):m.review(v)
 
 
+def test_successfully_queried_zero_context_or_trace_stream_id_is_not_missing():
+    m=module();v=evidence()
+    v['stream_binding'].update(context_uid=0,stream_id=0)
+    for c in v['callbacks']:c['context_uid']=0
+    v['effects'][0].update(context_uid=0,stream_id=0)
+    assert m.review(v)['status']=='MICRO_PARAMETER_EFFECT_PASS_LIMITED'
+
+
 def test_file_chain_binds_exact_bytes_and_refuses_target_promotion(tmp_path):
     m=module();p=tmp_path/'raw.json';p.write_text(json.dumps(evidence()),encoding='utf8')
     out=tmp_path/'derived-v0.1';r=m.review_file(p,out)

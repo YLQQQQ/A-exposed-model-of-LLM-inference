@@ -139,3 +139,17 @@ def test_actual_powershell51_launcher_has_only_static_dispatch(tmp_path,extra,su
     assert (p.returncode==0)==success,p.stderr.decode(errors='replace')
     if success:assert json.loads((tmp_path/'argv.json').read_text())==['--package',str(tmp_path)]
     else:assert not (tmp_path/'argv.json').exists()
+
+
+def test_packaged_support_import_does_not_change_strict_package_file_set(tmp_path):
+    root=Path(__file__).resolve().parents[1]
+    driver=tmp_path/'independent_cupti_stage.py'
+    driver.write_bytes((root/'scripts/independent_cupti_stage.py').read_bytes())
+    (tmp_path/'micro_support.py').write_bytes((root/'scripts/memset_micro.py').read_bytes())
+    before={p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob('*') if p.is_file()}
+    p=subprocess.run([sys.executable,'-I','-c',
+        "import runpy,sys; ns=runpy.run_path(sys.argv[1]); ns['support']()",str(driver)],
+        capture_output=True,timeout=20)
+    assert p.returncode==0,p.stderr.decode(errors='replace')
+    after={p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob('*') if p.is_file()}
+    assert after==before, 'bootstrap import polluted strict package coverage'

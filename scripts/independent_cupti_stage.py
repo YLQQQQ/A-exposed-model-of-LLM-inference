@@ -13,7 +13,11 @@ def support():
     sibling=Path(__file__).with_name('micro_support.py')
     if sibling.is_file():
         spec=importlib.util.spec_from_file_location('_cupti_micro_support',sibling)
-        m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
+        m=importlib.util.module_from_spec(spec);previous=sys.dont_write_bytecode
+        try:
+            sys.dont_write_bytecode=True;spec.loader.exec_module(m)
+        finally:sys.dont_write_bytecode=previous
+        return m
     from scripts import memset_micro
     return memset_micro
 

@@ -25,7 +25,7 @@ def native(tmp_path_factory):
 @pytest.mark.parametrize('mode,count,code,entry',[
     ('ordinary',64,0,'ORDINARY'),('zero',0,0,'ORDINARY'),
     ('large',2**63+7,0,'ORDINARY'),('ptsz',64,0,'PTSZ'),('failed',64,2,'ORDINARY'),
-    ('versioned_name',64,0,'ORDINARY')])
+    ('versioned_name',64,0,'ORDINARY'),('context_uid_zero',64,0,'ORDINARY')])
 def test_real_header_entry_copy_survives_mutation_and_exit_keeps_return(native,mode,count,code,entry):
     b,out=native
     p=subprocess.run([b['host_test'],mode],cwd=out,capture_output=True,timeout=15)
@@ -35,6 +35,7 @@ def test_real_header_entry_copy_survives_mutation_and_exit_keeps_return(native,m
     assert r['return_code']==code and r['entry_kind']==entry and r['callback_error']==0
     assert r['vendor_dll_loaded'] is False and r['cuda_calls']==0 and r['cupti_calls']==0
     if mode=='versioned_name':assert r['observed_name']=='cudaMemsetAsync_v3020'
+    if mode=='context_uid_zero':assert r['context_uid']==0
 
 
 @pytest.mark.parametrize('mode',[
