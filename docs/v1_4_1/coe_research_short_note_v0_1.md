@@ -1201,7 +1201,8 @@ forward范围指定源码callsite，也不能从85/113的规律断言零长度�
 `R=Q2048−Q512×G2048/G512`；另预定256→512、512→1024、1024→2048的signed差和同式R，
 其中G为同phase GPU union，分母0/未知则null，不加epsilon。首/第二token原值均保留，
 token/kernel不是独立重复，累计W不当Decode新增量。固定输出包括原A和独立候选预算的
-绝对值/phase比例、Q/G、copy/sync/操作墙钟、原sync交集、补集、活动位置/来源和公平baseline。
+绝对值/phase比例、Q/T及Q/G、copy/sync/操作墙钟、原sync交集、补集、活动位置/来源和公平baseline。
+T取同次同trace钟的phase投影长度；Q/T与迁移后预算的(E∪Q)/T分列，不把后者冒充COE本身占比。
 所有合法零值、负差、非单调均保留；质量硬失败或固定预算即停，不删失败点/替补/续采。
 时间估计55～80分钟，临时预留12GiB、最终保留估1.5～3GiB；沿用profile300s/driver900s，
 不是把估计当新全批硬deadline。1024缺证未解决前，**此四点方案不得打包启动**。
