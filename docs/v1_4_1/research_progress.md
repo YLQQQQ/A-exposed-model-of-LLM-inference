@@ -1,6 +1,36 @@
 # ExposedPath 科研进度清单
 
-## 7.198 独立CUPTI交付协调审查：隔离入口缺checkout导入绑定，A执行暂不通过（2026-10-18，当前）
+## 7.199 独立CUPTI隔离bootstrap最小修复：绑定已验证checkout模块来源（2026-10-18，当前）
+
+本轮仅本地Engineering启动链修复，承接7.198；没有服务器、模型、CUDA/CUPTI加载或Nsight
+运行。原f1ba8fb ZIP和协调拒绝原件保持，不能用新本地通过改写旧BLOCKED或授目标资格。
+
+- [x] 用原随包文件、真实`python -I`再次复现`ModuleNotFoundError`；原因是support资源函数
+  需要仓库模块，而原bootstrap没有建立已验证checkout的模块绑定。新增隔离回归先7项失败，
+  缺陷/失败记录保存在`.local/cupti_import_red.xml`，不是目标3.11运行证据。
+- [x] 保留`-I`。在部署、commit/clean及源码实字节审核后，显式建立仅指向该checkout的
+  `scripts` namespace和`coe_startup_storage`文件导入；再次核commit及该依赖源码表示。
+  不改`sys.path`、不使用PYTHONPATH、不执行未入索引的`__init__.py`，已加载第三方、旧
+  checkout、混合namespace或错子模块来源明确拒绝。新`checkout_imports.json`记录执行
+  commit、实际模块路径及源码bytes/SHA256，随新A回执/清单归档。
+- [x] 新增真实隔离子进程：随包bootstrap/support→临时真实Git checkout→真实空间函数，
+  包含错误commit、源码hash、第三方/旧/混合namespace和错误leaf反例；另经实际stage_a
+  走到资源后下一文件门，缺runtime保留BLOCKED、非零返回及完整封包。仅部署/构建等外部
+  边界替身，资源函数不再mock。普通pytest自身的第三方namespace污染由fixture明确隔离，
+  没有放宽生产拒绝条件；随包文件无pycache或其他新增字节。
+- [x] 定向命令：`python -m pytest -q -ra -p no:cacheprovider tests/test_independent_cupti_memset.py tests/test_independent_cupti_native.py tests/test_independent_cupti_delivery.py --basetemp=.local/cupti_import_release --junitxml=.local/cupti_import_release.xml --tb=short`，
+  **74 passed / 0 failed / 0 skipped，16.47s**。通过显式CPU配置和已核hash的build.json复用
+  未改native编译产物，只运行Host harness、PE字节检查及CPU文件链；不重建未变GPU程序。
+  本地Python3.12.7不冒充目标3.11.16；目标A真实构建/CPU仍NOT_RUN。
+- [ ] 提交实现后固定新执行=分析commit，重制唯一A-only包并核CRC/清单/源码/bundle及真实
+  隔离资源路径，再交协调审查；原包永久保留历史，不试跑/解锁原入口。
+
+最高优先级仅新A交付审查；本轮不安排服务器执行，无B命令或采集授权。仍估A 2～5分钟、
+临时2GiB，历史总量UNKNOWN/长期<50e9目标不变。取证说明增补0.14及本地handoff同步。
+未改参数/效果审核器、native逻辑、生产A/B/COE或冻结合同；旧1024/B2 BLOCKED、Gate13
+限定PASS/Gate14 NOT_RUN、Raw/UNKNOWN/NOT_ASSESSED及用户DOCX/大型原件保持。
+
+## 7.198 独立CUPTI交付协调审查：隔离入口缺checkout导入绑定，A执行暂不通过（2026-10-18，历史；修复见7.199）
 
 仅审查已发布f1ba8fb阶段A包，未修改业务代码、未执行服务器或GPU。发现一个本地可复现
 阻塞：launcher以`python -I`运行随包bootstrap；bootstrap未在调用`startup_resources`

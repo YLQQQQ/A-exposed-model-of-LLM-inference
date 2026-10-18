@@ -1,5 +1,6 @@
 """Stage A only: deployment, real-header build/link, Host doubles. No GPU run action."""
 import argparse
+import importlib.machinery
 import importlib.util
 import json
 import os
@@ -79,6 +80,51 @@ def verify_sources(code,representations):
     m.require(seen,'EMPTY_SOURCE_INDEX');return seen
 
 
+def bind_checkout_modules(cfg):
+    """Bind only the byte-verified storage dependency, never ambient sys.path."""
+    m=support();code=Path(cfg['code_root']).resolve()
+    m.tree(cfg,cfg['execution_commit'])
+    name='scripts.coe_startup_storage';relative='scripts/coe_startup_storage.py'
+    m.require(relative in cfg['source_representations'],'CHECKOUT_SOURCE_INDEX')
+    observed=verify_sources(code,{relative:cfg['source_representations'][relative]})
+    directory=m.safe(code,'scripts');source=m.safe(code,relative)
+    # This checkout uses a namespace package. Do not execute an unindexed init
+    # file, merge another checkout's namespace, or reuse a loaded third-party.
+    m.require(not (directory/'__init__.py').exists(),'CHECKOUT_PACKAGE_ORIGIN')
+    parent=sys.modules.get('scripts')
+    if parent is not None:
+        spec=getattr(parent,'__spec__',None)
+        m.require(getattr(parent,'__file__',None) is None and spec is not None and
+            spec.origin is None and
+            list(map(Path,getattr(parent,'__path__',())))==[directory] and
+            list(map(Path,spec.submodule_search_locations or ()))==[directory],
+            'CHECKOUT_PACKAGE_ORIGIN')
+    leaf=sys.modules.get(name)
+    if leaf is not None:
+        spec=getattr(leaf,'__spec__',None)
+        m.require(getattr(leaf,'__file__',None) is not None and
+            Path(leaf.__file__)==source and spec is not None and spec.origin is not None and
+            Path(spec.origin)==source,'CHECKOUT_MODULE_ORIGIN')
+    if parent is not None and hasattr(parent,'coe_startup_storage'):
+        m.require(parent.coe_startup_storage is leaf and leaf is not None,'CHECKOUT_MODULE_ORIGIN')
+    if parent is None:
+        spec=importlib.machinery.ModuleSpec('scripts',loader=None,is_package=True)
+        spec.submodule_search_locations=[str(directory)]
+        parent=importlib.util.module_from_spec(spec);sys.modules['scripts']=parent
+    if leaf is None:
+        spec=importlib.util.spec_from_file_location(name,source)
+        leaf=importlib.util.module_from_spec(spec);sys.modules[name]=leaf
+        previous=sys.dont_write_bytecode
+        try:
+            sys.dont_write_bytecode=True;spec.loader.exec_module(leaf)
+        finally:sys.dont_write_bytecode=previous
+    parent.coe_startup_storage=leaf
+    return dict(schema_version='independent-cupti-checkout-import/0.1.0',
+        execution_commit=cfg['execution_commit'],code_root=str(code),
+        namespace_path=list(parent.__path__),modules=[dict(name=name,origin=str(source),**observed[0])],
+        sys_path_modified=False,pythonpath_used=False)
+
+
 def deploy(cfg,package,out):
     m=support();m.tree(cfg,cfg['prerequisite'])
     m.command([cfg['git'],'bundle','verify',str(package/'execution.bundle')],cfg['code_root'],out/'bundle_verify')
@@ -120,6 +166,7 @@ def stage_a(package):
         m.require(list(sys.version_info[:3])==cfg['python_version'],'PYTHON_VERSION')
         deploy(cfg,package,out);m.tree(cfg,cfg['execution_commit'])
         m.write(out/'source_bytes.json',verify_sources(code,cfg['source_representations']))
+        m.write(out/'checkout_imports.json',bind_checkout_modules(cfg))
         m.write(out/'resources.json',startup_resources(out,archive,cfg))
         for name,fact in cfg['toolchain_files'].items():
             m.require(m.file_fact(fact['path'])==fact,'TOOLCHAIN:'+name)

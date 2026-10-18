@@ -1,6 +1,33 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-18增补：f1ba8fb交付启动链协调审查 0.13（当前，暂不执行A）
+## 2026-10-18增补：隔离bootstrap模块绑定修复 0.14（当前，仅本地验证）
+
+按0.13复现并修复启动链，不扩大独立CUPTI功能或研究支持域。保留`python -I`及原包，
+不以PYTHONPATH、取消隔离或吞异常放行。原f1ba8fb包仍是被拒绝的历史交付。
+
+顺序固定为：严格包清单→前置checkout/部署→执行commit及clean→全索引源码字节→再次核
+commit及资源依赖字节→显式绑定该checkout的`namespace + file`→真实空间函数。新组件
+记录`independent-cupti-checkout-import/0.1.0`，包含commit、code_root、namespace_path、
+模块origin和源码bytes/SHA256；写入`checkout_imports.json`，由A回执及产物清单绑定。
+这是启动链provenance，不是新增测量合同；原A-only配置和科研schema不放宽。
+
+绑定不搜索环境中的同名包，不修改sys.path。已有scripts若来自旧checkout、第三方或
+混合namespace，或已有leaf与预定源文件不同，则明确拒绝；不执行未入源码索引的init文件。
+仅依赖实际已审核的标准库资源模块，不加载vendor库、torch或采集入口。
+
+真实本地隔离子进程使用随包bootstrap/support、临时真实Git checkout和真实参与卷空间
+函数，正反例覆盖错误来源/commit/源码、未加载但可发现的第三方包，以及实际stage_a
+资源之后下一文件门的失败回执/封包。未再mock startup_resources。旧测试环境含合并的
+第三方namespace会被新严格门拒绝；测试fixture显式声明隔离namespace，真实-I负例保留
+这种拒绝，未为了普通pytest通过而降低生产门槛。
+
+定向74 passed/0 failed/0 skipped（16.47s），JUnit`.local/cupti_import_release.xml`；
+新增前7项失败的红例和原ModuleNotFoundError均保留。native/参数审核器未变，复用此前
+真实头文件编译产物并验证binary hash，执行Host-only回归；本地3.12.7不替代目标3.11.16。
+不重跑完整Q0/旧110项，不运行模型、GPU或Nsight。实现提交后再绑定新包，避免hash自引用；
+新包仍需协调审查，A真实原件审查前没有B命令。原始证据、冻结/旧Formal及1024拒绝不改。
+
+## 2026-10-18增补：f1ba8fb交付启动链协调审查 0.13（历史，原包暂不执行A）
 
 **协调审查发现可复现的隔离导入缺口，原包暂不执行；不是GPU微例或1024又失败。**
 ZIP为15,968,398 bytes、SHA256
