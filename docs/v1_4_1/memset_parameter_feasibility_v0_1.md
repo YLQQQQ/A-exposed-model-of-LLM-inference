@@ -1,5 +1,37 @@
 # Batch4 memset参数取证可行性审查 0.1
 
+## 2026-10-18增补：1024原生调用栈有限实现与交付准备 0.9（当前，目标NOT_RUN）
+
+用户批准继续完成通用分析适用性目标。本轮实现0.8已选的来源诊断；**还没有取得目标机
+调用栈、count或设备效果，不能称1024已经修复。** 256和四点研究准备保留，旧失败不重写。
+
+- [有限身份](../../exposedpath/memset_callsite.py)为独立Engineering，只允许1024/1/2、
+  P/w3/r1、一次profile。通过原Engineering adapter复用真实Qwen执行链，P helper函数体及
+  CUDA/Host-readable完成政策不变；旧Pilot、原S/A/B/COE计算没有放宽。旧collector及COE
+  preparation消费者显式拒绝新source-only角色。
+- [collector](../../scripts/memset_callsite_collect.py)保留原目标/producer/trace/nonce绑定；
+  开启原生all:0栈与process-tree 200Hz采样，不使用VectorModel、Python栈或第二subscriber。
+  CLI duration240秒、profile进程硬上限300秒、外层900秒，避免两个相同deadline抢在封尾前
+  强杀；不扩大原预算。只导出与运行来源查询，绝不为本诊断运行完整S/A/COE。
+- [来源消费](../../analysis/memset_callsite.py)只读原SQLite，按真实callchainId连接目标
+  帧，不按时间配栈。全部Prefill调用保留，并区分有/无关联效果；未观察效果不推断count0。
+  合法共享栈、未解析符号、VM命名空间、空/悬空栈、重复depth与仅工具帧均有CPU检查。
+  采后文件hash不是装载证明，原IP不是callee入口；源定位不等于参数、效果或必要依赖闭合。
+- [A/B入口](../../scripts/memset_callsite_stage.py)默认A，仅部署/CPU/compile/空间与NSys
+  help/version、实际管理员token；不自行提权。B须新A精确receipt SHA及显式采样风险接受。
+  原BugCheck 0x133仍UNKNOWN；200Hz不限制API取栈成本，不承诺系统安全。只一次，失败停止，
+  不自动进入CUPTI或重开hook；没有确证目标退出时拒绝封包，保留现场。
+- [打包器](../../scripts/package_memset_callsite.py)从真实Git commit和已审4da800d静态原件
+  绑定前置，固定1024输入/模型清单及源码实字节（明确Git blob/合法CRLF表示，不归一化文件）。
+  不安装依赖或构建native库。实际包身份/路径由忽略的本地交付说明提供；不将CPU替身视为
+  目标机权限、profile或参数资格。目标3.11及实际Nsight栈均待新A/B回执。
+
+相关回归242项通过；最后入口29项通过，覆盖重叠不相加，均无失败/跳过。完整producer和
+prepare/seal/consume使用真实文件与共同trace投影，模型/设备/NSys边界是CPU替身；
+Python3.11语法、compileall、PS5.1解析及diff检查通过。本地Python3.12.7，没有GPU实验。
+原始1024/旧BLOCKED仍不可评估；成功时只报CALLSITE_LOCATED，若缺口未复现或栈不足则
+不可判别/失败。研究进度7.194及handoff同步，旧Formal/Gate与用户DOCX保持。
+
 ## 2026-10-18增补：1024来源定位优先，先用Nsight原生CUDA调用栈 0.8（当前）
 
 **裁决：1024能执行，当前不能完成的是分析准入；尚未证明它不可修复。优先准备一次真实

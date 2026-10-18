@@ -139,7 +139,7 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
     if batch_binding is not None:
         from .batch_load import validate_input
         from . import memset_prefill as parameters
-        if preparing:preparation.validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')),length)
+        if preparing:preparation.validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')),length,binding=batch_binding)
         elif parameters.active(batch_binding):
             memset_input=parameters.validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')))
         else:validate_input(prompt,json.loads((Path(model_path)/'config.json').read_text(encoding='utf-8')),batch_binding['batch_size'])
@@ -308,7 +308,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
             from .batch_load import validate_input as batch_input
             if preparing:
                 preparation.validate_input(json.loads(prompt_path.read_text(encoding='utf-8')),
-                    json.loads((Path(manifest['model_id'])/'config.json').read_text(encoding='utf-8')),length)
+                    json.loads((Path(manifest['model_id'])/'config.json').read_text(encoding='utf-8')),length,binding=pilot)
             elif parameter_profile:
                 parameters.validate_input(json.loads(prompt_path.read_text(encoding='utf-8')),
                     json.loads((Path(manifest['model_id'])/'config.json').read_text(encoding='utf-8')))

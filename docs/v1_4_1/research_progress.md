@@ -1,6 +1,42 @@
 # ExposedPath 科研进度清单
 
+## 7.194 1024真实来源诊断：有限入口与只读消费实现完成，目标NOT_RUN（2026-10-18，当前）
+
+用户接受继续完成“同一规则覆盖不同长度”的目标；本轮落实7.193已选原生栈诊断的本地
+实现与交付准备，不将1024假定零长度或跳过。最高优先级是审查新A真实回执，再由用户显式
+决定一次B来源采集；1024实际count/设备效果及旧hook零捕获原因仍UNKNOWN。
+
+- [x] 独立`MEMSET-CALLSITE-ENGINEERING/0.1`，固定1024/batch1/o2/P/w3/r1、一个模型
+  进程/一个profile。复用原prepare/isolated seal/target入口/P helper；角色始终Engineering，
+  不冒充Pilot或恢复七槽。P的Host读取/NVTX/完成函数体、原S/A/B/COE算法不改。
+- [x] 独立collector固定`--sample=process-tree --sampling-frequency=200 --cudabacktrace=all:0`；
+  不保留冲突的sample/ctxsw none，不用Linux Python栈。CLI duration240s，进程硬超时300s，
+  外层900s，给结束/导出留余量，不提高原预算。旧采集/COE消费入口明确拒绝source-only角色。
+- [x] 只读SQLite通过runtime.callchainId连接CUDA_CALLCHAINS.id，保留全部Prefill目标调用、
+  实际ID/线程/模块/IP及有无效果组；复用栈ID合法，空栈、悬空、重复depth、仅工具帧与
+  不可读模块不伪造来源。VM/global process命名空间保留；只读取目标调用涉及的栈行。
+  模块文件hash是采后Raw所命名文件的身份，不冒充已证装载或callee入口。count仍null，
+  参数/效果恢复及A/COE均NOT_ASSESSED；若新run无缺效果组则不可判别，不追认旧1024。
+- [x] 默认A只部署/源码实字节/CPU/compile、新鲜12GiB空间和NSys help/version及实际管理员
+  token核验，不加载模型/启动profile、不自动提权。B另需新A receipt SHA及显式接受采样风险；
+  历史BugCheck 0x133未定因，低频/timeout不保证无系统风险。失败即停，不自动换hook/CUPTI。
+- [x] 真实PS5.1分派、CPU producer→Canonical/共同trace锚点→来源报告、prepare→seal→consume
+  →profile argv，以及实际控制器/清单/ZIP路径均覆盖；模型、设备、NSys和OS外部边界明确为
+  CPU替身。已观察目标退出才允许封包；未知writer保留现场并拒绝封包，不清理或杀无关进程。
+- [ ] 新A目标3.11.16/权限/选项事实、B实际栈覆盖及1024根因：均NOT_RUN。构建包由真实
+  execution commit及封存4da800d静态回执绑定；A通过不自动授B或1024/四点资格。
+
+验证：新增检查先见缺模块/入口、VM串配及超时余量红灯；本地相关回归242 passed/0 failed/
+0 skipped（`.local/callsite_final_regression2.xml`）；最后入口29 passed/0 failed/0 skipped
+（`.local/callsite_target_tests_final.xml`），覆盖重叠不相加。新完整prepare/seal/consume边界
+另单项通过并包含在最后29项。回归中已修正测试替身导入污染，仅调整测试加载，不放宽门。
+本地Python3.12.7；Python3.11语法检查不冒充目标3.11运行。compileall、PS5.1解析及diff检查
+通过；不是新Q0/GPU验证。原始1024/BLOCKED、四block端点、256准备、Raw和用户DOCX均保持。
+Gate13限定PASS、Gate14 NOT_RUN不改。本轮不操作服务器；旧三点/四点采集包继续暂停。
+
 ## 7.193 1024来源定位优先：原生CUDA调用栈方案，独立CUPTI候选不否定（2026-10-18，当前）
+
+> 本节保留方案时点；本地实现及真实待验证项见7.194，诊断尚未在目标机执行。
 
 用户调整优先级：256准备保留，暂缓256/512/2048三点包；重新调查1024真实调用来源。
 本轮仅本地接口/文档/SDK核对及必要CPU原型，没有服务器、GPU、新模型或新采集。

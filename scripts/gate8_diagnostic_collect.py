@@ -130,6 +130,9 @@ def target_argv(python,prepared,output,root=ROOT):
 def profile_argv(nsys,python,prepared,output,root=ROOT):
     from exposedpath.gate8_diagnostic import measurement_pass
     manifest=Path(prepared)/'manifest.json'
+    from exposedpath.memset_callsite import active as callsite_active
+    if manifest.exists() and callsite_active(json.loads(manifest.read_text(encoding='utf-8')).get('batch_load')):
+        raise ValueError('MEMSET_CALLSITE_SOURCE_ONLY_REQUIRES_DEDICATED_COLLECTOR')
     if manifest.exists() and measurement_pass(json.loads(manifest.read_text(encoding='utf-8')))!='pass1':
         raise ValueError('ENGINEERING_PAIR_PROFILE_PASS')
     kill='true' if sys.platform=='win32' else 'sigkill'

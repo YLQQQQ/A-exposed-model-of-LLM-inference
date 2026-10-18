@@ -26,7 +26,8 @@ def require(ok,reason):
 
 
 def active(value):
-    return isinstance(value,dict) and value.get('version')==VERSION
+    from .memset_callsite import active as callsite_active
+    return (isinstance(value,dict) and value.get('version')==VERSION) or callsite_active(value)
 
 
 def schedule(batch_id,commit):
@@ -41,6 +42,8 @@ def schedule(batch_id,commit):
 
 
 def validate_binding(value):
+    from . import memset_callsite as callsite
+    if callsite.active(value):return callsite.validate_binding(value)
     require(isinstance(value,dict),'BINDING')
     require(any(value==b and all(type(value[k]) is type(v) for k,v in b.items())
         for b in schedule(value.get('batch_id'),value.get('execution_commit'))),'BINDING')
@@ -48,6 +51,8 @@ def validate_binding(value):
 
 
 def minimal_fields(binding):
+    from . import memset_callsite as callsite
+    if callsite.active(binding):return callsite.minimal_fields(binding)
     b=validate_binding(binding)
     from .gate8_engineering_contract import declaration
     scope=declaration('sdpa');scope['profile']=PROFILE
@@ -66,7 +71,12 @@ def validate(manifest):
     return b
 
 
-def validate_input(prompt,config,length):
+def validate_input(prompt,config,length,*,binding=None):
+    from . import memset_callsite as callsite
+    if callsite.active(binding):
+        callsite.validate_binding(binding)
+        require(length==1024,'INPUT_LENGTH')
+        return callsite.validate_input(prompt,config)
     from .gate10_workload import validate_input as single
     require(length in (32,512) and type(length) is int,'INPUT_LENGTH')
     # Reuse the exact token range, mask, specials and 32-token cycle checks.
@@ -86,7 +96,7 @@ def validate_prepared(manifest,prepared,root):
     require(sha(Path(prepared)/'prompt.json')==manifest['prompt_tokens_sha256']
         and sha(Path(root)/'exposedpath/runner.py')==manifest['runner_source_sha256'],'INPUT_HASH')
     require(manifest.get('preparation_source_sha256')==sha(Path(root)/'exposedpath/observation_preparation.py'),'PREPARATION_SOURCE_HASH')
-    validate_input(read(Path(prepared)/'prompt.json'),read(Path(manifest['model_id'])/'config.json'),b['input_tokens'])
+    validate_input(read(Path(prepared)/'prompt.json'),read(Path(manifest['model_id'])/'config.json'),b['input_tokens'],binding=b)
 
 
 @dataclass(frozen=True)
@@ -183,7 +193,7 @@ def validate_tokens(path,manifest,ledger,execution,manifest_path,producer_path):
         and isinstance(ids,list) and len(ids)==2 and all(isinstance(a,list) and len(a)==1
         and type(a[0]) is int and a[0]>=0 for a in ids),'TOKEN_VALUES_OR_IDENTITY')
     p=execution['observation_preparation']
-    require(p['version']==VERSION and p['binding']==b and p['identity']==r['identity']
+    require(p['version']==b['version'] and p['binding']==b and p['identity']==r['identity']
         and p['pid']==ledger['pid'] and type(p['tid']) is int and p['tid']>0 and p['closed'] is True
         and p['dynamic_operations_moved'] is False,'PREPARATION_RECEIPT')
     from .nvtx import make_natural_token_ready_identity,make_structured_nvtx_label

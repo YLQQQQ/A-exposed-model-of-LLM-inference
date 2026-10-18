@@ -21,6 +21,8 @@ def process(receipt_path,execution_path,output):
     from exposedpath import coe_input_pilot as axis,coe_pilot
     mf=read(paths['wmpc_manifest']);input_axis=axis.active(mf.get('pilot'))
     binding=axis.validate(mf) if input_axis else contract.validate(mf)
+    from exposedpath.memset_callsite import active as callsite_active
+    contract.require(not callsite_active(binding),'SOURCE_ONLY_NOT_A_OR_COE_ADMISSION')
     validator=coe_pilot if input_axis else contract
     validator.validate_prepared(mf,paths['wmpc_manifest'].parent,Path(__file__).resolve().parents[1])
     hashes={Path(p):sha(p) for p in (receipt_path,execution_path,*paths.values())}
