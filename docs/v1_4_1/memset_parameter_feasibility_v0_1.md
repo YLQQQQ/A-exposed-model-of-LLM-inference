@@ -33,6 +33,12 @@ Python3.11语法、compileall、PS5.1解析及diff检查通过。本地Python3.1
 原始1024/旧BLOCKED仍不可评估；成功时只报CALLSITE_LOCATED，若缺口未复现或栈不足则
 不可判别/失败。研究进度7.194及handoff同步，旧Formal/Gate与用户DOCX保持。
 
+最终交付固定执行/分析`9c78e355bb43a8696f7eccb44c48d8448f366d09`，前置4da800d；
+唯一发布包`memset_callsite_9c78e355bb43_delivery.zip`146,418 bytes，SHA256
+`6a79cd0c12870e296c8d78a71be6299259f5d0e98c2422aa2e9d117c0b77a4f0`。
+10成员/9清单及359源码表示、bundle与PS5.1检查通过；准确路径和仅A命令位于本地交付说明。
+目标机仍未部署/采集，内部3d1bafd草稿不执行；B仍须新A和明确风险接受。
+
 ## 2026-10-18增补：1024来源定位优先，先用Nsight原生CUDA调用栈 0.8（当前）
 
 **裁决：1024能执行，当前不能完成的是分析准入；尚未证明它不可修复。优先准备一次真实

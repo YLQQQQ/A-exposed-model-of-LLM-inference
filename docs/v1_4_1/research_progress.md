@@ -35,6 +35,14 @@
 通过；不是新Q0/GPU验证。原始1024/BLOCKED、四block端点、256准备、Raw和用户DOCX均保持。
 Gate13限定PASS、Gate14 NOT_RUN不改。本轮不操作服务器；旧三点/四点采集包继续暂停。
 
+最终待审交付：执行/分析`9c78e355bb43a8696f7eccb44c48d8448f366d09`，服务器前置
+`4da800d2e8d270fdc2e25e07ab3511a73066df46`且clean。唯一发布包
+`memset_callsite_9c78e355bb43_delivery.zip`146,418 bytes，SHA256
+`6a79cd0c12870e296c8d78a71be6299259f5d0e98c2422aa2e9d117c0b77a4f0`；
+10成员/9项清单、359源码路径实字节、bundle verify及交付PS5.1解析通过。
+机器路径/阶段A整段命令只保存在`.local/MEMSET_CALLSITE_DELIVERY.md`及同前缀stage_a.ps1。
+3d1bafd内部草稿未发布、不可执行；本次只提供最终A，不提供B命令。新目标回执仍NOT_RUN。
+
 ## 7.193 1024来源定位优先：原生CUDA调用栈方案，独立CUPTI候选不否定（2026-10-18，当前）
 
 > 本节保留方案时点；本地实现及真实待验证项见7.194，诊断尚未在目标机执行。
