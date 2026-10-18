@@ -1,5 +1,35 @@
 # Batch4 memset参数取证可行性审查 0.1
 
+## 2026-10-18增补：真实目标阶段A审查PASS 0.16（当前，GPU微例NOT_RUN）
+
+独立CUPTI新A静态ZIP17,311,337 bytes，SHA256
+`71ff920f60e1fd27ec09f7f781c1f4c716e621019e11256c8479447d004decbf`；944成员/943清单，
+CRC/路径/全部hash、交付与13源码表示、118 SDK/377 CUPTI成员均通过。
+执行/分析cedd706、包清单cb93f554…、真实checkout及实际资源模块来源一致，
+receipt为STATIC_READY_FOR_REVIEW/error=null，14条process记录均exit0且无超时。
+
+目标3.11.16/MSVC14.38/SDK10.0.20348构建三个真实EXE，产物hash匹配build.json；
+imports仅系统库，GPU micro只构建未运行。CUPTI17项/CUDART9项导出通过PE字节检查，
+不是目标库加载。CPU原stdout与JUnit均74通过、零失败/跳过，12.34s/12.304s。
+stage_a_cuda_programs_executed=0、B_authorized=false，实际GPU订阅/参数/效果仍未知。
+空间373,384,695,808 bytes，历史总量UNKNOWN及长期50e9目标不变，无清理。
+
+下一项仅由实现窗口准备B执行边界，**直接复用新A已审产物，不重跑A、不重编未变native**。
+绑定外部receipt原SHA、原artifact_manifest及build/源码/库/二进制实字节；新B控制入口
+如有新commit，必须明确其控制身份与cedd706 native/reader身份，不能静默混同。
+一个tiny进程，两case，硬120s；不通过Nsight/torch.profiler启动，不运行模型或恢复旧槽。
+设备选择必须绑定已审UUID而非仅cudaSetDevice(0)，新输出不覆盖，失败/未知writer停。
+保存实际调用参数、返回/资源及效果桥、独立读回、drop/flush/关闭、进程状态，随后用现有
+独立审核器判定；失败即保留诊断，不补采或自动扩设施。B入口本轮尚未实现/交付，不能
+通过给当前A-only launcher附开关或裸跑EXE代替已审执行边界。
+
+真实A receipt SHA256为
+`67f02b575aa4ce37cdcdc9c861e1149a1e960d5d33b730d9983a541ae7877fb0`；micro.exe为
+335,872 bytes/SHA256 `b735bd1ee7484d6df3d52db5d5ccc4808ab63fd5c10fb90a5064e9aae5b4495b`。
+其余完整摘要、机器路径及14条进程argv存本地
+`.local/diagnostics/independent_cupti_target_a_review_v0_1/`；研究进度7.201同步。
+本轮无代码或新实验，A通过不授Q0/模型覆盖/旧1024或S/A/COE资格，原件及用户DOCX保持。
+
 ## 2026-10-18增补：cedd706修复包仅A协调复核通过 0.15（当前，目标A/B未运行）
 
 **只允许下一步显式运行阶段A，不启动GPU微例或模型。** 新包15,978,375 bytes、SHA256

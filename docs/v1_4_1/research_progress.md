@@ -1,6 +1,40 @@
 # ExposedPath 科研进度清单
 
-## 7.200 独立CUPTI修复包协调复核通过，仅可进入目标A（2026-10-18，当前）
+## 7.201 独立CUPTI目标阶段A原件审查通过，GPU微例B尚未准备/运行（2026-10-18，当前）
+
+真实静态ZIP17,311,337 bytes，SHA256
+`71ff920f60e1fd27ec09f7f781c1f4c716e621019e11256c8479447d004decbf`，manifest SHA256
+`696858267face79a889e49eda92e23189d0126db6ed2a1fafecf013107c88880`。本轮只读审查，
+不重跑CPU、构建或GPU，不修改业务代码/测量合同；执行=分析cedd706不变。
+
+- [x] 944成员/943项清单、CRC/安全路径及全部hash通过；交付配置/包清单与原包一致，
+  13源码表示、118 SDK/377 CUPTI成员匹配。receipt为STATIC_READY_FOR_REVIEW/error=null，
+  14条process记录均EXITED/exit0/无超时；checkout及模块来源绑定cedd706/正确仓库。
+- [x] 目标Python3.11.16前置门、MSVC14.38/SDK10.0.20348实际编译链接通过；三个EXE
+  bytes/hash与build.json一致，imports只有系统库，无静态CUDA/CUPTI导入。PE检查17项
+  CUPTI/9项CUDART导出成立；runtime PE版本6.14.11.12040，CUPTI候选库hash匹配SDK。
+- [x] 原CPU stdout及JUnit一致：74 passed/0 failed/0 skipped，stdout12.34s/JUnit12.304s。
+  只运行Host harness；micro_invoked=false、stage_a_cuda_programs_executed=0。
+  原静态检查已通过，不因后续B控制入口新增而无理由重复A/构建/74项测试。
+- [x] 空间观察373,384,695,808 bytes，满足2GiB；历史总量仍UNKNOWN，无清理/ACL追索。
+- [ ] 下一步交主窗口准备绑定真实A receipt、全部产物及已审micro二进制的窄域B入口，
+  不改/重编native、模型或分析语义。一个新tiny进程，0/64-byte两case，硬120秒，
+  独立运行、0 Nsight profile/0模型，显式设备UUID绑定及新鲜空间检查，失败即停。
+  B应保存实际argv/环境选择/退出、加载及关闭/丢失状态、独立读回和参数—设备效果关联，
+  并运行已有独立审核器；未知writer拒绝封包。不提供裸exe命令、无界启动或自动续跑。
+- [ ] 当前A-only包没有B开关，本轮没有制作B代码/包/命令或授权目标执行。
+  GPU加载/订阅/效果、PyTorch覆盖、1024及Canonical/S/A/COE仍未获资格。
+
+新A外部receipt SHA256
+`67f02b575aa4ce37cdcdc9c861e1149a1e960d5d33b730d9983a541ae7877fb0`；已审micro.exe
+335,872 bytes，SHA256`b735bd1ee7484d6df3d52db5d5ccc4808ab63fd5c10fb90a5064e9aae5b4495b`。
+准确runtime/CUPTI/build/receipt摘要与机器路径见本地
+`.local/diagnostics/independent_cupti_target_a_review_v0_1/adjudication.json`，
+process原argv索引同目录processes.json。取证审查0.16及handoff同步；目标A判PASS仅限
+Engineering构建/CPU，不升级Q0、微例或旧失败。Raw、用户DOCX、UNKNOWN/NOT_ASSESSED、
+Gate13限定PASS/Gate14 NOT_RUN、旧七槽和多点暂停保持。
+
+## 7.200 独立CUPTI修复包协调复核通过，仅可进入目标A（2026-10-18，历史；真实A见7.201）
 
 本轮只读复核新cedd706交付及隔离入口，无业务代码/测量合同修改。执行=分析仍为
 `cedd70610588d4d5691c5a86cbcb923ef8ea6433`，目标前置9c78e355bb43/clean不变。
