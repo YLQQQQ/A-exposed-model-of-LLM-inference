@@ -1,6 +1,38 @@
 # ExposedPath 科研进度清单
 
-## 7.205 同封存微例0.2限定参数/效果复核PASS；原B完整验收仍BLOCKED（2026-10-19，当前）
+## 7.206 1024同进程接回可行性审查：需限定新provider，尚不可执行（2026-10-19，当前）
+
+唯一目标转为未来同次1024真实调用缺证及COE路径。用户已接受0.2参数/效果结论；旧B
+后验checked_a未执行/BLOCKED保持，**不再以补历史B状态为后续前置**。本轮仅本地源码/
+固定SDK和接口审查及进度更新，没有业务代码、测试、微例、模型、服务器或新包。
+
+- [x] 技术路线GO：已核验API22存在同进程Callback/Activity、Windows x64与统一活动时钟
+  接口；推荐Python模型进程加载独立C ABI客户端，由唯一subscriber同时采参数及时间线。
+  不跑micro.exe代替模型，不与Nsight/torch.profiler共用或拼接跨执行证据。
+- [x] 明确当前执行/COE准入NO-GO的代码证据：Core单owner/共用栈、CALL_CAP64，84次缺
+  效果调用已超容量；仅支持API/MEMSET。micro主动拒绝torch并自行创建流/分配，不能
+  换argv就使用；0.2 reader固定两case/一显式流/非零handle，普通51→216微例资格不覆盖
+  PyTorch、PTSZ或自然handle0。新模型须按TID实际父子栈、容量和双向覆盖重新核验。
+- [x] 逐项接回清单及最短路线写入[取证审查0.21](memset_parameter_feasibility_v0_1.md)：
+  复用参数快照/返回/driver域效果、P/Host-readable/drain政策与纯区间/FIFO/预算算法；
+  新增kernel/Memcpy/sync、NVTX token窗口、资源与真实clock/身份输入；CUPTI provider/
+  Canonical同形view和质量门不能复用Nsight-only来源声明。旧analyze_files、schema和设备
+  表硬绑定Nsight，analyze_evidence_file也不授profile准入，不伪造SQLite或NSYS时钟。
+- [x] 参数成功与COE成功分开：count0保留逻辑调用/API预算，须独立零关系图不变性及scope/
+  terminal证明；zero_scope输出仅参数支持，候选提交覆盖门尚无此显式证据输入。count>0
+  唯一效果才能继续、缺效果仍拒绝；新provider完整时间线及局部资格是另外的必需条件。
+- [ ] 尚未实现：限定provider本地垂直切片、SDK结构解码/原NVTX捕获及新来源/时钟的文件链，
+  然后定向provider依赖桥接与一个新1024/batch1/output2真实PyTorch覆盖。它是新provider
+  工程，不是已完成小修；不制作count-only模型工具、可绕过缺口的入口或采集包。
+
+成本审查估计5～10工程工作日量级，非预算批准/交付保证；建议首次本地封顶2日只检验
+完整垂直切片，不能闭合即停，不滚动扩工具。未来若另获授权：定向桥接1进程/120s，
+1024诊断1进程/300s、0Nsight profile，约15～30分钟/临时2GiB为未实测规划；当前不执行。
+需要重编PyTorch、换栈、扩hook或混用Nsight/跨执行时即停止。原1024仍BLOCKED，旧参数
+不能回填；本轮不恢复七槽/矩阵，COE公式、生产A/B、Raw、UNKNOWN、用户DOCX及Gate13
+限定PASS/Gate14 NOT_RUN保持。优先级为先裁定该限定provider工程是否投入，不是重跑微例。
+
+## 7.205 同封存微例0.2限定参数/效果复核PASS；原B完整验收仍BLOCKED（2026-10-19，历史；接回1024见7.206）
 
 本轮仅离线原件核验和独立版本消费者；不部署、重采、编译native或运行模型/CUDA/Nsight。
 原B ZIP/Raw/receipt及0.1审核器保持原字节，缺driver活动原因仍UNKNOWN，不改成解析bug。

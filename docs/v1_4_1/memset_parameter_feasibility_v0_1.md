@@ -1,6 +1,143 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-19增补：0.2仅参数/效果的独立复核 0.20（当前；原B仍BLOCKED）
+## 2026-10-19增补：接回真实1024的同进程可行性裁决 0.21（当前；尚无可执行provider）
+
+**技术路线GO；当前模型执行/COE准入NO-GO。** 这两个判断对象不同：固定SDK有同进程
+Callback/Activity接口，但现有实现还不能提供真实模型的完整输入。仅把参数核心改成DLL
+不足以恢复COE；必须新增**限定单进程自然Prefill的时间线provider和消费适配**，并补参数
+已证零payload的显式准入分派。不是重写S/A/B公式，也不是已有Nsight资格的自动继承。
+本轮只做源码/接口/成本审查，不实现provider、测试、打包、操作服务器或采集。
+
+用户已接受0.20的限定参数/效果结论。旧B后验checked_a未执行及BLOCKED原样保留，
+**补齐它不再是当前任务/目标机门槛**；新工具只绑定其新构建、源码和运行的前后身份。
+旧1024没有参数或效果证据可回填；本路线最多使未来同次新执行获得可审数据。
+
+### 现有代码的真实接点与缺口
+
+| 层 | 现成可复用 | 最小需改/必须新增，不能省略的原因 |
+| --- | --- | --- |
+| 参数/效果核心 | [core.h](../../scripts/native_cupti_memset/core.h)的ENTRY参数快照、EXIT返回、实际栈parent设计；[0.2 reader](../../analysis/independent_cupti_memset_v0_2.py)的domain/父子/唯一效果核验规则 | Core当前CALL_CAP64、单owner/共用stack、只收API/MEMSET；84次目标调用已超过64，driver子调用还另占槽。须新版本多线程有界栈/容量/dispatcher，不能直接换成模型入口或仅提高常量 |
+| 同进程加载 | 已核验API22/SDK、库实字节、MSVC构建方法和Host harness；微例证明一次普通入口链 | [micro.cpp](../../scripts/native_cupti_memset/micro.cpp)的wmain主动拒绝torch/kineto，且自己创建/销毁stream和buffer。新增独立DLL+C ABI/Python loader，不调用micro.exe，不复制这些CUDA操作进模型 |
+| 时间线 | API/效果结构和缓冲/flush/loss检查机制；SDK有其余必需activity结构 | 必须新增CONCURRENT_KERNEL、MEMCPY、SYNCHRONIZATION、marker和context/stream/event记录及序列化；现Core遇这些kind会error。不能以MEMSET参数日志当完整trace |
+| producer边界 | [runner](../../exposedpath/runner.py)现有warmup、成功drain、request和两token Host-readable政策；[P helper](../../exposedpath/observation_preparation.py)和token值/ledger | 新ENGINEERING诊断声明和同进程生命周期绑定。保持P内容/实际CUDA与读取位置；不复用旧固定B2/512的[memset_prefill合同](../../exposedpath/memset_prefill.py)，也不把它的Detours Recorder换个DLL名使用 |
+| COE/零payload消费 | [completion_overlap/recover_suffix](../../scripts/analyze_completion_operation_candidate.py)、[候选预算union迁移](../../analysis/coe_candidate.py)、[zero_scope](../../analysis/memset_prefill.py)的有限证明义务 | 新provider来源/clock/schema、显式双domain桥和局部准入入口；当前analyze_files只认Nsight。analyze_operation对每个submit强制有activity；若实测count0，须新版本显式消费合格logical-zero证明，不能删API或伪造零ns活动来过旧门 |
+
+0.2 `review()`仍固定恰好两次0/64、value123、同一指针、非零native handle及一条显式流。
+它不是通用PyTorch消费者。Core可按不同SDK结构解码普通51/PTSZ235，但真实微例及0.2
+仅授普通51→driver216。**PTSZ235/driver428没有真实资格**；新运行若出现它们则完整记录
+但拒绝准入，不把普通资格静默迁移。天然handle0不等于缺失，也不等于已确定默认流模式；
+须同次CUPTI context/stream ID和入口类型/生命周期桥，必要时独立证明局部LEGACY/PTDS
+等价。微例的非零handle检查不能机械移植到自然模型路径。
+
+### 唯一推荐接线：模型进程内一个独立subscriber，同时取得参数和全部必需时间线
+
+1. **入口与加载。** 新Python bootstrap先验证checkout/解释器/模型/input/mask和Client DLL/
+   官方CUPTI实字节，再以绝对路径`ctypes.WinDLL`装载无CUDA静态初始化的客户端，显式
+   `open_session`。不需要重编PyTorch、Python C扩展ABI或从模型进程外注入参数。客户端
+   是被模型Python加载的DLL，全部回调来自该PID；加载torch不再是错误，但不能与
+   Nsight、torch.profiler、autograd profiler或另一个CUPTI会话同时工作。仅看到kineto
+   模块不等于已经订阅；实际cuptiSubscribe结果、模块清单及后续状态必须保存，冲突停止。
+   不改旧micro guard，不借Nsight私有DLL，不加载另一个CUDART来代替模型所用实例。
+   现`independent_cupti_stage.inspect_exports`/`build`只验证17项CUPTI导出并构建三个EXE；
+   新DLL及新增timestamp/资源dump/NVTX所需导出要单列PE/真实头文件构建检查，不能复用
+   旧A成功标志冒充新组件通过；无需为此重复未变的全套旧A测试。
+2. **范围和线程。** 订阅和资源/活动记录在模型暖机/既有最终drain之前开始，使该成功
+   drain本身有记录；实参覆盖目标为drain后的request→首token完成。按PID/创建实例/TID
+   分开回调栈，全局call_id只作身份、不作跨线程依赖。每线程ENTRY/EXIT维护实际parent，
+   不能用TID相同/时间接近补parent。外线程也先记录；已drain闭合的历史可按既有closed-prior
+   处理，request必要后缀的外线程/未知依赖仍按现合同拒绝，不能因能记录多线程就授ownership。
+   Core现有depth==1/单owner限制必须在新版本拆开验证；未知driver嵌套不扁平化。
+3. **参数与双向覆盖。** 普通/PTSZ目标均有明确CBID/元数据结构；ENTRY复制size_t、value、
+   pointer、native stream/context，EXIT保留真实返回。driver参数未复制就保持未知，不把
+   默认0当实参。每条目标runtime activity↔唯一实参回调双向覆盖；真实runtime→driver
+   parent↔同driver-domain效果再核bytes/value/device/context/stream。不按84条旧ID筛选，
+   不把跨domain相同数字当桥。零目标捕获/额外记录/非零缺效果/未知入口/冲突均停止。
+4. **同次时间线。** 同一会话采Runtime/Driver API、CONCURRENT_KERNEL、MEMCPY5、MEMSET4、
+   SYNCHRONIZATION、STREAM/CONTEXT和必要CUDA_EVENT/资源记录。Kernel9保留名称/grid、
+   context/stream及correlation；Memcpy5分别保留runtimeCorrelationId与driver correlation、
+   内存类型/bytes；Memset按driver域关联。不能套用Nsight导出表外键或把两域ID统一成一列。
+   activity缓冲归还前复制所需字段及有界kernel/marker字符串，不保存失效的SDK记录指针。
+   建立显式`effect→driver→runtime/logical_submit`引用，Raw双域记录均保留；找不到唯一桥
+   就拒绝。同步需真实成功返回、参数scope和真实同步activity对应；缺同步scope/时间不
+   用Host API包络替代。0.2缺driver API的窄域效果例外不推广为所有launch/copy/sync例外。
+5. **窗口/时钟。** 优先按固定SDK `samples/cupti_nvtx`接收原torch NVTX push/pop/mark，
+   同一个subscriber启用NVTX domain/MARKER；受控子进程在首次NVTX使用前绑定经核验的
+   `NVTX_INJECTION64_PATH`到该官方CUPTI DLL。这不是Nsight注入或第二subscriber，也不是
+   当前micro已实现的能力。实际PyTorch的NVTX绑定能否被此路径捕获必须验证，样例不是
+   模型覆盖证明。token范围及request/首末Host token marker保留原run/request/token身份，
+   数值仍由原`.cpu().tolist()`及producer文件证明，不由NVTX证明GPU完成。
+   全部活动和MARKER只在单个CUPTI clock域比较；`cuptiGetTimestamp`与activity同域，但
+   Python perf_counter ledger仍保持自己的域和marker夹界，不直接相减或假称相等。
+   缺真实MARKER/窗口映射就停，不能临时把另一个时钟点改叫原完成锚点。
+6. **容量与关闭。** 缓冲、每TID栈、API/参数/活动/标签都预分配并设硬上限，输出保存
+   各自高水位。micro的8×64KiB和64/4096/128不构成模型容量证明；预算由完整暖机＋drain
+   ＋测量范围计算，超限只失败、不自动扩容。禁止回调内CUDA API、同步或磁盘I/O；只用
+   SDK许可的CUPTI查询并核返回。原token完成后再flush/disable/flush，保留drop查询、
+   未交还缓冲、每线程未闭合栈、unsubscribe/finalize及异常回执。flush不等于GPU完成；
+   drop查询需覆盖实际参与的context/stream并保存各返回码，不能把一次global查询当全覆盖。
+   强制flush产生未知/不完整timestamp不得通过。成功关闭不等于全capture绝对完整。
+
+官方[CUDA12.4页面](https://developer.nvidia.com/cupti-ctk12_4)明确有Windows x64的Callback/
+Activity及统一活动时钟能力；具体限制以已核验12.4.127/API22 SDK为准：
+`cupti_callbacks.h:684–713`单subscriber且与Nsight冲突；`cupti_activity.h:1936–2061`
+Memcpy5双域ID、`2674–2976`Kernel9、`4684–4812`event/stream/sync、`6654–6666`
+同域timestamp、`6810–6850`EnableAndDump可补现存资源。固定SDK `samples/cupti_nvtx`
+提供上述NVTX接线依据；不把最新版13.x多subscriber/V2能力用于API22。
+12.4.1在线API页面本轮无法读取，版本语义来自匹配SDK实字节，不伪称网页核验成功。
+
+### 接回COE还必须经过的provider和零payload门
+
+现[Canonical validator](../../exposedpath_v141/canonical_raw.py)固定
+`NSYS_TRACE_RELATIVE_NS`、Nsight版本和SQLite/rowid来源；[bundle reader](../../exposedpath_v141/sync_semantics.py)
+也验证此来源。[COE analyze_files](../../analysis/coe_candidate.py)还打开SQLite读取内存enum、
+TARGET_INFO设备映射、Nsight诊断、物理drain和sync，**不能喂一个新JSON就视为同源**。
+现`analyze_evidence_file`也只授探索性计算，不授profile准入。
+
+必须新增独立版本的CUPTI输入manifest/record-ID/clock/库与输入身份合同、native记录解码和
+设备/stream/event生命周期桥，以及该provider的实际质量门。可以输出同形的操作分析view
+以复用纯区间和FIFO算法，但不得伪造Nsight SQLite、rowid、diagnostic PASS、physical sync
+或把CUPTI clock改名为NSYS。native handle/trace ID/流flag按SDK分别解析；runtime/driver
+嵌套API预算不得双计。两种默认流关系、未映射正提交、未知event/graph或ownership冲突
+仍拒绝。不能为了“接回”而绕过原来的必要集合、drain和terminal义务。
+
+若真实count0，复用0.5及`zero_scope()`的**有限FIFO图不变性规则**而非直接豁免：
+每个零payload保留逻辑API/提交次序及API预算，不造活动；同次映射证明z位于已闭合scope，
+两个被允许的零操作关系在真实活动成员/依赖/terminal投影一致，且所有正提交均映射。
+当前`zero_scope()`只输出PARAMETER_SUPPORT_ONLY，不等于COE放行。新候选消费版本须
+显式携带这个独立证明，才可针对被证明的零调用豁免“必须有设备activity”，其他submit
+门不变。若count>0且有合法唯一效果则沿原依赖恢复；count>0无效果则仍BLOCKED。
+因此**拿到参数成功、获得完整时间线、COE局部准入，是三个不同结果**。
+
+### 最短实施顺序、成本与止损（本轮仅设计，尚未授权实施/目标执行）
+
+- [ ] 先作一个连通的本地垂直切片：DLL宿主加载/关闭→多TID实际栈Host替身→全部必需
+  SDK活动结构解码→新来源/时钟和token文件链→逻辑零/非零覆盖→局部COE。用独立手算
+  的已完成前缀、操作内D2H、同步边界后提交、错域/错流/缺marker/丢失反例检查；不再
+  重跑0/64，也不先交“count-only模型工具”。完整provider不是本轮可直接铺开的修复。
+- [ ] 只有垂直切片可审且新provider准入合同另获批准，才准备目标验证：一次有限
+  kernel/D2H/sync依赖桥接（不是重做全Q0或0/64），随后**一个新1024/batch1/output2、
+  P/warmup3/repeat1真实PyTorch进程**，只评局部Prefill；无Nsight、零Nsight profile。
+  不借B2/512诊断配置代替1024，不恢复七槽或多点采集。新参数和时间线必须来自该次
+  模型执行；受控桥接仅验证provider，不能给模型补参数。真实覆盖失败就在这里停止。
+- 成本是**限定provider工程**，不是微例DLL化的1～2日小改：代码审查级估计约5～10个
+  工程工作日，含本地文件链、定向provider验证与原件审查，不是交付承诺或已批预算。
+  建议首次本地投入封顶2日，只检查上述垂直切片可否闭合；需要重编PyTorch、扩hook、
+  更换工具链、借私有CUPTI/混用Nsight、或不能捕获真实token标记，则停止并报告具体缺口，
+  不滚动开发通用collector。
+- 未来目标预算候选：受控桥接1进程硬120s；真实1024诊断1进程硬300s；整体人工窗口
+  约15～30分钟、临时2GiB为未实测估计，构建/归档另计。固定新路径、硬失败停止，
+  不自动重试/扩大缓冲/追加样本。不得用诊断时长作无扰动性能；空间仍须启动时新鲜核验。
+- 成功分层：**PARAMETERS_COVERED**只能确认真实调用参数/效果；**PROVIDER_COMPLETE**
+  还要求同次kernel/内存/API/sync/窗口/clock/身份/关闭全闭合；最后**PREFILL_COE_ADMITTED**
+  再要求完整必要后缀、零规则、terminal及候选预算门。任何后层失败保留前层事实，但不
+  发布可信COE。新1024成功也不追认旧1024、不立即恢复负载矩阵或新Formal。
+
+**本轮推荐只有这一条：若继续投入，先批准限定同次provider的垂直切片，而不是再采
+一个参数模型包。** 当前没有这条完整输入链，所以不提供可运行的1024入口；新provider
+工程是否投入是明确的成本决定，不把缺历史checked_a或重复微例作为前置。原生产定义、
+COE公式、旧Raw/0.2结论、旧BLOCKED/UNKNOWN和既有Gate保持不变。
+
+## 2026-10-19增补：0.2仅参数/效果的独立复核 0.20（历史限定结论保持；当前接回审查见0.21）
 
 **裁决：此普通入口微例的限定参数/效果证据成立，不需要driver API时长；完整B仍缺
 实际后验A检查。** 独立新增0.2，不部署、不重采、不改变旧审核器或生产定义。
