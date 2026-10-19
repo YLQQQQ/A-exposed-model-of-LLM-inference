@@ -1,6 +1,42 @@
 # ExposedPath 科研进度清单
 
-## 7.203 独立CUPTI B包协调审查通过，仅一次tiny待用户显式执行（2026-10-19，当前）
+## 7.204 独立CUPTI真实微例取得参数/效果，旧审核器因driver活动覆盖拒绝（2026-10-19，当前）
+
+目标用户已执行一次tiny；本轮仅离线审查回传原件，没有重采、运行GPU或修改生产代码。
+原attempt按cedd706审核器仍BLOCKED，不将已观察事实自动升级为限定微例PASS。
+
+- [x] ZIP50,225 bytes、SHA256
+  `d1dbf34c018230c82f7d2cce537e9fb5c783f2e99a00f44afed934e9812920ef`，manifest SHA256
+  `c357b426a3edcc6be823b865bfdfa04174dbf94437454e948038b384dd18d46d`；17成员/16项清单，
+  CRC/安全路径/全部hash通过。配置及包清单匹配已审662b94a控制包；随包A receipt、
+  manifest/build/库/源码清单副本与真实A相同，不混用controller/native/reader身份。
+- [x] 真实micro PID12640、exit0、无超时，Raw run/PID与执行一致；CUDA12040/API22及
+  加载库路径/hash符合预定。订阅、缓冲、启用、flush、关闭等状态均成功，closed=true；
+  已记录的overflow/drop/query error均0，三次drop查询成功，不扩大为所有潜在记录皆无损证明。
+- [x] 两次runtime CBID51参数为count=0/64，返回均0，原ENTRY/EXIT及runtime API记录闭合。
+  零字节case独立读回64字节保持0x3a；64-byte case读回全0x7b，存在MEMSET效果64bytes/
+  value123/context1/stream13/device0，正时长993ns。前者不自动授零长度依赖豁免。
+- [x] 精确复现`CUPTI_MICRO_API_COVERAGE`：Raw为6条runtime API活动、0条driver API活动；
+  唯一被拒回调为driver call3/CBID216/cuMemsetD8Async/correlation4。其真实parent_call_id=2，
+  ENTER/EXIT序号3<4<5<6，与64-byte runtime同PID/TID/context，效果的DRIVER correlation为4。
+  不同domain数值相同本身不作为桥接证明。driver参数未复制，其默认count=0不是真实参数事实。
+- [x] driver活动行为何缺失仍UNKNOWN；未发现足以归因的native过滤或解析证据。旧消费者
+  强制每个driver回调另有API活动行，故在后续效果检查前停止；不能删除覆盖门或虚构该行。
+  reader异常使控制层后验checked_a未执行，不能声称完整后验A树检查通过；原native自身
+  库hash检查及既有封存副本核验与该缺项分别记录。
+- [ ] 唯一下一步交主窗口：先依据固定12.4/API22和封存原件，评估“runtime API＋真实嵌套
+  driver回调＋同driver域唯一效果”能否作为仅参数/效果的独立版本化证据路径。若可成立，
+  仅增加明确新版本消费者/正反例并离线重判，不伪造driver API时长或宣称其interval已核验。
+  driver API存在时仍严格校验；runtime API/父子关系/真实scope/效果/读回/关闭及丢失门缺失
+  继续拒绝。保留旧读取/原BLOCKED，后验检查未运行的边界须单独说明。
+
+审计`.local/diagnostics/independent_cupti_b_failure_review_v0_1/adjudication.json`及Raw/
+process/receipt副本可复查。原包hash读后未变；无新测试或CUDA资格声明。本轮不制作包、
+部署、重编、重跑A/B、模型、Nsight或恢复七槽。1024及PyTorch覆盖、Canonical/S/A/COE
+仍未授资格；用户DOCX、旧Raw/UNKNOWN、Gate13限定PASS/Gate14 NOT_RUN保持。
+取证说明0.19及本地handoff同步，长期历史容量UNKNOWN不变。
+
+## 7.203 独立CUPTI B包协调审查通过，仅一次tiny待用户显式执行（2026-10-19，历史；实物失败审查见7.204）
 
 只读审查控制包`662b94a33421550958d927cb819b88cb5c67b401`，精确复用真实A的
 cedd706 native/reader及原checkout，不重跑A、不重编产物、无业务代码修改或目标操作。

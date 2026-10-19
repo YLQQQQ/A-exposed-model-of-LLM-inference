@@ -1,6 +1,50 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-19增补：B控制包协调复核通过 0.18（当前，目标B NOT_RUN）
+## 2026-10-19增补：真实tiny参数/效果已观测，旧driver活动覆盖门拒绝 0.19（当前）
+
+**先离线核验替代证据路径，不重采或改写原BLOCKED。** 本次micro进程exit0，原审核器
+在`CUPTI_MICRO_API_COVERAGE`停止，尚未授限定微例PASS。它不是旧1024原件，也不能用
+新count替旧84次调用补参数。
+
+新ZIP50,225 bytes、SHA256
+`d1dbf34c018230c82f7d2cce537e9fb5c783f2e99a00f44afed934e9812920ef`，manifest SHA256
+`c357b426a3edcc6be823b865bfdfa04174dbf94437454e948038b384dd18d46d`；17成员/16项清单、
+CRC/路径/全部hash及原B包、真实A副本绑定通过。controller662b94a/native及reader cedd706
+仍分开；真实PID12640、未超时、Raw error为空。实际库路径/hash、12040/API22、关闭及
+已记录loss状态符合原计划，三次drop查询成功；这不证明所有不可见记录均完整。
+
+| 实物 | 已观察事实 | 尚不能推出 |
+| --- | --- | --- |
+| 零字节runtime调用 | CBID51/corr1，参数count0/value123，返回0；runtime API存在，读回64字节保持0x3a，无关联效果 | 无顺序影响、旧1024也是零字节、COE已准入 |
+| 64字节runtime调用 | CBID51/corr4，count64/value123，返回0；runtime API存在，读回全0x7b | driver API墙钟已恢复 |
+| 嵌套driver回调 | call3/parent2，CBID216/cuMemsetD8Async/corr4，同PID/TID/context，序号3<4<5<6 | 其未复制的默认count0是真实参数 |
+| 设备效果 | 唯一MEMSET、DRIVER corr4、64bytes/value123、context1/stream13/device0、993ns | 用数值相同直接跨runtime/driver域关联 |
+
+拒绝点很具体：Raw有6条RUNTIME API活动，0条DRIVER API活动。旧reader对每条回调
+都强制要求同domain的API活动行，driver call3因此最先拒绝。native已保留该回调和效果，
+缺driver活动行的实际原因仍UNKNOWN，不能写成已确认CUPTI/解析bug或普遍嵌套省略规则。
+
+固定12.4头文件`cupti_callbacks.h`的correlationId约定区分driver/runtime；
+`cupti_activity.h`中MEMSET4 correlation对应driver调用。**值得评估的窄域路径**是：
+从实际runtime参数及API行出发，经真实driver回调parent/ENTRY-EXIT嵌套、context及
+driver域唯一correlation到MEMSET效果；不用时间邻近、直接runtime数字等于driver数字或
+读回正确单独代替映射。该微例任务只判参数/效果，不计算driver API时长。
+
+只有固定版本语义及证据足够时，才由主窗口增加独立版本消费者和确定性反例，离线重判
+同一原件。已有driver API时必须保留原严格检查；缺runtime API、错误/缺失/歧义parent、
+未识别driver入口、错scope/stream/context、效果缺失或多余、读回冲突、失败返回、丢失及
+关闭失败继续拒绝。缺driver API行保持缺失，不补起止、不授原interval check通过；
+不能把所有API覆盖门统一取消。
+
+控制层reader先异常，所以后验`checked_a`未执行。初始A及封存副本、native库hash可审，
+但不能伪称完整后验树检查通过；新离线判定须明确这个尚缺证据或其限定影响，不能为了
+通过偷偷补成已执行。当前只读审查**不授微例PASS、PyTorch覆盖或完整provider资格**。
+
+独立审计位于`.local/diagnostics/independent_cupti_b_failure_review_v0_1/adjudication.json`；
+科研进度7.204及本地handoff同步。原ZIP/Raw/receipt未改，无生产代码、新测试、目标命令
+或采集。本轮旧1024/B2、七槽、UNKNOWN及所有Gate结论保持，先交主窗口离线评估。
+
+## 2026-10-19增补：B控制包协调复核通过 0.18（历史；真实B审查见0.19）
 
 控制662b94a、native/reader cedd706严格分列。小包59,681 bytes、SHA256
 `ba5f332a887390427feadd7a2fb3d8fb96fa07063adebd78f58908e80d664e50`，8成员/7项清单的
