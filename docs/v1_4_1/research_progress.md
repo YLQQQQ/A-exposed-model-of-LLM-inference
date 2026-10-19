@@ -1,6 +1,29 @@
 # ExposedPath 科研进度清单
 
-## 7.210 512/2048×O/P交付协调复核通过，仅阶段A可显式执行（2026-10-19，当前）
+## 7.211 真实阶段A回执审查通过，绑定新receipt后仅8P1待用户显式执行（2026-10-19，当前）
+
+- [x] 新静态ZIP104,163 bytes、SHA256 `32f6a44663a678953f2fa3380e189f4ee5d40d1a1761f6fca50ec87e1e17b653`；
+  19成员/18项清单、安全路径/CRC及全部hash通过，manifest SHA256
+  `b7718fba9e78603d200e6c6982ddc2f68914ecd4baa8695dd8db8c06cacc037a`。实际delivery/
+  executed.ps1与原交付精确相同，execution=analysis=9c8b03e；415项实际源码均命中已审
+  Git/CRLF表示。6个exit记录均0，原32项CPU stdout/JUnit一致：32 passed/零失败/跳过，
+  99.81s/99.812s；compile通过。未重跑CPU或GPU，A未记录解释器版本，不借旧版本填入。
+- [x] receipt为STATIC_READY_FOR_REVIEW/error=null；新receipt实字节SHA256
+  `6e7bf50642ed45f3afc6f4e9ffcff01975aee478b3991303837fd85e890d7803`，delivery/storage/
+  source_bytes绑定成立。最终clean由精确绑定launcher成功路径证明，不冒充独立现场查询。
+  资源记录370,851,753,984 bytes空闲，满足12GiB；输出/TEMP/TMP/归档同卷、可写无错误。
+  历史容量仍UNKNOWN，不清理或查ACL；B仍须fresh资源/源码/clean与模型身份门。
+- [ ] 用户可显式执行本次固定8P1 Engineering：512/2048×O/P、两完整block，原计划及
+  两token消费不变。B命令只启用原launcher的CollectReviewedEngineering，绑定上述真实
+  receipt SHA，不换包、不fetch新文档HEAD、不重跑A。准确本地命令及PS5.1仅解析验证见
+  `.local/observation_input_9c8b03eae89f_stage_b.ps1`；尚未执行，无模型/GPU结果。
+
+只读审计和副本位于`.local/diagnostics/observation_input_target_a_9c8b03_v0_1/`。
+下一项仅用户执行既定B并回传`observation_9c8b03eae89f_engineering.zip`，预计40～60min、
+每driver900s、fresh12GiB；硬失败或8槽完成即停，不重试/替补/追加。成功也只STOP_FOR_REVIEW，
+不授Formal/纯阻塞/论文结论。业务代码、用户DOCX、旧Raw/UNKNOWN/Gate与暂停支线保持。
+
+## 7.210 512/2048×O/P交付协调复核通过，仅阶段A可显式执行（2026-10-19，历史；真实A审查见7.211）
 
 - [x] 原137,870-byte ZIP、SHA256 `3df595a7e1f70e3a5a606e0dcc698d9bdc92633b753016f6e54f79eb6095ea07`、
   CRC/安全路径、17成员/16项清单及全部内容hash独立核验；bundle verify与head精确为
