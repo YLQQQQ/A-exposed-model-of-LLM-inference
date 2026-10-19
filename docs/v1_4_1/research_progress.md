@@ -1,6 +1,45 @@
 # ExposedPath 科研进度清单
 
-## 7.215 低侧三点真实阶段A通过，绑定新receipt后仅9P1待显式执行（2026-10-19，当前）
+## 7.216 固定P低侧三点九次完成：256准入闭合，首token响应复核（2026-10-19，当前）
+
+- [x] 新Pilot ZIP66,509,841 bytes，SHA256
+  `9e0bbefd89f0a7500e05d43545e028db9171bcd6d8be2509439cdb9883630c9a`；691成员/690清单、
+  安全路径/CRC及全部hash核验，manifest SHA256
+  `0501c0b1204821660665743fdb30702d23c1d443eebe282d698bc5356e8448e9`。
+  原A的23成员字节不变，delivery/launcher/418项实际源码与8f49ab0一致，根3个exit0；
+  9run/9profile、3完整block、18条token链、27个原A/候选预算均齐全，无替补或拼旧样本。
+- [x] 独立只读核对387条来源hash、47,946次活动行引用和47,991次API行引用（含累计前缀
+  重复，不是样本数）、物理drain/sync、D2H及terminal；18条区间并集/27窗口/8,656个
+  迁移片段行去重守恒，Request=Prefill+Decode。未重跑完整analyzer或Q0；不授完整物理B。
+  256本次两token链在原声明支持假设下闭合，并非一般长度或新Formal资格；1024仍BLOCKED。
+- [x] 首token COE中位数：256为0.912891ms，512为2.681677ms，2048为97.546735ms；
+  各自COE/Prefill范围1.094920%～1.309083%、2.976901%～3.840910%、
+  50.185424%～55.525901%。独立候选完成预算/Prefill分别1.110507%～1.327438%、
+  2.997711%～3.862568%、50.201676%～55.541197%，不是旧Device wait或纯Host阻塞率。
+  3个block首token均256<512<2048；低侧R为+1.340980/+0.451339/+1.166011ms，
+  端点R为+91.044476/+88.784905/+82.895469ms。端点G增长4.021～4.266倍，COE增长
+  35.001～44.769倍；仅作固定P/profile/模型的Pilot响应线索，不作显著性或普遍单调结论。
+- [x] 现有Raw位置核对：首token在copy入口已有提交API返回但活动尚未完成的必要kernel，
+  256为5～13个、512为14～80个、2048为1089～1174个；2048 COE约99.87%～99.95%
+  为先行kernel，其余为MemOp，不是把8-byte D2H或完整copy墙钟改算等待。该计数不是硬件
+  队列深度或因果证明。同输入三个block的必要kernel名称/grid/block序列一致；跨输入不同。
+- [x] 第二token没有相同单调响应，2048 block2的6.732092ms保留。全部12个预定token
+  比较中，copy墙钟与COE方向10个相同、2个相反：block1端点ΔCOE−0.022431ms/
+  Δcopy+0.041102ms，block3为+0.084259/−0.176974ms。这是实例级参照差异，不证明
+  稳定判别优势；全18条同操作GPU union仍等于COE，完整timeline能恢复相同答案。
+- [ ] 下一项优先利用本批Raw检查2048暴露所来自的具体kernel符号/实现、提交及执行位置，
+  提出一个有竞争解释和失败判据的机制假设，再审最小后续验证；不立刻堆输入点、扩输出轴
+  或恢复1024/provider。当前没有新GPU预算/采集包/服务器命令，旧B已经执行不可重跑。
+
+完整18条原值与27个预算见[本批结果](coe_input_low3_results_v0_1.csv)、
+[预算](coe_input_low3_budgets_v0_1.csv)，每行绑定Pilot/执行commit/源ZIP/run身份；
+科学收口见[短稿§13](coe_research_short_note_v0_1.md#13-固定p低侧三点pilot九次完成2026-10-19)。
+审计代码、12项signed比较与来源在`.local/diagnostics/coe_low3_result_review_8f49ab0_v0_1/`。
+本轮仅离线来源/区间/描述统计核对及必要记录，无新图、业务修改、测试套件/GPU/服务器操作。
+原Raw/DOCX/定义/Gate与所有历史BLOCKED保持；本批仍Pilot，NOT_ASSESSED/UNKNOWN及
+长期容量UNKNOWN不升级，不与旧Engineering/Pilot拼为新Formal或宣布论文创新已成立。
+
+## 7.215 低侧三点真实阶段A通过，绑定新receipt后仅9P1待显式执行（2026-10-19，历史；实际B见7.216）
 
 - [x] 真实静态ZIP107,261 bytes、SHA256
   `b58485902497e3a871426e40304f309718fcbe913c1748bbcacebed7c25e1927`；23成员/22清单、
