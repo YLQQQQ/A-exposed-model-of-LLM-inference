@@ -43,7 +43,7 @@ def consume_collection(target,binding,commit):
         and r['candidate_sha256']==sha(candidate_path) and r['token_ids']==tokens
         and r['preparation']==read(execution)['observation_preparation'] and r['physical_b_qualified'] is False
         and r['formal_eligible'] is False,'RESULT_BINDING')
-    if input_axis:
+    if input_axis or contract.input_axis(binding):
         from analysis.coe_budget_preview import VERSION as preview_version
         preview_path=target/'analyzed/candidate_budget_preview.json';preview=read(preview_path)
         contract.require(r.get('candidate_budget_preview_sha256')==sha(preview_path)
@@ -64,10 +64,14 @@ def run(config,output,*,execute=False,input_pilot=False):
     rules=axis if input_pilot else contract
     version=axis.VERSION
     schema=config.get('schema_version')
+    sensitivity=not input_pilot and schema=='observation-preparation-delivery/0.2'
+    if sensitivity:
+        version=contract.INPUT_VERSION
+        contract.require(config.get('observation_contract_version')==version,'DELIVERY_CONTRACT_VERSION')
     if input_pilot and schema=='coe-input-pilot-delivery/0.2':
         version=axis.MIDPOINT_VERSION
         contract.require(config.get('input_contract_version')==version,'DELIVERY_CONTRACT_VERSION')
-    expected_schema=('coe-input-pilot-delivery/0.2' if version==axis.MIDPOINT_VERSION else 'coe-input-pilot-delivery/0.1') if input_pilot else 'observation-preparation-delivery/0.1'
+    expected_schema=('coe-input-pilot-delivery/0.2' if version==axis.MIDPOINT_VERSION else 'coe-input-pilot-delivery/0.1') if input_pilot else 'observation-preparation-delivery/0.2' if sensitivity else 'observation-preparation-delivery/0.1'
     budget=axis.specification(version)['budget'] if input_pilot else 8
     contract.require(schema==expected_schema
         and type(config.get('model_process_budget')) is int and type(config.get('profile_budget')) is int
@@ -78,13 +82,13 @@ def run(config,output,*,execute=False,input_pilot=False):
         and not git(['-C',str(ROOT),'status','--porcelain']).strip(),'CLEAN_EXECUTION')
     contract.require(sha(config['nsys'])==config['nsys_sha256'],'COLLECTOR_HASH')
     out=Path(output);out.mkdir(parents=True,exist_ok=False)
-    kwargs={'version':version} if input_pilot else {}
+    kwargs={'version':version} if input_pilot or sensitivity else {}
     prompts=rules.make_inputs(config['seed_input'],config['prompt_512_sha256'],out/'inputs',**kwargs)
-    if input_pilot:
+    if input_pilot or sensitivity:
         axis.require(set(config.get('input_bindings',{}))=={str(n) for n in prompts},'EXECUTION_INPUT_SET')
         for n,p in prompts.items():
             expected=config.get('input_bindings',{}).get(str(n),{})
-            axis.require(expected==dict(file_sha256=sha(p),identity=axis.input_identity(read(p),version=version)),
+            axis.require(expected==dict(file_sha256=sha(p),identity=axis.input_identity(read(p),version=version) if input_pilot else contract.input_identity(read(p))),
                 'EXECUTION_INPUT_BINDING:'+str(n))
     from exposedpath.gate8_diagnostic import prepare_diagnostic
     from scripts.gate8_diagnostic_collect import run_once
@@ -93,7 +97,7 @@ def run(config,output,*,execute=False,input_pilot=False):
         print('[stage] prepare '+b['run_id'],flush=True)
         prepared=prepare_diagnostic(output_dir=folder/'prepared',model_path=config['model'],
             inventory_path=config['inventory'],inventory_sha256=config['inventory_sha256'],prompt_path=prompt,
-            prompt_sha256=config['input_bindings'][str(b['input_tokens'])]['file_sha256'] if input_pilot else sha(prompt),
+            prompt_sha256=config['input_bindings'][str(b['input_tokens'])]['file_sha256'] if input_pilot or sensitivity else sha(prompt),
             expected_commit=config['commit'],physical_gpu=3,
             engineering_attention_backend='sdpa',target_python=config['target_python'],site_root=config['site_root'],
             **({'pilot_binding':b} if input_pilot else {'batch_binding':b}))

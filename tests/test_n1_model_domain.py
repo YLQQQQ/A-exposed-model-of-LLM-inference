@@ -16,6 +16,10 @@ from test_gate8_identity import UUID, sha, write_json
 
 def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, queries=False,
            default_prefix=False, allocations=False, vm_bits=False, pilot_binding=None,formal_binding=None,driver_apis=False,batch_binding=None,completion_binding=None,collector_contract=None):
+    # Load real JSON/file helpers before entry_source installs its isolated OS
+    # receipt double. Otherwise a first lazy axis import captures read=lambda:{}.
+    # This is fixture isolation, not a bypass of input or target identity checks.
+    from exposedpath import coe_pilot,coe_input_pilot
     queries=queries or damage=='unknown_query'
     if batch_binding is not None:
         from exposedpath.batch_load import minimal_fields as batch_fields  # before OS probe doubles
@@ -90,6 +94,7 @@ def source(tmp_path, monkeypatch, variant='Vsync', damage=None, internal=False, 
             from exposedpath import observation_preparation as preparation
             if preparation.active(batch_binding):
                 manifest.pop('domain_qualification',None)
+                if preparation.input_axis(batch_binding):manifest['observation_input']=preparation.input_identity(prompt)
                 manifest.update(runner_git_commit=batch_binding['execution_commit'],**coe_pilot.SOFTWARE,
                     preparation_source_sha256=sha(Path(preparation.__file__)))
                 monkeypatch.setattr(coe_pilot,'software_identity',lambda _:dict(coe_pilot.SOFTWARE))

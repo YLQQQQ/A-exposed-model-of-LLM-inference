@@ -199,6 +199,7 @@ def prepare_diagnostic(*, output_dir, model_path, inventory_path, inventory_sha2
         from .batch_load import minimal_fields
         manifest.update(minimal_fields(batch_binding))
         if preparing:manifest['preparation_source_sha256']=_sha(Path(__file__).with_name('observation_preparation.py'))
+        if preparing and preparation.input_axis(batch_binding):manifest['observation_input']=preparation.input_identity(prompt)
         if parameters.active(batch_binding):manifest['memset_input']=memset_input
     if completion_binding is not None:
         from .completion_path import minimal_fields
@@ -399,6 +400,12 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
     observed_tokens=[]
     actual_input={}
     def observe_input(batch):
+        if preparing and preparation.input_axis(manifest['batch_load']):
+            actual=preparation.input_identity(dict(fixed_input_tokens=batch['fixed_input_tokens'],samples=[
+                dict(sample_index=i,input_ids=ids,attention_mask=mask)
+                for i,(ids,mask) in enumerate(zip(batch['input_ids'],batch['attention_mask']))]))
+            preparation.require(actual==manifest['observation_input'],'ACTUAL_INPUT_IDENTITY')
+            return
         actual_input.update(coe_pilot.input_identity(dict(fixed_input_tokens=batch['fixed_input_tokens'],samples=[
             dict(sample_index=i,input_ids=ids,attention_mask=mask)
             for i,(ids,mask) in enumerate(zip(batch['input_ids'],batch['attention_mask']))]),binding=pilot))
@@ -439,7 +446,7 @@ def run_diagnostic(*, manifest_path, prompt_path, preflight_path, project_root, 
         model_setup=dict(model_path=manifest['model_id'], prompt_path=output_dir/'prompt.json',
                          physical_gpu_index=manifest['gpu_index_physical'], batch_size=manifest['batch_size'] if batch or coe else 1,
                          manifest_path=output_dir/'manifest.json'),
-        request_plan=plan,**({'input_observer':observe_input} if coe or parameter_profile else {}),
+        request_plan=plan,**({'input_observer':observe_input} if coe or parameter_profile or (preparing and preparation.input_axis(manifest['batch_load'])) else {}),
         **({'observation_preparation':preparation_controller} if preparing or input_axis else {}),
         **({'parameter_recorder':parameter_recorder} if parameter_profile else {}))
         # Prepared cache contains no Tensor or dynamic completion state.

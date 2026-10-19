@@ -1,5 +1,33 @@
 # 观测准备位置消融 0.1：待审Engineering执行合同
 
+## 当前增量：512/2048 × O/P，执行合同0.2（2026-10-19）
+
+用户批准本地实现与待审交付；目标执行仍NOT_RUN。仅新增有限声明
+`OBSERVATION-PREPARATION-ENGINEERING/0.2`，沿用旧pass/execution/token/result
+封套0.1，以内含的精确binding/version和profile0.2区分；旧0.1仍只允许32/512。
+计划见[固定8槽配置](../../configs/observation_input_sensitivity_v0_1.json)。
+block1：512O→512P→2048P→2048O；block2反向。每run新进程，8P1/8profile，
+batch1、输出2、warmup3/repeat1。O直接使用原helper，P的prepare/ready函数体不变；
+只复用既有有限输入构造并将完整矩阵input/mask摘要接入新manifest与实际输入检查。
+两token完整request闭合与原质量门不变，无Decode隔离新例外、无Cpre/新hook。
+
+预定首token主要比较为各包装的R=Q2048−Q512×(phase GPU union2048/512)及R_P−R_O；
+用有理数保留signed精确值，分母无效则null/未定义，不加epsilon。第二token全保留，
+phase GPU union不是累计W。保存全部原值、H/D、成员/提交/位置、copy墙钟、phase及
+operation GPU union；原A和独立候选预算分别保存，迁移仍union去重，不改生产定义。
+完整block才比较，不拼旧样本。H下降不是精确包装成本或充分的操纵证明。
+
+两block只筛查：若准备操纵有效、成员/位置合格且O/P均保留正R，削弱“强响应仅为P
+特有”解释，不能排除共同profiler/时序影响；O反向或响应消失提示敏感性；混合、操纵
+不足或质量失败则不可判别，不追加。任何方向不构成新Formal或论文成功。
+
+预计40～60分钟（含现有后处理，非保证）；每槽现有driver硬超时900秒，固定8槽或
+硬失败停止，无重试/替补。新鲜空间门为输出/TEMP/归档卷各12GiB，同卷不重复计算；
+历史总量null/UNKNOWN、长期目标50,000,000,000 bytes未证明，不扫旧目录/ACL或清理。
+阶段A默认仅固定版本部署、变更CPU检查与空间回执；必须审查真实新A，之后才另行
+显式启用B。单ZIP保留原始和小型来源证据，不生成巨型domain。下文0.1及已执行审查
+保持历史身份，不能当作本批已执行。
+
 用户2026-10-17批准本地实现、CPU验证及待审打包，未授权本窗口执行服务器。
 本合同不签署Formal、不修改A/B、COE、完成政策或旧结果。Gate13限定PASS保持；
 新实验NOT_RUN，B2/旧七槽及历史UNKNOWN/BLOCKED保持。机器计划见

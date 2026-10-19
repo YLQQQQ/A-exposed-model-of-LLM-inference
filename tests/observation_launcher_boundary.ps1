@@ -23,6 +23,7 @@ function Run([string]$Exe,[string[]]$Argv,[string]$Name) {
         if ($Name -eq '03_checkout') {$script:CpuHead=$Target}
         $Tests=if ($InputPilot) {'tests/test_coe_input_pilot.py|tests/test_coe_input_delivery.py'} else {'tests/test_observation_preparation.py|tests/test_observation_delivery.py'}
         if ($Midpoint) {$Tests+='|tests/test_coe_input_midpoint.py|tests/test_coe_midpoint_delivery.py'}
+        if ($Sensitivity) {$Tests='tests/test_observation_input_sensitivity.py|tests/test_observation_input_delivery.py'}
         if ($Name -eq '04_cpu' -and ((@($Argv | Where-Object {$_ -like 'tests/*'}) -join '|') -ne $Tests)) {throw 'CPU check scope drift'}
         if ($Name -eq '06_nsys_version' -and ($Argv -join '|') -ne '--version') {throw 'Collector scope drift'}
         Write-Host ('CPU_PROCESS_BOUNDARY '+$Name)

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import threading
+from fractions import Fraction
 
 from .gate8_isolated_preflight import read,sha,write_new
 
@@ -19,6 +20,13 @@ RESULT_VERSION='observation-preparation-result/0.1.0'
 STATUS='OBSERVATION_PREPARATION_BOTH_TOKENS_PENDING_REVIEW'
 ORDERS=(((32,'O'),(32,'P'),(512,'P'),(512,'O')),
         ((512,'O'),(512,'P'),(32,'P'),(32,'O')))
+INPUT_VERSION='OBSERVATION-PREPARATION-ENGINEERING/0.2'
+INPUT_ORDERS=(((512,'O'),(512,'P'),(2048,'P'),(2048,'O')),
+              ((2048,'O'),(2048,'P'),(512,'P'),(512,'O')))
+
+
+def input_axis(value):
+    return isinstance(value,dict) and value.get('version')==INPUT_VERSION
 
 
 def require(ok,reason):
@@ -27,18 +35,19 @@ def require(ok,reason):
 
 def active(value):
     from .memset_callsite import active as callsite_active
-    return (isinstance(value,dict) and value.get('version')==VERSION) or callsite_active(value)
+    return (isinstance(value,dict) and value.get('version') in (VERSION,INPUT_VERSION)) or callsite_active(value)
 
 
-def schedule(batch_id,commit):
+def schedule(batch_id,commit,*,version=VERSION):
+    require(version in (VERSION,INPUT_VERSION),'BINDING_VERSION')
     require(isinstance(batch_id,str) and re.fullmatch('[A-Za-z0-9_-]{1,60}',batch_id),'BATCH_ID')
     require(isinstance(commit,str) and re.fullmatch('[0-9a-f]{40}',commit),'COMMIT')
-    return [dict(version=VERSION,batch_id=batch_id,execution_commit=commit,block=b,position=p,
+    return [dict(version=version,batch_id=batch_id,execution_commit=commit,block=b,position=p,
         condition=f'G{n}{v}',variant=v,input_tokens=n,batch_size=1,output_tokens=2,
         pass_id='pass1',pair_id=f'{batch_id}-b{b}-G{n}',run_id=f'{batch_id}-b{b}-G{n}{v}-pass1',
         warmup_count=3,repeat_count=1,purpose='OBSERVATION_PREPARATION_SENSITIVITY_ONLY',
         declaration_role='PRE_EXECUTION',formal_eligible=False)
-        for b,order in enumerate(ORDERS,1) for p,(n,v) in enumerate(order,1)]
+        for b,order in enumerate(INPUT_ORDERS if version==INPUT_VERSION else ORDERS,1) for p,(n,v) in enumerate(order,1)]
 
 
 def validate_binding(value):
@@ -46,7 +55,7 @@ def validate_binding(value):
     if callsite.active(value):return callsite.validate_binding(value)
     require(isinstance(value,dict),'BINDING')
     require(any(value==b and all(type(value[k]) is type(v) for k,v in b.items())
-        for b in schedule(value.get('batch_id'),value.get('execution_commit'))),'BINDING')
+        for b in schedule(value.get('batch_id'),value.get('execution_commit'),version=value.get('version'))),'BINDING')
     return value
 
 
@@ -55,7 +64,7 @@ def minimal_fields(binding):
     if callsite.active(binding):return callsite.minimal_fields(binding)
     b=validate_binding(binding)
     from .gate8_engineering_contract import declaration
-    scope=declaration('sdpa');scope['profile']=PROFILE
+    scope=declaration('sdpa');scope['profile']='OBSERVATION_PREPARATION_BOTH_TOKENS/0.2' if input_axis(b) else PROFILE
     return dict(batch_load=deepcopy(b),run_role='ENGINEERING',data_role='Engineering',run_id=b['run_id'],
         fixed_input_tokens=b['input_tokens'],fixed_output_tokens=2,batch_size=1,warmup_count=3,repeat_count=1,
         execution_mode='eager',attention_backend='sdpa',dtype_and_quantization='fp16',
@@ -68,10 +77,22 @@ def validate(manifest):
     require(not any(k in manifest for k in ('pilot','formal','n1_model','completion_path','domain_qualification','gate10_workload')),'MIXED_DOMAIN')
     require(all(type(manifest.get(k)) is type(v) and manifest[k]==v for k,v in minimal_fields(b).items()),'DECLARATION')
     require(manifest['runner_git_commit']==b['execution_commit'] and manifest['runner_git_dirty'] is False,'EXECUTION_IDENTITY')
+    if input_axis(b):
+        i=manifest.get('observation_input',{})
+        require(i.get('shape')==[1,b['input_tokens']] and i.get('schema_version')=='coe-input-axis-identity/0.1.0'
+            and i.get('algorithm')=='SHA256_COMPACT_UTF8_JSON_IN_ORDER' and i.get('sample_indices')==[0]
+            and set(i)=={'shape','schema_version','algorithm','sample_indices','input_ids_sha256','attention_mask_sha256','batch_sha256'}
+            and all(isinstance(i[k],str) and re.fullmatch('[0-9a-f]{64}',i[k]) for k in
+                ('input_ids_sha256','attention_mask_sha256','batch_sha256')),'INPUT_BINDING')
     return b
 
 
 def validate_input(prompt,config,length,*,binding=None):
+    if input_axis(binding):
+        validate_binding(binding)
+        require(length==binding['input_tokens'],'INPUT_LENGTH')
+        from .coe_input_pilot import validate_input as finite
+        return finite(prompt,config,1)
     from . import memset_callsite as callsite
     if callsite.active(binding):
         callsite.validate_binding(binding)
@@ -97,6 +118,13 @@ def validate_prepared(manifest,prepared,root):
         and sha(Path(root)/'exposedpath/runner.py')==manifest['runner_source_sha256'],'INPUT_HASH')
     require(manifest.get('preparation_source_sha256')==sha(Path(root)/'exposedpath/observation_preparation.py'),'PREPARATION_SOURCE_HASH')
     validate_input(read(Path(prepared)/'prompt.json'),read(Path(manifest['model_id'])/'config.json'),b['input_tokens'],binding=b)
+    if input_axis(b):
+        require(manifest['observation_input']==input_identity(read(Path(prepared)/'prompt.json')),'INPUT_CONTENT')
+
+
+def input_identity(prompt):
+    from .coe_input_pilot import input_identity as identity
+    return identity(prompt)
 
 
 @dataclass(frozen=True)
@@ -215,7 +243,11 @@ def execution_extension(manifest,ledger,execution,execution_path,manifest_path,p
     return {'batch_load','batch_tokens_sha256','observation_preparation'},EXECUTION_VERSION
 
 
-def make_inputs(seed,expected_sha,output):
+def make_inputs(seed,expected_sha,output,*,version=VERSION):
+    require(version in (VERSION,INPUT_VERSION),'BINDING_VERSION')
+    if version==INPUT_VERSION:
+        from .coe_input_pilot import make_inputs as finite
+        return finite(seed,expected_sha,output)
     require(sha(seed)==expected_sha,'SEED_HASH');value=read(seed)
     require(value['fixed_input_tokens']==512 and len(value['samples'])==1,'SEED_SHAPE')
     ids=value['samples'][0]['input_ids'];require(len(ids)==512 and ids==ids[:32]*16,'SEED_CYCLE')
@@ -235,8 +267,11 @@ METRICS=('candidate_ns','original_sync_ns','kernel_ns','memop_ns','wall_ns','unc
 def block_contrasts(rows):
     """Predeclared complete four-condition block, signed P-O and 512-32."""
     require(len(rows)==4 and all(s['status']=='COMPLETE' for s in rows),'INCOMPLETE_BLOCK')
+    bindings=[validate_binding(s['binding']) for s in rows]
+    require(len({(b['version'],b['batch_id'],b['execution_commit'],b['block']) for b in bindings})==1,'BLOCK_IDENTITY')
+    lengths=(512,2048) if input_axis(bindings[0]) else (32,512)
     values={(s['binding']['input_tokens'],s['binding']['variant']):s['result'] for s in rows}
-    require(set(values)=={(32,'O'),(32,'P'),(512,'O'),(512,'P')},'BLOCK_CONDITIONS')
+    require(set(values)=={(n,v) for n in lengths for v in ('O','P')},'BLOCK_CONDITIONS')
     result=[]
     for token in (0,1):
         metrics={}
@@ -245,20 +280,45 @@ def block_contrasts(rows):
             require(op['token_index']==token,'TOKEN_ORDER')
             metrics[key]={**{k:op[k] for k in METRICS},**{k:op['positions'][k] for k in ('H_ns','D_ns')}}
         difference=lambda a,b:{k:metrics[a][k]-metrics[b][k] for k in metrics[a]}
-        po={str(n):difference((n,'P'),(n,'O')) for n in (32,512)}
-        length={v:difference((512,v),(32,v)) for v in ('O','P')}
-        result.append(dict(token_index=token,phase='prefill' if token==0 else 'decode',
-            P_minus_O=po,length_512_minus_32=length,
-            difference_of_length_responses={k:length['P'][k]-length['O'][k] for k in length['P']}))
+        po={str(n):difference((n,'P'),(n,'O')) for n in lengths}
+        length={v:difference((lengths[1],v),(lengths[0],v)) for v in ('O','P')}
+        entry=dict(token_index=token,phase='prefill' if token==0 else 'decode',
+            P_minus_O=po,**{f'length_{lengths[1]}_minus_{lengths[0]}':length},
+            difference_of_length_responses={k:length['P'][k]-length['O'][k] for k in length['P']})
+        if input_axis(bindings[0]):
+            raw={};residuals={}
+            for (n,v),r in values.items():
+                windows=[w for w in r['windows'] if w['phase']==entry['phase']]
+                require(len(windows)==1,'BLOCK_WINDOW_COVERAGE')
+                w=windows[0];gpu=w['baseline']['gpu_activity'];g=gpu['union_ns']
+                duration=w['projection']['end_ns']-w['projection']['start_ns']
+                require(duration>0,'BLOCK_WINDOW_DURATION')
+                raw[f'G{n}{v}']=dict(metrics[n,v],phase_gpu_union_ns=g,phase_gpu_status=gpu['status'],
+                    phase_ns=duration,coe_over_phase=metrics[n,v]['candidate_ns']/duration,
+                    coe_over_phase_gpu=metrics[n,v]['candidate_ns']/g if gpu['status']=='KNOWN' and type(g) is int and g>0 else None)
+            for v in ('O','P'):
+                low,high=raw[f'G512{v}'],raw[f'G2048{v}']
+                valid=all(x['phase_gpu_status']=='KNOWN' and type(x['phase_gpu_union_ns']) is int
+                    and x['phase_gpu_union_ns']>=0 for x in (low,high)) and low['phase_gpu_union_ns']>0
+                f=Fraction(high['candidate_ns'])-Fraction(low['candidate_ns']*high['phase_gpu_union_ns'],low['phase_gpu_union_ns']) if valid else None
+                residuals[v]=f
+            encode=lambda f:dict(R_ns=float(f) if f is not None else None,
+                R_exact=dict(numerator=f.numerator,denominator=f.denominator) if f is not None else None,
+                status='DEFINED_SIGNED' if f is not None else 'UNDEFINED_INVALID_PHASE_GPU_DENOMINATOR')
+            diff=residuals['P']-residuals['O'] if all(f is not None for f in residuals.values()) else None
+            entry.update(primary=token==0,raw_by_condition=raw,R_by_variant={v:encode(f) for v,f in residuals.items()},
+                R_P_minus_R_O_ns=float(diff) if diff is not None else None,R_P_minus_R_O_exact=encode(diff)['R_exact'],
+                denominator='SAME_PHASE_GPU_UNION_NOT_CUMULATIVE_W')
+        result.append(entry)
     return dict(block=rows[0]['binding']['block'],per_token=result,
         interpretation='SENSITIVITY_SCREEN_ONLY_NOT_STABILITY_OR_CAUSAL_EFFECT')
 
 
-def run_batch(batch_id,commit,output,collect):
+def run_batch(batch_id,commit,output,collect,*,version=VERSION):
     out=Path(output);out.mkdir(parents=True,exist_ok=False)
-    r=dict(version=VERSION,status='BLOCKED',run_role='ENGINEERING',data_role='Engineering',
+    r=dict(version=version,status='BLOCKED',run_role='ENGINEERING',data_role='Engineering',
         model_process_budget=8,profile_budget=8,automatic_retry=False,replacement=False,
-        runs=[dict(binding=b,status='NOT_RUN') for b in schedule(batch_id,commit)],blocks=[],incomplete_blocks=[1,2],
+        runs=[dict(binding=b,status='NOT_RUN') for b in schedule(batch_id,commit,version=version)],blocks=[],incomplete_blocks=[1,2],
         sensitivity_verdict='NOT_ASSESSED',formal_eligible=False,dropped_records_status='UNKNOWN',measurement_validity='NOT_ASSESSED')
     def persist():
         p=out/'batch_report.pending.json';write_new(p,r);p.replace(out/'batch_report.json')
@@ -281,7 +341,7 @@ def run_batch(batch_id,commit,output,collect):
             slot.update(status='BLOCKED',error=f'{type(exc).__name__}: {exc}');persist();break
         persist()
     else:
-        decreases=[t['P_minus_O'][str(n)]['H_ns']<0 for block in r['blocks'] for t in block['per_token'] for n in (32,512)]
+        decreases=[t['P_minus_O'][str(n)]['H_ns']<0 for block in r['blocks'] for t in block['per_token'] for n in ((512,2048) if version==INPUT_VERSION else (32,512))]
         r.update(status='FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW',
             sensitivity_verdict='CONSISTENT_H_DECREASE_SCREEN_ONLY' if all(decreases) else 'INCONCLUSIVE_OR_MIXED',
             causal_effect_verdict='NOT_IDENTIFIED_AUTOMATICALLY_REVIEW_D_MEMBERS_AND_SUBMISSION_STRUCTURE')

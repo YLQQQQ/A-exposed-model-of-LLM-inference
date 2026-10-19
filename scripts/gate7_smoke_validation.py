@@ -140,7 +140,9 @@ def validate_pre_model_identity(manifest_path: Path, preflight_path: Path, proje
         elif execution_contract == 'N1-VERIFIED-MODEL/0.1':
             from exposedpath.n1_model import validate_prepared
             validate_prepared(manifest, manifest_path.parent, project_root)
-        elif execution_contract in ('BATCH-LOAD-ENGINEERING/0.1','MEMSET-PYTORCH-PREFILL-PARAMS/0.1','OBSERVATION-PREPARATION-ENGINEERING/0.1','MEMSET-CALLSITE-ENGINEERING/0.1'):
+        elif execution_contract in ('BATCH-LOAD-ENGINEERING/0.1','MEMSET-PYTORCH-PREFILL-PARAMS/0.1','OBSERVATION-PREPARATION-ENGINEERING/0.1','OBSERVATION-PREPARATION-ENGINEERING/0.2','MEMSET-CALLSITE-ENGINEERING/0.1'):
+            if execution_contract.startswith('OBSERVATION-PREPARATION-') and manifest.get('batch_load',{}).get('version')!=execution_contract:
+                raise ValueError('Observation preparation pre-model contract version conflicts')
             from exposedpath.batch_load import validate_prepared
             validate_prepared(manifest,manifest_path.parent,project_root)
         elif execution_contract=='G12-FORMAL-ENVELOPE/0.1':

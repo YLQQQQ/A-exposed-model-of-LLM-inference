@@ -1,6 +1,48 @@
 # ExposedPath 科研进度清单
 
-## 7.208 科研优先的一页开题裁决：有条件适合，provider任务暂停（2026-10-19，当前）
+## 7.209 实验优先：512/2048×O/P的8P1本地接线与待审交付（2026-10-19，当前）
+
+用户批准本地实现、CPU验证与单一待审包；未授权本窗口服务器/模型/CUDA/Nsight。
+沿用[现有执行说明](observation_preparation_engineering_v0_1.md)新增0.2小节及
+[固定8槽配置](../../configs/observation_input_sensitivity_v0_1.json)，不写开题/论文或新图。
+
+- [x] 有限合同`OBSERVATION-PREPARATION-ENGINEERING/0.2`接通512/2048 O/P，
+  旧0.1仍只支持32/512。复用原O helper及P prepare/ready函数体，不移动动态读取、
+  NVTX、时间戳、CUDA或completion。新manifest/实际input observer绑定完整input/mask
+  矩阵摘要；独立版本profile和采集前身份分派，不借旧seal或改旧Pilot/Formal角色。
+- [x] prepare→seal→真实采集argv边界→producer→Canonical→两token准入→独立候选
+  预算→消费者→完整四条件block已做CPU文件链验证（外部设备/进程明确替身）。
+  缺drain/依赖/标记、错流/身份/token/版本/结果或预算hash均拒绝；原A及COE迁移预算
+  独立保存，完整request闭合门不变，无Decode新豁免，不生成巨型domain。
+- [x] block1为512O→512P→2048P→2048O，block2反向；8个新P1、8profile，
+  batch1/输出2/warmup3/repeat1。首token各包装R与R_P−R_O用signed有理数，
+  对应phase GPU union作为分母，零/无效时null而非epsilon；保留第二token全部原值、
+  COE绝对量/phase比例、phase/operation union、H/D、copy及成员/提交位置。
+  两block只筛查P特有解释/观测敏感性；混合、反向、操纵不足及零值不触发追加。
+- [x] 本地Python3.12.7：新版本两文件最终32 passed/0 failed/0 skipped（81.18s），
+  命令`python -m pytest -q -p no:cacheprovider tests/test_observation_input_sensitivity.py tests/test_observation_input_delivery.py --basetemp .local/obs2048_final2 --junitxml=.local/obs2048_final.xml`。
+  旧合同定向26 passed/0 failed/0 skipped（56 deselected，20.33s），覆盖原排程、
+  缓存、负差/R及旧角色门；实际PowerShell5.1解析/分派、空间不足/未知、源码冲突、
+  错A回执、B失败传播均使用CPU边界。compileall/diff通过，不是目标GPU资格。
+  早期测试括号/fixture目录/错误block构造及空选集记录保留，不将初稿当最终证据。
+  追加旧producer实文件链6 passed/0 failed/0 skipped（8 deselected，35.53s）；曾有
+  2项旧Pilot单独选择时失败，已定位为fixture在OS receipt替身之后延迟导入输入模块，
+  捕获`read=lambda:{}`。提前导入真实文件模块后相同检查通过，不修改生产读取或形状门。
+  命令`python -m pytest -q -p no:cacheprovider tests/test_observation_preparation.py::test_actual_producer_canonical_both_tokens tests/test_coe_input_pilot.py::test_real_producer_canonical_both_tokens_and_budget -k 'None or test_actual_producer' --basetemp .local/obs2048_legacy_files3 --junitxml=.local/obs2048_legacy_files.xml`。
+- [ ] 新目标A及8P1真实执行均**NOT_RUN**。最近可信checkout仅为已审A的cedd706，
+  其receipt SHA256为67f02b575aa4ce37cdcdc9c861e1149a1e960d5d33b730d9983a541ae7877fb0；
+  不用本地HEAD或B控制层版本猜现场。新A必须fresh核checkout/clean、源码实字节、
+  新执行版本和资源，若已偏离此前置则停止，不自动重置/试包。
+
+最高优先级为协调审查**新的**单一交付及A静态原件，之后才另行显式B；默认仅部署/CPU/
+空间，包与实际执行/分析commit精确绑定，构建后再记录完整ZIP/hash，避免自引用。
+预计40～60min、临时12GiB（估计）；每槽driver硬超时900s，固定8槽或硬失败停止，
+无重试/替补/追加；未知writer不强封包。新鲜输出/TEMP/归档卷空间同卷不重复核算；
+历史总量null/UNKNOWN，长期50,000,000,000 bytes目标尚未证明，不扫ACL/旧目录/清理。
+CUPTI provider/1024取证/引擎/输出轴及旧七槽暂停。Gate13限定PASS/Gate14 NOT_RUN、
+原A/B/COE定义、Raw/历史BLOCKED/UNKNOWN及用户DOCX不变，本批不授新Formal。
+
+## 7.208 科研优先的一页开题裁决：有条件适合，provider任务暂停（2026-10-19，历史；当前执行准备见7.209）
 
 本轮按用户优先级只复用已有数据/文稿，在[现有决策稿0.4](pytorch_research_feasibility_decision_v0_1.md)
 集中回答问题、假设、证据/竞争解释、公平用途和唯一判别设计；保留原0.3全文及其停止范围。

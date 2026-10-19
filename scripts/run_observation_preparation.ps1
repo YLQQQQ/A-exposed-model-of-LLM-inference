@@ -3,13 +3,15 @@ param([switch]$CollectReviewedEngineering,[switch]$CollectReviewedInputPilot,[st
 $ErrorActionPreference='Stop'
 $C=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'delivery.json') -Raw | ConvertFrom-Json
 $Midpoint=$C.schema_version -eq 'coe-input-pilot-delivery/0.2'
+$Sensitivity=$C.schema_version -eq 'observation-preparation-delivery/0.2'
 $InputPilot=$C.schema_version -in @('coe-input-pilot-delivery/0.1','coe-input-pilot-delivery/0.2')
 $Budget=if ($Midpoint) {9} else {8}
 $Collect=$CollectReviewedEngineering -or $CollectReviewedInputPilot
 if (($InputPilot -and $CollectReviewedEngineering) -or (!$InputPilot -and $CollectReviewedInputPilot)) {throw 'Explicit role opt-in conflict'}
-if ($C.schema_version -notin @('observation-preparation-delivery/0.1','coe-input-pilot-delivery/0.1','coe-input-pilot-delivery/0.2') -or $C.commit -ne $C.analysis_commit -or
+if ($C.schema_version -notin @('observation-preparation-delivery/0.1','observation-preparation-delivery/0.2','coe-input-pilot-delivery/0.1','coe-input-pilot-delivery/0.2') -or $C.commit -ne $C.analysis_commit -or
     $C.model_process_budget -ne $Budget -or $C.profile_budget -ne $Budget -or
-    ($Midpoint -and $C.input_contract_version -ne 'COE-INPUT-P-PILOT/0.2')) {throw 'Delivery conflict'}
+    ($Midpoint -and $C.input_contract_version -ne 'COE-INPUT-P-PILOT/0.2') -or
+    ($Sensitivity -and $C.observation_contract_version -ne 'OBSERVATION-PREPARATION-ENGINEERING/0.2')) {throw 'Delivery conflict'}
 function Hash([string]$P) {return (Get-FileHash -LiteralPath $P -Algorithm SHA256).Hash.ToLowerInvariant()}
 function Safe([string]$Root,[string]$Relative) {
     $Base=[IO.Path]::GetFullPath($Root).TrimEnd('\')+'\'
@@ -36,7 +38,7 @@ function VerifyManifest([string]$Root) {
 }
 VerifyManifest $PSScriptRoot
 if ((Hash $PSCommandPath) -ne $C.launcher_sha256) {throw 'Launcher identity conflict'}
-if ($InputPilot -and ((Hash (Join-Path $PSScriptRoot 'plan.json')) -ne $C.plan_sha256)) {throw 'Plan identity conflict'}
+if (($InputPilot -or $Sensitivity) -and ((Hash (Join-Path $PSScriptRoot 'plan.json')) -ne $C.plan_sha256)) {throw 'Plan identity conflict'}
 $Code=$C.code_root;$Target=$C.commit;$Python=Join-Path $Code '.venv\Scripts\python.exe'
 $Prefix=if ($InputPilot) {'coe_input_'} else {'observation_'}
 $Static=Safe $C.server_root ('logs\'+$Prefix+$Target.Substring(0,12)+'_static')
@@ -117,6 +119,7 @@ try {
         if (Test-Path -LiteralPath $CpuTemp) {throw 'CPU output exists'}
         $Tests=if ($InputPilot) {@('tests/test_coe_input_pilot.py','tests/test_coe_input_delivery.py')} else {@('tests/test_observation_preparation.py','tests/test_observation_delivery.py')}
         if ($Midpoint) {$Tests+=@('tests/test_coe_input_midpoint.py','tests/test_coe_midpoint_delivery.py')}
+        if ($Sensitivity) {$Tests=@('tests/test_observation_input_sensitivity.py','tests/test_observation_input_delivery.py')}
         Run $Python (@('-X','utf8','-m','pytest','-q','-ra','-p','no:cacheprovider','--basetemp',$CpuTemp,
             '--junitxml',(Join-Path $Out 'cpu_results.xml'))+$Tests) '04_cpu'
         $Compile=@('-X','utf8','-m','py_compile','exposedpath/observation_preparation.py',
