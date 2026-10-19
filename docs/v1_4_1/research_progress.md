@@ -1,6 +1,42 @@
 # ExposedPath 科研进度清单
 
-## 7.211 真实阶段A回执审查通过，绑定新receipt后仅8P1待用户显式执行（2026-10-19，当前）
+## 7.212 512/2048×O/P八次完成并审查：方向保留，非比例幅度敏感（2026-10-19，当前）
+
+- [x] 新B归档57,450,743 bytes，SHA256
+  `afd428171bbe84e2ab53ea1b32a5f8099e750ca84c4a6b74f3fd8ee0c84d0f0e`；606成员/605项清单、
+  CRC、安全路径及全部hash核验，manifest SHA256
+  `0fe79cd8a514549a14971316f25cc6f41941d045706c94942f44c60e51f86ad8`。
+  原A的19成员逐字节保留；launcher/delivery、415项实际源码与既定9c8b03e一致，
+  根3个exit均0。8run/8profile、16条链、两个完整block，全部实际token为29184/6556。
+  输入/mask/模型源码/PID及GPU身份、准备消费和成功窗前drain证据相符；非重采或新Q0。
+- [x] 独立只读SQLite行及整数区间核对42,320次成员行引用、42,360次API行引用（含重复
+  前缀，不是新增样本数）；328条候选来源hash、8条辅助合同Git内容绑定成立。
+  16条COE、terminal/直接D2H、物理同步及24个原A/候选窗口相符；14,106个迁移片段
+  只从submit扣除，去重/守恒/Request=Prefill+Decode均成立。未重跑完整analyzer，
+  不把行与算术复核写成独立W oracle或完整物理B资格。
+- [x] 首token预定R：block1 O/P为+5.781778/+88.917694ms，block2为
+  +6.770716/+83.505612ms；R_P−R_O为+83.135916/+76.734895ms。
+  O/P均正，削弱“正响应只在P存在”；但O的COE/GPU活动增长接近同比例，P明显偏离，
+  不支持响应幅度包装不敏感。2048的COE占Prefill为47.713110%～51.498626%；
+  这是候选完成暴露，不是原Device wait或纯Host阻塞率。第二token仍一block正、一block负。
+- [x] 8个P−O的H均下降0.139468～0.651662ms；同长度/同block的必要kernel名称及
+  grid/block/动态共享内存序列相同，但512首token的D下降91.014676/94.036969ms。
+  其O操作未覆盖部分69.683762/79.696249ms，其中69.561224/79.501896ms的下一个
+  必要活动所对应提交API已在空隙开始前返回。该分类只报告时间/提交事实，不判定驱动、
+  调度、profiler或纯阻塞根因；H差不能解释全部时序变化。16条同操作普通GPU union仍等于COE。
+- [ ] 后续建议固定P，将O/P作为独立敏感性证据，另审256/512/2048同期三点的3完整block、
+  9P1有限计划，检查低侧与端点响应；256目标准入仍未验证。尚未批准/生成新包或服务器
+  命令，不恢复1024/provider/引擎/输出轴/旧七槽。先审现有解释和准确预算，不为追大值改定义。
+
+结果集中于[执行与结果审查](observation_preparation_engineering_v0_1.md#2026-10-19八次真实结果审查)。
+只读审计、16条原值、24个预算、signed比较及空隙来源在
+`.local/diagnostics/observation_input_result_review_9c8b03_v0_1/`；旧B命令已经执行，不再运行。
+两block仅Engineering敏感性筛查，不与旧Pilot拼样本，不作显著性/稳定性/无插桩因果或方法优越主张。
+本轮无业务修改、图表、GPU/服务器操作或测试套件重跑；仅离线核对及必要记录。
+历史NOT_ASSESSED/UNKNOWN、长期总容量UNKNOWN、生产A/B/COE、用户DOCX/Raw、
+Gate13限定PASS和Gate14 NOT_RUN均保持。当前协议仍Pre-Pilot，不授新Formal。
+
+## 7.211 真实阶段A回执审查通过，绑定新receipt后仅8P1待用户显式执行（2026-10-19，历史；实际B见7.212）
 
 - [x] 新静态ZIP104,163 bytes、SHA256 `32f6a44663a678953f2fa3380e189f4ee5d40d1a1761f6fca50ec87e1e17b653`；
   19成员/18项清单、安全路径/CRC及全部hash通过，manifest SHA256
