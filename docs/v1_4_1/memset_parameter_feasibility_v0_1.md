@@ -1,6 +1,92 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-19增补：接回真实1024的同进程可行性裁决 0.21（当前；尚无可执行provider）
+## 2026-10-19增补：通用输入适配的A/B选路 0.22（当前；仅选路，不实施）
+
+**唯一推荐B：保持当前执行栈，先进行两日封顶的限定CUPTI provider本地接通验证。**
+不是批准完整provider、目标模型或新实验。A暂不执行；B也未获得真实模型覆盖/COE资格。
+本轮半天上限内完成代码、固定源码和封存审计材料的对照，只更新本说明/进度/handoff。
+
+### 问题定义纠正与证据
+
+这是**测量工具对输入引起的合法执行分支变化的适配缺口**，不是“1024不受支持”或
+“不同路径就不能分析”。输入长度不是validity理由；实例参数、效果、scope、依赖或
+terminal的缺证才是。目标是按同一证据规则处理声明范围内的输入，而不是建立1024豁免。
+也不能由一次失败推断其他长度都会失败，或由512/2048通过推断其他长度必然通过。
+“通用输入”指不以长度特例处理上述证据状态，不表示一次通过就支持所有CUDA API、
+graph、并发ownership或所有资源尺寸；实际语义超出已声明子域仍按具体原因拒绝。
+
+- 已封存中点批次的来源审计：相同runner/P/input-adapter字节、FP16/eager/SDPA，512
+  Prefill有85次memset且全部映射；1024有113次，其中29次映射、84次缺效果。实际callchain
+  均为空，未取得count/native stream/callee地址。复用已完成Raw/Canonical/关联搜索，
+  不再次查旧correlation。出处：本地`coe_input_extension_v0_1/call_origin_review.json`与
+  `coe_midpoint_failure_closeout_v0_1/review.json`，原ZIP SHA256 `8d4accd2…1859784`。
+- [已有512/2048 Raw分支事实](coe_research_short_note_v0_1.md)§12.3证明Softmax/GEMM名称、
+  grid和次数变化，且2048中实际MEMSET仍可映射。这证明“分支可变且仍可能可分析”，
+  **不证明缺效果调用来自哪一个后端/库**。
+- 固定[PyTorch2.6 SDPA dispatcher](https://raw.githubusercontent.com/pytorch/pytorch/v2.6.0/aten/src/ATen/native/transformers/cuda/sdp_utils.cpp)
+  L30–46、688–743根据参数/能力和优先级选实现；
+  [sdpa_kernel](https://raw.githubusercontent.com/pytorch/pytorch/v2.6.0/torch/nn/attention/__init__.py)
+  L74–131可显式限制MATH。它们证明**有控制接口**，没有证明MATH能消除此84次缺口。
+  [runner/model配置观察](../../exposedpath/gate8_diagnostic.py)仍把
+  `native_attention_backend`记为UNKNOWN；`_attn_implementation=sdpa`不是native分支证明。
+- 已保存且与目标快照匹配的Qwen2源码通过ALL_ATTENTION_FUNCTIONS选attention实现；
+  固定CUDABlas源码证明有BLAS调用，FillKernel使用gpu_kernel。它们没有具体调用实例
+  到84次memset的证据链，不能把缺口归因给cuBLAS、SDPA某分支或零payload。
+  固定tag源码也不冒充完整目标二进制构建来源证明。相关文件/hash已在
+  `batch_load_memset_effect_v0_1/evidence_binding_and_results.json`封存。
+
+### 仅比较两条路线
+
+| 路线 | 最小验收与成本 | 停止条件及本轮判断 |
+| --- | --- | --- |
+| A：保留Nsight，预先固定SDPA MATH，不试多个后端 | 先有具体来源证据说明该选择为何针对缺口；再声明新执行栈、绑定实际backend flags/源码/输入，关键输入256/512/1024/2048均同期验证，完整同次trace→局部资格→COE；不能只留通过点。接线约1～2工作日估计，但真实资格成本尚不能可靠估计，绝不是零成本换开关 | **当前缺针对性来源证据，故不推荐、不试包。** MATH只约束attention，不冻结所有GEMM/临时空间路径；不知道旧路径是否已经落在math/fallback。任一实际分支/输入身份不符、未知效果、必要闭包失败即停，不换另一个后端追绿 |
+| B：保留当前执行栈，限定同进程CUPTI provider | 同一个真实模型进程、一个subscriber，同时取得参数、Runtime/Driver/API/sync、kernel/Memcpy/Memset、token/clock/身份及关闭；完整局部证据才能入COE。复用0.21所列核心和算法，新增来源适配/逻辑零证据入口。完整工程仍约5～10工作日量级的初估，**本次仅推荐两日本地可行性上限，不批准其余工程** | 推荐，因为直接针对“实例证据不足”，不改变被研究程序的后端政策。不能保证拿到正效果。真实覆盖为空/不全、非零缺效果、未知stream/依赖/terminal仍停；需要重编PyTorch、扩hook、混用Nsight或跨运行拼证据即停止，不滚动扩建 |
+
+A若以后获实质证据并被选用，是新的执行栈。MATH的中间精度和kernel实现可能改变，
+不是只修观测：固定[functional.py](https://raw.githubusercontent.com/pytorch/pytorch/v2.6.0/torch/nn/functional.py)
+L5376–5396说明各实现的数值可能不同，math对half/bfloat16输入使用float中间量。
+新输入系列必须完整保留失败及不可评估点，不能与旧SDPA批次拼成一条同栈曲线。
+
+### 两路线共用同一准入分类，不按token长度分派
+
+1. **有设备效果：** 原API及同次真实父子/correlation桥均保留，核实际bytes/value、
+   device/context/stream和提交边界，所有必要成员及terminal闭合后计算；不能只看正bytes
+   或读回正确。效果存在不自动代表整个profile合格。
+2. **已证明零payload：** 必须有该次实际count0和成功返回，保留逻辑调用/顺序及API预算；
+   依0.5/zero_scope的有限关系，独立验证真实成员、依赖及terminal投影不受未知零节点关系
+   影响。不虚构device activity，不把count0等同无顺序作用。A若仍只有无参数的Nsight记录，
+   就**没有资格使用此分支**；backend名称不能代替实参。B也须逐实例覆盖，不借微例结论。
+3. **效果未知：** 未取到count、桥接含糊、非零却无合法效果或闭包不清，明确BLOCKED。
+   无activity/成功返回/同名API/其他长度通过均不把它变成零。三类规则对所有输入相同。
+
+### 唯一下一任务：两日封顶的本地验证清单（本轮未开始）
+
+- [ ] **第1日：验证接线是否足够。** 以现有API22核心制作最小Host-only DLL/宿主切片，
+  核真实SDK头、C ABI、每线程父子栈、容量/关闭；按官方结构消费手工构造的Kernel9、
+  Memcpy5、Memset4、API、Synchronization、Marker及资源记录。禁止调用CUDA/CUPTI或
+  运行生成的GPU入口；这不是实际模型覆盖证明。缺字段须定位到真实SDK/producer来源，
+  不能凭空声明将来可采到。
+- [ ] **第2日：验证这不是参数孤岛。** 用同一会话身份贯通
+  `模型入口绑定→原P/token/drain证据→参数/活动源→局部必要集合→COE/覆盖清单`的CPU文件链；
+  参数已映射、已证零payload及未知三类均按同一规则消费。独立预期覆盖跨输入身份混用、
+  双domain同号错桥、失配/重复、错流/时钟、操作内D2H、已完成前缀、未来提交和缺依赖。
+  不将旧CSV/record ID作为答案，不按长度写准入条件，也不再重跑0/64或全Q0。
+- [ ] **到点只裁决一次：** 是否已形成来源明确、可审的本地完整链，并能逐项列出真实
+  模型执行时应取得的证据。若只有count日志，或缺kernel/copy/sync/marker/资源任一必需
+  来源，判本地接通不成立，停止；不转发参数模型包、不自动追加工具和资格步骤。
+  通过也只允许集中审查是否投入目标验证，**不自动延长成5～10日开发，不授模型资格**。
+
+最终目标验收仍必须在未来同一个真实PyTorch运行上完成：参数目标集合与实际API双向
+唯一覆盖，全部同次时间线、原Host-readable窗口/输入/token/drain、依赖/terminal及新
+provider质量门通过，才可发布局部COE。CPU链不能证明实际运行已满足这些条件。
+首次真实模型覆盖若需选择1024，只是用已知缺口作**预定反证用例**，不是1024专用政策；
+一个输入成功也不能授任意输入通行，其他长度沿同一逐request质量规则检查。
+
+本轮不实现上述两日任务，不打包/换backend/采集。0.21的1024专用表述作为历史保留，
+当前优先级改为通用输入适配。旧B后验不作为目标；0.2限定结论、原1024/B2 BLOCKED、
+已通过512/2048、旧Formal/Gate、Raw、UNKNOWN与用户DOCX全部保持。
+
+## 2026-10-19增补：接回真实1024的同进程可行性裁决 0.21（历史；当前通用输入选路见0.22）
 
 **技术路线GO；当前模型执行/COE准入NO-GO。** 这两个判断对象不同：固定SDK有同进程
 Callback/Activity接口，但现有实现还不能提供真实模型的完整输入。仅把参数核心改成DLL
