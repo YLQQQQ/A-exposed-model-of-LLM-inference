@@ -42,6 +42,18 @@
 CUPTI provider/1024取证/引擎/输出轴及旧七槽暂停。Gate13限定PASS/Gate14 NOT_RUN、
 原A/B/COE定义、Raw/历史BLOCKED/UNKNOWN及用户DOCX不变，本批不授新Formal。
 
+交付固定执行/分析commit为`9c8b03eae89f5f5e62e647cdeb15b9010ba0b0ee`（已正常推送）。
+唯一包`observation_input_9c8b03eae89f_delivery.zip`，137870 bytes，SHA256
+`3df595a7e1f70e3a5a606e0dcc698d9bdc92633b753016f6e54f79eb6095ea07`；清单SHA256
+`6e635ed4b323bf2eb83fa97146c79c015ef7eb293a3aa0d2bf42e8231176792c`。
+本地独立包审：CRC、17成员/16清单项全覆盖、415源码路径的固定Git内容/明确CRLF表示、
+两份完整输入矩阵摘要、原可信A绑定及包内PS解析通过；O原helper与P prepare体对
+cedd706的同解释器AST比较均相同（跨版本helper身份仍用既有独立结构合同）。
+包内launcher SHA256为`27fbb7d52b1bdda00cf3e0651196010a0cd3c9d03d55da38e96b5c78fc3ed448`。
+本条为控制层交付记录，不改变已封包执行commit、不再打包；新A/B均未执行。
+具体机器路径、阶段A整段命令及包审小回执在忽略的`.local/observation_input_9c8b03eae89f_*`
+与本地handoff；不提供可直接运行B命令，待真实A回传审查。
+
 ## 7.208 科研优先的一页开题裁决：有条件适合，provider任务暂停（2026-10-19，历史；当前执行准备见7.209）
 
 本轮按用户优先级只复用已有数据/文稿，在[现有决策稿0.4](pytorch_research_feasibility_decision_v0_1.md)
