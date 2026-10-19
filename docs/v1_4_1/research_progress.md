@@ -30,8 +30,10 @@
   事实，不能代替完整后验A检查，本地副本不能补写它曾在服务器执行。
 
 当前窄域参数/效果问题无需新采；完整B真正缺后验目标状态证据，而不是再跑一次0/64。
-缺driver API时间能力仍未取得，未知不填0。取证审查0.20和handoff同步；分析commit在
-实现提交后以sidecar绑定，避免自引用。不制作新包或服务器命令；PyTorch、旧1024/B2、
+缺driver API时间能力仍未取得，未知不填0。取证审查0.20和handoff同步；实际分析实现
+commit为`d32a2533f6c52128ddfb1b4577b844e9be47b1c5`，提交后以同目录
+`analysis_binding.json`绑定原ZIP/Raw、消费者实字节及三个派生结果hash，避免自引用。
+不制作新包或服务器命令；PyTorch、旧1024/B2、
 零长度依赖、Canonical/provider及A/COE未获资格，七槽不恢复。原Raw/UNKNOWN、用户DOCX、
 Gate13限定PASS/Gate14 NOT_RUN保持。
 

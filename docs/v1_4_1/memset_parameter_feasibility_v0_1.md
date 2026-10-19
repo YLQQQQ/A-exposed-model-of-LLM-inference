@@ -37,6 +37,10 @@
 derived/review和adjudication；原ZIP/Raw/0.1/原BLOCKED不改。新结果是显式事后Engineering
 参数/效果限定PASS，不追认Formal、全capture或生产S/A/COE资格。
 
+实际分析实现为`d32a2533f6c52128ddfb1b4577b844e9be47b1c5`；提交后独立
+`analysis_binding.json`绑定原件、消费者实字节和三个派生结果hash。控制层仍为662b94a、
+native仍为cedd706；不沿用旧analysis seal，不把本轮文档HEAD当原执行身份。
+
 后验缺口必须单独保留：原reader异常早于第二次checked_a，故未执行。native退出前库hash
 自检、前置A和所附前置副本均可核，但没有目标A整树/源码/build的实际后验状态。原始数据
 消费者只判参数/效果，full_B_admission不评；包级完整B仍BLOCKED，不能补写“后验通过”。
