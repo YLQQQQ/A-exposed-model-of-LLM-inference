@@ -1,6 +1,38 @@
 # ExposedPath 科研进度清单
 
-## 7.201 独立CUPTI目标阶段A原件审查通过，GPU微例B尚未准备/运行（2026-10-18，当前）
+## 7.202 独立CUPTI微例B入口本地准备，复用真实A产物（2026-10-19，当前，B NOT_RUN）
+
+用户授权仅本地入口/CPU与待审命令，未操作服务器或运行CUDA、GPU、模型、Nsight。
+真实A限定PASS复用，不重跑A/74项CPU、不重编native或修改既有独立审核器。
+
+- [x] 新独立B控制入口与显式PS5.1 launcher，不向旧A加开关；native/审核器精确复用
+  `cedd70610588d4d5691c5a86cbcb923ef8ea6433`，目标checkout不切换。控制commit单独记录，
+  实现提交后再固定包/hash，后续文档HEAD不得替代native或分析身份。
+- [x] 强绑定已审A receipt SHA256 `67f02b575aa4ce37cdcdc9c861e1149a1e960d5d33b730d9983a541ae7877fb0`、
+  原artifact_manifest、build/micro.exe、runtime/CUPTI及source_bytes，执行前后复核未变。
+  A原receipt/B_authorized=false不改；新的显式用户授权只由独立B入口消费，不升级旧数据。
+- [x] 新目录/一次tiny、0/64-byte、硬120秒、零模型/零Nsight；固定完整已审GPU UUID为
+  子进程CUDA_VISIBLE_DEVICES，保留CUDA_DEVICE_ORDER和本地序号0的选择声明。没有向native
+  添加UUID查询，也不声称它独立查询了物理UUID。新鲜参与卷2GiB门/可写检查复用已审
+  资源函数，不遍历历史YLQ或ACL，历史总量null/UNKNOWN、长期<50e9目标保留。
+- [x] 参数/返回/资源及效果桥、独立读回、drop/flush/关闭均由既有native和审核器保存；
+  新增实际argv/环境选择、PID/exit/超时与Raw来源交叉绑定。审核/进程失败返回非零，
+  保留BLOCKED；未知writer拒绝封包，零重试/清理/恢复七槽，不裸跑EXE。
+- [x] 仅新增执行边界定向`python -m pytest -q -ra -p no:cacheprovider tests/test_independent_cupti_b.py --basetemp=.local/cupti_b_release --junitxml=.local/cupti_b_release.xml --tb=short`：
+  **22 passed / 0 failed / 0 skipped，7.46s**。含真实PS5.1显式参数/-I、真实隔离
+  bootstrap→资源→native之前停止，以及回执/Raw/既有reader/封包链。A/Git和GPU进程用
+  明确CPU替身；GPU替身记录只作文件链验证，不能冒充目标参数/效果通过。
+  前16项缺入口的红例、嵌套support替身未贯通导致的3项中间失败保留，未放宽生产门。
+- [ ] 提交后绑定唯一小型B包/完整待审命令，交协调审查。用户以后显式执行并回传后，
+  才审一个新微例；当前B实际加载、订阅、参数/设备效果均NOT_RUN。
+
+新入口成功最多到`MICRO_EVIDENCE_COMPLETE_PENDING_REVIEW`，不是科学资格自动PASS。
+微例通过也不授PyTorch内部覆盖、1024修复、零字节依赖豁免或Canonical/S/A/COE资格；
+旧1024/B2、历史BLOCKED/UNKNOWN、Raw/用户DOCX、Gate13限定PASS/Gate14 NOT_RUN不改。
+最高优先级仅协调审查B边界/命令；微例硬120秒，校验/封包另计，估数分钟、临时2GiB，
+小型回传预计低于10MiB但非目标实测。取证说明0.17及本地handoff同步，无新模型预算。
+
+## 7.201 独立CUPTI目标阶段A原件审查通过，GPU微例B尚未准备/运行（2026-10-18，历史；B准备见7.202）
 
 真实静态ZIP17,311,337 bytes，SHA256
 `71ff920f60e1fd27ec09f7f781c1f4c716e621019e11256c8479447d004decbf`，manifest SHA256

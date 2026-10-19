@@ -1,6 +1,35 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-18增补：真实目标阶段A审查PASS 0.16（当前，GPU微例NOT_RUN）
+## 2026-10-19增补：绑定真实A的独立B执行边界 0.17（当前，B未运行）
+
+仅准备一个新0/64-byte tiny的控制入口，不恢复模型、旧七槽或多点。目标A限定PASS保留，
+native/审核器继续为cedd706，不重编/重跑A。新控制commit与cedd706分开绑定，代码从小包
+直接运行，目标checkout不切换；旧A-only launcher保持拒绝所有采集开关。
+
+入口先核包/控制字节，再核给定A receipt SHA256、原manifest及全部清单、build/binary/
+runtime/CUPTI/源码与clean commit。bind_checkout_modules复用已通过的真实A代码，仍-I、
+来源明确、无PYTHONPATH。只运行已审micro.exe，原argv保持；执行前后复核A/源码/库未改。
+新的receipt保存原A SHA、controller/native/analysis三种身份，原A receipt从不改写。
+
+唯一可见GPU固定为已审完整UUID，原native `cudaSetDevice(0)`因此选择该可见设备；
+依据[CUDA12.4.1设备可见性规定](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-c-programming-guide/index.html#env-vars)。
+这不是native新增UUID查询或仅凭历史ordinal猜测。保存应用环境选择声明，CUPTI记录
+native context/stream/device/对应效果；零模型/零Nsight，不与torch.profiler共用subscriber。
+
+新鲜空间门复用2GiB参与卷检查，输出/ZIP均新路径；不重扫历史/ACL或自动清理。
+tiny只有一次启动、两case，硬120秒；超时保留原process状态及UNKNOWN，拒绝强行封包。
+参数/返回/效果桥/读回/drop/flush/关闭由未改native和原独立审核器检查；控制层另核实际
+PID、加载库路径、run及库hash。非零、缺效果或审核失败即BLOCKED，不重试/替补/追加。
+成功只记`MICRO_EVIDENCE_COMPLETE_PENDING_REVIEW`，仍待回传审查。
+
+本地仅新增边界22 passed/0 failed/0 skipped，7.46s（`.local/cupti_b_release.xml`）；
+真实PS5.1参数/-I、隔离资源依赖及失败回执/封包均运行，GPU调用是明确CPU替身。既有A74项、
+native编译、微例及完整Q0未重跑。本地Python3.12.7不代替目标3.11.16或实际订阅资格。
+包/hash先由实现commit固定后再集中记科研进度7.202和本地交付说明；没有裸EXE命令。
+本轮没有服务器、GPU/vendor库加载或模型。微例成功亦不接回完整provider，不升级旧1024、
+零长度依赖或A/COE；原定义/Raw/角色/历史判断与用户DOCX保持。
+
+## 2026-10-18增补：真实目标阶段A审查PASS 0.16（历史A结论保持；B准备见0.17）
 
 独立CUPTI新A静态ZIP17,311,337 bytes，SHA256
 `71ff920f60e1fd27ec09f7f781c1f4c716e621019e11256c8479447d004decbf`；944成员/943清单，
