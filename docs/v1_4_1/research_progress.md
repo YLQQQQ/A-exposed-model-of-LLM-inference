@@ -1,6 +1,32 @@
 # ExposedPath 科研进度清单
 
-## 7.213 固定P低侧三点Pilot：本地接线与唯一待审交付（2026-10-19，当前）
+## 7.214 固定P低侧三点交付协调通过，仅可执行新阶段A（2026-10-19，当前）
+
+- [x] 原93,884-byte ZIP及SHA256
+  `b7d0327332632a78039dfba8a98a29c5e616d2611d989bb43f1bef80d3ad12fb`核验；20成员/
+  19清单、安全路径/CRC及全部hash通过。418源码路径逐项对应8f49ab0固定Git内容与
+  明确CRLF表示；13个核心组件相对9c8b03e内容不变。bundle verify/head、真实前置A/B
+  receipt/归档引用、三份完整input/mask矩阵和P三点九槽计划一致，不改旧四点BLOCKED。
+- [x] 精确包内launcher匹配执行Git及SHA256
+  `c8773e01c7207ec45e0474b193cfdcba040dfb83b6a10091666e2137fc586b1a`；默认A只部署/
+  CPU/compile/解释器身份/新鲜空间，B另需显式Pilot开关和新A真实receipt哈希。
+  PowerShell5.1语法通过，未运行真实launcher/模型/CUDA/Nsight。未来256资格仍未知。
+- [x] 协调复跑本次36项全部通过，零失败/跳过，111.80s，本地Python3.12.7。真实文件链、
+  隔离子进程及PS5.1分支运行，外部OS/设备/collector为明确CPU替身；不是目标3.11或
+  GPU资格，不与原36项相加。最初审查命令在父临时目录建立前启动，2 passed/34项setup
+  errors均为该目录FileNotFoundError；原XML保留。补齐审查目录后同一交付/代码完成上述
+  复跑，未修交付文件、删除失败原件或重跑GPU。旧8/19项证据直接复用，未重复套件。
+- [ ] 用户可将原ZIP复制到既定服务器transfer位置，使用已有准确整段命令执行新A。
+  前置须fresh为9c8b03e且clean，否则停止不reset；执行目标仍8f49ab0，不部署文档HEAD。
+  回传`coe_input_8f49ab01ca36_static.zip`；目标A/B仍NOT_RUN，真实新A审过前不启B。
+
+只读协调审计、原包副本及CPU/JUnit在`.local/diagnostics/coe_low3_coordination_8f49ab0_v0_1/`；
+准确A命令仍为`.local/coe_low3_8f49ab01ca36_stage_a.md`，不另发B或重打包。后续固定P
+256/512/2048三完整block、9P1，估35～55min，fresh12GiB；任何质量硬失败或九次即停，
+不重试/替补/扩展。历史总容量UNKNOWN，原Raw/DOCX/合同/Gate及暂停支线不变。
+本轮仅本地审查/CPU与必要进度记录，不修改生产代码或新增科学样本。
+
+## 7.213 固定P低侧三点Pilot：本地接线与唯一待审交付（2026-10-19，历史；协调结论见7.214）
 
 用户批准本地实现/验证/打包；本窗口不操作服务器或模型/CUDA/Nsight。基于7.212，
 O/P首token正R均保留，但O约+5.78/+6.77ms、P约+88.92/+83.51ms，幅度明显敏感。
