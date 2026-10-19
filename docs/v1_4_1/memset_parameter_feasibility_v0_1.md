@@ -1,5 +1,27 @@
 # Batch4 memset参数取证可行性审查 0.1
 
+## 2026-10-19增补：B控制包协调复核通过 0.18（当前，目标B NOT_RUN）
+
+控制662b94a、native/reader cedd706严格分列。小包59,681 bytes、SHA256
+`ba5f332a887390427feadd7a2fb3d8fb96fa07063adebd78f58908e80d664e50`，8成员/7项清单的
+CRC/path/全部hash及commit表示通过；A receipt/manifest原字节与真实A一致，build、EXE、
+runtime/CUPTI、Python与GPU配置匹配已审数据。没有部署bundle、新二进制或SDK。
+
+入口先复核A receipt原SHA及全artifact_manifest、源码/checkout/clean、库与二进制，
+复用已审namespace绑定后进入真实新鲜2GiB空间门；仅启动一次已审micro。
+CUDA_VISIBLE_DEVICES为完整已审UUID、PCI_BUS_ID排序、本地ordinal0；这不冒充native已测
+UUID。原native/分析未修改，后验再次检查A；缺开关、身份/空间冲突或非零/效果审核失败
+均停止，未知writer拒绝封包，既不重试也不切工具。微例硬120s，校验/封包时间另计。
+
+协调复跑22项新增边界CPU：22通过/零失败/跳过，6.24s；明确A/Git/GPU为替身，未运行
+native或加载vendor，不能与原22项相加。实际随包-I缺开关拒绝、包未变；PS5.1解析通过。
+这批准的是**用户显式运行一个0/64-byte tiny**，不是GPU验证已经完成。0模型/0Nsight，
+不重跑A/重编/恢复旧槽；成功仍需原件审查，不授权PyTorch/1024/零依赖/A/COE/provider。
+
+完整机器路径及精确命令位于忽略的B交付说明/同控制版本stage_b.ps1；协调审计
+`.local/diagnostics/independent_cupti_b_coordination_review_v0_1/audit.json`，CPU JUnit为
+`.local/cupti_b_coordination_check.xml`。研究进度7.203同步；旧原件及用户DOCX保持。
+
 ## 2026-10-19增补：绑定真实A的独立B执行边界 0.17（当前，B未运行）
 
 仅准备一个新0/64-byte tiny的控制入口，不恢复模型、旧七槽或多点。目标A限定PASS保留，

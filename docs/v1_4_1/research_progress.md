@@ -1,6 +1,34 @@
 # ExposedPath 科研进度清单
 
-## 7.202 独立CUPTI微例B入口本地准备，复用真实A产物（2026-10-19，当前，B NOT_RUN）
+## 7.203 独立CUPTI B包协调审查通过，仅一次tiny待用户显式执行（2026-10-19，当前）
+
+只读审查控制包`662b94a33421550958d927cb819b88cb5c67b401`，精确复用真实A的
+cedd706 native/reader及原checkout，不重跑A、不重编产物、无业务代码修改或目标操作。
+
+- [x] B ZIP59,681 bytes、SHA256
+  `ba5f332a887390427feadd7a2fb3d8fb96fa07063adebd78f58908e80d664e50`；8成员/7清单，
+  CRC/安全路径/全部hash通过，两个控制文件绑定662b94a，两份helper绑定cedd706。
+  随包A receipt/manifest与真实A原件逐字节相同，receipt SHA67f02b57…及build、EXE、
+  runtime、CUPTI、Python版本/路径和GPU UUID均与已审A一致，没有混用控制/native身份。
+- [x] 真实入口检查确认：严格复核原A全清单、当前checkout/clean/源码及库；在真实资源
+  门后仅调用一次micro，使用完整UUID/本地ordinal0/PCI_BUS_ID；原native未加UUID查询，
+  不声称其独立测了UUID。timeout120s，环境冲突、缺效果、PID/加载路径、关闭/丢失或
+  后验A字节冲突均非零；未知writer由原pack拒绝，不自动换工具/重试/封包。
+- [x] 协调复跑新增边界22 passed/0 failed/0 skipped，6.24s，
+  `.local/cupti_b_coordination_check.xml`。A/Git/GPU明确使用CPU替身，未运行native；
+  不与主窗口同22项相加。实际随包-I缺显式开关拒绝且包未变，两个PS入口经真实PS5.1解析。
+- [x] 仅B控制包/命令获协调通过：用户可在目标Windows PowerShell5.1显式执行本次
+  0/64-byte一次微例，硬120秒（校验/封包另计），0模型/0Nsight、新鲜2GiB。准确命令
+  位于忽略的`.local/independent_cupti_662b94a33421_stage_b.ps1`及B交付说明。
+- [ ] 目标B的加载/订阅/参数/效果仍NOT_RUN，成功终态仅PENDING_REVIEW；收到新原件
+  才审限定微例，不预授PyTorch、1024、零字节依赖、provider或A/COE资格。
+
+审计`.local/diagnostics/independent_cupti_b_coordination_review_v0_1/audit.json`及随包原件、
+缺开关stderr可复查；回传一个新B ZIP，不覆盖旧A。取证说明0.18及handoff同步。
+旧Raw/BLOCKED/UNKNOWN、用户DOCX、已审端点及Gate13限定PASS/Gate14 NOT_RUN不变；
+无服务器、GPU、模型操作，不恢复七槽或多点采集。
+
+## 7.202 独立CUPTI微例B入口本地准备，复用真实A产物（2026-10-19，历史；协调复核见7.203）
 
 用户授权仅本地入口/CPU与待审命令，未操作服务器或运行CUDA、GPU、模型、Nsight。
 真实A限定PASS复用，不重跑A/74项CPU、不重编native或修改既有独立审核器。
