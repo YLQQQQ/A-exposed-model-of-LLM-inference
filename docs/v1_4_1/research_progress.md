@@ -1,6 +1,41 @@
 # ExposedPath 科研进度清单
 
-## 7.204 独立CUPTI真实微例取得参数/效果，旧审核器因driver活动覆盖拒绝（2026-10-19，当前）
+## 7.205 同封存微例0.2限定参数/效果复核PASS；原B完整验收仍BLOCKED（2026-10-19，当前）
+
+本轮仅离线原件核验和独立版本消费者；不部署、重采、编译native或运行模型/CUDA/Nsight。
+原B ZIP/Raw/receipt及0.1审核器保持原字节，缺driver活动原因仍UNKNOWN，不改成解析bug。
+
+- [x] 原50,225-byte ZIP、17成员/16清单、安全路径/CRC/全部hash复核通过；原0.1仍精确
+  复现API_COVERAGE。A receipt/manifest/build/库/源码副本与已审真实A相同，micro进程
+  PID12640、exit0/no timeout及Raw run/库hash/路径一致；这不是目标A树的后验复核。
+- [x] 官方12.4.127/API22归档及四个头文件实字节复核：CallbackData区分domain，MEMSET4
+  correlation对应driver调用；实际parent/ENTRY-EXIT是已审Core栈记录，不是时间邻近。
+  runtime参数/API→真实driver parent/闭合顺序/context→driver域唯一效果，足以支持此微例
+  的参数/效果判定，不恢复缺失driver API的起止/时长或其缺失原因。
+- [x] 新独立`analysis/independent_cupti_memset_v0_2.py`输出schema0.2.0及窄域policy0.1.0。
+  原0.1/driver/native/默认分派/生产S/A/B/COE不改。runtime API始终必需；缺driver API
+  只接受普通216入口、明确父调用、每个缺行driver自身有唯一64-byte效果的桥。额外无
+  效果driver和零字节下缺行driver不获该例外；已有API仍核身份/返回/interval，未归属
+  目标driver API拒绝。无虚构API/时间/参数，driver未复制的默认0不当实参。
+- [x] 旧30项及新41项定向回归共71 passed/0 failed/0 skipped，0.53s：
+  `python -m pytest -q -ra -p no:cacheprovider tests/test_independent_cupti_memset.py tests/test_independent_cupti_memset_v0_2.py --basetemp=.local/cupti_v02_release --junitxml=.local/cupti_v02_release.xml --tb=short`。
+  先37项缺模块红例，再4项桥接边界红例；预期来自手工fixture而非analyzer。真实文件链
+  保留输入/拒绝覆盖。未跑A、完整Q0或GPU；本地Python3.12.7仅CPU验证。
+- [x] 同Raw在新`.local/diagnostics/independent_cupti_b_offline_v0_2/derived/review.json`
+  和`adjudication.json`独立复核：count0/64、返回0，call3/parent2序号3<4<5<6，driver corr4
+  →唯一64bytes/value123/context1/stream13/device0效果，设备区间993ns；读回0x3a/0x7b。
+  0.2仅参数/效果判PASS_LIMITED，不是0.1 attempt改判或新Formal。
+- [ ] 完整B仍BLOCKED：原reader提前异常，历史后验checked_a确实NOT_RUN；原件缺目标
+  A tree/源码/build/库的实际后验状态。native退出前库hash自检及前置副本可证相应局部
+  事实，不能代替完整后验A检查，本地副本不能补写它曾在服务器执行。
+
+当前窄域参数/效果问题无需新采；完整B真正缺后验目标状态证据，而不是再跑一次0/64。
+缺driver API时间能力仍未取得，未知不填0。取证审查0.20和handoff同步；分析commit在
+实现提交后以sidecar绑定，避免自引用。不制作新包或服务器命令；PyTorch、旧1024/B2、
+零长度依赖、Canonical/provider及A/COE未获资格，七槽不恢复。原Raw/UNKNOWN、用户DOCX、
+Gate13限定PASS/Gate14 NOT_RUN保持。
+
+## 7.204 独立CUPTI真实微例取得参数/效果，旧审核器因driver活动覆盖拒绝（2026-10-19，历史；独立0.2见7.205）
 
 目标用户已执行一次tiny；本轮仅离线审查回传原件，没有重采、运行GPU或修改生产代码。
 原attempt按cedd706审核器仍BLOCKED，不将已观察事实自动升级为限定微例PASS。

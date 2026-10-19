@@ -1,6 +1,50 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-19增补：真实tiny参数/效果已观测，旧driver活动覆盖门拒绝 0.19（当前）
+## 2026-10-19增补：0.2仅参数/效果的独立复核 0.20（当前；原B仍BLOCKED）
+
+**裁决：此普通入口微例的限定参数/效果证据成立，不需要driver API时长；完整B仍缺
+实际后验A检查。** 独立新增0.2，不部署、不重采、不改变旧审核器或生产定义。
+
+依据匹配的[官方CUDA12.4.127 CUPTI SDK](https://developer.download.nvidia.com/compute/cuda/redist/cuda_cupti/windows-x86_64/cuda_cupti-windows-x86_64-12.4.127-archive.zip)
+实字节（归档SHA6ad8df63…、API22；四项header hash在本地新审计）：
+
+- `cupti_callbacks.h`304–392行：ENTRY内复制参数、EXIT内取返回，correlation属于各自
+  runtime/driver domain；两域数值相同不能作为父子关系。
+- `cupti_activity.h`2192–2302行MEMSET4：效果correlation对应发起它的driver调用。即便
+  API活动行未记录，实际driver callback仍提供同domain调用ID；这支持效果归属，不
+  恢复未记录的API时间。`cupti_driver_cbid.h`226行为普通216入口，PTSZ不在此支持域。
+- 已审`core.h`的parent来自同线程实际调用栈，ENTER/EXIT闭合并核context/ID，而非
+  时间接近。driver参数未复制，Raw默认count/value/handle0不作实参事实。
+
+因此只支持：runtime实际参数和API→driver真实parent/顺序/context→driver域唯一效果
+→独立读回。效果可在Host API返回后执行；配对不依赖重叠。缺driver API原因仍UNKNOWN，
+报告的drop0不能转换成全采集完整性认证。这不是CUPTI保证所有活动行必然存在的推断。
+
+新reader显式选择0.2；0.1及默认B分派不变。缺driver API只接受每个普通216 driver均有
+唯一64-byte合法效果；额外无效果/零字节下缺行driver不获该例外。runtime API、身份、
+父子、scope、返回/读回、关闭和已记录丢失门保持；已有driver API仍核身份/返回及区间
+嵌套，目标driver API未归属也拒绝，不允许扔掉冲突行再走缺行路径。不补行、时间或参数。
+
+| 原件 | 新0.2可核验结论 | 不支持的解释 |
+| --- | --- | --- |
+| call1/runtime corr1/count0/return0 | 读回64字节保持0x3a，逻辑调用保留 | 无依赖、无顺序影响或旧1024为0 |
+| call2/runtime corr4/count64/return0 | call3/parent2，顺序3<4<5<6；driver corr4唯一对应64bytes/value123，读回全0x7b | 两域同为4就是桥；driver默认count0是实参 |
+| MEMSET context1/stream13/device0 | 来源唯一，设备活动993ns | driver API时长、Host阻塞、可优化时延 |
+| driver API行缺失 | 原样记录缺失，api_duration=null、interval check未执行 | 起止已恢复、缺失原因已知 |
+
+71项CPU通过（旧30+新41，0失败/跳过，0.53s）。新派生目录
+`.local/diagnostics/independent_cupti_b_offline_v0_2/`保存archive_review、SDK hash、
+derived/review和adjudication；原ZIP/Raw/0.1/原BLOCKED不改。新结果是显式事后Engineering
+参数/效果限定PASS，不追认Formal、全capture或生产S/A/COE资格。
+
+后验缺口必须单独保留：原reader异常早于第二次checked_a，故未执行。native退出前库hash
+自检、前置A和所附前置副本均可核，但没有目标A整树/源码/build的实际后验状态。原始数据
+消费者只判参数/效果，full_B_admission不评；包级完整B仍BLOCKED，不能补写“后验通过”。
+此窄域问题无需新采；若要求完整B退出，缺实际后验目标状态证据，本地副本无法填补。
+不制作包/命令或恢复旧槽；PyTorch覆盖、旧1024修复、零字节依赖豁免及provider/A/COE
+仍未取得。科研进度7.205/handoff同步，用户DOCX/Raw/UNKNOWN和旧Gate保持。
+
+## 2026-10-19增补：真实tiny参数/效果已观测，旧driver活动覆盖门拒绝 0.19（历史；独立0.2见0.20）
 
 **先离线核验替代证据路径，不重采或改写原BLOCKED。** 本次micro进程exit0，原审核器
 在`CUPTI_MICRO_API_COVERAGE`停止，尚未授限定微例PASS。它不是旧1024原件，也不能用
