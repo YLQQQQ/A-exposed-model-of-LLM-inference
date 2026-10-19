@@ -1,6 +1,27 @@
 # ExposedPath 科研进度清单
 
-## 7.209 实验优先：512/2048×O/P的8P1本地接线与待审交付（2026-10-19，当前）
+## 7.210 512/2048×O/P交付协调复核通过，仅阶段A可显式执行（2026-10-19，当前）
+
+- [x] 原137,870-byte ZIP、SHA256 `3df595a7e1f70e3a5a606e0dcc698d9bdc92633b753016f6e54f79eb6095ea07`、
+  CRC/安全路径、17成员/16项清单及全部内容hash独立核验；bundle verify与head精确为
+  9c8b03e，前置cedd706。415源码路径的Git blob/明确CRLF表示均匹配执行commit，
+  两份完整input/mask身份匹配；可信前置A receipt与原静态ZIP逐字节相同。
+- [x] 随包launcher匹配执行commit，默认分支只部署/CPU/compile/新鲜空间，不启动模型；
+  8槽/两block、原O及P prepare函数AST相对前置未变。B另核真实新A receipt/hash/清单、
+  fresh资源与显式开关，不从A或失败路径续采；不扫描旧YLQ/ACL，不自动清理。
+- [x] 协调复跑新增两文件32 passed/0 failed/0 skipped，87.17s，本地Python3.12.7；
+  实际PS5.1分支/文件链运行，OS、Git、外部进程及GPU为明确CPU替身。不是新增科学样本，
+  不与主窗口同32项相加，未重复旧26/6项或运行模型/CUDA/Nsight。审计及JUnit见
+  `.local/diagnostics/observation_input_coordination_9c8b03_v0_1/`；原ZIP读后hash不变。
+- [ ] 用户可按已有精确命令在目标PowerShell5.1执行阶段A；现场cedd706/clean和参与卷
+  各12GiB须fresh成立，否则停止，不reset/重试。回传新`observation_9c8b03eae89f_static.zip`。
+  目标A/B仍NOT_RUN，真实A回执审查后才另启B，本轮不提供或授权B启动命令。
+
+本轮只读代码/包审计、CPU验证与必要进度/handoff更新，无业务修改、新包或服务器操作。
+用户DOCX原hash保持；旧Raw/UNKNOWN/BLOCKED、Gate13限定PASS/Gate14 NOT_RUN保持。
+执行身份仍9c8b03e，provider/1024/引擎/输出轴/旧七槽继续暂停，等待目标新A原件。
+
+## 7.209 实验优先：512/2048×O/P的8P1本地接线与待审交付（2026-10-19，历史；协调结论见7.210）
 
 用户批准本地实现、CPU验证与单一待审包；未授权本窗口服务器/模型/CUDA/Nsight。
 沿用[现有执行说明](observation_preparation_engineering_v0_1.md)新增0.2小节及
