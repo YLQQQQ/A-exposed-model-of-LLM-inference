@@ -23,8 +23,16 @@
   bootstrap→资源→native之前停止，以及回执/Raw/既有reader/封包链。A/Git和GPU进程用
   明确CPU替身；GPU替身记录只作文件链验证，不能冒充目标参数/效果通过。
   前16项缺入口的红例、嵌套support替身未贯通导致的3项中间失败保留，未放宽生产门。
-- [ ] 提交后绑定唯一小型B包/完整待审命令，交协调审查。用户以后显式执行并回传后，
-  才审一个新微例；当前B实际加载、订阅、参数/设备效果均NOT_RUN。
+- [x] 控制版本`662b94a33421550958d927cb819b88cb5c67b401`；唯一小包
+  `independent_cupti_b_662b94a33421_delivery.zip`，59,681 bytes，SHA256
+  `ba5f332a887390427feadd7a2fb3d8fb96fa07063adebd78f58908e80d664e50`，manifest SHA256
+  `3162dbf70ea0ec422aac67b58af3dc6e282b9291e6275ba6e7f4d27467cde23b`。8成员/7项清单及
+  全hash/CRC、真实A receipt/build/runtime/CUPTI与精确helper字节核验通过；没有EXE/DLL/
+  SDK或执行bundle。实际随包`python -I`缺显式B开关时拒绝，且包文件不变。审计
+  `.local/diagnostics/independent_cupti_b_delivery_v0_1/review.json`；完整待审命令与机器
+  路径在忽略的`.local/INDEPENDENT_CUPTI_B_DELIVERY.md`，未执行。
+- [ ] B控制包/命令待协调审查。用户以后显式执行并回传后，才审一个新微例；当前B实际
+  加载、订阅、参数/设备效果均NOT_RUN，不能把CPU替身或入口完成记为微例PASS。
 
 新入口成功最多到`MICRO_EVIDENCE_COMPLETE_PENDING_REVIEW`，不是科学资格自动PASS。
 微例通过也不授PyTorch内部覆盖、1024修复、零字节依赖豁免或Canonical/S/A/COE资格；

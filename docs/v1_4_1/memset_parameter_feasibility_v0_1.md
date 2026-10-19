@@ -25,7 +25,10 @@ PID、加载库路径、run及库hash。非零、缺效果或审核失败即BLOC
 本地仅新增边界22 passed/0 failed/0 skipped，7.46s（`.local/cupti_b_release.xml`）；
 真实PS5.1参数/-I、隔离资源依赖及失败回执/封包均运行，GPU调用是明确CPU替身。既有A74项、
 native编译、微例及完整Q0未重跑。本地Python3.12.7不代替目标3.11.16或实际订阅资格。
-包/hash先由实现commit固定后再集中记科研进度7.202和本地交付说明；没有裸EXE命令。
+包/hash先由实现commit固定后再集中记科研进度7.202和本地交付说明；控制662b94a，native/
+reader仍cedd706，不切目标checkout。小包8成员/7清单/全部hash/CRC及真实A原件绑定通过，
+实际包在`python -I`下未给B开关时明确拒绝；完整PS5.1待审命令仅启用独立B launcher，
+没有裸EXE命令。审计`.local/diagnostics/independent_cupti_b_delivery_v0_1/review.json`。
 本轮没有服务器、GPU/vendor库加载或模型。微例成功亦不接回完整provider，不升级旧1024、
 零长度依赖或A/COE；原定义/Raw/角色/历史判断与用户DOCX保持。
 
