@@ -1,6 +1,34 @@
 # ExposedPath 科研进度清单
 
-## 7.214 固定P低侧三点交付协调通过，仅可执行新阶段A（2026-10-19，当前）
+## 7.215 低侧三点真实阶段A通过，绑定新receipt后仅9P1待显式执行（2026-10-19，当前）
+
+- [x] 真实静态ZIP107,261 bytes、SHA256
+  `b58485902497e3a871426e40304f309718fcbe913c1748bbcacebed7c25e1927`；23成员/22清单、
+  安全路径/CRC及全部hash通过，manifest SHA256
+  `cc79a04d054ca25edc6929193f208bb718b0aab8dc702c1ea05ae8d8b459a436`。
+  实际delivery/executed.ps1与原交付逐字节一致；418项实际源码均匹配固定8f49ab0的
+  Git/CRLF表示，8个exit均0。CPU stdout/JUnit均36 passed/零失败/错误/跳过，
+  72.73s/72.732s；compile通过。本轮不重跑测试、模型或GPU。
+- [x] 新A分别实测编排与目标解释器均Python3.11.16，isolated=1/no_site=1；不再依赖
+  旧版本推断。receipt为STATIC_READY_FOR_REVIEW/error=null，execution=analysis=8f49ab0；
+  原始receipt字节SHA256
+  `f5c6473786552c5d246cc5e53df1448bfd63bddf4b2be5ca1eec7ef8f2b3ada6`。
+  delivery/source_bytes/storage hash链成立，最终clean由已绑定launcher成功路径证明，
+  不是独立现场查询。A未启动模型/CUDA/Nsight，未来256目标准入仍NOT_RUN。
+- [x] 新鲜资源回执370,037,780,480 bytes空闲、四位置同一卷且可写，无查询错误，满足
+  12GiB；历史总量仍null/UNKNOWN，不扫历史ACL或清理。B仍须重新核资源/源码/clean。
+- [ ] 用户可执行固定P256/512/2048、3完整block、9新P1/profile；仅原已部署launcher的
+  CollectReviewedInputPilot开关，绑定上述真实新A receipt哈希。不重跑A、不解压新包，
+  不切换文档HEAD、不复用其他批次B。准确本地命令
+  `.local/coe_low3_8f49ab01ca36_stage_b.ps1`仅做PS5.1解析，未在本地/服务器运行。
+  首个256仍在预定槽位接受完整实物门；九次或硬失败即停，不重试/替补/追加。
+
+审计及静态副本在`.local/diagnostics/coe_low3_target_a_8f49ab0_v0_1/`。下一项仅用户显式
+B并回传`coe_input_8f49ab01ca36_pilot.zip`；估35～55min、fresh12GiB，完成仅STOP_FOR_REVIEW，
+不授COE正式资格或负载规律结论。生产代码/定义/DOCX/Raw/Gate及暂停支线不变；
+measurement_validity=NOT_ASSESSED、dropped_records_status=UNKNOWN及长期容量UNKNOWN保持。
+
+## 7.214 固定P低侧三点交付协调通过，仅可执行新阶段A（2026-10-19，历史；真实A见7.215）
 
 - [x] 原93,884-byte ZIP及SHA256
   `b7d0327332632a78039dfba8a98a29c5e616d2611d989bb43f1bef80d3ad12fb`核验；20成员/
