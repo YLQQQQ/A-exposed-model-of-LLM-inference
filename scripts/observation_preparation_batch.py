@@ -54,6 +54,12 @@ def consume_collection(target,binding,commit):
         and all(all(op.get(k)==v for k,v in original.items())
             and op['operation_validity']=='VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS'
             for op,original in zip(r['operations'],candidate['operations'])),'OPERATION_BINDING')
+    if input_axis and binding['version']==axis.LOW_SIDE_VERSION:
+        # The exact preview hash was checked above. Preserve separate A and
+        # candidate budgets without embedding another copy of migration atoms.
+        r['candidate_budget_windows']=[{k:w[k] for k in ('phase','original_a','candidate_budgets_ns','coe_union_ns')}
+            for w in preview['windows']]
+        r['candidate_member_positions']=preview['operations']
     return {**r,'result_sha256':sha(target/'analyzed/sensitivity.json'),
         'result_reference':'collection/analyzed/sensitivity.json'}
 
@@ -64,6 +70,10 @@ def run(config,output,*,execute=False,input_pilot=False):
     rules=axis if input_pilot else contract
     version=axis.VERSION
     schema=config.get('schema_version')
+    low_side=input_pilot and schema=='coe-input-low3-pilot-delivery/0.1'
+    if low_side:
+        version=axis.LOW_SIDE_VERSION
+        contract.require(config.get('input_contract_version')==version,'DELIVERY_CONTRACT_VERSION')
     sensitivity=not input_pilot and schema=='observation-preparation-delivery/0.2'
     if sensitivity:
         version=contract.INPUT_VERSION
@@ -72,6 +82,7 @@ def run(config,output,*,execute=False,input_pilot=False):
         version=axis.MIDPOINT_VERSION
         contract.require(config.get('input_contract_version')==version,'DELIVERY_CONTRACT_VERSION')
     expected_schema=('coe-input-pilot-delivery/0.2' if version==axis.MIDPOINT_VERSION else 'coe-input-pilot-delivery/0.1') if input_pilot else 'observation-preparation-delivery/0.2' if sensitivity else 'observation-preparation-delivery/0.1'
+    if low_side:expected_schema='coe-input-low3-pilot-delivery/0.1'
     budget=axis.specification(version)['budget'] if input_pilot else 8
     contract.require(schema==expected_schema
         and type(config.get('model_process_budget')) is int and type(config.get('profile_budget')) is int
@@ -125,7 +136,7 @@ def main():
     a=p.parse_args();r=run(read(a.config),a.output,execute=a.collect_reviewed_preparation or a.collect_reviewed_input_pilot,
         input_pilot=a.collect_reviewed_input_pilot)
     print(r['status'],flush=True)
-    return 0 if r['status'] in ('FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW','FIXED_EIGHT_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW','FIXED_NINE_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW') else 1
+    return 0 if r['status'] in ('FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW','FIXED_EIGHT_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW','FIXED_NINE_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW','FIXED_NINE_LOW3_PILOT_COMPLETE_STOP_FOR_REVIEW') else 1
 
 
 if __name__=='__main__':raise SystemExit(main())

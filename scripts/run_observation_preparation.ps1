@@ -3,14 +3,16 @@ param([switch]$CollectReviewedEngineering,[switch]$CollectReviewedInputPilot,[st
 $ErrorActionPreference='Stop'
 $C=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'delivery.json') -Raw | ConvertFrom-Json
 $Midpoint=$C.schema_version -eq 'coe-input-pilot-delivery/0.2'
+$LowSide=$C.schema_version -eq 'coe-input-low3-pilot-delivery/0.1'
 $Sensitivity=$C.schema_version -eq 'observation-preparation-delivery/0.2'
-$InputPilot=$C.schema_version -in @('coe-input-pilot-delivery/0.1','coe-input-pilot-delivery/0.2')
-$Budget=if ($Midpoint) {9} else {8}
+$InputPilot=$C.schema_version -in @('coe-input-pilot-delivery/0.1','coe-input-pilot-delivery/0.2','coe-input-low3-pilot-delivery/0.1')
+$Budget=if ($Midpoint -or $LowSide) {9} else {8}
 $Collect=$CollectReviewedEngineering -or $CollectReviewedInputPilot
 if (($InputPilot -and $CollectReviewedEngineering) -or (!$InputPilot -and $CollectReviewedInputPilot)) {throw 'Explicit role opt-in conflict'}
-if ($C.schema_version -notin @('observation-preparation-delivery/0.1','observation-preparation-delivery/0.2','coe-input-pilot-delivery/0.1','coe-input-pilot-delivery/0.2') -or $C.commit -ne $C.analysis_commit -or
+if ($C.schema_version -notin @('observation-preparation-delivery/0.1','observation-preparation-delivery/0.2','coe-input-pilot-delivery/0.1','coe-input-pilot-delivery/0.2','coe-input-low3-pilot-delivery/0.1') -or $C.commit -ne $C.analysis_commit -or
     $C.model_process_budget -ne $Budget -or $C.profile_budget -ne $Budget -or
     ($Midpoint -and $C.input_contract_version -ne 'COE-INPUT-P-PILOT/0.2') -or
+    ($LowSide -and $C.input_contract_version -ne 'COE-INPUT-P-LOW3-PILOT/0.1') -or
     ($Sensitivity -and $C.observation_contract_version -ne 'OBSERVATION-PREPARATION-ENGINEERING/0.2')) {throw 'Delivery conflict'}
 function Hash([string]$P) {return (Get-FileHash -LiteralPath $P -Algorithm SHA256).Hash.ToLowerInvariant()}
 function Safe([string]$Root,[string]$Relative) {
@@ -115,11 +117,17 @@ try {
         if ($LASTEXITCODE -ne 0 -or $Fetched -ne $Target) {throw 'Bundle target conflict'}
         Run 'git' @('-c','core.autocrlf=false','checkout','--detach',$Target) '03_checkout'
         Tree $Target;Sources;Storage
+        if ($LowSide) {
+            $IdentityCode='import json,sys; print(json.dumps(dict(executable=sys.executable,version=list(sys.version_info[:3]),isolated=sys.flags.isolated,no_site=sys.flags.no_site)))'
+            Run $Python @('-I','-S','-B','-X','utf8','-c',$IdentityCode) '03_python_identity'
+            Run $C.target_python @('-I','-S','-B','-X','utf8','-c',$IdentityCode) '03_target_python_identity'
+        }
         $CpuTemp=Join-Path $C.server_root ('diagnostics\'+$Prefix+$Target.Substring(0,12)+'_cpu')
         if (Test-Path -LiteralPath $CpuTemp) {throw 'CPU output exists'}
         $Tests=if ($InputPilot) {@('tests/test_coe_input_pilot.py','tests/test_coe_input_delivery.py')} else {@('tests/test_observation_preparation.py','tests/test_observation_delivery.py')}
         if ($Midpoint) {$Tests+=@('tests/test_coe_input_midpoint.py','tests/test_coe_midpoint_delivery.py')}
         if ($Sensitivity) {$Tests=@('tests/test_observation_input_sensitivity.py','tests/test_observation_input_delivery.py')}
+        if ($LowSide) {$Tests=@('tests/test_coe_input_low3.py','tests/test_coe_low3_delivery.py','tests/test_coe_helper_identity.py::test_pinned_source_provenance_and_real_isolated_python')}
         Run $Python (@('-X','utf8','-m','pytest','-q','-ra','-p','no:cacheprovider','--basetemp',$CpuTemp,
             '--junitxml',(Join-Path $Out 'cpu_results.xml'))+$Tests) '04_cpu'
         $Compile=@('-X','utf8','-m','py_compile','exposedpath/observation_preparation.py',
@@ -138,13 +146,14 @@ try {
         $C | Add-Member -NotePropertyName inventory -NotePropertyValue (Join-Path $Out 'model_sha256.csv')
         $RunConfig=Join-Path $Out 'run_config.json';$C | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $RunConfig -Encoding utf8
         $Switch=if ($InputPilot) {'--collect-reviewed-input-pilot'} else {'--collect-reviewed-preparation'}
-        $BatchStage=if ($Midpoint) {'07_nine_p1'} else {'07_eight_p1'}
+        $BatchStage=if ($Midpoint -or $LowSide) {'07_nine_p1'} else {'07_eight_p1'}
         Run $Python @('-X','utf8','-u','scripts/observation_preparation_batch.py','--config',$RunConfig,
             '--output',(Join-Path $Out 'experiment'),$Switch) $BatchStage
         $BR=Get-Content -LiteralPath (Join-Path $Out 'experiment\batch\batch_report.json') -Raw | ConvertFrom-Json
         $ExpectedStatus=if ($InputPilot) {'FIXED_EIGHT_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW'} else {'FIXED_EIGHT_COMPLETE_STOP_FOR_REVIEW'}
         $ExpectedBlocks=if ($InputPilot) {4} else {2}
         if ($Midpoint) {$ExpectedStatus='FIXED_NINE_INPUT_PILOT_COMPLETE_STOP_FOR_REVIEW';$ExpectedBlocks=3}
+        if ($LowSide) {$ExpectedStatus='FIXED_NINE_LOW3_PILOT_COMPLETE_STOP_FOR_REVIEW';$ExpectedBlocks=3}
         if ($BR.status -ne $ExpectedStatus -or $BR.runs.Count -ne $Budget -or $BR.blocks.Count -ne $ExpectedBlocks) {throw 'Incomplete batch'}
         Tree $Target;$Status=$ExpectedStatus
     }

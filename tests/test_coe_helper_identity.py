@@ -122,8 +122,20 @@ def test_pinned_source_provenance_and_real_isolated_python(tmp_path):
         assert EXPECTED[name] == item['structure_sha256']
     # Real isolated interpreter, imports stdlib + this identity module only.
     # A target Stage A run executes this under its actual Python, not a double.
-    launcher = (ROOT / 'scripts/run_coe_candidate_pilot.ps1').read_text()
-    code = launcher.split("$HelperCode=@'\n", 1)[1].split("\n'@", 1)[0]
+    # d6957de removed that launcher's inline HelperCode when static reuse was
+    # introduced. Exercise the real identity module directly, not dead script
+    # text, a runtime fingerprint expectation, or an imported torch runner.
+    code = """import importlib.util,json,pathlib,sys
+path=pathlib.Path(sys.argv[1]).resolve()
+spec=importlib.util.spec_from_file_location('verified_helper_identity',path)
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+assert pathlib.Path(module.__file__).resolve()==path
+rows=[]
+for profile,name in zip(('COE_PILOT_NATURAL','LEGACY_NATURAL'),sys.argv[2:4]):
+    rows.append(dict(profile=profile,identity=module.validate_source(pathlib.Path(name).read_text(encoding='utf-8-sig'),profile)))
+assert '.'.join(map(str,sys.version_info[:3]))==sys.argv[4]
+print(json.dumps(dict(python=sys.version,torch_imported='torch' in sys.modules,rows=rows)))
+"""
     # Real target receipt code, legacy source supplied from this independent
     # pinned-source fixture, never executing/importing the runner.
     legacy = tmp_path / 'legacy.py'
@@ -133,5 +145,5 @@ def test_pinned_source_provenance_and_real_isolated_python(tmp_path):
         '.'.join(map(str,sys.version_info[:3]))],capture_output=True, text=True, timeout=30)
     assert proc.returncode == 0, proc.stderr
     result = json.loads(proc.stdout)
-    assert result['python'] == sys.version and result['cuda_initialized'] is False
+    assert result['python'] == sys.version and result['torch_imported'] is False
     assert [r['identity']['sha256'] for r in result['rows']] == [EXPECTED['COE_PILOT_NATURAL'], EXPECTED['LEGACY_NATURAL']]

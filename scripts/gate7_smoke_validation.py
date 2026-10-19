@@ -148,7 +148,7 @@ def validate_pre_model_identity(manifest_path: Path, preflight_path: Path, proje
         elif execution_contract=='G12-FORMAL-ENVELOPE/0.1':
             from exposedpath.formal_protocol import validate_prepared
             validate_prepared(manifest,manifest_path.parent,project_root)
-        elif execution_contract in ('G11-LIMITED-PILOT/0.1','G11-WARMUP-CONTROL/0.1','G11-WARMUP3-PAIR/0.1','COE-NATURAL-PREFILL-PILOT/0.1','COE-INPUT-P-PILOT/0.1','COE-INPUT-P-PILOT/0.2','COE-INPUT-P-PILOT/0.3'):
+        elif execution_contract in ('G11-LIMITED-PILOT/0.1','G11-WARMUP-CONTROL/0.1','G11-WARMUP3-PAIR/0.1','COE-NATURAL-PREFILL-PILOT/0.1','COE-INPUT-P-PILOT/0.1','COE-INPUT-P-PILOT/0.2','COE-INPUT-P-PILOT/0.3','COE-INPUT-P-LOW3-PILOT/0.1'):
             from exposedpath.gate11_pilot import validate_prepared
             if manifest.get('pilot',{}).get('version')!=execution_contract:
                 raise ValueError('Pilot pre-model contract version conflicts')

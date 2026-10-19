@@ -1,6 +1,53 @@
 # ExposedPath 科研进度清单
 
-## 7.212 512/2048×O/P八次完成并审查：方向保留，非比例幅度敏感（2026-10-19，当前）
+## 7.213 固定P低侧三点Pilot：本地接线与唯一待审交付（2026-10-19，当前）
+
+用户批准本地实现/验证/打包；本窗口不操作服务器或模型/CUDA/Nsight。基于7.212，
+O/P首token正R均保留，但O约+5.78/+6.77ms、P约+88.92/+83.51ms，幅度明显敏感。
+本批只研究固定P参考程序，不宣称包装不敏感、无插桩迁移、纯Host阻塞或COE优越；
+同操作普通GPU union仍作公平参照。原有限Formal/旧COE/Raw与Gate结论不变。
+
+- [x] 独立合同`COE-INPUT-P-LOW3-PILOT/0.1`与profile/input身份/schema有限分派，
+  不修改或解锁旧0.3四点BLOCKED计划。三完整block顺序256→512→2048、
+  512→2048→256、2048→256→512，共9新P1/profile；只有P、batch1/output2/
+  warmup3/repeat1。同模型/FP16/eager/SDPA/自然Host-readable，不新增或移动同步。
+  [机器计划](../../configs/coe_input_low3_pilot_v0_1.json)固定全部槽位、质量与停止规则。
+- [x] 复用256有限构造及input/mask全矩阵摘要，接通prepare→seal→采集argv边界→
+  实际producer→Canonical→两token准入→原A/独立预算→完整三点block。端点signed
+  ΔCOE及原R保持，低侧256→512同公式单列；无效分母null、无epsilon。新汇总分别
+  保存COE/phase、COE/phase GPU union、候选预算占比、copy/操作墙钟、原sync交集、
+  H/D、必要成员/提交位置；第二token累计必要后缀不当Decode新增量或独立样本。
+  只消费已有资格和预算文件，不改变S/A/B、COE与迁移定义、不产生巨型domain。
+- [x] 本地Python3.12.7最终36 passed/0 failed/0 skipped（100.50s）：
+  `python -m pytest -q -p no:cacheprovider tests/test_coe_input_low3.py tests/test_coe_low3_delivery.py tests/test_coe_helper_identity.py::test_pinned_source_provenance_and_real_isolated_python --basetemp .local/low3_final_verified --junitxml=.local/low3_final_verified.xml`。
+  覆盖9份真实producer结果/3完整block消费、256/512/2048实际prepare/seal边界、
+  错身份/token/hash/版本、预算冲突、未知依赖/drain、失败未运行槽位、正负零/未定义、
+  `-I`排除cwd/PYTHONPATH同名模块及真实PS5.1的默认A/显式B、旧回执/空间/源码门。
+  外部设备/OS/collector为明确CPU替身，不是256目标准入或新GPU资格。
+- [x] 未变旧合同定向8 passed/0 failed/0 skipped（5.95s）；helper19 passed/0 failed/
+  0 skipped（1.41s，和主命令1项有重叠，不相加为科研证据）。发现旧helper测试仍从
+  d6957de已删除的launcher内联片段抽代码，导致IndexError；最小修复为真实`-I -S`
+  子进程直接加载现有身份模块、核两个固定源码与hash，保留行为变化/AST字段负例。
+  原失败日志保留，不改生产helper。新A额外记录编排/目标解释器的实际版本；本地未
+  执行3.11（py launcher无注册版本不等于全机无3.11），不把AST形状替身称实机3.11。
+- [ ] 新A及9P1均**NOT_RUN**；首个256在预定槽位同时接受实物准入，无额外试跑。
+  前置仅取7.212封存A/B的执行commit `9c8b03eae89f5f5e62e647cdeb15b9010ba0b0ee`，
+  已审A receipt为`6e7bf50642ed45f3afc6f4e9ffcff01975aee478b3991303837fd85e890d7803`。
+  新A必须fresh核现场HEAD/clean和新源码实字节；文档HEAD不是现场版本。真实新A
+  回执审查后才另行提供B命令；旧A不替代、不解锁旧批次或七槽。
+
+最高优先级为固定代码commit后的单一包本地审查及目标新A。组件兼容证明绑定原P
+helper/runner、生产S/A/B、COE/预算与资源函数均未改。依据7.212的小process回执与ZIP
+目录（非重分析），P单槽driver139.437～163.359s，9槽历史中位数外推约22.96min；
+另留准备/hash/封包与256未知路径余量，计划35～55min、最终单ZIP约70～140MiB、
+展开约1～2GiB（均估计，不是容量/可行性保证）。profile300s、每槽driver900s沿用；
+后者9槽总和上界135min不含准备/封包，非全局超时。固定9槽或身份/效果映射/依赖/
+terminal/容量硬失败即停，不重试/替补/追加/删点拼block。资源仍参与卷新鲜12GiB、
+同卷不重复，长期50,000,000,000 bytes目标及历史总量UNKNOWN单列，不扫历史ACL或清理。
+归档核验/批次审查前保留Raw、REP、SQLite、Canonical、输入身份及小型来源记录；
+本轮不清理。1024/provider/hook、引擎、batch/输出轴保持暂停；用户DOCX不纳提交。
+
+## 7.212 512/2048×O/P八次完成并审查：方向保留，非比例幅度敏感（2026-10-19，历史；新三点准备见7.213）
 
 - [x] 新B归档57,450,743 bytes，SHA256
   `afd428171bbe84e2ab53ea1b32a5f8099e750ca84c4a6b74f3fd8ee0c84d0f0e`；606成员/605项清单、

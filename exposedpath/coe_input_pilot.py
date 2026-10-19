@@ -18,17 +18,23 @@ MIDPOINT_ORDERS=((512,1024,2048),(1024,2048,512),(2048,512,1024))
 EXTENDED_VERSION='COE-INPUT-P-PILOT/0.3'
 EXTENDED_ORDERS=((256,512,2048,1024),(512,1024,256,2048),
                  (1024,2048,512,256),(2048,256,1024,512))
+LOW_SIDE_VERSION='COE-INPUT-P-LOW3-PILOT/0.1'
+LOW_SIDE_ORDERS=((256,512,2048),(512,2048,256),(2048,256,512))
 
 
 def require(ok,reason):
     if not ok:raise ValueError('COE_INPUT_'+reason)
 
 
-def active(v):return isinstance(v,dict) and v.get('version') in (VERSION,MIDPOINT_VERSION,EXTENDED_VERSION)
+def active(v):return isinstance(v,dict) and v.get('version') in (VERSION,MIDPOINT_VERSION,EXTENDED_VERSION,LOW_SIDE_VERSION)
 
 
 def specification(version):
-    require(version in (VERSION,MIDPOINT_VERSION,EXTENDED_VERSION),'BINDING_VERSION')
+    require(version in (VERSION,MIDPOINT_VERSION,EXTENDED_VERSION,LOW_SIDE_VERSION),'BINDING_VERSION')
+    if version==LOW_SIDE_VERSION:
+        return dict(orders=LOW_SIDE_ORDERS,lengths=(256,512,2048),budget=9,
+            profile='COE_INPUT_P_LOW3_BOTH_TOKENS/0.1',input_schema='coe-input-low3-identity/0.1.0',
+            status='FIXED_NINE_LOW3_PILOT_COMPLETE_STOP_FOR_REVIEW')
     if version==EXTENDED_VERSION:
         return dict(orders=EXTENDED_ORDERS,lengths=(256,512,1024,2048),budget=16,
             profile='COE_INPUT_P_BOTH_TOKENS/0.3',input_schema='coe-input-axis-identity/0.3.0',
@@ -47,7 +53,7 @@ def schedule(batch_id,commit,*,version=VERSION):
     return [dict(version=version,batch_id=batch_id,execution_commit=commit,block=b,position=p,
         condition=f'G{n}P',input_tokens=n,batch_size=1,output_tokens=2,variant=None,observation_variant='P',
         pass_id='pass1',pair_id=f'{batch_id}-b{b}',run_id=f'{batch_id}-b{b}-G{n}P-pass1',
-        warmup_count=3,repeat_count=1,purpose='CANDIDATE_INPUT_RESPONSE_PILOT_ONLY',
+        warmup_count=3,repeat_count=1,purpose='CANDIDATE_LOW_SIDE_RESPONSE_PILOT_ONLY' if version==LOW_SIDE_VERSION else 'CANDIDATE_INPUT_RESPONSE_PILOT_ONLY',
         declaration_role='PRE_EXECUTION',formal_eligible=False)
         for b,order in enumerate(spec['orders'],1) for p,n in enumerate(order,1)]
 
@@ -168,7 +174,7 @@ def block_contrasts(rows):
             R_status='DEFINED_SIGNED' if valid else 'UNDEFINED_INVALID_PHASE_GPU_DENOMINATOR',
             denominator='SAME_PHASE_GPU_UNION_NOT_CUMULATIVE_W',
             interpretation='OBSERVED_PROGRAM_STRUCTURE_NOT_PURE_WAIT_OR_P0_PERFORMANCE')
-        if bs[0]['version'] in (MIDPOINT_VERSION,EXTENDED_VERSION):
+        if bs[0]['version'] in (MIDPOINT_VERSION,EXTENDED_VERSION,LOW_SIDE_VERSION):
             result['coe_over_phase_gpu']={n:q[n]/g[n] if gpu[n]['status']=='KNOWN' and type(g[n]) is int and g[n]>0 else None for n in lengths}
             key='midpoint_contrasts' if bs[0]['version']==MIDPOINT_VERSION else 'input_contrasts'
             result[key]=[]
@@ -178,8 +184,39 @@ def block_contrasts(rows):
                 result[key].append(dict(lower_input=low,higher_input=high,delta_coe_ns=q[high]-q[low],
                     R_ns=float(r) if r is not None else None,R_exact=dict(numerator=r.numerator,denominator=r.denominator) if r is not None else None,
                     R_status='DEFINED_SIGNED' if valid_pair else 'UNDEFINED_INVALID_PHASE_GPU_DENOMINATOR'))
+            if bs[0]['version']==LOW_SIDE_VERSION:
+                # Same formula, separately labelled low-side comparison. The
+                # original 512->2048 endpoint fields above remain unchanged.
+                result['low_side_comparison']=result.pop(key)[0]
+                result['raw_by_input']=low_side_values(values,windows,token,phase)
         answer.append(result)
     return dict(block=bs[0]['block'],per_token=answer)
+
+
+def low_side_values(values,windows,token,phase):
+    """Serialize already qualified facts; never reclassifies A or infers W."""
+    answer={}
+    for n,r in values.items():
+        op=r['operations'][token];w=windows[n][0]
+        duration=w['projection']['end_ns']-w['projection']['start_ns']
+        budget=[b for b in r['candidate_budget_windows'] if b['phase']==phase]
+        positions=[p for p in r['candidate_member_positions'] if p['token_index']==token]
+        require(len(budget)==len(positions)==1,'BLOCK_BUDGET_OR_POSITION_COVERAGE')
+        b=budget[0];cb=b['candidate_budgets_ns']
+        require(type(duration) is int and duration>0 and duration==w['a']['T_window_ns']==b['original_a']['T_window_ns']
+            and all(type(v) is int and v>=0 for v in cb.values()) and sum(cb.values())==duration,'BLOCK_BUDGET_WINDOW')
+        answer[n]=dict(coe_ns=op['candidate_ns'],phase_ns=duration,coe_over_phase=op['candidate_ns']/duration,
+            coe_over_phase_gpu=None if w['baseline']['gpu_activity']['status']!='KNOWN' or
+                type(w['baseline']['gpu_activity']['union_ns']) is not int or w['baseline']['gpu_activity']['union_ns']<=0 else
+                op['candidate_ns']/w['baseline']['gpu_activity']['union_ns'],
+            original_a=deepcopy(w['a']),candidate_budgets_ns=deepcopy(cb),
+            candidate_completion_budget_over_phase=cb['completion_exposure']/duration,
+            phase_gpu_union_ns=w['baseline']['gpu_activity']['union_ns'],
+            **{k:op[k] for k in ('copy_wall_ns','wall_ns','original_sync_ns','kernel_ns','memop_ns',
+                'same_operation_all_gpu_union_ns','uncovered_ns','positions','members','member_submits')},
+            necessary_member_position=deepcopy(positions[0]),
+            position_interpretation='QUALIFIED_SUFFIX_CUMULATIVE_NOT_DECODE_INCREMENT')
+    return answer
 
 
 def run_batch(batch_id,commit,output,collect,*,version=VERSION):
