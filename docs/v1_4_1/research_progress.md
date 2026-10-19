@@ -47,6 +47,17 @@ terminal/容量硬失败即停，不重试/替补/追加/删点拼block。资源
 归档核验/批次审查前保留Raw、REP、SQLite、Canonical、输入身份及小型来源记录；
 本轮不清理。1024/provider/hook、引擎、batch/输出轴保持暂停；用户DOCX不纳提交。
 
+交付执行/分析固定`8f49ab01ca3606626bce0987e6129b4d0f9ae637`（已正常推送），唯一
+`coe_low3_8f49ab01ca36_delivery.zip`为93884 bytes，SHA256
+`b7d0327332632a78039dfba8a98a29c5e616d2611d989bb43f1bef80d3ad12fb`；清单SHA256
+`36d61c4813da324b5668b8bb7e8a35d49f2f1eedc4d8a39b912cd82b2ed46b61`。
+本地包审CRC/安全路径/20成员19清单全覆盖、418源码身份、三份完整输入/mask摘要、
+封存A/B引用及13个未变组件Git hash对应通过，包内PowerShell解析通过；并非目标A/GPU
+验收。launcher SHA256为`c8773e01c7207ec45e0474b193cfdcba040dfb83b6a10091666e2137fc586b1a`。
+该补充是控制层交付记录，不以文档HEAD代替执行commit、不重包装；准确机器路径与
+阶段A整段命令在忽略的`.local/coe_low3_8f49ab01ca36_stage_a.md`，包审小回执为
+`.local/coe_low3_8f49ab01ca36_package_review.json`。A及9P1均NOT_RUN；B命令未提供。
+
 ## 7.212 512/2048×O/P八次完成并审查：方向保留，非比例幅度敏感（2026-10-19，历史；新三点准备见7.213）
 
 - [x] 新B归档57,450,743 bytes，SHA256
