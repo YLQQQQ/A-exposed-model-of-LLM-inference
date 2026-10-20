@@ -1,6 +1,57 @@
 # ExposedPath 科研进度清单
 
-## 7.216 固定P低侧三点九次完成：256准入闭合，首token响应复核（2026-10-19，当前）
+## 7.217 Raw机制已核对；独立512/768/1536增量Pilot本地接线（2026-10-20，当前）
+
+- [x] 先完成7.216原件机制核对：输入ZIP身份不变，只读9份SQLite及18条已审链，复用必要
+  成员/提交映射而非按重叠选成员、不重建S。生成每kernel符号、次数、grid/block/动态共享、
+  提交API行及返回位置、copy前/操作内执行并集；18链、1356个符号/布局分组可追溯。
+  小型[机制摘要](coe_low3_raw_mechanism_v0_1.csv)及[短稿§13.1](coe_research_short_note_v0_1.md#131-已有raw机制核对与有限中间点探索2026-10-20)
+  已补充；完整派生及只读审计在`.local/diagnostics/coe_low3_mechanism_v0_1/`。
+  实际命令`python .local/analyze_low3_mechanism.py` exit0，约9.85s；没有完整analyzer/Q0。
+- [x] 2048首token必要kernel数1762，低于512的1818和256的1846；全部提交API在copy前
+  返回，2048最后返回距copy0.093039～0.116935ms。2048 copy前执行46.308962～49.461800ms，
+  操作内93.860885～102.665413ms，其中kernel93.766678～102.613605ms。block1实际
+  fp16 GEMM(56次，grid70×16×1/block128×1×1)、SoftMaxForwardSmem组(28次，
+  grid24576×1×1/block1024×1×1)、add<float>组(28次，grid196608×1×1/block128×1×1)
+  分别贡献12.735186/8.900520/8.892519ms。完整模板符号和Raw/API来源不缩写丢弃。
+  排除“仅复制/整API/更多kernel次数”这一描述；总量、布局和相对位置都变，尚不能识别
+  后端选择、CPU/driver/profiler根因或净因果贡献，未声称纯Host阻塞或无插桩迁移。
+- [x] 新增独立`COE-INPUT-P-INCREMENTAL-PILOT/0.1`，有限输入/mask身份、prepare/seal
+  分派、消费及完整block汇总；旧LOW3/0.1、0.1/0.2/四点0.3不改。计划
+  [JSON](../../configs/coe_input_incremental_pilot_v0_1.json)：512→768→1536、768→1536→512、
+  1536→512→768，9个新P1，固定P/batch1/输出2/warmup3/repeat1及原自然Host-readable路径。
+  首token两项相邻signed ΔCOE/R为主要比较，512→1536描述性；第二token及原A/独立候选
+  预算/同操作union/成员位置全保留，完整block为比较单位。没有新1536与旧2048的配对，
+  共同512只查部分跨批漂移，不校正旧点；不预设平滑/单调/显著，不解锁1024或旧七槽。
+- [x] tests-first先观察`COE_INPUT_BINDING_VERSION`及真实PS分派`Delivery conflict`红例，
+  再最小接线。实际`python -m pytest -q -ra -p no:cacheprovider tests/test_coe_input_incremental.py
+  tests/test_coe_incremental_delivery.py tests/test_coe_helper_identity.py::test_pinned_source_provenance_and_real_isolated_python
+  --basetemp .local/increment_final --junitxml .local/increment_final.xml`：**36 passed/0 failed/0 skipped**，
+  98.17s。覆盖prepare→seal→实际profile argv、producer/Canonical→两token→预算→3完整block，
+  输入字节/role/版本/token/drain/依赖/hash、signed负/零及无效分母、PS5.1默认A/显式B新receipt、
+  空闲不足/未知/不可写/来源冲突和硬失败未运行槽位。外部设备/OS/collector用CPU替身，
+  真实隔离子进程使用`-I -S -B`，不称768/1536目标资格。
+- [x] 受影响旧版本定向回归：原端点R、LOW3低侧R、中点/四点signed、旧四点入口拒绝及
+  LOW3静态资源分派共**11 passed/0 failed/0 skipped**（10.93s），证据`.local/increment_legacy.xml`；
+  `python -m compileall -q exposedpath analysis`、两个变更scripts的py_compile及diff检查exit0。
+  本地Python3.12.7；本机py launcher无注册3.11（不是全盘环境断言）；真实目标3.11.16旧A
+  仅复用为历史依据，新A同时记录controller/target实际版本。未重跑完整Gate/Q0/无关套件。
+- [ ] 新固定commit包及真实阶段A待审；B NOT_RUN。新A必须fresh核实际HEAD/clean为封存
+  成功执行`8f49ab01ca3606626bce0987e6129b4d0f9ae637`，不能用22f71f4文档HEAD代替服务器。
+  新launcher/源码绑定新commit，默认仅部署/CPU/compile/参与卷fresh空间，无CUDA/模型/profile。
+  真实新A原receipt审查后才另给B命令。768/1536首次真实准入就在预定槽位，硬失败或9次即停，
+  无试跑、重试、替补/拼块、自动追加或清理。
+
+资源按7.216真实9driver总1325.062s、单槽133.297～175.156s、完整ZIP66,509,841bytes/
+展开900,187,644bytes重新估计：新B约30～45min，A约2～5min，保留ZIP65～140MiB、展开
+1～2GiB，均非保证；未知新分支/取证/服务器竞争可改变成本。实际profile硬300s、外层每槽
+900s，9槽driver上界合计8100s，不误称45min全局硬超时。启动仍参与卷新鲜12GiB门，
+同卷不重复计数，长期目标<50,000,000,000bytes/历史总量null UNKNOWN独立记录，不查ACL。
+当前最高优先级仅本地单包身份复核及协调审查新A；本轮无服务器/GPU/Nsight/新模型执行、
+无图/开题稿/新采集设施。原A/B/COE与迁移、数据角色、Gate13限定PASS/Gate14 NOT_RUN、
+所有BLOCKED/UNKNOWN/NOT_ASSESSED与用户DOCX和Raw保持，用户修改不纳提交。
+
+## 7.216 固定P低侧三点九次完成：256准入闭合，首token响应复核（2026-10-19，历史；后续见7.217）
 
 - [x] 新Pilot ZIP66,509,841 bytes，SHA256
   `9e0bbefd89f0a7500e05d43545e028db9171bcd6d8be2509439cdb9883630c9a`；691成员/690清单、
@@ -27,9 +78,10 @@
   比较中，copy墙钟与COE方向10个相同、2个相反：block1端点ΔCOE−0.022431ms/
   Δcopy+0.041102ms，block3为+0.084259/−0.176974ms。这是实例级参照差异，不证明
   稳定判别优势；全18条同操作GPU union仍等于COE，完整timeline能恢复相同答案。
-- [ ] 下一项优先利用本批Raw检查2048暴露所来自的具体kernel符号/实现、提交及执行位置，
+- [x] 原下一项：优先利用本批Raw检查2048暴露所来自的具体kernel符号/实现、提交及执行位置，
   提出一个有竞争解释和失败判据的机制假设，再审最小后续验证；不立刻堆输入点、扩输出轴
-  或恢复1024/provider。当前没有新GPU预算/采集包/服务器命令，旧B已经执行不可重跑。
+  或恢复1024/provider。该只读任务已于7.217完成并另获有限中间点本地准备授权；本条保留
+  当时无新GPU预算/采集包/服务器命令的状态，旧B已经执行不可重跑。
 
 完整18条原值与27个预算见[本批结果](coe_input_low3_results_v0_1.csv)、
 [预算](coe_input_low3_budgets_v0_1.csv)，每行绑定Pilot/执行commit/源ZIP/run身份；

@@ -20,17 +20,23 @@ EXTENDED_ORDERS=((256,512,2048,1024),(512,1024,256,2048),
                  (1024,2048,512,256),(2048,256,1024,512))
 LOW_SIDE_VERSION='COE-INPUT-P-LOW3-PILOT/0.1'
 LOW_SIDE_ORDERS=((256,512,2048),(512,2048,256),(2048,256,512))
+INCREMENTAL_VERSION='COE-INPUT-P-INCREMENTAL-PILOT/0.1'
+INCREMENTAL_ORDERS=((512,768,1536),(768,1536,512),(1536,512,768))
 
 
 def require(ok,reason):
     if not ok:raise ValueError('COE_INPUT_'+reason)
 
 
-def active(v):return isinstance(v,dict) and v.get('version') in (VERSION,MIDPOINT_VERSION,EXTENDED_VERSION,LOW_SIDE_VERSION)
+def active(v):return isinstance(v,dict) and v.get('version') in (VERSION,MIDPOINT_VERSION,EXTENDED_VERSION,LOW_SIDE_VERSION,INCREMENTAL_VERSION)
 
 
 def specification(version):
-    require(version in (VERSION,MIDPOINT_VERSION,EXTENDED_VERSION,LOW_SIDE_VERSION),'BINDING_VERSION')
+    require(version in (VERSION,MIDPOINT_VERSION,EXTENDED_VERSION,LOW_SIDE_VERSION,INCREMENTAL_VERSION),'BINDING_VERSION')
+    if version==INCREMENTAL_VERSION:
+        return dict(orders=INCREMENTAL_ORDERS,lengths=(512,768,1536),budget=9,
+            profile='COE_INPUT_P_INCREMENTAL_BOTH_TOKENS/0.1',input_schema='coe-input-incremental-identity/0.1.0',
+            status='FIXED_NINE_INCREMENTAL_PILOT_COMPLETE_STOP_FOR_REVIEW')
     if version==LOW_SIDE_VERSION:
         return dict(orders=LOW_SIDE_ORDERS,lengths=(256,512,2048),budget=9,
             profile='COE_INPUT_P_LOW3_BOTH_TOKENS/0.1',input_schema='coe-input-low3-identity/0.1.0',
@@ -53,7 +59,8 @@ def schedule(batch_id,commit,*,version=VERSION):
     return [dict(version=version,batch_id=batch_id,execution_commit=commit,block=b,position=p,
         condition=f'G{n}P',input_tokens=n,batch_size=1,output_tokens=2,variant=None,observation_variant='P',
         pass_id='pass1',pair_id=f'{batch_id}-b{b}',run_id=f'{batch_id}-b{b}-G{n}P-pass1',
-        warmup_count=3,repeat_count=1,purpose='CANDIDATE_LOW_SIDE_RESPONSE_PILOT_ONLY' if version==LOW_SIDE_VERSION else 'CANDIDATE_INPUT_RESPONSE_PILOT_ONLY',
+        warmup_count=3,repeat_count=1,purpose='CANDIDATE_INCREMENTAL_RESPONSE_PILOT_ONLY' if version==INCREMENTAL_VERSION else
+            'CANDIDATE_LOW_SIDE_RESPONSE_PILOT_ONLY' if version==LOW_SIDE_VERSION else 'CANDIDATE_INPUT_RESPONSE_PILOT_ONLY',
         declaration_role='PRE_EXECUTION',formal_eligible=False)
         for b,order in enumerate(spec['orders'],1) for p,n in enumerate(order,1)]
 
@@ -166,6 +173,10 @@ def block_contrasts(rows):
         require(all(len(windows[n])==1 for n in windows),'BLOCK_WINDOW_COVERAGE')
         gpu={n:windows[n][0]['baseline']['gpu_activity'] for n in windows}
         g={n:gpu[n]['union_ns'] for n in gpu}
+        if bs[0]['version']==INCREMENTAL_VERSION:
+            # Independent batch: no 2048 endpoint or historical paired values.
+            answer.append(incremental_contrasts(values,windows,q,g,gpu,token,phase))
+            continue
         valid=all(gpu[n]['status']=='KNOWN' and type(g[n]) is int and g[n]>=0 for n in (512,2048)) and g[512]>0
         residual=Fraction(q[2048])-Fraction(q[512]*g[2048],g[512]) if valid else None
         result=dict(token_index=token,phase=phase,primary=token==0,coe_ns=q,phase_gpu_union_ns=g,
@@ -191,6 +202,23 @@ def block_contrasts(rows):
                 result['raw_by_input']=low_side_values(values,windows,token,phase)
         answer.append(result)
     return dict(block=bs[0]['block'],per_token=answer)
+
+
+def incremental_contrasts(values,windows,q,g,gpu,token,phase):
+    def contrast(low,high,primary):
+        valid=all(gpu[n]['status']=='KNOWN' and type(g[n]) is int and g[n]>=0 for n in (low,high)) and g[low]>0
+        r=Fraction(q[high])-Fraction(q[low]*g[high],g[low]) if valid else None
+        return dict(lower_input=low,higher_input=high,primary=primary,
+            delta_coe_ns=q[high]-q[low],R_ns=float(r) if r is not None else None,
+            R_exact=dict(numerator=r.numerator,denominator=r.denominator) if r is not None else None,
+            R_status='DEFINED_SIGNED' if valid else 'UNDEFINED_INVALID_PHASE_GPU_DENOMINATOR')
+    return dict(token_index=token,phase=phase,primary=token==0,coe_ns=q,phase_gpu_union_ns=g,
+        primary_contrasts=[contrast(512,768,token==0),contrast(768,1536,token==0)],
+        descriptive_endpoint=contrast(512,1536,False),
+        raw_by_input=low_side_values(values,windows,token,phase),
+        denominator='SAME_PHASE_GPU_UNION_NOT_CUMULATIVE_W',
+        cross_batch_policy='COMMON_512_DRIFT_REFERENCE_ONLY_NO_RESCALE_OR_HISTORICAL_PAIRING',
+        interpretation='OBSERVED_PROGRAM_STRUCTURE_NOT_PURE_WAIT_OR_P0_PERFORMANCE')
 
 
 def low_side_values(values,windows,token,phase):
