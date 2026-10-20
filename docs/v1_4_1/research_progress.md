@@ -1,6 +1,31 @@
 # ExposedPath 科研进度清单
 
-## 7.217 Raw机制已核对；独立512/768/1536增量Pilot本地接线（2026-10-20，当前）
+## 7.218 增量三点交付协调复核通过：仅允许执行新阶段A（2026-10-20，当前）
+
+- [x] 独立审查7.217唯一ZIP：100342 bytes及SHA256与交付一致，19成员/18清单、
+  CRC/安全路径/全部hash、421项Git源码表示、三份完整输入/mask摘要及13项未变核心组件
+  均通过。bundle verify/list-heads和唯一前置核对通过：8f49ab0→8197f0d；包内计划、
+  launcher、旧成功A/B回执与封存原件字节一致。当前测试代码与8197f0d执行版本一致。
+- [x] 本地独立重跑7.217同组最小相关检查：**36 passed、0 failed、0 skipped**，170.29s；
+  JUnit实际36项、errors=0。Python3.12.7，实际Windows PowerShell5.1.26100.9711；
+  真实文件/隔离子进程/PS分派检查使用明确的外部OS、设备与collector CPU替身。
+  包内原36项与11项JUnit亦核验，无重复相加；不代表目标3.11或768/1536 GPU资格。
+  另直接解析包内launcher，PS5.1无语法错误。审查脚本、audit.json、cpu.xml/log及
+  包副本保留在`.local/diagnostics/coe_incremental_coordination_8197f0d_v0_1/`。
+- [x] 排程与边界复核：只运行新512/768/1536各3次、3完整block；原P/helper/完成政策、
+  S/A/B/COE与迁移不改。相邻signed比较、无效分母保持undefined；不把旧2048配对、不按
+  512校正历史点、不预设单调。默认A仅部署/CPU/compile/fresh12GiB，B必须绑定本次真实
+  成功A回执及另行显式开关；源码/空间冲突与硬失败拒绝，固定预算不重试/续跑/替补。
+- [ ] 新目标A与B仍NOT_RUN。下一步由用户在服务器执行已审原阶段A命令，回传
+  `coe_input_8197f0d0d6ac_static.zip`原件；真实A审查通过后才另给B命令。协调记录提交不
+  改变包执行8197f0d或服务器前置8f49ab0，不要求把服务器切到文档HEAD。
+
+本轮仅本地协调审查及最小CPU复核，未修改业务代码/包/合同，未运行模型、CUDA或Nsight，
+未操作服务器。研究方案v7.1/协议v2.1的Pre-Pilot身份与本批Pilot角色不变；无新Freeze/
+Formal资格。Gate13限定PASS、Gate14 NOT_RUN、1024及历史BLOCKED/UNKNOWN保持。
+当前最高优先级为取得并审查新A原回执；用户DOCX与Raw均保全，不纳入本次提交。
+
+## 7.217 Raw机制已核对；独立512/768/1536增量Pilot本地接线（2026-10-20，历史；后续见7.218）
 
 - [x] 先完成7.216原件机制核对：输入ZIP身份不变，只读9份SQLite及18条已审链，复用必要
   成员/提交映射而非按重叠选成员、不重建S。生成每kernel符号、次数、grid/block/动态共享、
