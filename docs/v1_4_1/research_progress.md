@@ -1,6 +1,34 @@
 # ExposedPath 科研进度清单
 
-## 7.218 增量三点交付协调复核通过：仅允许执行新阶段A（2026-10-20，当前）
+## 7.219 增量三点真实A回执审查通过；B待用户显式启动（2026-10-20，当前）
+
+- [x] 新A原ZIP108266 bytes，SHA256
+  `c030e4dbb8739044aa64371ed579d92f511296f52fe0c7d96818750dd1b536bb`；23成员/22清单、
+  CRC/安全路径/全部hash通过，manifest SHA256
+  `f4948aeaf0ddb8984a19324e9baff300421709baf458fcae5f193690e142bd33`。原delivery/执行
+  launcher与已审包逐字节一致，执行/分析8197f0d，421项实际源码均匹配；8项退出记录exit0。
+  绑定入口成功终态证明最后clean检查已通过，不冒充独立服务器实时查询。
+- [x] 实际controller和target Python均3.11.16、isolated=1/no_site=1；CPU原日志与JUnit
+  一致：**36 passed、0 failed、0 skipped**，113.25s，compile exit0。默认A没有真实模型/
+  CUDA/Nsight采集；这是已绑定执行链的静态资格，不是768/1536 GPU或COE准入。
+- [x] 空间记录为2026-10-20T14:04:18Z，唯一参与卷可用369077116928 bytes，输出/临时/
+  归档路径可写，满足12GiB门；B会fresh重查。历史YLQ总量仍null/UNKNOWN，不扫描ACL、
+  不据空闲推断长期占用、不自动清理。原A仍保留measurement_validity=NOT_ASSESSED及
+  dropped_records_status=UNKNOWN。
+- [x] 原receipt SHA256
+  `719b687a4c356b680ea652210f21fcc2317c4b03e171cf376ba219ae0660f670`已绑定显式B命令。
+  命令另核launcher/delivery字节，实际PS5.1解析及三个哈希与原件交叉检查通过；未运行。
+  只读审计及静态原件副本位于`.local/diagnostics/coe_incremental_target_a_8197f0d_v0_1/`。
+- [ ] B仍NOT_RUN，由用户显式执行既定512/768/1536各3次、9P1，预计30～45min非硬保证；
+  逐槽driver900s/profile300s、fresh12GiB及原证据门继续适用。固定9次或硬失败即停，
+  不重试/续跑/替补/拼旧block。回传`coe_input_8197f0d0d6ac_pilot.zip`后逐原件审查；
+  当前不预授新长度、完整物理B、新Formal或科学响应结论。
+
+本轮仅只读审查真实新A及生成已审B命令，未重跑CPU/模型/采集、未操作服务器或修改业务
+代码/包/合同。用户DOCX与Raw保留。原A/B/COE及所有历史BLOCKED/UNKNOWN、Gate13限定
+PASS/Gate14 NOT_RUN不变；当前最高优先级是用户执行既定B并回传唯一原ZIP。
+
+## 7.218 增量三点交付协调复核通过：仅允许执行新阶段A（2026-10-20，历史；后续见7.219）
 
 - [x] 独立审查7.217唯一ZIP：100342 bytes及SHA256与交付一致，19成员/18清单、
   CRC/安全路径/全部hash、421项Git源码表示、三份完整输入/mask摘要及13项未变核心组件
