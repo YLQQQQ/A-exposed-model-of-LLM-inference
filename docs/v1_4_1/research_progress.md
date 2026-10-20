@@ -34,6 +34,9 @@
 完整18条原值与27个预算见[本批结果](coe_input_low3_results_v0_1.csv)、
 [预算](coe_input_low3_budgets_v0_1.csv)，每行绑定Pilot/执行commit/源ZIP/run身份；
 科学收口见[短稿§13](coe_research_short_note_v0_1.md#13-固定p低侧三点pilot九次完成2026-10-19)。
+两份新汇总CSV使用LF行结束；仅调整派生文本表示，原ns、字段/来源、Raw及运行文件未改。
+2026-10-20收尾核对：18/27行与原派生表及前次提交逐字段相同，仅行结束表示变化；
+未新增实验或修改语义，不重跑已完成批次。
 审计代码、12项signed比较与来源在`.local/diagnostics/coe_low3_result_review_8f49ab0_v0_1/`。
 本轮仅离线来源/区间/描述统计核对及必要记录，无新图、业务修改、测试套件/GPU/服务器操作。
 原Raw/DOCX/定义/Gate与所有历史BLOCKED保持；本批仍Pilot，NOT_ASSESSED/UNKNOWN及
