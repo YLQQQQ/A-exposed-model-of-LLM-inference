@@ -36,7 +36,16 @@
   `python -m compileall -q exposedpath analysis`、两个变更scripts的py_compile及diff检查exit0。
   本地Python3.12.7；本机py launcher无注册3.11（不是全盘环境断言）；真实目标3.11.16旧A
   仅复用为历史依据，新A同时记录controller/target实际版本。未重跑完整Gate/Q0/无关套件。
-- [ ] 新固定commit包及真实阶段A待审；B NOT_RUN。新A必须fresh核实际HEAD/clean为封存
+- [x] 实现/分析精确绑定`8197f0d0d6ac35ef17c4c5f6ba0d9ed00fe5b41e`，已正常推送。
+  唯一`coe_incremental_8197f0d0d6ac_delivery.zip` **100342bytes**，SHA256
+  `0716d92194467385d5168a96f6f4f33cfdb0c06bbf1760f25678184806460582`，manifest SHA256
+  `d5e94fd0b19d149b64b77a51647b3304154107861467a3bbc2e6f14aea0d1025`；19成员/18清单，
+  CRC/安全路径/覆盖/hash通过，另独立逐Git blob核对421项源码表示及13项未变核心组件。
+  bundle精确要求8f49ab0、目标8197f0d，verify/list-heads通过；计划/三份完整input与mask摘要、
+  launcher、原静态/成功执行回执及组件兼容均绑定。包内不含模型/大型Raw或可执行GPU产物。
+  本地全源码审计`.local/coe_incremental_8197f0d0d6ac_package_full_source_review.json`；本次
+  包身份记录是实现commit之后的控制元数据，不修改bundle目标或产生哈希自引用。
+- [ ] 真实新阶段A待协调审查/用户执行；B NOT_RUN。新A必须fresh核实际HEAD/clean为封存
   成功执行`8f49ab01ca3606626bce0987e6129b4d0f9ae637`，不能用22f71f4文档HEAD代替服务器。
   新launcher/源码绑定新commit，默认仅部署/CPU/compile/参与卷fresh空间，无CUDA/模型/profile。
   真实新A原receipt审查后才另给B命令。768/1536首次真实准入就在预定槽位，硬失败或9次即停，
