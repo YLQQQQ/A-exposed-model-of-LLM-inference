@@ -89,3 +89,34 @@ DLL及许可证的必要子集，避免无关HTML长路径；所保留字节与�
 目录下无关HTML的长路径失败，最终资产子集不再含这些文档；未调整目标机系统策略。
 目标服务器仍须严格核验前置8197f0d且clean、Python3.11.16/MSVC14.38和新鲜12GiB空间。
 用户复制包、执行单独的A脚本并回传`cupti_timeline_7fa36efb340f_static.zip`后才审下一步。
+
+## 目标Stage A审查与单次模型接回合同
+
+目标A真实回传3,040,625 bytes，SHA256
+`89265f8ddcce6b513457b1d40f44eda325e058f9cf654cf53d40d05476ae5376`。
+231成员/230清单、CRC/安全路径/全部hash通过，438项源码逐Git blob或预定CRLF表示匹配。
+原CPU日志和JUnit一致：82 passed/0 failed/0 skipped，3.23s。10个部署/编译/导出/测试
+进程均exit0，无超时。目标Python3.11.16、MSVC14.38和SDK10.0.20348.0完成真实编译链接。
+这次阶段A审查PASS仅证明构建、CPU文件链和身份，不证明实际CUPTI订阅或模型覆盖。
+
+固定新B采用最新拒绝形状768输入、batch1、每样本输出2、3次原暖机、1次测量。
+`scripts/cupti_timeline_model.py`直接继承原P的prepare/finish方法；仅Engineering构造器
+版本化，不冒充旧Pilot绑定。原模型加载、输入内容和FP16/eager/SDPA均核验；加载/原暖机
+位于订阅之前，随后开启一次session，原resident runner执行原drain及两个Host-readable
+token完成操作。新增CUPTI marker sink和订阅位置有观测成本，不声称与旧Nsight时序等价。
+该范围选择用于覆盖失败形状；不是重新采集负载规律或授予所有输入长度资格。
+
+独立B包绑定真实A的receipt/manifest/delivery、全部封存文件、438源码与现有DLL；不换
+checkout、不重编、不重跑A。固定一个模型进程/一个CUPTI session，零Nsight/零micro。
+模型硬300秒，后续CPU离线消费硬180秒；新鲜空间12GiB。一次或硬失败停止，无重试或
+替补。writer未知仍拒绝封包并保留现场。B成功状态只允许STOP_FOR_REVIEW。
+
+producer/token/输入/模型/库/进程均绑定同次capture，完成标记使用CUPTI活动时钟。
+从原producer标签恢复两条操作，继续使用7fa36ef来源桥/局部必要集合/COE；不造Nsight
+SQLite、API墙钟或缺失设备效果。原暖机完成、实际模型配置和输入记录均单列并绑定hash。
+即使模型或reader失败，后验A检查也执行，避免将前置副本代替采集后的身份核验。
+
+独立CPU手定两token参考：第一操作交集20ns，第二仅D2H交集1ns；来源和producer的
+真实文件链通过。真实PS5.1默认拒绝、显式CPU替身入口，以及控制器成功/模型失败/分析
+失败封包分支均验证。所有CPU替身保持本地测试角色；目标GPU验证仍待用户执行固定B。
+结果不得直接成为旧A或负载曲线数据；纯Host阻塞始终不由此授予。

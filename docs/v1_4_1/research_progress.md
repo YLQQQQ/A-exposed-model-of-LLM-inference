@@ -1,6 +1,41 @@
 # ExposedPath 科研进度清单
 
-## 7.221 按用户授权实现提交效果桥与同进程CUPTI局部文件链；目标资格NOT_RUN（2026-10-21，当前）
+## 7.222 CUPTI时间线目标Stage A通过；准备单次768模型接回验证（2026-10-21，当前）
+
+- [x] 真实Stage A回传3,040,625 bytes，SHA256
+  `89265f8ddcce6b513457b1d40f44eda325e058f9cf654cf53d40d05476ae5376`；231成员/230清单、
+  CRC/路径与全部hash通过。manifest SHA256
+  `18565ddc0153e48111dc6238c7e72b3339972e23b3c15ab43f8e12ca38e45d72`；receipt SHA256
+  `59271549fb7e4fb160870af0303aeba6b6fc9eae8f02a5c74b5e80047cc18ef2`。
+- [x] 执行/分析固定7fa36ef；438项实际源码逐Git blob/显式CRLF表示一致，原delivery及
+  资产身份匹配唯一reviewed包。原日志/JUnit一致：82 passed、0 failed、0 skipped，
+  3.23s；10项部署/构建/导出/CPU进程记录均exit0且未超时。目标Python3.11.16、
+  MSVC14.38/SDK10.0.20348.0真实编译链接成功；DLL/Host程序仅导入KERNEL32。
+  最终clean由已绑定入口成功执行末次tree检查证明；未另查服务器实时状态。
+- [x] 新鲜参与卷空闲368,942,075,904 bytes，满足当次12GiB预留；历史YLQ总量仍UNKNOWN。
+  审查记录存忽略的本地`cupti_timeline_target_a_7fa36ef_v0_1/review.json`。Stage A只授静态
+  部署/构建/CPU通过，模型/GPU/COE资格不由此授予。
+- [x] 已补独立Stage B控制器和模型入口：绑定真实A原件、库及438源码，复用已建DLL，
+  不切checkout/重编/重跑A。固定新768/batch1/输出2/warmup3/repeat1；原P方法直接继承，
+  模型/输入加载和原暖机在订阅前完成，随后同进程同次记录原drain及两个token完成操作。
+  新观测来源与订阅位置单列，不能把时延并入旧Nsight曲线。
+- [x] 原producer、输入/模型内容、实际token、CUPTI时钟/资源/参数/活动、关闭与丢失检查
+  接入同次局部S/COE消费；模型或分析失败也执行后验A检查并保留回执。手定两token文件链
+  预期20ns/1ns复现；错PID/篡改/错token/缺scope/关闭与暖机冲突均拒绝。
+- [x] 本地新接线/同次文件链27项及相关来源桥/adapter/session共87 passed，另有原P/helper/
+  Stage A入口68 passed，均0 failed/0 skipped；数量按命令分别记录，不相加成资格。真实
+  PS5.1默认拒绝及显式CPU替身入口、控制器成功/模型失败/分析失败封包和后验检查通过。
+  本机Python3.12.7；新模型入口在目标3.11及GPU上的实际执行仍待验证。
+- [ ] 当前最高优先级：完成固定B小包；预算仅一个新模型进程/一个
+  CUPTI session，零Nsight/零micro；模型硬300s、离线分析180s，固定一次或硬失败即停。
+  目标真实PyTorch覆盖、768缺口闭合、观测扰动和新COE准入仍NOT_RUN/NOT_ASSESSED。
+
+计划调整：用户要求继续已授权的通用来源修复；本轮以真实A为前置准备一个新失败形状的
+同次模型诊断。没有恢复长度矩阵/旧七槽，不使用新参数追认旧768/1024。当前研究方案及
+Pre-Pilot协议不变；生产S/A/B/COE、Raw、历史BLOCKED、UNKNOWN、Gate13限定PASS与
+Gate14 NOT_RUN保持。用户DOCX未改。
+
+## 7.221 按用户授权实现提交效果桥与同进程CUPTI局部文件链；目标资格NOT_RUN（2026-10-21，历史；后续见7.222）
 
 - [x] 用户明确暂停追加负载点，要求解决通用来源缺口并完善脚本。重新启用限定的独立
   CUPTI纵切片：ENTRY参数/EXIT返回、逐线程真实父子关系、分域correlation、kernel/
