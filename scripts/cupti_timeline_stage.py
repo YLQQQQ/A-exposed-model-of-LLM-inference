@@ -12,6 +12,9 @@ import shutil
 import sys
 
 
+# -I intentionally ignores PYTHONDONTWRITEBYTECODE. Set the interpreter flag
+# before importing a sibling, so the exact package manifest is not polluted.
+sys.dont_write_bytecode=True
 _base_path=Path(__file__).with_name('independent_cupti_stage.py')
 _spec=importlib.util.spec_from_file_location('_timeline_deployment_base',_base_path)
 base=importlib.util.module_from_spec(_spec);_spec.loader.exec_module(base)

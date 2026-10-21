@@ -69,3 +69,14 @@ def test_real_ps51_positive_hash_gate_reaches_only_a_cpu_driver_double(tmp_path)
         cwd=tmp_path,capture_output=True,timeout=20)
     assert r.returncode==0,r.stderr.decode(errors='replace')
     assert (tmp_path/'entered.txt').read_text()=='CPU_DOUBLE'
+
+
+def test_packaged_isolated_bootstrap_does_not_pollute_its_own_exact_manifest_directory(tmp_path):
+    for src,dst in [('cupti_timeline_stage.py','cupti_timeline_stage.py'),
+        ('independent_cupti_stage.py','independent_cupti_stage.py'),('memset_micro.py','micro_support.py')]:
+        (tmp_path/dst).write_bytes((ROOT/'scripts'/src).read_bytes())
+    before={p.name for p in tmp_path.iterdir()}
+    r=subprocess.run([sys.executable,'-I',str(tmp_path/'cupti_timeline_stage.py'),'--help'],
+        cwd=tmp_path,capture_output=True,timeout=20)
+    assert r.returncode==0,r.stderr.decode(errors='replace')
+    assert {p.name for p in tmp_path.iterdir()}==before
