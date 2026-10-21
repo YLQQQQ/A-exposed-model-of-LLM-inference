@@ -114,9 +114,13 @@ def test_real_ps51_explicit_entry_hashes_then_runs_only_cpu_double(tmp_path):
 
 
 @pytest.mark.parametrize('failure',[None,'analysis','model'])
-def test_actual_controller_file_flow_seals_success_or_failure_and_rechecks_a(tmp_path,monkeypatch,failure):
+def test_actual_controller_file_flow_seals_success_or_failure_and_rechecks_a(tmp_path_factory,monkeypatch,failure):
     """Real controller/packaging; process, A and storage are explicit CPU doubles."""
     import runpy,sys,zipfile
+    # Stage A already nests its basetemp under a sealed output tree. A long
+    # pytest function-derived name can exceed Win32 MAX_PATH in the fixture;
+    # use a short unique CPU directory, without changing production paths.
+    tmp_path=tmp_path_factory.mktemp('b')
     m=module();package=tmp_path/'package';package.mkdir();server=tmp_path/'YLQ';server.mkdir()
     a=tmp_path/'a';(a/'build').mkdir(parents=True)
     for name in ('receipt.json','artifact_manifest.json','source_bytes.json','build/build.json'):put(a/name,{})
