@@ -173,3 +173,46 @@ kind、domain和status_code。旧capture缺该对象时保留None；未知版本
 编译及注入capture留在忽略的本地`cupti_startup_*`诊断目录。目标14.38/3.11和真实CUPTI
 初始化修复未验证，没有制作或执行新的服务器包；旧attempt、Raw及其UNKNOWN/BLOCKED
 不改。下一步先固定新诊断的执行/构建身份和预算，再取得目标原始错误事实。
+
+## API22活动控制策略0.2与事件关联验证（2026-10-21，当前）
+
+7.227目标原件明确证明：直接enable CUDA_EVENT(kind36)返回21/INVALID_KIND，之前8类
+成功；不证明旧768同因，也不修复1024缺效果。封存12.4.127 SDK头文件与本轮实际编译
+头文件逐字节相同。枚举/结构可解析不等于接受单独enable。
+[官方CUDA12.9发布说明](https://docs.nvidia.com/cupti/release-notes/release-notes.html#updates-in-cuda-12-9)
+说明此前CUDA_EVENT与SYNCHRONIZATION收集耦合。将此用于API22的控制策略是有依据的
+候选，**不是12.4目标事件实际发出的证明**，不得升级工具链来迁就它。
+
+固定`cupti-api22-activity-policy/0.2.0`：显式顺序为RUNTIME5、DRIVER4、
+CONCURRENT_KERNEL10、MEMCPY1、MEMSET2、SYNCHRONIZATION38、CONTEXT9、STREAM37；
+末两项仍用EnableAndDump。只对成功启用前缀逆序disable，36不单独enable或disable，
+无吞21/重试/fallback。保留全部9种原始kind的解码及必需证据检查；“保留记录类型”不等于
+要求未执行的操作也有非零计数，真实event例必须存在相应记录才可通过。request内未知
+event依赖继续拒绝，不把本微例变成S层event资格。原capture schema不改，初始化事实版本
+0.2.0携带完整策略；旧0.1.0照读、不附新policy、不重判旧状态。session receipt新增0.1.2，
+声明新policy不能接受旧/缺失/冲突元数据。关闭步骤另存原始码及首失败，不覆盖初始化失败。
+
+Stage A独立版本0.1.2，仅部署/真实SDK编译链接/CPU/身份/新鲜2GiB；构建policy必须与
+合同一致，不能把新库写成旧0.1.1诊断。旧A读取/历史配置保留，混用明确拒绝。新DLL在
+新commit目录，不覆盖旧库；旧成功A只确定前置checkout与资产，不能替代新A。
+
+**未来一次B独立预期，当前不执行。** 单进程、单session、硬120秒、0 LLM、0 Nsight：
+沿已核验PyTorch2.6/cu124的小上下文、64-byte逻辑张量与单显式流建立并订阅前drain，
+session内创建一个event，按record→event synchronize→stream synchronize→destroy执行。
+流上无待验证的长任务，允许极短/零活动交集；本例只检验记录存在与真实关联，不测等待。
+不把64-byte逻辑分配称为物理显存上限。保持原始返回码；任一步失败停止，无重试/替补。
+
+必需来源：同session/PID/TID和CUPTI时钟的闭合操作范围、侧记实际native event/stream与
+每次返回、唯一runtime activity及callback、明确driver父子关系、CUDA_EVENT记录的
+driver correlation/context/stream/eventId，以及同eventId的物理event sync与同流物理
+stream sync、context/stream资源、loss查询/flush/关闭/退出。native event指针不等于
+CUPTI eventId；关联来自受控调用范围与明确父子/correlation，不按时间邻近猜配。
+API activity和callback时刻可能不同，不强求逐ns相等，各保留原值及范围。driver API
+行若存在必须严格核对；不补造缺行或计算其时长。API22的旧event记录没有设备完成时间戳，
+保持NOT_AVAILABLE，不能填0冒充实测。
+
+缺事件/范围、重复/错线程/错父子、同步失败或eventId/stream/context冲突、丢失/容量/
+关闭失败均拒绝；open成功而缺event尤其不能通过。新分析入口只授`EVENT_LINK_COMPLETE_PENDING_REVIEW`，
+不授模型覆盖、1024修复、W/terminal、A/COE或新Formal。B约2～5分钟、临时2GiB、
+小型回传估计<1MiB（非保证）；先审真实新A，再绑定原receipt/库/hash准备控制入口及命令。
+历史总占用仍null/UNKNOWN，长期<50,000,000,000bytes目标独立，无ACL遍历或自动清理。

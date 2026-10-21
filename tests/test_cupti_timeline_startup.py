@@ -36,7 +36,7 @@ def invoke(startup,tmp_path,mode,code=37):
 
 @pytest.mark.parametrize('mode,operation,kind',[
     ('stream_failure','cuptiActivityEnableAndDump',37),
-    ('event_failure','cuptiActivityEnable',36),
+    ('sync_failure','cuptiActivityEnable',38),
     ('subscribe_failure','cuptiSubscribe',None),
     ('thread_failure','cuptiSetThreadIdType',None),
     ('buffers_failure','cuptiActivityRegisterCallbacks',None),
@@ -45,7 +45,7 @@ def invoke(startup,tmp_path,mode,code=37):
 def test_actual_dll_retains_original_failure_without_changing_generic_code(startup,tmp_path,mode,operation,kind):
     r,raw=invoke(startup,tmp_path,mode)
     assert r['open_code']==3 and r['close_code']!=0
-    init=raw['initialization'];assert init['schema_version']=='cupti-timeline-startup/0.1.0'
+    init=raw['initialization'];assert init['schema_version']=='cupti-timeline-startup/0.2.0'
     assert init['succeeded'] is False and init['overflow']==0
     failure=init['failure']
     assert failure['operation']==operation and failure['activity_kind']==kind
@@ -53,7 +53,7 @@ def test_actual_dll_retains_original_failure_without_changing_generic_code(start
     assert init['steps'][-1]==failure
     assert raw['quality']['errors']==[1] and raw['quality']['dropped']==0
     if mode=='stream_failure':assert not any(s['activity_kind']==36 for s in init['steps'])
-    if mode=='event_failure':assert any(s['activity_kind']==37 and s['success'] for s in init['steps'])
+    if mode=='sync_failure':assert not any(s['activity_kind']==37 for s in init['steps'])
 
 
 def test_actual_success_preserves_all_original_activity_types_and_order(startup,tmp_path):
@@ -61,11 +61,11 @@ def test_actual_success_preserves_all_original_activity_types_and_order(startup,
     assert r['open_code']==r['close_code']==0
     init=raw['initialization'];assert init['succeeded'] is True and init['failure'] is None
     kinds=[s['activity_kind'] for s in init['steps'] if s['activity_kind'] is not None]
-    assert kinds==[5,4,10,1,2,38,9,37,36]
+    assert kinds==[5,4,10,1,2,38,9,37]
     operations=[s['operation'] for s in init['steps'] if s['status_domain']=='CUPTI']
     assert operations==['cuptiGetVersion','cuptiSubscribe','cuptiSetThreadIdType','cuptiActivityRegisterCallbacks',
         'cuptiEnableDomain','cuptiEnableDomain',*['cuptiActivityEnable']*6,
-        'cuptiActivityEnableAndDump','cuptiActivityEnableAndDump','cuptiActivityEnable']
+        'cuptiActivityEnableAndDump','cuptiActivityEnableAndDump']
     assert raw['quality']['closed'] is True and raw['quality']['errors']==[]
 
 
@@ -108,7 +108,7 @@ fake=ctypes.WinDLL(library)
 configure=fake.ep_startup_double_configure
 configure.argtypes=[ctypes.c_char_p,ctypes.c_int,ctypes.c_int,ctypes.c_uint32]
 configure.restype=None
-configure(b"cuptiActivityEnable",36,37,22)
+configure(b"cuptiActivityEnable",38,37,22)
 cfg=dict(client=client,client_sha256=m.sha(client),cupti=library,cupti_sha256=m.sha(library),session_id="CPU_DLL_DOUBLE")
 try:
  with m.CaptureSession(cfg,output,allow_target_capture=True,_library_factory=ctypes.WinDLL):pass
@@ -117,7 +117,7 @@ except ValueError as error:
  assert "OPEN_FAILED:3" in message and "cuptiActivityEnable" in message and "37" in message
 else:raise AssertionError("failure was accepted")
 receipt=json.loads((Path(output)/"receipt.json").read_text())
-assert receipt["startup_failure"]["status_code"]==37 and receipt["startup_failure"]["activity_kind"]==36
+assert receipt["startup_failure"]["status_code"]==37 and receipt["startup_failure"]["activity_kind"]==38
 assert receipt["open_code"]==3 and receipt["close_code"]==4
 assert receipt["verification_mode"]=="CPU_LIBRARY_DOUBLE_NOT_GPU"
 k=ctypes.WinDLL("kernel32");k.GetModuleHandleW.argtypes=[ctypes.c_wchar_p];k.GetModuleHandleW.restype=ctypes.c_void_p

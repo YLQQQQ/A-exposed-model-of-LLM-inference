@@ -1,6 +1,45 @@
 # ExposedPath 科研进度清单
 
-## 7.227 启动诊断取得明确失败：CUDA_EVENT直接启用返回INVALID_KIND（2026-10-21，当前）
+## 7.228 API22启用策略最小修复与单event验证入口，本地完成待新A（2026-10-21，当前）
+
+- [x] 复用7.227归档核验，重新核对本轮消费的原capture及来源hash：旧0.1.0首失败仍是
+  `cuptiActivityEnable(36)=21`，新reader照读，原ZIP/Raw/报告不变。实际编译使用的
+  cupti_activity/result/version头文件与封存官方12.4.127 ZIP逐字节相同；官方12.9中
+  旧CUDA_EVENT/SYNCHRONIZATION耦合说明仅作为API22修复候选依据，不冒充目标证明。
+  本地审计`.local/diagnostics/cupti_event_policy_sources_v0_1/review.json`。
+- [x] 实现版本化`cupti-api22-activity-policy/0.2.0`：显式启用原前8项，36作为由38控制的
+  记录类型保留；只逆序关闭成功前缀，不尝试36、吞码、fallback或重试。全部9种原始kind
+  继续解码，事件/缺映射/依赖拒绝不放宽。关闭API原始状态及首失败独立保存，不覆盖初始化。
+  新startup0.2.0/session receipt0.1.2/Stage A0.1.2严格绑定policy；旧版本读取/选择保留，
+  未知或混用、将新构建假标旧诊断均拒绝；S/A/B/COE和旧冻结合同不改。
+- [x] 新增窄域event入口/独立reader及先验手定反例：单进程/单session、0 LLM/0 Nsight，
+  事件record→event同步→stream同步，闭合标记+runtime/callback/driver父子+eventId/
+  context/stream关联。保留真实返回和失败partial；缺event不能因open成功放行。API22
+  event没有设备完成时间戳，保持NOT_AVAILABLE；不构造新W/B或授事件依赖资格。
+  独立预期、必需字段/停止条件见[控制策略及事件验证](cupti_submit_effect_vertical_slice_v0_1.md#api22活动控制策略02与事件关联验证2026-10-21当前)。
+- [x] tests-first真实SDK/client+CPU ABI替身先复现旧open3/close4及关闭原码丢失，再修复。
+  实际命令`python -m pytest -q -ra -p no:cacheprovider tests/test_cupti_activity_policy.py
+  tests/test_cupti_timeline_startup.py tests/test_cupti_timeline_session.py tests/test_cupti_timeline_native.py
+  tests/test_cupti_event_probe.py tests/test_cupti_timeline_stage.py
+  tests/test_cupti_timeline_adapter.py::test_historical_event_is_closed_only_by_explicit_callback_and_later_drain
+  --basetemp .local/epol_done --junitxml .local/epol_done.xml`：**82 passed/0 failed/0 skipped，19.69s**。
+  含实际client DLL启用顺序/关闭范围/其他接口失败、原码21保留、新旧版本拒绝、SDK事件结构
+  解码、实际入口→capture/side→独立reader→receipt的成功/缺event失败文件链，及原事件依赖拒绝。
+  本地Python3.12.7/MSVC14.44，厂商CUDA/CUPTI库未执行；参数/事件是CPU替身，不是目标GPU资格。
+  compileall exposedpath/analysis、变更scripts的py_compile及diff检查通过；无完整Q0/无关套件。
+- [ ] 先固定实际实现/分析commit，再交唯一Stage A包。前置以真实A ddc7abc及e017一次B
+  后验A检查确定（控制e017未换checkout），新A仍fresh核ddc7abc HEAD/clean；不猜文档HEAD。
+  原SDK/CUPTI/toolchain资产复用，不安装依赖；新DLL写新输出。默认A仅构建/CPU/身份/
+  新鲜2GiB，0模型/0 CUDA程序/0采集，无B开关；真实新A审查后另给B命令。
+- [ ] 目标事件实物仍NOT_RUN：未来一次硬120秒单进程event验证，成功也只关闭本次限定
+  启用/事件关联问题，不证明旧768同因、不修复1024效果、不恢复输入矩阵或旧七槽。
+
+最高优先级仅新A固定交付及协调审查；A估2～5分钟、保留静态证据约4～8MiB，未来B估
+2～5分钟/小型回传<1MiB，均非保证。长期总容量null UNKNOWN与50,000,000,000bytes目标
+分开，无ACL/自动清理。用户DOCX、原Raw、旧BLOCKED/UNKNOWN、数据角色、Gate13限定PASS/
+Gate14 NOT_RUN保持；本轮未操作服务器、未运行GPU/模型/Nsight。
+
+## 7.227 启动诊断取得明确失败：CUDA_EVENT直接启用返回INVALID_KIND（2026-10-21，历史；修复见7.228）
 
 - [x] 回传44,821 bytes、SHA256
   `77403b1db387979784f3e3313cdb139fcc79ebc72e05c0942e78ebc0677e4fe9`；19成员/18清单、
@@ -21,10 +60,10 @@
   官方12.9发布说明又明确旧版CUDA_EVENT与SYNCHRONIZATION记录收集耦合，提供了具体
   修复候选依据；它不能替代目标12.4上事件记录实际发出及同次关联的验证。独立审查存
   忽略的`cupti_startup_failure_e017_v0_1`，原ZIP/Raw/回执不覆盖。
-- [ ] 最高优先级：版本化区分“显式enable控制项”和“必须保留/验证的记录类型”，
+- [x] 原最高优先级：版本化区分“显式enable控制项”和“必须保留/验证的记录类型”，
   审查以SYNCHRONIZATION取得CUDA_EVENT的固定API22方案，再做本地修复/回归及有限
   事件/同步实物验证设计。不得在原入口临时吞21、自动fallback、填空event或直接判COE
-  合格；必须保留事件解码/依赖拒绝和旧读取版本。此修复及目标效果仍NOT_RUN。
+  合格；必须保留事件解码/依赖拒绝和旧读取版本。本地修复已于7.228完成，目标效果仍NOT_RUN。
 
 计划调整：当前从泛化“启动失败”收敛到具体enable操作拒绝，有可定位的采集器兼容
 问题；本轮只读审查原件/固定SDK及第一方说明，未修改生产代码、重跑测试、制作新包

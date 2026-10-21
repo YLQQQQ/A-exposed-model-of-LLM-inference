@@ -42,6 +42,28 @@ def test_versioned_stage_selects_real_startup_dll_and_failed_process_checks():
     assert m.selected_cpu_tests(valid())==m.CPU_TESTS
 
 
+def test_activity_policy_stage_is_separate_from_old_diagnostic_stage():
+    c=valid();c.update(schema_version='cupti-timeline-stage-a/0.1.2',startup_diagnostic_version='cupti-timeline-startup/0.2.0',
+        activity_policy_version='cupti-api22-activity-policy/0.2.0')
+    m=module();m.validate_delivery(c)
+    assert m.selected_cpu_tests(c)==['tests/test_cupti_activity_policy.py','tests/test_cupti_timeline_startup.py',
+        'tests/test_cupti_timeline_session.py','tests/test_cupti_timeline_native.py','tests/test_cupti_event_probe.py','tests/test_cupti_timeline_stage.py',
+        'tests/test_cupti_timeline_adapter.py::test_historical_event_is_closed_only_by_explicit_callback_and_later_drain']
+    for key,value in [('startup_diagnostic_version','cupti-timeline-startup/0.1.0'),('activity_policy_version','unknown'),
+        ('schema_version','cupti-timeline-stage-a/0.1.1')]:
+        with pytest.raises(ValueError):m.validate_delivery({**c,key:value})
+
+
+def test_built_policy_cannot_be_mislabelled_as_legacy_diagnostic():
+    m=module();old=startup_delivery()
+    with pytest.raises(ValueError,match='BUILD_POLICY'):m.validate_build_policy(old,dict(activity_policy_version='cupti-api22-activity-policy/0.2.0'))
+    m.validate_build_policy(old,{})
+    new={**old,'schema_version':'cupti-timeline-stage-a/0.1.2','startup_diagnostic_version':'cupti-timeline-startup/0.2.0',
+        'activity_policy_version':'cupti-api22-activity-policy/0.2.0'}
+    with pytest.raises(ValueError,match='BUILD_POLICY'):m.validate_build_policy(new,{})
+    m.validate_build_policy(new,dict(activity_policy_version='cupti-api22-activity-policy/0.2.0'))
+
+
 @pytest.mark.parametrize('version',[None,'cupti-timeline-startup/0.2.0',False])
 def test_new_static_delivery_cannot_silently_drop_or_guess_diagnostic_version(version):
     c=startup_delivery();c['startup_diagnostic_version']=version

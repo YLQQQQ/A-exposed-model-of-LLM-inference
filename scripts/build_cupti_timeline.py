@@ -23,6 +23,7 @@ def build(config,output):
         imports[stem]=tools.pe_imports(target,str(dumpbin),env,out)
         built[stem]=str(target)
     built.update(schema_version='cupti-timeline-build/0.1.0',imports=imports,vendor_gpu_executed=False,
+        activity_policy_version='cupti-api22-activity-policy/0.2.0',
         binaries=[dict(path=Path(built[k]).name,bytes=Path(built[k]).stat().st_size,sha256=tools.sha(built[k])) for k in ('client','host_test')])
     tools.write(out/'build.json',built)
     return built
@@ -44,7 +45,7 @@ def build_startup_test_doubles(config,output):
         if dll:argv.append('/LD')
         argv += [str(source/filename),'/Fo:'+str(out/(name+'.obj')),'/Fe:'+str(target),'/link']
         if dll:
-            exports=['ep_startup_double_configure','cuptiGetVersion','cuptiGetTimestamp','cuptiActivityGetNextRecord',
+            exports=['ep_startup_double_configure','ep_startup_double_controls','cuptiGetVersion','cuptiGetTimestamp','cuptiActivityGetNextRecord',
                 'cuptiActivityGetNumDroppedRecords','cuptiGetDeviceId','cuptiGetStreamIdEx','cuptiActivityDisable',
                 'cuptiActivityFlushAll','cuptiUnsubscribe','cuptiFinalize','cuptiSubscribe','cuptiSetThreadIdType',
                 'cuptiActivityRegisterCallbacks','cuptiEnableDomain','cuptiActivityEnable']

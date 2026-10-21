@@ -24,9 +24,11 @@ CPU_TESTS=['tests/test_submit_effect_bridge.py','tests/test_cupti_timeline_adapt
 
 def validate_delivery(c):
     version=c.get('schema_version')
-    diagnostic_ok=(version=='cupti-timeline-stage-a/0.1.0' and 'startup_diagnostic_version' not in c or
+    diagnostic_ok=(version=='cupti-timeline-stage-a/0.1.0' and 'startup_diagnostic_version' not in c and 'activity_policy_version' not in c or
         version=='cupti-timeline-stage-a/0.1.1' and
-        c.get('startup_diagnostic_version')=='cupti-timeline-startup/0.1.0')
+        c.get('startup_diagnostic_version')=='cupti-timeline-startup/0.1.0' and 'activity_policy_version' not in c or
+        version=='cupti-timeline-stage-a/0.1.2' and c.get('startup_diagnostic_version')=='cupti-timeline-startup/0.2.0' and
+        c.get('activity_policy_version')=='cupti-api22-activity-policy/0.2.0')
     ok=(diagnostic_ok and
         c.get('default_stage')=='A_ONLY_NO_B_ENTRY' and
         all(type(c.get(k)) is int and c[k]==0 for k in ('model_process_budget','profile_budget','micro_process_budget')) and
@@ -40,7 +42,18 @@ def validate_delivery(c):
 def selected_cpu_tests(c):
     validate_delivery(c)
     if c['schema_version']=='cupti-timeline-stage-a/0.1.0':return list(CPU_TESTS)
+    if c['schema_version']=='cupti-timeline-stage-a/0.1.2':
+        return ['tests/test_cupti_activity_policy.py','tests/test_cupti_timeline_startup.py',
+            'tests/test_cupti_timeline_session.py','tests/test_cupti_timeline_native.py',
+            'tests/test_cupti_event_probe.py','tests/test_cupti_timeline_stage.py',
+            'tests/test_cupti_timeline_adapter.py::test_historical_event_is_closed_only_by_explicit_callback_and_later_drain']
     return CPU_TESTS+['tests/test_cupti_timeline_startup.py','tests/test_cupti_timeline_b.py']
+
+
+def validate_build_policy(c,built):
+    new=c['schema_version']=='cupti-timeline-stage-a/0.1.2'
+    if not (built.get('activity_policy_version')==c['activity_policy_version'] if new else 'activity_policy_version' not in built):
+        raise ValueError('CUPTI_TIMELINE_A_BUILD_POLICY_CONFLICT')
 
 
 def stage_a(package):
@@ -76,7 +89,7 @@ def stage_a(package):
         path=code/'scripts/build_cupti_timeline.py'
         spec=importlib.util.spec_from_file_location('_verified_timeline_build',path)
         builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
-        built=builder.build(build,out/'build');m.write(out/'build_configuration.json',build)
+        built=builder.build(build,out/'build');validate_build_policy(cfg,built);m.write(out/'build_configuration.json',build)
         env=os.environ.copy()
         for k in ('PYTEST_ADDOPTS','PYTEST_PLUGINS'):env.pop(k,None)
         env.update(PYTEST_DISABLE_PLUGIN_AUTOLOAD='1',CUDA_VISIBLE_DEVICES='-1',
@@ -100,9 +113,10 @@ def stage_a(package):
         model_process_budget=0,micro_process_budget=0,profile_budget=0,B_authorized=False,
         automatic_retry=False,A_COE_admission='NOT_ASSESSED',pytorch_coverage='NOT_ASSESSED',
         historical_ylq_total_bytes=None,long_term_target_exclusive_bytes=50000000000)
-    if cfg['schema_version']=='cupti-timeline-stage-a/0.1.1':
-        receipt.update(schema_version='cupti-timeline-stage-a-receipt/0.1.1',
+    if cfg['schema_version'] in ('cupti-timeline-stage-a/0.1.1','cupti-timeline-stage-a/0.1.2'):
+        receipt.update(schema_version=cfg['schema_version'].replace('stage-a/','stage-a-receipt/'),
             startup_diagnostic_version=cfg['startup_diagnostic_version'],cpu_tests=selected_cpu_tests(cfg))
+    if cfg['schema_version']=='cupti-timeline-stage-a/0.1.2':receipt['activity_policy_version']=cfg['activity_policy_version']
     m.write(out/'receipt.json',receipt)
     try:print(json.dumps(m.pack(out,archive)),flush=True)
     except BaseException as exc:print('PACK_REFUSED_PRESERVE_SCENE:'+str(exc),flush=True);return 2

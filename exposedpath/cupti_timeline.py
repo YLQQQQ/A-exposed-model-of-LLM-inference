@@ -24,12 +24,24 @@ def sha(path):
     return h.hexdigest()
 
 
+ACTIVITY_POLICY_VERSION='cupti-api22-activity-policy/0.2.0'
+
+
+def activity_policy():
+    return dict(schema_version=ACTIVITY_POLICY_VERSION,api_version=22,
+        explicit_enable_kinds=[5,4,10,1,2,38,9,37],retained_record_kinds=[5,4,10,1,2,38,9,37,36],
+        dependent_records=[dict(kind=36,controlled_by=38)])
+
+
 def startup_diagnostic(capture):
     """Read additive startup facts; never infer an original code from open_code."""
-    data=json.loads(Path(capture).read_text(encoding='utf8'))
+    return validate_startup_data(json.loads(Path(capture).read_text(encoding='utf8')))
+
+
+def validate_startup_data(data):
     if 'initialization' not in data:return None
     value=data['initialization']
-    require(isinstance(value,dict) and value.get('schema_version')=='cupti-timeline-startup/0.1.0'
+    require(isinstance(value,dict) and value.get('schema_version') in ('cupti-timeline-startup/0.1.0','cupti-timeline-startup/0.2.0')
         and type(value.get('succeeded')) is bool and type(value.get('overflow')) is int
         and value['overflow']>=0 and isinstance(value.get('steps'),list),'STARTUP_REPORT_SCHEMA')
     failed=[]
@@ -44,6 +56,19 @@ def startup_diagnostic(capture):
         if not step['success']:failed.append(step)
     require(value.get('failure')==(failed[0] if failed else None),'STARTUP_REPORT_FIRST_FAILURE')
     require(not value['succeeded'] or (not failed and value['overflow']==0),'STARTUP_REPORT_CONFLICT')
+    new=value['schema_version']=='cupti-timeline-startup/0.2.0'
+    require((value.get('activity_policy')==activity_policy() and
+        json.dumps(value.get('activity_policy'),sort_keys=True)==json.dumps(activity_policy(),sort_keys=True))
+        if new else 'activity_policy' not in value,'POLICY_VERSION')
+    if new:
+        require(all(s['success']==(s['status_code']==0) for s in value['steps'] if s['status_domain']=='CUPTI')
+            and (not failed or value['steps'][-1]==failed[0]),'POLICY_STATUS_CONFLICT')
+        enabled=[s for s in value['steps'] if s['operation'] in ('cuptiActivityEnable','cuptiActivityEnableAndDump')]
+        expected=activity_policy()['explicit_enable_kinds']
+        require(len(enabled)<=len(expected) and [s['activity_kind'] for s in enabled]==expected[:len(enabled)]
+            and all(s['operation']==('cuptiActivityEnableAndDump' if s['activity_kind'] in (9,37) else 'cuptiActivityEnable')
+                for s in enabled),'POLICY_CONTROL_ORDER')
+        if value['succeeded']:require(len(enabled)==len(expected),'POLICY_CONTROL_COVERAGE')
     return value
 
 
@@ -52,6 +77,8 @@ class CaptureSession:
         self.config=dict(config);self.output=Path(output).resolve();self.allowed=allow_target_capture
         self.factory=_library_factory;self.lib=None;self.open_code=None;self.close_code=None;self.wrappers=0
         self.startup=None;self.startup_report_error=None
+        require('activity_policy_version' not in self.config or
+            self.config['activity_policy_version']==ACTIVITY_POLICY_VERSION,'POLICY_VERSION')
 
     def __enter__(self):
         require(self.allowed is True,'EXPLICIT_OPT_IN_REQUIRED')
@@ -86,7 +113,10 @@ class CaptureSession:
         require(not self.wrappers,'NVTX_WRAPPER_STILL_ACTIVE')
         self.close_code=self.lib.ep_timeline_close(str(self.output/'capture.json'))
         if (self.output/'capture.json').is_file():
-            try:self.startup=startup_diagnostic(self.output/'capture.json')
+            try:
+                self.startup=startup_diagnostic(self.output/'capture.json')
+                if 'activity_policy_version' in self.config:
+                    require(self.startup is not None and self.startup.get('activity_policy')==activity_policy(),'POLICY_EXPECTED_NEW_CAPTURE')
             except (OSError,ValueError,TypeError,KeyError) as exc:self.startup_report_error=type(exc).__name__+':'+str(exc)
         r=dict(schema_version='cupti-timeline-session-receipt/0.1.1',session_id=self.config['session_id'],
             pid=os.getpid(),open_code=self.open_code,close_code=self.close_code,
@@ -98,6 +128,8 @@ class CaptureSession:
             startup_report_version=self.startup['schema_version'] if self.startup else None,
             startup_failure=self.startup['failure'] if self.startup else None,
             startup_report_error=self.startup_report_error)
+        if self.startup is not None and 'activity_policy' in self.startup:
+            r.update(schema_version='cupti-timeline-session-receipt/0.1.2',activity_policy=self.startup['activity_policy'])
         with (self.output/'receipt.json').open('x',encoding='utf8') as f:json.dump(r,f,indent=2)
         if typ is None:
             require(self.open_code==0 and self.close_code==0,'CLOSE_FAILED:'+str(self.close_code))

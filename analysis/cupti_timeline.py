@@ -82,6 +82,9 @@ def select_scope(raw,producer):
 
 def to_evidence(raw,scope):
     require(raw.get('schema_version')=='cupti-timeline-capture/0.1.0','CAPTURE_VERSION')
+    if 'initialization' in raw:
+        from exposedpath.cupti_timeline import validate_startup_data
+        require(validate_startup_data(raw)['succeeded'],'STARTUP_FAILED')
     require(raw['session_id']==scope['session_id'] and raw['pid']==scope['pid'],'SESSION')
     all_calls={c['id']:c for c in raw['callbacks']}
     require(len(all_calls)==len(raw['callbacks']),'CALLBACK_DUPLICATE')

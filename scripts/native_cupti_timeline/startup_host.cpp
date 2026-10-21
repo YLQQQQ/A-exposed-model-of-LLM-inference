@@ -12,13 +12,19 @@ int wmain(int argc,wchar_t** argv) {
     auto close=reinterpret_cast<int(*)(const wchar_t*)>(GetProcAddress(native,"ep_timeline_close"));
     if(!open || !close)return 4;
     const wchar_t* library=argv[2];
+    const char* (*controls)()=nullptr;
     if(mode!=L"missing_library") {
         auto cpu=LoadLibraryW(library);if(!cpu)return 5;
         auto configure=reinterpret_cast<void(*)(const char*,int,int,unsigned)>(GetProcAddress(cpu,"ep_startup_double_configure"));
         if(!configure)return 6;
+        controls=reinterpret_cast<const char*(*)()>(GetProcAddress(cpu,"ep_startup_double_controls"));
+        if(!controls)return 6;
         const char* operation="";int kind=-1;unsigned version=22;
         if(mode==L"stream_failure"){operation="cuptiActivityEnableAndDump";kind=37;}
         else if(mode==L"event_failure"){operation="cuptiActivityEnable";kind=36;}
+        else if(mode==L"sync_failure"){operation="cuptiActivityEnable";kind=38;}
+        else if(mode==L"disable_failure"){operation="cuptiActivityDisable";kind=38;}
+        else if(mode==L"flush_failure")operation="cuptiActivityFlushAll";
         else if(mode==L"subscribe_failure")operation="cuptiSubscribe";
         else if(mode==L"thread_failure")operation="cuptiSetThreadIdType";
         else if(mode==L"buffers_failure")operation="cuptiActivityRegisterCallbacks";
@@ -30,7 +36,7 @@ int wmain(int argc,wchar_t** argv) {
     const int opened=open(library,"CPU_STARTUP_DOUBLE");const int closed=close(argv[3]);
     const bool vendor=GetModuleHandleW(L"nvcuda.dll") || GetModuleHandleW(L"cudart64_12.dll") || GetModuleHandleW(L"cupti64_2024.1.1.dll");
     std::cout<<"{\"role\":\"CPU_DLL_STARTUP_DOUBLE_NOT_GPU\",\"vendor_loaded\":"<<(vendor?"true":"false")
-        <<",\"open_code\":"<<opened<<",\"close_code\":"<<closed<<"}\n";
+        <<",\"open_code\":"<<opened<<",\"close_code\":"<<closed<<",\"controls\":["<<(controls?controls():"")<<"]}\n";
     // Exit process; the client owns callbacks until its normal close completes.
     return vendor?8:0;
 }

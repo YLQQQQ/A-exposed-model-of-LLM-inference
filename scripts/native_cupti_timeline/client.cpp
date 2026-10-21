@@ -10,7 +10,7 @@
 namespace {
 using namespace ep_timeline;
 struct Client {
-    Core core;StartupLog startup;HMODULE module=nullptr;CUpti_SubscriberHandle subscriber=nullptr;
+    Core core;StartupLog startup,shutdown;HMODULE module=nullptr;CUpti_SubscriberHandle subscriber=nullptr;
     std::string session;bool owns=false,closed=false;size_t enabled=0;
     std::atomic<unsigned> errors{0},query_errors{0};std::atomic<uint64_t> dropped_count{0};
     static constexpr size_t N=16,B=1024*1024;
@@ -34,9 +34,6 @@ struct Client {
     }
 };
 std::unique_ptr<Client> client;
-const CUpti_ActivityKind kinds[]={CUPTI_ACTIVITY_KIND_RUNTIME,CUPTI_ACTIVITY_KIND_DRIVER,
-    CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL,CUPTI_ACTIVITY_KIND_MEMCPY,CUPTI_ACTIVITY_KIND_MEMSET,
-    CUPTI_ACTIVITY_KIND_SYNCHRONIZATION,CUPTI_ACTIVITY_KIND_CONTEXT,CUPTI_ACTIVITY_KIND_STREAM,CUPTI_ACTIVITY_KIND_CUDA_EVENT};
 template<class F>F symbol(Client& c,const char* n){
     auto p=GetProcAddress(c.module,n);
     if(!p){const auto error=GetLastError();c.startup.record("GetProcAddress","WIN32",error,false,-1,n);throw std::runtime_error(n);}
@@ -125,7 +122,7 @@ extern "C" __declspec(dllexport) int ep_timeline_open(const wchar_t* path,const 
         need(c,"cuptiActivityRegisterCallbacks",CP(cuptiActivityRegisterCallbacks)(request,complete));
         need(c,"cuptiEnableDomain",CP(cuptiEnableDomain)(1,c.subscriber,CUPTI_CB_DOMAIN_RUNTIME_API),-1,"RUNTIME_API");
         need(c,"cuptiEnableDomain",CP(cuptiEnableDomain)(1,c.subscriber,CUPTI_CB_DOMAIN_DRIVER_API),-1,"DRIVER_API");
-        for(auto k:kinds) {
+        for(auto k:explicit_activity_kinds) {
             if(k==CUPTI_ACTIVITY_KIND_CONTEXT || k==CUPTI_ACTIVITY_KIND_STREAM)need(c,"cuptiActivityEnableAndDump",CP(cuptiActivityEnableAndDump)(k),k);
             else need(c,"cuptiActivityEnable",CP(cuptiActivityEnable)(k),k);++c.enabled;
         }
@@ -141,10 +138,14 @@ extern "C" __declspec(dllexport) int ep_timeline_mark(int action,const char* lab
 extern "C" __declspec(dllexport) int ep_timeline_close(const wchar_t* output) {
     if(!client || client->closed || !output)return 1;auto& c=*client;
     try {
+        auto closed_call=[&](const char* op,CUptiResult code,int kind=-1) {
+            c.shutdown.record(op,"CUPTI",static_cast<int>(code),code==CUPTI_SUCCESS,kind);
+            if(code!=CUPTI_SUCCESS)++c.errors;
+        };
         if(c.owns) {
-            if(c.flush(0)!=CUPTI_SUCCESS)++c.errors;
-            for(size_t i=c.enabled;i>0;--i)if(c.disable(kinds[i-1])!=CUPTI_SUCCESS)++c.errors;
-            if(c.flush(0)!=CUPTI_SUCCESS)++c.errors;
+            closed_call("cuptiActivityFlushAll",c.flush(0));
+            for(size_t i=c.enabled;i>0;--i)closed_call("cuptiActivityDisable",c.disable(explicit_activity_kinds[i-1]),explicit_activity_kinds[i-1]);
+            closed_call("cuptiActivityFlushAll",c.flush(0));
             // Match activity context IDs to callback context handles, not stream adjacency.
             std::set<std::pair<uint32_t,uint32_t>> wanted;
             {
@@ -162,14 +163,15 @@ extern "C" __declspec(dllexport) int ep_timeline_close(const wchar_t* output) {
                 if(!handle){++c.query_errors;continue;}
                 c.loss(reinterpret_cast<CUcontext>(static_cast<uintptr_t>(handle)),scope.second,scope.first);
             }
-            if(c.unsubscribe(c.subscriber)!=CUPTI_SUCCESS)++c.errors;
-            if(c.finalize()!=CUPTI_SUCCESS)++c.errors;
+            closed_call("cuptiUnsubscribe",c.unsubscribe(c.subscriber));
+            closed_call("cuptiFinalize",c.finalize());
             c.closed=true;
         }
+        c.shutdown.succeeded=c.closed && c.shutdown.first_failure==SIZE_MAX;
         for(const auto& b:c.buffers)if(b.busy)++c.errors;
         std::vector<std::array<uint32_t,2>> scopes;for(auto s:c.queried)scopes.push_back({s.first,s.second});
         std::ostringstream out;
-        {std::lock_guard<std::mutex> lock(c.core.mutex);capture_json(out,c.core,c.session.c_str(),GetCurrentProcessId(),"TARGET_CUPTI",c.closed,c.errors.load(),c.dropped_count.load(),c.query_errors.load(),scopes,&c.startup);}
+        {std::lock_guard<std::mutex> lock(c.core.mutex);capture_json(out,c.core,c.session.c_str(),GetCurrentProcessId(),"TARGET_CUPTI",c.closed,c.errors.load(),c.dropped_count.load(),c.query_errors.load(),scopes,&c.startup,&c.shutdown);}
         write_new(output,out.str());return c.closed && c.errors==0 && c.query_errors==0 && c.core.errors==0 && c.core.overflow==0 && c.dropped_count==0 && c.core.closed()?0:4;
     }catch(...){++c.errors;return 5;}
 }

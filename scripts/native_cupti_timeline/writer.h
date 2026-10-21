@@ -1,5 +1,6 @@
 #pragma once
 #include "core.h"
+#include "activity_policy.h"
 #include "startup.h"
 #include <iomanip>
 #include <ostream>
@@ -37,8 +38,16 @@ inline void startup_step_json(std::ostream& o,const StartupStep& s) {
     o<<",\"activity_name\":";if(s.kind<0)o<<"null";else string(o,startup_kind_name(s.kind));
     o<<",\"detail\":";string(o,s.detail);o<<'}';
 }
-inline void startup_json(std::ostream& o,const StartupLog& log) {
-    o<<"{\"schema_version\":\"cupti-timeline-startup/0.1.0\",\"succeeded\":"<<(log.succeeded?"true":"false")
+inline void startup_json(std::ostream& o,const StartupLog& log,bool shutdown=false) {
+    if(shutdown)o<<"{\"schema_version\":\"cupti-timeline-shutdown/0.1.0\"";
+    else {
+    o<<"{\"schema_version\":\"cupti-timeline-startup/0.2.0\",\"activity_policy\":{\"schema_version\":";
+    string(o,activity_policy_version);
+    o<<",\"api_version\":22,\"explicit_enable_kinds\":[";
+    for(size_t i=0;i<sizeof(explicit_activity_kinds)/sizeof(explicit_activity_kinds[0]);++i){if(i)o<<',';o<<explicit_activity_kinds[i];}
+    o<<"],\"retained_record_kinds\":[5,4,10,1,2,38,9,37,36],\"dependent_records\":[{\"kind\":36,\"controlled_by\":38}]}";
+    }
+    o<<",\"succeeded\":"<<(log.succeeded?"true":"false")
      <<",\"overflow\":"<<log.overflow<<",\"steps\":[";
     for(size_t i=0;i<log.count;++i){if(i)o<<',';startup_step_json(o,log.steps[i]);}
     o<<"],\"failure\":";
@@ -47,7 +56,7 @@ inline void startup_json(std::ostream& o,const StartupLog& log) {
 }
 inline void capture_json(std::ostream& o,const Core& c,const char* session,uint32_t pid,const char* source,
                          bool closed,unsigned client_errors,uint64_t dropped,unsigned query_errors,
-                         const std::vector<std::array<uint32_t,2>>& scopes,const StartupLog* startup=nullptr) {
+                         const std::vector<std::array<uint32_t,2>>& scopes,const StartupLog* startup=nullptr,const StartupLog* shutdown=nullptr) {
     o<<"{\"schema_version\":\"cupti-timeline-capture/0.1.0\",\"source\":";string(o,source);
     o<<",\"session_id\":";string(o,session);o<<",\"clock\":\"CUPTI_TIMESTAMP_NS\",\"pid\":"<<pid
      <<",\"quality\":{\"closed\":"<<(closed && c.closed()?"true":"false")
@@ -91,6 +100,7 @@ inline void capture_json(std::ostream& o,const Core& c,const char* session,uint3
     for(size_t i=0;i<c.marker_count;++i) {
         const auto& m=c.markers[i];if(i)o<<',';
         o<<"{\"action\":"<<m.action<<",\"time\":"<<m.time<<",\"tid\":"<<m.tid<<",\"label\":";string(o,m.label);o<<'}';
-    }o<<']';if(startup){o<<",\"initialization\":";startup_json(o,*startup);}o<<"}\n";
+    }o<<']';if(startup){o<<",\"initialization\":";startup_json(o,*startup);}
+    if(shutdown){o<<",\"shutdown\":";startup_json(o,*shutdown,true);}o<<"}\n";
 }
 }
