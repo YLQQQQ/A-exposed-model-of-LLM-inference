@@ -1,6 +1,32 @@
 # ExposedPath 科研进度清单
 
-## 7.220 增量三点Pilot在768的提交效果证据门阻塞；不续七槽（2026-10-21，当前）
+## 7.221 按用户授权实现提交效果桥与同进程CUPTI局部文件链；目标资格NOT_RUN（2026-10-21，当前）
+
+- [x] 用户明确暂停追加负载点，要求解决通用来源缺口并完善脚本。重新启用限定的独立
+  CUPTI纵切片：ENTRY参数/EXIT返回、逐线程真实父子关系、分域correlation、kernel/
+  Memcpy/Memset/API/物理sync/资源及原token标记同次取证。没有与Nsight并采或换后端。
+- [x] 新`submit-effect-bridge/0.1.0`区分提交→效果与同步→必要成员；允许有实际API行的
+  顶层driver提交。实际零payload保留逻辑节点/API时间，不虚构效果；非零缺效果、错域/
+  错流/丢失/关闭失败拒绝。实际嵌套driver同步单列，缺API行不补墙钟。不是把memset或
+  copy名称直接改成sync。有限支持域、版本和独立预期见
+  [纵切片合同](cupti_submit_effect_vertical_slice_v0_1.md)。
+- [x] 原标签与物理drain→新Raw→来源桥→局部必要集合→COE的完整Host文件链通过；
+  独立预期20ns/15ns及内部同步13ns复现。新入口80 passed、0 failed、0 skipped，含
+  真实CUDA12.4/API22头文件编译链接和Host替身；相关旧路径156 passed、0 failed、0
+  skipped。本地MSVC14.44/Python3.12.7；**不是目标14.38/3.11、真实GPU或Q0资格**。
+- [x] 新Stage A仅部署、构建、CPU及新鲜空间/身份检查，模型/微例/profile预算全0；
+  无B采集开关。不按输入长度写豁免，不修改旧生产S/A/B/COE、旧Raw或历史判定。
+- [ ] 最高优先级：固定执行版本的Stage A真实回执；随后才准备单次同进程模型覆盖诊断，
+  需要同次全部必需记录及关闭/丢失证据。真实PyTorch覆盖、provider扰动和新COE准入
+  均NOT_RUN/NOT_ASSESSED，不能宣称768/1024或所有输入已修复。
+
+计划调整：本轮从纯审查进入用户明确授权的本地Engineering实现；不追加长度矩阵/恢复七槽，
+不把新参数拼接旧Nsight记录，不扩至并发/多GPU，不自动启用GPU采集。阶段A交付后暂停
+等待真实回执，后续单次模型诊断另绑定原输入/producer/token/设备与库身份。当前研究方案
+与Pre-Pilot协议不变，无新Protocol Freeze/Formal资格。用户DOCX/大原件保留；历史BLOCKED、
+UNKNOWN/NOT_ASSESSED、Gate13限定PASS、Gate14 NOT_RUN不变。
+
+## 7.220 增量三点Pilot在768的提交效果证据门阻塞；不续七槽（2026-10-21，历史；后续见7.221）
 
 - [x] 回传失败ZIP11,457,863 bytes，SHA256
   `176dc97ed38db012d023103d247425c94e170f17e894064a4806e3ec99f42a11`；184成员/183清单、
