@@ -1,6 +1,50 @@
 # ExposedPath 科研进度清单
 
-## 7.229 真实策略A通过；限定event B控制接线本地完成（2026-10-21，当前）
+## 7.230 事件微例限定PASS后接回一次真实768完整链（2026-10-21，当前）
+
+- [x] 消费协调已审event B：49,309 bytes，SHA256
+  `1b30ac79fa3e4dd0ee6776ab3e95d380f273fff97a13ed2a07052612dc66e5ed`；receipt
+  `824183fcea1e4ca5d0f3423cfedf6fb791379bc80a4f3dd47318854a0fac0ed9`。
+  本地只读核23成员/22清单CRC/安全路径/hash、前后A绑定、PID36656 exit0/未超时。
+  复核原事件记录138、event同步140、stream同步142，context1/stream13/eventId1；
+  runtime3→driver4来源闭合，0丢失/溢出/查询错、初始化/关闭成功。裁决仅
+  **限定事件记录与关联Engineering PASS**，不授模型、S事件依赖、COE或Formal资格。
+  证据在忽略的`cupti_event_target_b_38baca4_v0_1/review.json`。
+- [x] 现有768入口/消费者仍绑定旧7fa36ef和0.1.0；新增显式0.1.1分派至已审
+  `6c744bf52daff3fc54571e264a0c34e3207aa1df`及0.2启用政策，旧分派/读取保留。
+  仅改变控制/producer身份元数据与回执，不重编DLL、不换checkout。runner、P helper、
+  resident_capture/producer_scopes、S/COE和来源桥不变。控制/模型脚本来源独立hash绑定，
+  不把新控制提交伪称为目标checkout；旧A/B或缺/错policy混用仍拒绝。
+- [x] 新控制同时绑定真实A receipt与event B receipt/完整清单/库；运行前后fresh核
+  HEAD/clean、A和B原件、源码/SDK/库，package也复读。仅一次新768、batch1/输出2、
+  原warmup3/repeat1/P自然Host-readable政策；1模型进程/1 CUPTI session，0 Nsight。
+  同次保存参数、kernel/Memcpy/Memset、物理同步、资源、标记/CUPTI时钟及producer，
+  两token均走原严格S/COE。物理/逻辑历史前缀规则不放宽，不跨运行拼接实例。
+- [x] 新逐token memset coverage独立保存：实际count及native stream/返回/父子/来源；
+  仅原S/COE成功后标记LOGICAL_ZERO_QUALIFIED或POSITIVE_EFFECT_QUALIFIED。
+  有count=0但scope未准入仍UNRESOLVED；缺效果/参数保留null及具体错误，不填0。
+  token2覆盖request历史前缀，不冒充Decode新增活动，不跨token累加。原A/B不改。
+  分开保存模型与CPU分析进程退出、执行原错/后验错；离线失败必传播BLOCKED/非零，
+  UNKNOWN writer拒绝强行封包，保留partial，无重试/替补/清理。
+- [x] tests-first新版本/消费及缺效果红例后实现。最终命令
+  `python -m pytest -q -ra -p no:cacheprovider tests/test_cupti_model_policy_reconnect.py
+  tests/test_cupti_timeline_b.py tests/test_cupti_timeline_model.py tests/test_cupti_timeline_file_chain.py
+  --basetemp .local/cmr_release --junitxml .local/cmr_release.xml`：
+  **42 passed/0 failed/0 skipped，25.89s**。实际隔离CPU读取和PS5.1双回执门、旧角色/
+  版本拒绝、原runner两token/drain、完整封包/失败传播；手定COE仍20ns/1ns。
+  本地Python3.12.7，外部CUDA/模型/进程或静态门明确CPU替身，不是目标3.11/GPU资格。
+  compileall exposedpath/analysis、变更py_compile及diff检查通过；未重跑A/Q0/微例或编译。
+- [ ] 实现提交后绑定唯一待审包及整段命令；真实模型完整链**NOT_RUN**，先交协调审查。
+  固定硬预算：模型300秒、同次CPU消费180秒；新鲜参与卷12GiB，不遍历历史ACL。
+  时间估5～10分钟，最终保留估20～150MiB，均非保证；长期总量null/UNKNOWN与
+  <50,000,000,000bytes目标分开，不自动清理。一次完成或任何硬失败即停。
+
+本次成功只证明这一新768执行下同次完整链可评估；缺参数/效果、PTSZ、未支持API/事件/
+图/跨流、ownership/依赖/terminal或容量失败仍BLOCKED，逐项保留原因并停止，不扩设施。
+不追认旧768同因/旧1024、不恢复输入矩阵或旧七槽，不授新Formal。用户DOCX、原Raw/ZIP/
+BLOCKED/UNKNOWN、Gate13限定PASS/Gate14 NOT_RUN保持；本轮无服务器/模型/CUDA/Nsight执行。
+
+## 7.229 真实策略A通过；限定event B控制接线本地完成（2026-10-21，历史；真实B见7.230）
 
 - [x] 消费协调已审真实A：ZIP 4,955,356 bytes，SHA256
   `894d3636653d4ef30603bd0e279110ef6e18727db7e0fa8343f6989827c5ebdb`；receipt

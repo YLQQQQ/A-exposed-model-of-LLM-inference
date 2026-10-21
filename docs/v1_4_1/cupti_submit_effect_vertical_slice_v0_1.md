@@ -242,3 +242,35 @@ A receipt SHA256为`9d6d4000d07ea7d752c78f4d337f88fe35085e99995ee88242eae5a824ad
 `7858aec7e2aa80765233681e15202b0276dda97e2a7eebbf7c90175c66c120e8`；
 16成员/15清单全部CRC/hash、真实A引用和源码核验通过，不含替换二进制或部署bundle。
 准确服务器路径/整段命令在忽略的本地交付记录中；先交协调审查，未执行B。
+
+## 事件B已闭合；一次768完整链接回0.1.1（2026-10-21，当前）
+
+真实event B原件23成员/22清单、PID36656 exit0、前后A核验通过；实际record138→
+event-sync140→stream-sync142，context1/stream13/eventId1，有明确runtime/driver父子，
+初始化/关闭及loss闭合。协调及本地裁决为限定事件记录与关联Engineering PASS。
+receipt SHA256：`824183fcea1e4ca5d0f3423cfedf6fb791379bc80a4f3dd47318854a0fac0ed9`。
+它不等于真实模型覆盖、S层event依赖、旧768同因、1024修复或COE/Formal资格。
+
+复用原`cupti_timeline_model.py`/`cupti_timeline_b.py`，新增model/stage-B/result/review
+显式0.1.1合同，绑定原6c744bf DLL、启用政策0.2和同次session receipt0.1.2。
+旧0.1.0/7fa36ef读取仍保留，新旧/未知混用拒绝。实际checkout/runner/S/COE固定6c744bf，
+新的控制/producer脚本另绑commit及字节hash；不部署checkout、不重编或替换DLL。
+原`resident_capture`、scope标签、P.prepare/finish及Host-readable位置、warmup/drain
+未改；新source role仍Engineering，不宣称Nsight时序等价。
+
+仅一次768/batch1/输出2、原warmup3/repeat1，1模型进程/1 CUPTI session；不与Nsight
+并采。输入/完整model inventory/实际token值同次核验，两token完整S/COE消费。
+初始化和完整flush/逆序关闭、无丢失/溢出/未知依赖为必要条件；新request内event等未支持
+依赖仍拒绝，不因事件小例成功而放行。API22缺event完成时间戳仍NOT_AVAILABLE。
+
+`cupti-model-memset-coverage/0.1.0`仅汇总观察到的真实参数与原严格S/COE判定：
+零payload逻辑节点、合法非零效果、未准入/参数未知分别保存；count=0本身不豁免scope/
+顺序/依赖/terminal。成员覆盖request前缀直到各token，不当成Decode新增活动量。
+未知效果为null，失败不填零；模型与CPU分析退出和后验错误分别保存并传播。
+一次完成/任何硬失败即停，不重试、替补、降级输入或自动清理；未知writer拒绝强封包。
+
+本地相关42 passed/0 failed/0 skipped（25.89s），包含实际隔离CPU消费者、真实PS5.1
+双回执门、旧路径/新政策、原runner文件链及缺效果失败传播；独立手算20ns/1ns保持。
+GPU/模型边界为CPU替身，未运行模型/CUDA/Nsight或重编；目标768仍NOT_RUN。
+模型硬300秒、CPU消费硬180秒，新鲜参与卷12GiB；预计5～10分钟、保留20～150MiB为估计。
+长期总量UNKNOWN独立，不复读历史ACL。先固定包交协调审查，由用户另行执行。

@@ -14,6 +14,7 @@ import sys
 import threading
 
 NATIVE_COMMIT='7fa36efb340fe59a3138eb6132e162d6b0cbfc41'
+POLICY_NATIVE_COMMIT='6c744bf52daff3fc54571e264a0c34e3207aa1df'
 
 
 def require(ok,reason):
@@ -35,12 +36,22 @@ def write(path,value):
 
 
 def validate_contract(c):
-    expected=dict(schema_version='cupti-timeline-model/0.1.0',input_tokens=768,batch_size=1,
+    version=c.get('schema_version')
+    require(version in ('cupti-timeline-model/0.1.0','cupti-timeline-model/0.1.1'),'CONTRACT_VERSION')
+    current=version=='cupti-timeline-model/0.1.1'
+    expected=dict(schema_version=version,input_tokens=768,batch_size=1,
         output_tokens=2,warmup_count=3,repeat_count=1,role='Engineering',completion_policy='HOST_READABLE_P',
-        model_process_budget=1,nsight_profiles=0,torch_profiler=False,native_commit=NATIVE_COMMIT)
+        model_process_budget=1,nsight_profiles=0,torch_profiler=False,
+        native_commit=POLICY_NATIVE_COMMIT if current else NATIVE_COMMIT)
     require(all(type(c.get(k)) is type(v) and c[k]==v for k,v in expected.items()),'CONTRACT')
     import re
     require(isinstance(c.get('run_id'),str) and re.fullmatch('[A-Za-z0-9_-]{1,60}',c['run_id']),'RUN_ID')
+    if current:
+        require(c.get('activity_policy_version')=='cupti-api22-activity-policy/0.2.0'
+            and c.get('session',{}).get('activity_policy_version')==c['activity_policy_version']
+            and re.fullmatch('[0-9a-f]{40}',c.get('control_commit','')),'CONTRACT_POLICY')
+    else:require('activity_policy_version' not in c and 'control_commit' not in c,'CONTRACT_LEGACY')
+    return expected['native_commit']
 
 
 def preparer(config):
@@ -50,7 +61,8 @@ def preparer(config):
     class EngineeringPreparation(Execution):
         def __init__(self):
             self.axis=False
-            self.binding=dict(version='CUPTI-TIMELINE-MODEL/0.1',run_id=config['run_id'],
+            self.binding=dict(version='CUPTI-TIMELINE-MODEL/0.2' if config['schema_version']=='cupti-timeline-model/0.1.1'
+                else 'CUPTI-TIMELINE-MODEL/0.1',run_id=config['run_id'],
                 role='Engineering',input_tokens=768,output_tokens=2)
             self.variant='P';self.closed=True;self.used=[]
     return EngineeringPreparation()
@@ -92,7 +104,7 @@ def producer_scopes(session_id,host,drains,tokens):
 
 def run(config_path,out,*,enabled=False):
     require(enabled is True,'EXPLICIT_OPT_IN')
-    c=read(config_path);validate_contract(c);out=Path(out).resolve()
+    c=read(config_path);native_commit=validate_contract(c);out=Path(out).resolve()
     require(not out.exists(),'NO_OVERWRITE_RESUME_RETRY');out.mkdir(parents=True,exist_ok=False)
     # The parent verifies checkout/source/library identity before this import.
     require(sys.flags.isolated and sys.flags.no_site and list(sys.version_info[:3])==[3,11,16],'TARGET_PYTHON')
@@ -131,7 +143,7 @@ def run(config_path,out,*,enabled=False):
         source_role='NEW_PROVIDER_ENGINEERING_NOT_NSIGHT_TIMING_EQUIVALENCE'))
     fields=dict(experiment_id='cupti-submit-effect-engineering',wmpc_id=c['run_id'],run_id=c['run_id'],
         run_role='ENGINEERING',data_role='Engineering',pass_id='pass1',attempt_id='once',pid=os.getpid(),
-        wmpc_manifest_sha256=sha(config_path),prompt_sha256=c['prompt_sha256'],runner_git_commit=NATIVE_COMMIT,
+        wmpc_manifest_sha256=sha(config_path),prompt_sha256=c['prompt_sha256'],runner_git_commit=native_commit,
         runner_git_dirty=False,runner_source_sha256=sha(runner.__file__))
     preparation=preparer(c);tokens={}
     def observed(identity,result):
@@ -149,13 +161,18 @@ def run(config_path,out,*,enabled=False):
     host=read(out/'producer/host_boundaries.json');drains=read(out/'producer/drain_ledger.json')
     scopes=producer_scopes(c['session']['session_id'],host,drains,tokens)
     write(out/'scope_producers.json',scopes)
-    write(out/'model_result.json',dict(schema_version='cupti-timeline-model-result/0.1.0',
+    result=dict(schema_version='cupti-timeline-model-result/0.1.0',
         status='MODEL_CAPTURE_COMPLETE_PENDING_ANALYSIS',pid=os.getpid(),role='Engineering',
         config_sha256=sha(config_path),capture_sha256=sha(out/'timeline/capture.json'),
         session_receipt_sha256=sha(out/'timeline/receipt.json'),producer_receipt_sha256=sha(receipt),
         token_sha256=sha(out/'tokens.json'),scope_producers_sha256=sha(out/'scope_producers.json'),
         setup_sha256=sha(out/'setup.json'),warmup_sha256=sha(out/'warmup_completed.json'),
-        provider_qualification='NOT_GRANTED',A_COE_admission='NOT_ASSESSED'))
+        provider_qualification='NOT_GRANTED',A_COE_admission='NOT_ASSESSED')
+    if c['schema_version']=='cupti-timeline-model/0.1.1':
+        result.update(schema_version='cupti-timeline-model-result/0.1.1',native_commit=native_commit,
+            control_commit=c['control_commit'],activity_policy_version=c['activity_policy_version'],
+            model_entry_sha256=sha(__file__))
+    write(out/'model_result.json',result)
     return 0
 
 
