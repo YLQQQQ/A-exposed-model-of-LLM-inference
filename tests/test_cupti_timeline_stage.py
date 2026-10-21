@@ -29,6 +29,30 @@ def test_static_contract_and_exact_cpu_selection():
         'tests/test_cupti_timeline_session.py','tests/test_cupti_timeline_native.py','tests/test_cupti_timeline_stage.py']
 
 
+def startup_delivery():
+    c=valid();c.update(schema_version='cupti-timeline-stage-a/0.1.1',
+        startup_diagnostic_version='cupti-timeline-startup/0.1.0')
+    return c
+
+
+def test_versioned_stage_selects_real_startup_dll_and_failed_process_checks():
+    m=module();c=startup_delivery();m.validate_delivery(c)
+    assert m.selected_cpu_tests(c)==m.CPU_TESTS+[
+        'tests/test_cupti_timeline_startup.py','tests/test_cupti_timeline_b.py']
+    assert m.selected_cpu_tests(valid())==m.CPU_TESTS
+
+
+@pytest.mark.parametrize('version',[None,'cupti-timeline-startup/0.2.0',False])
+def test_new_static_delivery_cannot_silently_drop_or_guess_diagnostic_version(version):
+    c=startup_delivery();c['startup_diagnostic_version']=version
+    with pytest.raises(ValueError):module().validate_delivery(c)
+
+
+def test_legacy_static_contract_cannot_claim_new_startup_diagnostic():
+    c=valid();c['startup_diagnostic_version']='cupti-timeline-startup/0.1.0'
+    with pytest.raises(ValueError):module().validate_delivery(c)
+
+
 @pytest.mark.parametrize('key,value', [('model_process_budget',1),('profile_budget',1),
     ('micro_process_budget',1),('default_stage','B'),('schema_version','old'),('analysis_commit','c'*40)])
 def test_stage_A_cannot_silently_become_a_capture(key,value):

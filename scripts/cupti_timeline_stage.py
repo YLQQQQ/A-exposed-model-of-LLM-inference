@@ -23,7 +23,11 @@ CPU_TESTS=['tests/test_submit_effect_bridge.py','tests/test_cupti_timeline_adapt
 
 
 def validate_delivery(c):
-    ok=(c.get('schema_version')=='cupti-timeline-stage-a/0.1.0' and
+    version=c.get('schema_version')
+    diagnostic_ok=(version=='cupti-timeline-stage-a/0.1.0' and 'startup_diagnostic_version' not in c or
+        version=='cupti-timeline-stage-a/0.1.1' and
+        c.get('startup_diagnostic_version')=='cupti-timeline-startup/0.1.0')
+    ok=(diagnostic_ok and
         c.get('default_stage')=='A_ONLY_NO_B_ENTRY' and
         all(type(c.get(k)) is int and c[k]==0 for k in ('model_process_budget','profile_budget','micro_process_budget')) and
         c.get('execution_commit')==c.get('analysis_commit') and
@@ -31,6 +35,12 @@ def validate_delivery(c):
         re.fullmatch('[0-9a-f]{40}',c.get('prerequisite','')) and
         c.get('sdk_files') and c.get('cupti_files') and type(c.get('cpu_test_count')) is int and c['cpu_test_count']>0)
     if not ok:raise ValueError('CUPTI_TIMELINE_A_ONLY_DELIVERY')
+
+
+def selected_cpu_tests(c):
+    validate_delivery(c)
+    if c['schema_version']=='cupti-timeline-stage-a/0.1.0':return list(CPU_TESTS)
+    return CPU_TESTS+['tests/test_cupti_timeline_startup.py','tests/test_cupti_timeline_b.py']
 
 
 def stage_a(package):
@@ -72,7 +82,7 @@ def stage_a(package):
         env.update(PYTEST_DISABLE_PLUGIN_AUTOLOAD='1',CUDA_VISIBLE_DEVICES='-1',
             CUPTI_TIMELINE_CPU_CONFIG=str(out/'build_configuration.json'),
             CUPTI_TIMELINE_BUILT_JSON=str(out/'build/build.json'))
-        m.command([cfg['python'],'-X','utf8','-m','pytest','-q','-ra','-p','no:cacheprovider',*CPU_TESTS,
+        m.command([cfg['python'],'-X','utf8','-m','pytest','-q','-ra','-p','no:cacheprovider',*selected_cpu_tests(cfg),
             '--basetemp',str(out/'cpu_tmp'),'--junitxml',str(out/'cpu.xml')],code,out/'cpu',env=env,timeout=600)
         import xml.etree.ElementTree as ET
         suites=ET.parse(out/'cpu.xml').getroot().findall('testsuite')
@@ -80,15 +90,20 @@ def stage_a(package):
             all(s.attrib[k]=='0' for s in suites for k in ('failures','errors','skipped')),'CPU_RESULT')
         base.verify_sources(code,cfg['source_representations']);m.verify_rows(out/'build',built['binaries'])
         m.verify_rows(out/'sdk',cfg['sdk_files']);m.verify_rows(out/'cupti',cfg['cupti_files'])
+        m.require(runtime==m.runtime_fact(cfg['runtime_path']),'RUNTIME_CHANGED_DURING_A')
         m.tree(cfg,cfg['execution_commit']);status='STATIC_READY_FOR_REVIEW'
     except BaseException as exc:error=type(exc).__name__+':'+str(exc)
     facts={p.name:m.sha(p) for p in out.iterdir() if p.is_file()}
-    m.write(out/'receipt.json',dict(schema_version='cupti-timeline-stage-a-receipt/0.1.0',phase='A',
+    receipt=dict(schema_version='cupti-timeline-stage-a-receipt/0.1.0',phase='A',
         status=status,error=error,execution_commit=cfg['execution_commit'],analysis_commit=cfg['analysis_commit'],
         package_index_sha256=index,static_files=facts,stage_a_cuda_programs_executed=0,
         model_process_budget=0,micro_process_budget=0,profile_budget=0,B_authorized=False,
         automatic_retry=False,A_COE_admission='NOT_ASSESSED',pytorch_coverage='NOT_ASSESSED',
-        historical_ylq_total_bytes=None,long_term_target_exclusive_bytes=50000000000))
+        historical_ylq_total_bytes=None,long_term_target_exclusive_bytes=50000000000)
+    if cfg['schema_version']=='cupti-timeline-stage-a/0.1.1':
+        receipt.update(schema_version='cupti-timeline-stage-a-receipt/0.1.1',
+            startup_diagnostic_version=cfg['startup_diagnostic_version'],cpu_tests=selected_cpu_tests(cfg))
+    m.write(out/'receipt.json',receipt)
     try:print(json.dumps(m.pack(out,archive)),flush=True)
     except BaseException as exc:print('PACK_REFUSED_PRESERVE_SCENE:'+str(exc),flush=True);return 2
     if error:print('STOP:'+error,flush=True);return 2
