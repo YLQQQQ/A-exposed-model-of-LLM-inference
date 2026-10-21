@@ -27,9 +27,17 @@
   0 failed、0 skipped。含实际SDK/DLL CPU启动链、PS5.1默认拒绝/正向hash门、控制器
   成功/失败封包与后验核验、同次文件消费负例、上下文CPU替身。Python3.12.7/MSVC14.44，
   **不是新目标GPU证据**；完整命令/JUnit存忽略的`cupti_startup_b_*`。语法及diff检查通过。
-- [ ] 最高优先级：固定新控制提交和唯一小包，核对真实A原件引用、PS5.1命令及封包内容，
-  交付用户单次显式B。B仍NOT_RUN；目标失败接口和原始CUptiResult仍UNKNOWN。原768/
-  1024/旧batch状态不变，不恢复负载系列。
+- [x] 控制提交固定e017dcad666e821a26361581457b12ea441ebaec，native/读取库沿用已审
+  ddc7abc，不切换目标checkout。唯一推荐`cupti_startup_b_e017dcad666e_delivery.zip`，
+  46,124 bytes，SHA256
+  `33fb1922cae2f9adec1ca832729b3e97fb7e56838a9c2b1d6716ef26e686b858`；13成员/12清单、
+  CRC/全部hash、真实A引用和Git实际控制字节通过。GPU PCI的4/8位domain及大小写
+  表示用原规范化函数核对，是同一设备；未放宽设备门。PS5.1整段命令解析及入口正反
+  CPU演练通过。唯一回传`cupti_startup_e017dcad666e_once.zip`；本地交付审查在忽略的
+  `cupti_startup_b_delivery_v0_1`，准确服务器路径和命令仅存`.local/`。
+- [ ] 最高优先级：用户显式执行上述一次B并回传；预计2～5分钟，GPU子进程硬120秒、
+  启动新鲜2GiB，0模型/0 Nsight/1 CUPTI session。B仍NOT_RUN，目标失败接口和原始
+  CUptiResult仍UNKNOWN；不会由小上下文通过追认模型故障或1024资格，不恢复负载系列。
 
 计划调整：继续此前已定的初始化定位步骤，未增加模型/样本预算。对同一初始化序列的
 小上下文失败可获得具体接口/码，若通过则只排除该小上下文中的失败；不做跨状态归因。
