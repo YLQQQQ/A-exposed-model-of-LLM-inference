@@ -73,3 +73,19 @@ Host 替身 → native JSON → 原标签/物理 drain → 来源桥 → 局部 
 
 82项本地成功不证明真实 PyTorch 已修复。新的采集来源、观测扰动和模型覆盖是剩余闸口；
 `pure_host_blocking` 保持 null。旧 BLOCKED、UNKNOWN、Gate13限定PASS和Gate14 NOT_RUN不变。
+
+## 固定交付与本地完整控制演练
+
+执行/分析固定`7fa36efb340fe59a3138eb6132e162d6b0cbfc41`；后续交付记录提交不替代它。
+`cupti_timeline_7fa36efb340f_reviewed_delivery.zip`为唯一交付，2,596,307 bytes，SHA256
+`2957f49862b3eaac4e70b57e41220f7ce9a93886485fbbe3855d59b6645841da`。
+14成员/13项清单，438源码表示；旧421科研源码逐Git blob不变。只保留原厂CUPTI头文件、
+DLL及许可证的必要子集，避免无关HTML长路径；所保留字节与封存原资产一致。
+
+最终包的本地CPU控制演练已实际经过PS5.1入口、真实Git bundle/deploy/clean、438源码
+核验、PE导出、SDK提取、真实编译链接、82项CPU检查、末次身份与封包，exit0。演练明确
+替换本地路径/Python3.12.7/MSVC14.44，回执标注为本地控制测试，**不是目标服务器A**。
+原失败演练和最终日志/receipt/JUnit均保留在忽略的本地诊断目录。此前演练还暴露深测试
+目录下无关HTML的长路径失败，最终资产子集不再含这些文档；未调整目标机系统策略。
+目标服务器仍须严格核验前置8197f0d且clean、Python3.11.16/MSVC14.38和新鲜12GiB空间。
+用户复制包、执行单独的A脚本并回传`cupti_timeline_7fa36efb340f_static.zip`后才审下一步。

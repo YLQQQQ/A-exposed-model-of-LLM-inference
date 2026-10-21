@@ -19,6 +19,15 @@
   本机PS5.1正向入口发现`Get-FileHash`缺件，改用.NET SHA256并保留正向CPU驱动反例，
   隔离包演练另发现`-I`忽略bytecode环境变量，bootstrap现显式禁写，独立子进程核对包目录
   不新增缓存。不把本机演练称作目标机验证。
+- [x] 执行/分析锁定7fa36efb340fe59a3138eb6132e162d6b0cbfc41。唯一reviewed ZIP
+  2,596,307 bytes/SHA256 `2957f49862b3eaac4e70b57e41220f7ce9a93886485fbbe3855d59b6645841da`，
+  14成员/13清单/CRC/hash/bundle通过；438源码表示、旧421科研源码不变。原厂CUPTI资产
+  仅留编译头文件/DLL/许可证，避免不参与执行的HTML长路径；所留字节不改。私有准确传输
+  路径和整段A命令在忽略的本地CUPTI_TIMELINE_DELIVERY.md/STAGE_A.ps1。
+- [x] 最终包本地完整CPU控制演练exit0：PS5.1→真实Git部署/clean→源码与库身份→真实
+  SDK编译链接→82项检查→末次身份→ZIP。显式本地路径/Python3.12.7/MSVC14.44替代，
+  不是服务器回执。原失败演练和最终receipt/JUnit/log均保留，临时checkout完成后移除，
+  不长期保留测试仓库副本。新服务器A、GPU和PyTorch覆盖仍NOT_RUN。
 - [ ] 最高优先级：固定执行版本的Stage A真实回执；随后才准备单次同进程模型覆盖诊断，
   需要同次全部必需记录及关闭/丢失证据。真实PyTorch覆盖、provider扰动和新COE准入
   均NOT_RUN/NOT_ASSESSED，不能宣称768/1024或所有输入已修复。
