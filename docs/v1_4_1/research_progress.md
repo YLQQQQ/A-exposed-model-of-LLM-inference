@@ -27,7 +27,19 @@
   解码、实际入口→capture/side→独立reader→receipt的成功/缺event失败文件链，及原事件依赖拒绝。
   本地Python3.12.7/MSVC14.44，厂商CUDA/CUPTI库未执行；参数/事件是CPU替身，不是目标GPU资格。
   compileall exposedpath/analysis、变更scripts的py_compile及diff检查通过；无完整Q0/无关套件。
-- [ ] 先固定实际实现/分析commit，再交唯一Stage A包。前置以真实A ddc7abc及e017一次B
+- [x] 固定执行/分析`6c744bf52daff3fc54571e264a0c34e3207aa1df`。唯一Stage A包
+  `cupti_event_policy_6c744bf52daf_delivery.zip`，2,595,474bytes，SHA256
+  `96589852237123cbeea892a3d9b4cbd619f5ef79d42f371d470dfe26ee214283`；14成员/13清单、
+  CRC/安全路径/hash及458项源码Git表示独立核验通过；SDK/CUPTI/工具链参考与ddc7abc旧包
+  完全相同。core.h、runner、S/A/B/COE及迁移7项核心文件与前置字节一致。新包在提交之后
+  绑定，控制记录不替代执行身份，不重新包装成文档HEAD。
+- [x] 本地短期隔离checkout完整演练PS5.1→bundle/fetch/checkout→真实SDK编译链接→
+  CPU82项→前后验/封包成功，10项顶层进程exit0/无超时，399成员/398清单全hash通过。
+  本地Python3.12.7/MSVC14.44改配明确记录，厂商库未执行，不是目标3.11/14.38回执。
+  原短期clone尝试被沙箱MSYS命名对象权限拒绝，未进入产品；隔离的本地授权演练通过。
+  确认clean且无独有资料后移除仅演练checkout，日志/编译证据/完整ZIP保留，源码可从Git
+  恢复。证据及包审查在`.local/diagnostics/cupti_event_policy_delivery_v0_1/`。
+- [ ] 真实新Stage A待协调审查/用户执行。前置以真实A ddc7abc及e017一次B
   后验A检查确定（控制e017未换checkout），新A仍fresh核ddc7abc HEAD/clean；不猜文档HEAD。
   原SDK/CUPTI/toolchain资产复用，不安装依赖；新DLL写新输出。默认A仅构建/CPU/身份/
   新鲜2GiB，0模型/0 CUDA程序/0采集，无B开关；真实新A审查后另给B命令。
