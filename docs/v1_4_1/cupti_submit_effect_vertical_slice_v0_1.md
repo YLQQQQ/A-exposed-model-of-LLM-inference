@@ -51,7 +51,7 @@ count=0 保留逻辑调用与原 API 时间，不造活动。只在成功 drain 
 Host 替身 → native JSON → 原标签/物理 drain → 来源桥 → 局部 S/COE 复现这些预期。
 另有嵌套 driver 同步参考，物理交集为13ns，缺 driver API 行时墙钟保持 null。
 
-本地新入口 **80 passed / 0 failed / 0 skipped**，包含实际头文件编译链接、DLL Host-only
+本地新入口 **81 passed / 0 failed / 0 skipped**，包含实际头文件编译链接、DLL Host-only
 加载、逐线程栈/参数快照、跨域冲突/孤儿/错 scope/缺效果等反例、PS5.1 禁采入口。
 旧参数消费者、COE及预算等相关回归 **156 passed / 0 failed / 0 skipped**。
 本地 MSVC14.44、Python3.12.7；目标 MSVC14.38、Python3.11.16 与真实 GPU 尚未验证。
@@ -66,5 +66,8 @@ Host 替身 → native JSON → 原标签/物理 drain → 来源桥 → 局部 
 不拿新参数补旧768/1024，也不恢复原七槽。若真实模型暴露新的未支持 API/事件/并发，
 按具体来源拒绝并裁决，不据无效果填零或自动扩设施。
 
-80项本地成功不证明真实 PyTorch 已修复。新的采集来源、观测扰动和模型覆盖是剩余闸口；
+完整PS5.1正向启动演练发现本机缺`Get-FileHash`命令；新入口直接使用.NET SHA256，
+不依赖该附加命令。正向CPU驱动替身及禁采参数均实测；不把它当成目标服务器证据。
+
+81项本地成功不证明真实 PyTorch 已修复。新的采集来源、观测扰动和模型覆盖是剩余闸口；
 `pure_host_blocking` 保持 null。旧 BLOCKED、UNKNOWN、Gate13限定PASS和Gate14 NOT_RUN不变。

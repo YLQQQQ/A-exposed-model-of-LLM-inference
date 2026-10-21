@@ -6,9 +6,15 @@ $Config=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'delivery.json') -Raw 
 $Driver=Join-Path $PSScriptRoot 'cupti_timeline_stage.py'
 $Support=Join-Path $PSScriptRoot 'micro_support.py'
 $Parent=Join-Path $PSScriptRoot 'independent_cupti_stage.py'
-if ((Get-FileHash -LiteralPath $Driver -Algorithm SHA256).Hash -ine $Config.bootstrap_sha256 -or
-    (Get-FileHash -LiteralPath $Support -Algorithm SHA256).Hash -ine $Config.support_sha256 -or
-    (Get-FileHash -LiteralPath $Parent -Algorithm SHA256).Hash -ine $Config.parent_stage_sha256) {
+function Get-ExactSHA256([string]$Path) {
+    $Stream=[IO.File]::OpenRead($Path)
+    $Digest=[Security.Cryptography.SHA256]::Create()
+    try {return ([BitConverter]::ToString($Digest.ComputeHash($Stream))).Replace('-','').ToLowerInvariant()}
+    finally {$Digest.Dispose();$Stream.Dispose()}
+}
+if ((Get-ExactSHA256 $Driver) -ine $Config.bootstrap_sha256 -or
+    (Get-ExactSHA256 $Support) -ine $Config.support_sha256 -or
+    (Get-ExactSHA256 $Parent) -ine $Config.parent_stage_sha256) {
     throw 'Bootstrap/support identity conflict; STOP'
 }
 & $Config.python -I $Driver --package $PSScriptRoot
