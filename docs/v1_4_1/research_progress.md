@@ -10,12 +10,24 @@
   0 skipped。本地Python3.12.7/MSVC14.44、真实12.4/API22头文件与CPU ABI替身，
   没有加载CUDA/CUPTI厂商库，不代表目标14.38/3.11或GPU通过。记录在忽略的
   `cupti_startup_stage_red/green`及对应JUnit。
-- [ ] 固定新执行commit、从目标可信7fa36ef制作增量包，逐项核对封存资产/源码表示、
-  PS5.1入口和完整CPU部署文件链；核验完成后给出唯一Stage A传输/执行说明。
+- [x] 最终执行/分析固定ddc7abc8a1bf09b40fa868bf1a0c319f3977f80a，从目标可信7fa36ef
+  制作唯一推荐`cupti_startup_ddc7abc8a1bf_delivery.zip`：2,597,527 bytes、SHA256
+  `5b20a7b44a743cb8c7bbc7ec81b57e8313a0a6127115a043b70f08c90472ecba`；14成员/13清单、
+  CRC/全部hash、448项源码表示及bundle verify通过。SDK/CUPTI/工具链资产与原封存包
+  字节相同；前置checkout须7fa36ef且clean，新输出不覆盖旧A。此前0c7db8b本地候选
+  已被深路径修正替代，不作为用户执行包。
 - [x] 首次完整本地部署/编译成功，CPU为112通过/3失败：新加入的B控制器CPU fixture
   在深层输出下超过Win32路径限制，尚未到模拟进程；不是目标CUPTI故障。仅将该测试的
   自动长目录名改为短唯一名，未改生产路径/校验。独立深路径11项通过；另一次复核的
   basetemp父目录未建导致setup错误，保留记录，不将其计为产品故障或通过证据。
+- [x] 修正后的本地完整PS5.1→bundle/fetch/checkout→真实SDK编译/链接→CPU115项→
+  后验身份检查→封包链成功，0失败/跳过。10项顶层进程均exit0/未超时；仅用CPU ABI
+  替身，不运行厂商GPU库。归档及审查存忽略的`cupti_startup_delivery_v0_3`，本地机器
+  路径/3.12.7/14.44改配明确单列，不能冒充目标回执。演练临时checkout确认无工作修改、
+  无独有提交、ignored仅pyc后已移除，日志/封包及失败原件保留。
+- [ ] 最高优先级：用户执行新Stage A，回传`cupti_timeline_ddc7abc8a1bf_static.zip`。
+  A预计2～5分钟/启动新鲜2GiB空间；仅部署/构建/CPU，目标3.11.16/14.38仍NOT_RUN。
+  已生成完整PS5.1命令并解析通过，无采集开关，无自动清理或历史ACL/占用遍历。
 - [ ] 新目标A真实回执审查后，才准备单次最小CUDA上下文启动诊断，记录每一步API及
   原始状态。最小上下文不等于原模型三次暖机后的状态；若通过，不能据此关闭模型故障。
   本轮不自动授权/运行GPU，不恢复输入矩阵；原768失败和1024缺效果继续BLOCKED。
