@@ -1,6 +1,42 @@
 # ExposedPath 科研进度清单
 
-## 7.225 新诊断库Stage A有限交付接线；目标启动问题仍未解决（2026-10-21，当前）
+## 7.226 新诊断库目标A通过；准备单次无LLM上下文启动诊断（2026-10-21，当前）
+
+- [x] 新回传4,074,407 bytes、SHA256
+  `ba1bd7a5b6b7d3963f7a11c50bca50345a553c1a41a5973a71031c53d87e0c2f`；411成员/410清单、
+  CRC/路径安全/全部hash、448项Git blob或显式CRLF源码表示一致。manifest SHA256
+  `d7089d1611c805c9381f9ecc8e996ac5c1f8fcd56ec9c63f55543ea5e68fd0fe`；receipt SHA256
+  `42e54632d1058ba4c56916ca3dc1bbd72a8f496d81cce857fbbc5fa9ca31e088`。
+- [x] 执行/分析固定ddc7abc8a1bf09b40fa868bf1a0c319f3977f80a，真实目标Python3.11.16/
+  MSVC14.38完成构建/CPU115 passed、0 failed、0 skipped，13.73s。封存库及SDK身份不变；
+  新client313,856 bytes、SHA256
+  `372fdca399895c23bdbde8f7fdd1070e554a8e96a73e4792996812b75537066f`；PE仅KERNEL32。
+  10项顶层进程exit0/未超时；测试内部预定非零CPU反例不冒充产品失败。末次clean由
+  已绑定脚本成功终态证明；本次未查询目标实时状态。新鲜空闲368,571,654,144 bytes，
+  满足当次2GiB；长期总量仍UNKNOWN。独立审查存本地忽略的`cupti_startup_target_a_ddc7abc_v0_1`。
+- [x] 实现限定B控制器及无LLM探针：仅1子进程/1 CUPTI session、硬120秒，沿用已审库及
+  全部9类活动/原顺序，不部署checkout/重编/运行Nsight/加载模型。仅按原目标torch栈
+  建立64-byte逻辑张量及1条显式流，订阅前排空；初始化/关闭与标记同次记录，不计算COE。
+  PyTorch分配器可能保留更大的底层块，64-byte不是物理显存上限。小上下文不冒充原模型
+  三次暖机后的状态；成功也不关闭原故障、不授予模型覆盖或1024准入。
+- [x] 新入口绑定真实A receipt/完整manifest/源码/已建库，实际UUID/PCI及已加载runtime
+  路径/hash；默认拒绝，须显式开关。失败保留真实进程及startup原码/上下文事实；执行后
+  再验A，超时未知writer拒绝封包，无重试/替补/清理。隔离父进程只显式加载已核验的
+  stdlib reader，不使用PYTHONPATH或猜测包来源。
+- [x] 新功能先有失败用例；修复本地隔离导入及库/执行路径绑定反例后，最终相关87 passed、
+  0 failed、0 skipped。含实际SDK/DLL CPU启动链、PS5.1默认拒绝/正向hash门、控制器
+  成功/失败封包与后验核验、同次文件消费负例、上下文CPU替身。Python3.12.7/MSVC14.44，
+  **不是新目标GPU证据**；完整命令/JUnit存忽略的`cupti_startup_b_*`。语法及diff检查通过。
+- [ ] 最高优先级：固定新控制提交和唯一小包，核对真实A原件引用、PS5.1命令及封包内容，
+  交付用户单次显式B。B仍NOT_RUN；目标失败接口和原始CUptiResult仍UNKNOWN。原768/
+  1024/旧batch状态不变，不恢复负载系列。
+
+计划调整：继续此前已定的初始化定位步骤，未增加模型/样本预算。对同一初始化序列的
+小上下文失败可获得具体接口/码，若通过则只排除该小上下文中的失败；不做跨状态归因。
+本轮未操作服务器或运行真实GPU；研究方案/Pre-Pilot及生产S/A/B/COE不变，用户DOCX、
+Raw、旧BLOCKED/UNKNOWN、Gate13限定PASS和Gate14 NOT_RUN保持。
+
+## 7.225 新诊断库Stage A有限交付接线；目标启动问题仍未解决（2026-10-21，历史；后续见7.226）
 
 - [x] 下一操作先固定并构建7.224的新诊断库，不重复运行旧768模型包。Stage A合同及
   receipt显式版本化为0.1.1，固定加入真实SDK/实际DLL启动失败链和原失败process回填
@@ -25,10 +61,11 @@
   替身，不运行厂商GPU库。归档及审查存忽略的`cupti_startup_delivery_v0_3`，本地机器
   路径/3.12.7/14.44改配明确单列，不能冒充目标回执。演练临时checkout确认无工作修改、
   无独有提交、ignored仅pyc后已移除，日志/封包及失败原件保留。
-- [ ] 最高优先级：用户执行新Stage A，回传`cupti_timeline_ddc7abc8a1bf_static.zip`。
+- [x] 当时最高优先级：用户执行新Stage A，回传`cupti_timeline_ddc7abc8a1bf_static.zip`；
+  已在7.226核验通过。
   A预计2～5分钟/启动新鲜2GiB空间；仅部署/构建/CPU，目标3.11.16/14.38仍NOT_RUN。
   已生成完整PS5.1命令并解析通过，无采集开关，无自动清理或历史ACL/占用遍历。
-- [ ] 新目标A真实回执审查后，才准备单次最小CUDA上下文启动诊断，记录每一步API及
+- [x] 新目标A真实回执审查后，准备单次最小CUDA上下文启动诊断，记录每一步API及
   原始状态。最小上下文不等于原模型三次暖机后的状态；若通过，不能据此关闭模型故障。
   本轮不自动授权/运行GPU，不恢复输入矩阵；原768失败和1024缺效果继续BLOCKED。
 
