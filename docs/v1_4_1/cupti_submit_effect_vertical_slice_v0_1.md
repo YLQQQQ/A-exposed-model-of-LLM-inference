@@ -149,3 +149,27 @@ errors=[1]，close_code=4不自动证明第二个独立关闭错误。
 下一步先在本地补齐初始化步骤/活动类型/原始CUptiResult的可测试记录，保留已有拒绝；
 不先删必需类型或调整初始化次序碰运气。此轮只读审查，未改业务代码/原件、重采、
 打包或操作服务器；目标模型覆盖仍BLOCKED。
+
+## 初始化事实记录的本地修复
+
+用户要求本地修复后，新增`cupti-timeline-startup/0.1.0`诊断对象，作为capture的
+`initialization`事实扩展：有界记录每个初始化步骤、activity kind/name、状态域、原始
+状态码及首个失败。CUPTI、Win32、版本/路径合同和异常分域；不从统一open_code=3猜
+原始错误。实际CUPTI调用次序与原9种activity集合相同，不重试或跳过失败步骤。
+原capture schema/活动字段、来源桥及S/A/B/COE定义不变；诊断不产生新的有效性资格。
+
+session receipt改为0.1.1，按显式诊断版本核验并保留首失败，在Python异常中展示API、
+kind、domain和status_code。旧capture缺该对象时保留None；未知版本/类型、首失败冲突
+和成功矛盾均记录诊断错误，不能覆盖原启动失败或授予通过。失败进程的原始process.json
+也被保留到顶层回执，解决先抛异常导致process=null的问题。
+
+验证使用真实CUDA12.4/API22结构和签名，MSVC14.44编译实际client DLL及独立CPU ABI
+替身库，覆盖stream/event、订阅、线程/缓冲/driver域启用、缺库/缺导出、版本冲突与成功
+序列。替身由.def导出原SDK签名，未改SDK头文件；进程检查确认没有CUDA/CUPTI厂商库。
+实际client DLL经Python隔离子进程到receipt也复现精确的注入步骤/错误码。
+**注入错误码仅是CPU测试数据，不是服务器失败的原始码。**
+
+最终相关126 passed/0 failed/0 skipped；本机Python3.12.7。原失败/成功JUnit、真实SDK
+编译及注入capture留在忽略的本地`cupti_startup_*`诊断目录。目标14.38/3.11和真实CUPTI
+初始化修复未验证，没有制作或执行新的服务器包；旧attempt、Raw及其UNKNOWN/BLOCKED
+不改。下一步先固定新诊断的执行/构建身份和预算，再取得目标原始错误事实。

@@ -194,6 +194,9 @@ def run(package,*,enabled=False,reviewed=None):
                 c['code_root'],c['site_root'],str(out/'model'),json.dumps(process),str(out/'analysis_config.json')],
                 out,out/'same_run_analysis',env=env,timeout=180)
         finally:
+            # command() persists the actual original process record before it
+            # raises on nonzero exit. Retain that fact instead of leaving null.
+            if process is None and (out/'one_model.process.json').is_file():process=read(out/'one_model.process.json')
             checked_a(c,stage,m);postchecked=True
         status='MODEL768_BOTH_TOKENS_COMPLETE_STOP_FOR_REVIEW'
     except BaseException as exc:error=type(exc).__name__+':'+str(exc)

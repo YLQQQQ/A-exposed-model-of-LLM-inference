@@ -1,6 +1,35 @@
 # ExposedPath 科研进度清单
 
-## 7.223 新768模型诊断在CUPTI初始化失败；原始错误码缺失（2026-10-21，当前）
+## 7.224 本地修复CUPTI初始化诊断与失败进程回执；目标原因仍待实物（2026-10-21，当前）
+
+- [x] 用户明确要求按7.223分析进行本地修复。新增有界初始化事实记录
+  `cupti-timeline-startup/0.1.0`：API名称、activity kind及名称、原始状态码/成功状态、
+  CUPTI/WIN32/CONTRACT/EXCEPTION域、完整步骤和首个失败分开保存。首次失败不被后续
+  catch或关闭覆盖；旧open_code=3仍保留，不再把它当作原始CUptiResult。
+- [x] session receipt版本0.1.1将已验证的首个失败带入Python异常与回执。旧capture没有
+  新诊断字段时保持None；出现未知版本、类型冲突、首失败不一致或成功矛盾时明确拒绝/
+  保留诊断错误，不补造API原因。失败进程的原process.json现在回填顶层receipt，保留
+  原PID、exit和timeout状态；失败即停、后验A检查及unknown writer拒绝继续生效。
+- [x] 保持原初始化调用顺序及全部9类活动，无自动重试/删除类型/新CUDA同步。原
+  `Raw->S`来源桥、必要集合算法、生产A/B/COE及模型/P helper未改。新诊断是事实扩展，
+  不授予纯Host阻塞或新的测量资格。
+- [x] 先复现信息丢失及process=null反例，再修复。真实CUDA12.4/API22头文件、MSVC14.44
+  编译链接实际client和独立CPU ABI替身；实际DLL覆盖stream/event、订阅、线程/缓冲/
+  driver域、缺库/缺导出/版本冲突及成功路径。替身不加载CUDA/CUPTI厂商库；另有实际DLL
+  经Python隔离子进程写回receipt的完整失败链。CPU注入码不是服务器原始码。
+- [x] 最终相关检查126 passed、0 failed、0 skipped；Python3.12.7。包含新诊断、session/
+  控制器、真实SDK/native、Stage A禁采、producer两token、来源桥及区间参考；语法与
+  diff检查通过。完整命令/JUnit/build及原red记录位于本地忽略的`cupti_startup_*`目录。
+- [ ] 最高优先级：在另行固定新执行身份/构建/预算后，以修复后的记录获得目标机明确
+  初始化失败操作和原始状态，再决定针对性修复。原59,045-byte失败ZIP仍BLOCKED，
+  具体目标API和原始CUptiResult仍UNKNOWN；未制作部署包/服务器命令，未执行新GPU或模型。
+
+计划调整：本轮完成用户明确授权的本地诊断缺陷修复，未推断或修改尚未查明的CUDA启用
+机制；未重采、提权、换栈或恢复负载矩阵。目标MSVC14.38/Python3.11和实际provider覆盖
+尚待后续实物。研究方案/Pre-Pilot与历史数据资格不变；用户DOCX、Raw、旧BLOCKED/
+UNKNOWN、Gate13限定PASS和Gate14 NOT_RUN保持。
+
+## 7.223 新768模型诊断在CUPTI初始化失败；原始错误码缺失（2026-10-21，历史；后续见7.224）
 
 - [x] 回传ZIP59,045 bytes，SHA256
   `dc25d11710cd2a5ff3741f9a1204e3f2ed873544af4f9276573620ae80d7590f`；21成员/20清单、

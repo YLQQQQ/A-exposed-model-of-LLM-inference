@@ -157,5 +157,6 @@ def test_actual_controller_file_flow_seals_success_or_failure_and_rechecks_a(tmp
         assert z.testzip() is None
         r=json.loads(z.read('receipt.json'))
         assert r['post_execution_static_rechecked'] is True
+        assert r['process']['pid']==7 and r['process']['exit_code']==(1 if failure=='model' else 0)
         assert (r['status']=='BLOCKED') is (failure is not None)
         assert r['COE_admission']=='NOT_ASSESSED'

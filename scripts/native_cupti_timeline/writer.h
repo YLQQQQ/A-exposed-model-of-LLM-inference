@@ -1,5 +1,6 @@
 #pragma once
 #include "core.h"
+#include "startup.h"
 #include <iomanip>
 #include <ostream>
 #include <string>
@@ -15,9 +16,38 @@ inline void string(std::ostream& o,const char* s) {
 inline const char* kind_name(Record::Kind k) {
     const char* names[]={"API","KERNEL","MEMCPY","MEMSET","SYNC","STREAM","CONTEXT","CUDA_EVENT"};return names[k];
 }
+inline const char* startup_kind_name(int kind) {
+    switch(kind) {
+    case CUPTI_ACTIVITY_KIND_RUNTIME:return "RUNTIME";
+    case CUPTI_ACTIVITY_KIND_DRIVER:return "DRIVER";
+    case CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL:return "CONCURRENT_KERNEL";
+    case CUPTI_ACTIVITY_KIND_MEMCPY:return "MEMCPY";
+    case CUPTI_ACTIVITY_KIND_MEMSET:return "MEMSET";
+    case CUPTI_ACTIVITY_KIND_SYNCHRONIZATION:return "SYNCHRONIZATION";
+    case CUPTI_ACTIVITY_KIND_CONTEXT:return "CONTEXT";
+    case CUPTI_ACTIVITY_KIND_STREAM:return "STREAM";
+    case CUPTI_ACTIVITY_KIND_CUDA_EVENT:return "CUDA_EVENT";
+    default:return "UNKNOWN";
+    }
+}
+inline void startup_step_json(std::ostream& o,const StartupStep& s) {
+    o<<"{\"operation\":";string(o,s.operation);o<<",\"status_domain\":";string(o,s.domain);
+    o<<",\"status_code\":"<<s.code<<",\"success\":"<<(s.success?"true":"false")<<",\"activity_kind\":";
+    if(s.kind<0)o<<"null";else o<<s.kind;
+    o<<",\"activity_name\":";if(s.kind<0)o<<"null";else string(o,startup_kind_name(s.kind));
+    o<<",\"detail\":";string(o,s.detail);o<<'}';
+}
+inline void startup_json(std::ostream& o,const StartupLog& log) {
+    o<<"{\"schema_version\":\"cupti-timeline-startup/0.1.0\",\"succeeded\":"<<(log.succeeded?"true":"false")
+     <<",\"overflow\":"<<log.overflow<<",\"steps\":[";
+    for(size_t i=0;i<log.count;++i){if(i)o<<',';startup_step_json(o,log.steps[i]);}
+    o<<"],\"failure\":";
+    if(log.first_failure==SIZE_MAX)o<<"null";else startup_step_json(o,log.steps[log.first_failure]);
+    o<<'}';
+}
 inline void capture_json(std::ostream& o,const Core& c,const char* session,uint32_t pid,const char* source,
                          bool closed,unsigned client_errors,uint64_t dropped,unsigned query_errors,
-                         const std::vector<std::array<uint32_t,2>>& scopes) {
+                         const std::vector<std::array<uint32_t,2>>& scopes,const StartupLog* startup=nullptr) {
     o<<"{\"schema_version\":\"cupti-timeline-capture/0.1.0\",\"source\":";string(o,source);
     o<<",\"session_id\":";string(o,session);o<<",\"clock\":\"CUPTI_TIMESTAMP_NS\",\"pid\":"<<pid
      <<",\"quality\":{\"closed\":"<<(closed && c.closed()?"true":"false")
@@ -61,6 +91,6 @@ inline void capture_json(std::ostream& o,const Core& c,const char* session,uint3
     for(size_t i=0;i<c.marker_count;++i) {
         const auto& m=c.markers[i];if(i)o<<',';
         o<<"{\"action\":"<<m.action<<",\"time\":"<<m.time<<",\"tid\":"<<m.tid<<",\"label\":";string(o,m.label);o<<'}';
-    }o<<"]}\n";
+    }o<<']';if(startup){o<<",\"initialization\":";startup_json(o,*startup);}o<<"}\n";
 }
 }

@@ -10,7 +10,7 @@
 namespace {
 using namespace ep_timeline;
 struct Client {
-    Core core;HMODULE module=nullptr;CUpti_SubscriberHandle subscriber=nullptr;
+    Core core;StartupLog startup;HMODULE module=nullptr;CUpti_SubscriberHandle subscriber=nullptr;
     std::string session;bool owns=false,closed=false;size_t enabled=0;
     std::atomic<unsigned> errors{0},query_errors{0};std::atomic<uint64_t> dropped_count{0};
     static constexpr size_t N=16,B=1024*1024;
@@ -37,7 +37,11 @@ std::unique_ptr<Client> client;
 const CUpti_ActivityKind kinds[]={CUPTI_ACTIVITY_KIND_RUNTIME,CUPTI_ACTIVITY_KIND_DRIVER,
     CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL,CUPTI_ACTIVITY_KIND_MEMCPY,CUPTI_ACTIVITY_KIND_MEMSET,
     CUPTI_ACTIVITY_KIND_SYNCHRONIZATION,CUPTI_ACTIVITY_KIND_CONTEXT,CUPTI_ACTIVITY_KIND_STREAM,CUPTI_ACTIVITY_KIND_CUDA_EVENT};
-template<class F>F symbol(HMODULE m,const char* n){auto p=GetProcAddress(m,n);if(!p)throw std::runtime_error(n);return reinterpret_cast<F>(p);}
+template<class F>F symbol(Client& c,const char* n){
+    auto p=GetProcAddress(c.module,n);
+    if(!p){const auto error=GetLastError();c.startup.record("GetProcAddress","WIN32",error,false,-1,n);throw std::runtime_error(n);}
+    return reinterpret_cast<F>(p);
+}
 void CUPTIAPI callback(void*,CUpti_CallbackDomain domain,CUpti_CallbackId id,const void* data) {
     const auto saved=GetLastError();auto& c=*client;
     if(!data){++c.errors;return;}
@@ -74,7 +78,10 @@ void CUPTIAPI complete(CUcontext ctx,uint32_t stream,uint8_t* data,size_t,size_t
     }
     ++c.errors;
 }
-void need(CUptiResult code){if(code!=CUPTI_SUCCESS)throw std::runtime_error("CUPTI_STATUS");}
+void need(Client& c,const char* operation,CUptiResult code,int kind=-1,const char* detail="") {
+    c.startup.record(operation,"CUPTI",static_cast<int>(code),code==CUPTI_SUCCESS,kind,detail);
+    if(code!=CUPTI_SUCCESS)throw std::runtime_error("CUPTI_STATUS");
+}
 void write_new(const wchar_t* path,const std::string& bytes) {
     auto h=CreateFileW(path,GENERIC_WRITE,0,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
     if(h==INVALID_HANDLE_VALUE)throw std::runtime_error("OUTPUT_EXISTS_OR_UNWRITABLE");
@@ -97,25 +104,35 @@ extern "C" __declspec(dllexport) int ep_timeline_open(const wchar_t* path,const 
         if(std::wcslen(path)<3 || path[1]!=L':')return 2;
         client=std::make_unique<Client>();auto& c=*client;c.session=session;
         c.module=LoadLibraryExW(path,nullptr,LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR|LOAD_LIBRARY_SEARCH_SYSTEM32);
+        c.startup.record("LoadLibraryExW","WIN32",c.module?0:GetLastError(),c.module!=nullptr);
         if(!c.module)throw std::runtime_error("CUPTI_LOAD");
         wchar_t actual[32768]{};
-        if(!GetModuleFileNameW(c.module,actual,32768) || _wcsicmp(path,actual))throw std::runtime_error("CUPTI_PATH");
-#define CP(n) symbol<decltype(&n)>(c.module,#n)
-        uint32_t version=0;need(CP(cuptiGetVersion)(&version));if(version!=22)throw std::runtime_error("CUPTI_VERSION");
+        const auto length=GetModuleFileNameW(c.module,actual,32768);
+        c.startup.record("GetModuleFileNameW","WIN32",length?0:GetLastError(),length!=0);
+        if(!length)throw std::runtime_error("CUPTI_PATH");
+        const bool same_path=_wcsicmp(path,actual)==0;
+        c.startup.record("LOADED_CUPTI_PATH","CONTRACT",same_path?0:1,same_path);
+        if(!same_path)throw std::runtime_error("CUPTI_PATH");
+#define CP(n) symbol<decltype(&n)>(c,#n)
+        uint32_t version=0;need(c,"cuptiGetVersion",CP(cuptiGetVersion)(&version));
+        c.startup.record("CUPTI_API_VERSION","CONTRACT",version,version==22);
+        if(version!=22)throw std::runtime_error("CUPTI_VERSION");
         c.next=CP(cuptiActivityGetNextRecord);c.dropped=CP(cuptiActivityGetNumDroppedRecords);c.timestamp=CP(cuptiGetTimestamp);
         c.device_id=CP(cuptiGetDeviceId);c.stream_id=CP(cuptiGetStreamIdEx);c.disable=CP(cuptiActivityDisable);c.flush=CP(cuptiActivityFlushAll);
         c.unsubscribe=CP(cuptiUnsubscribe);c.finalize=CP(cuptiFinalize);
-        need(CP(cuptiSubscribe)(&c.subscriber,callback,nullptr));c.owns=true;
-        need(CP(cuptiSetThreadIdType)(CUPTI_ACTIVITY_THREAD_ID_TYPE_SYSTEM));
-        need(CP(cuptiActivityRegisterCallbacks)(request,complete));
-        need(CP(cuptiEnableDomain)(1,c.subscriber,CUPTI_CB_DOMAIN_RUNTIME_API));
-        need(CP(cuptiEnableDomain)(1,c.subscriber,CUPTI_CB_DOMAIN_DRIVER_API));
+        need(c,"cuptiSubscribe",CP(cuptiSubscribe)(&c.subscriber,callback,nullptr));c.owns=true;
+        need(c,"cuptiSetThreadIdType",CP(cuptiSetThreadIdType)(CUPTI_ACTIVITY_THREAD_ID_TYPE_SYSTEM));
+        need(c,"cuptiActivityRegisterCallbacks",CP(cuptiActivityRegisterCallbacks)(request,complete));
+        need(c,"cuptiEnableDomain",CP(cuptiEnableDomain)(1,c.subscriber,CUPTI_CB_DOMAIN_RUNTIME_API),-1,"RUNTIME_API");
+        need(c,"cuptiEnableDomain",CP(cuptiEnableDomain)(1,c.subscriber,CUPTI_CB_DOMAIN_DRIVER_API),-1,"DRIVER_API");
         for(auto k:kinds) {
-            if(k==CUPTI_ACTIVITY_KIND_CONTEXT || k==CUPTI_ACTIVITY_KIND_STREAM)need(CP(cuptiActivityEnableAndDump)(k));
-            else need(CP(cuptiActivityEnable)(k));++c.enabled;
+            if(k==CUPTI_ACTIVITY_KIND_CONTEXT || k==CUPTI_ACTIVITY_KIND_STREAM)need(c,"cuptiActivityEnableAndDump",CP(cuptiActivityEnableAndDump)(k),k);
+            else need(c,"cuptiActivityEnable",CP(cuptiActivityEnable)(k),k);++c.enabled;
         }
+        c.startup.succeeded=true;
         return 0;
-    } catch(...) {if(client)++client->errors;return 3;}
+    } catch(const std::exception& error) {if(client){++client->errors;client->startup.exception(error.what());}return 3;}
+      catch(...) {if(client){++client->errors;client->startup.exception("UNKNOWN_EXCEPTION");}return 3;}
 }
 extern "C" __declspec(dllexport) int ep_timeline_mark(int action,const char* label) {
     if(!client || !client->owns || client->closed || action<0 || action>2 || !label)return 1;
@@ -152,7 +169,7 @@ extern "C" __declspec(dllexport) int ep_timeline_close(const wchar_t* output) {
         for(const auto& b:c.buffers)if(b.busy)++c.errors;
         std::vector<std::array<uint32_t,2>> scopes;for(auto s:c.queried)scopes.push_back({s.first,s.second});
         std::ostringstream out;
-        {std::lock_guard<std::mutex> lock(c.core.mutex);capture_json(out,c.core,c.session.c_str(),GetCurrentProcessId(),"TARGET_CUPTI",c.closed,c.errors.load(),c.dropped_count.load(),c.query_errors.load(),scopes);}
+        {std::lock_guard<std::mutex> lock(c.core.mutex);capture_json(out,c.core,c.session.c_str(),GetCurrentProcessId(),"TARGET_CUPTI",c.closed,c.errors.load(),c.dropped_count.load(),c.query_errors.load(),scopes,&c.startup);}
         write_new(output,out.str());return c.closed && c.errors==0 && c.query_errors==0 && c.core.errors==0 && c.core.overflow==0 && c.dropped_count==0 && c.core.closed()?0:4;
     }catch(...){++c.errors;return 5;}
 }

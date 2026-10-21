@@ -55,6 +55,57 @@ def test_explicit_capture_keeps_original_nvtx_calls_labels_and_restores_them(set
     assert r['verification_mode']=='CPU_LIBRARY_DOUBLE_NOT_GPU' and r['open_code']==r['close_code']==0
 
 
+def test_original_native_startup_result_is_shown_and_saved_without_calling_vendor(setup):
+    cfg,calls,factory,out=setup
+    lib=factory(cfg['client'])
+    failure=dict(operation='cuptiActivityEnable',activity_kind=36,activity_name='CUDA_EVENT',
+        status_domain='CUPTI',status_code=37,success=False,detail='')
+    diagnostic=dict(schema_version='cupti-timeline-startup/0.1.0',succeeded=False,overflow=0,
+        steps=[failure],failure=failure)
+    lib.ep_timeline_open=Function(lambda *a:3)
+    def close(path):
+        open(path,'w').write(json.dumps(dict(initialization=diagnostic)));return 4
+    lib.ep_timeline_close=Function(close)
+    with pytest.raises(ValueError,match='OPEN_FAILED:3.*cuptiActivityEnable.*36.*37'):
+        with module().CaptureSession(cfg,out,allow_target_capture=True,_library_factory=lambda *a:lib):pass
+    receipt=json.loads((out/'receipt.json').read_text())
+    assert receipt['startup_failure']==failure and receipt['open_code']==3 and receipt['close_code']==4
+    assert receipt['provider_qualification']=='NOT_GRANTED'
+
+
+@pytest.mark.parametrize('damage',['unknown_version','wrong_first_failure','wrong_type','false_success'])
+def test_malformed_startup_diagnostic_is_preserved_but_cannot_mask_original_failure(setup,damage):
+    cfg,calls,factory,out=setup;lib=factory(cfg['client'])
+    failure=dict(operation='cuptiActivityEnable',activity_kind=36,activity_name='CUDA_EVENT',
+        status_domain='CUPTI',status_code=37,success=False,detail='')
+    diagnostic=dict(schema_version='cupti-timeline-startup/0.1.0',succeeded=False,overflow=0,steps=[failure],failure=failure.copy())
+    if damage=='unknown_version':diagnostic['schema_version']='unsupported'
+    if damage=='wrong_first_failure':diagnostic['failure']['status_code']=99
+    if damage=='wrong_type':diagnostic['steps'][0]['status_code']='37'
+    if damage=='false_success':diagnostic['succeeded']=True
+    lib.ep_timeline_open=Function(lambda *a:3)
+    def close(path):open(path,'w').write(json.dumps(dict(initialization=diagnostic)));return 4
+    lib.ep_timeline_close=Function(close)
+    with pytest.raises(ValueError,match='OPEN_FAILED:3'):
+        with module().CaptureSession(cfg,out,allow_target_capture=True,_library_factory=lambda *a:lib):pass
+    receipt=json.loads((out/'receipt.json').read_text())
+    assert receipt['startup_failure'] is None and receipt['startup_report_error']
+    assert receipt['open_code']==3 and receipt['close_code']==4
+
+
+def test_zero_wrapper_codes_do_not_accept_contradictory_startup_success(setup):
+    cfg,calls,factory,out=setup;lib=factory(cfg['client'])
+    failure=dict(operation='cuptiSubscribe',activity_kind=None,activity_name=None,status_domain='CUPTI',
+        status_code=37,success=False,detail='')
+    diagnostic=dict(schema_version='cupti-timeline-startup/0.1.0',succeeded=True,overflow=0,steps=[failure],failure=failure)
+    def close(path):open(path,'w').write(json.dumps(dict(initialization=diagnostic)));return 0
+    lib.ep_timeline_close=Function(close)
+    with pytest.raises(ValueError,match='STARTUP_REPORT_INVALID'):
+        with module().CaptureSession(cfg,out,allow_target_capture=True,_library_factory=lambda *a:lib):pass
+    receipt=json.loads((out/'receipt.json').read_text())
+    assert receipt['startup_report_error'] and receipt['provider_qualification']=='NOT_GRANTED'
+
+
 @pytest.mark.parametrize('damage',['no_opt_in','hash','exists'])
 def test_invalid_capture_is_rejected_before_any_vendor_boundary(setup,damage):
     cfg,calls,factory,out=setup

@@ -24,10 +24,34 @@ def sha(path):
     return h.hexdigest()
 
 
+def startup_diagnostic(capture):
+    """Read additive startup facts; never infer an original code from open_code."""
+    data=json.loads(Path(capture).read_text(encoding='utf8'))
+    if 'initialization' not in data:return None
+    value=data['initialization']
+    require(isinstance(value,dict) and value.get('schema_version')=='cupti-timeline-startup/0.1.0'
+        and type(value.get('succeeded')) is bool and type(value.get('overflow')) is int
+        and value['overflow']>=0 and isinstance(value.get('steps'),list),'STARTUP_REPORT_SCHEMA')
+    failed=[]
+    for step in value['steps']:
+        require(isinstance(step,dict) and set(step)=={'operation','status_domain','status_code','success',
+            'activity_kind','activity_name','detail'} and isinstance(step['operation'],str) and step['operation']
+            and step['status_domain'] in ('CUPTI','WIN32','CONTRACT','EXCEPTION') and type(step['status_code']) is int
+            and type(step['success']) is bool and isinstance(step['detail'],str)
+            and ((step['activity_kind'] is None and step['activity_name'] is None) or
+                (type(step['activity_kind']) is int and step['activity_kind']>=0 and isinstance(step['activity_name'],str))),
+            'STARTUP_REPORT_STEP')
+        if not step['success']:failed.append(step)
+    require(value.get('failure')==(failed[0] if failed else None),'STARTUP_REPORT_FIRST_FAILURE')
+    require(not value['succeeded'] or (not failed and value['overflow']==0),'STARTUP_REPORT_CONFLICT')
+    return value
+
+
 class CaptureSession:
     def __init__(self,config,output,*,allow_target_capture=False,_library_factory=None):
         self.config=dict(config);self.output=Path(output).resolve();self.allowed=allow_target_capture
         self.factory=_library_factory;self.lib=None;self.open_code=None;self.close_code=None;self.wrappers=0
+        self.startup=None;self.startup_report_error=None
 
     def __enter__(self):
         require(self.allowed is True,'EXPLICIT_OPT_IN_REQUIRED')
@@ -52,21 +76,33 @@ class CaptureSession:
         self.open_code=self.lib.ep_timeline_open(str(Path(self.config['cupti']).resolve()),self.config['session_id'].encode('ascii'))
         if self.open_code!=0:
             self.__exit__(RuntimeError,RuntimeError('OPEN_FAILED'),None)
-            require(False,'OPEN_FAILED:'+str(self.open_code))
+            failure=self.startup['failure'] if self.startup else None
+            detail=('; operation='+failure['operation']+'; kind='+str(failure['activity_kind'])+
+                '; domain='+failure['status_domain']+'; status_code='+str(failure['status_code'])) if failure else ''
+            require(False,'OPEN_FAILED:'+str(self.open_code)+detail)
         return self
 
     def __exit__(self,typ,error,tb):
         require(not self.wrappers,'NVTX_WRAPPER_STILL_ACTIVE')
         self.close_code=self.lib.ep_timeline_close(str(self.output/'capture.json'))
-        r=dict(schema_version='cupti-timeline-session-receipt/0.1.0',session_id=self.config['session_id'],
+        if (self.output/'capture.json').is_file():
+            try:self.startup=startup_diagnostic(self.output/'capture.json')
+            except (OSError,ValueError,TypeError,KeyError) as exc:self.startup_report_error=type(exc).__name__+':'+str(exc)
+        r=dict(schema_version='cupti-timeline-session-receipt/0.1.1',session_id=self.config['session_id'],
             pid=os.getpid(),open_code=self.open_code,close_code=self.close_code,
             model_error_type=typ.__name__ if typ else None,
             client_sha256=self.config['client_sha256'],cupti_sha256=self.config['cupti_sha256'],
             verification_mode='CPU_LIBRARY_DOUBLE_NOT_GPU' if self.factory else 'TARGET_CUPTI_UNQUALIFIED',
             capture_sha256=sha(self.output/'capture.json') if (self.output/'capture.json').is_file() else None,
-            provider_qualification='NOT_GRANTED',A_COE_admission='NOT_ASSESSED',automatic_retry=False)
+            provider_qualification='NOT_GRANTED',A_COE_admission='NOT_ASSESSED',automatic_retry=False,
+            startup_report_version=self.startup['schema_version'] if self.startup else None,
+            startup_failure=self.startup['failure'] if self.startup else None,
+            startup_report_error=self.startup_report_error)
         with (self.output/'receipt.json').open('x',encoding='utf8') as f:json.dump(r,f,indent=2)
-        if typ is None:require(self.open_code==0 and self.close_code==0,'CLOSE_FAILED:'+str(self.close_code))
+        if typ is None:
+            require(self.open_code==0 and self.close_code==0,'CLOSE_FAILED:'+str(self.close_code))
+            require(self.startup_report_error is None,'STARTUP_REPORT_INVALID')
+            if self.startup is not None:require(self.startup['succeeded'] is True,'STARTUP_NOT_SUCCESSFUL')
         return False
 
     def mark(self,action,label):
