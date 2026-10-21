@@ -1,6 +1,39 @@
 # ExposedPath 科研进度清单
 
-## 7.228 API22启用策略最小修复与单event验证入口，本地完成待新A（2026-10-21，当前）
+## 7.229 真实策略A通过；限定event B控制接线本地完成（2026-10-21，当前）
+
+- [x] 消费协调已审真实A：ZIP 4,955,356 bytes，SHA256
+  `894d3636653d4ef30603bd0e279110ef6e18727db7e0fa8343f6989827c5ebdb`；receipt
+  `9d6d4000d07ea7d752c78f4d337f88fe35085e99995ee88242eae5a824ad971e`。
+  本地再次核对399成员/398清单、CRC/安全路径/全部hash、458源码Git表示、SDK/库、
+  原82 passed/0 failed/0 skipped与10项顶层exit0。未重跑A或编译；此A只授静态资格。
+  独立小审查在忽略的`cupti_event_target_a_6c744bf_v0_1/review.json`。
+- [x] 新`cupti-event-b/0.1.0`控制层绑定真实A/manifest/delivery、6c744bf执行/分析版本、
+  已建client.dll（314,880 bytes，SHA256
+  `5e0ffa4b332652c6107cb278ed300ddc9b1bc0e201a370dbe1040cb463d2247a`）、
+  CUDART/CUPTI及SDK。无checkout切换/重编/重跑A；未变probe/reader沿用6c744bf。
+  默认拒绝，显式B只开启1个GPU探针进程/1 session，硬120秒，0 LLM/0 Nsight。
+- [x] 沿7.228先验event record→event同步→stream同步；独立reader继续检查真实闭合范围、
+  runtime/driver父子、event/context/stream及loss，不能只凭open成功。新父控制器核对
+  capture/side/context/session/review全部文件覆盖与hash、成功初始化和完整flush/逆序关闭。
+  运行前后fresh核A/HEAD/clean/源码/库，分别保存回执；子进程与后验双失败分别保存原错。
+  超时保留真实process及UNKNOWN，拒绝强制封包，无重试/续跑/清理。
+- [x] tests-first缺入口与双失败原错丢失红例后实现；最终命令
+  `python -m pytest -q -ra -p no:cacheprovider tests/test_cupti_event_b.py
+  tests/test_cupti_event_probe.py --basetemp .local/ceb_release --junitxml .local/ceb_release.xml`：
+  **45 passed/0 failed/0 skipped，6.57s**。含真实PS5.1开关/hash门、隔离`-I -S`纯CPU读取、
+  完整文件链/缺事件/哈希/旧版本/身份/后验冲突/UNKNOWN拒绝；外部CUDA/进程边界明确替身。
+  本地Python3.12.7，不是目标3.11.16/GPU验证；复用已审A82项，不重跑Q0或无关检查。
+  compileall exposedpath/analysis、变更文件py_compile及diff检查通过。
+- [ ] 控制实现先提交后绑定唯一B包/命令；目标事件B仍NOT_RUN，先交协调审查后用户执行。
+  新鲜2GiB参与卷检查；预计2～5分钟、回传约1MiB内均为估计，硬预算120秒不延长。
+  历史总量null/UNKNOWN，长期50,000,000,000bytes目标独立，不遍历ACL/自动清理。
+
+最高优先级仅本次限定事件关联B交付与实物审查；它不重判旧768启动同因、不修复旧1024，
+不授予模型覆盖、W/terminal、COE或Formal，不恢复输入矩阵。原Raw/ZIP/BLOCKED/UNKNOWN、
+用户DOCX与大型未跟踪原件、Gate13限定PASS/Gate14 NOT_RUN保持；本轮无服务器/GPU操作。
+
+## 7.228 API22启用策略最小修复与单event验证入口，本地完成待新A（2026-10-21，历史；真实A见7.229）
 
 - [x] 复用7.227归档核验，重新核对本轮消费的原capture及来源hash：旧0.1.0首失败仍是
   `cuptiActivityEnable(36)=21`，新reader照读，原ZIP/Raw/报告不变。实际编译使用的

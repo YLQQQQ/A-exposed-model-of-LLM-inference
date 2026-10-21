@@ -216,3 +216,22 @@ API activity和callback时刻可能不同，不强求逐ns相等，各保留原�
 不授模型覆盖、1024修复、W/terminal、A/COE或新Formal。B约2～5分钟、临时2GiB、
 小型回传估计<1MiB（非保证）；先审真实新A，再绑定原receipt/库/hash准备控制入口及命令。
 历史总占用仍null/UNKNOWN，长期<50,000,000,000bytes目标独立，无ACL遍历或自动清理。
+
+### 真实A与独立B控制边界（2026-10-21）
+
+6c744bf真实A已审：399成员/398清单，458源码、SDK/库、原82项CPU/10项顶层exit0。
+A receipt SHA256为`9d6d4000d07ea7d752c78f4d337f88fe35085e99995ee88242eae5a824ad971e`；
+不是此前本地改配演练包。新`cupti-event-b/0.1.0`只复用此A的client/CUPTI/CUDART和
+未变6c744bf probe/reader，不切换服务器checkout、不构建、不重跑A。控制层版本单独绑定，
+不能将文档HEAD替代执行/分析身份。
+
+默认入口拒绝；显式B仍严格为上述一个事件链/一个GPU子进程/一个session、硬120秒。
+父控制器不初始化CUDA。初始化、真实事件和物理同步唯一关联、完整关闭/flush及进程退出
+均为必要证据。结果只允许`EVENT_LINK_COMPLETE_STOP_FOR_REVIEW`，不是资格判PASS。
+运行前后核A全部封存文件、fresh HEAD/clean、源码和库；两份检查证据独立保存。
+子进程原始错误与后验变化可同时记录，不能以后验失败覆盖原错误。超时/未知writer仍拒绝
+封包，保留场景且停止，无重试/自动清理。新的B不接受旧0.1.1 A/旧policy来代替此次A。
+
+本地新增控制边界及相关probe共45 passed/0 failed/0 skipped（6.57s），真实PS5.1和
+隔离Python读取已运行，外部进程/CUDA参数与event均为CPU替身；没有执行GPU或重编。
+目标B仍NOT_RUN；成功也不授PyTorch真实模型覆盖、1024效果修复、S事件依赖或A/COE资格。
