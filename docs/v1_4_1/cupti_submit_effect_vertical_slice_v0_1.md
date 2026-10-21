@@ -120,3 +120,10 @@ SQLite、API墙钟或缺失设备效果。原暖机完成、实际模型配置�
 真实文件链通过。真实PS5.1默认拒绝、显式CPU替身入口，以及控制器成功/模型失败/分析
 失败封包分支均验证。所有CPU替身保持本地测试角色；目标GPU验证仍待用户执行固定B。
 结果不得直接成为旧A或负载曲线数据；纯Host阻塞始终不由此授予。
+
+固定控制版本`c58c65b94b5a33d6fb7b49cfa195edec4d348aed`，服务器native/analyzer checkout
+继续保持7fa36ef。唯一B包`cupti_timeline_b_c58c65b94b5a_delivery.zip`为48,019 bytes，
+SHA256 `9c24ad3f12d59794dc401706081e5de53e101d78ddc8b4b2b6709bfc6252d5fe`。
+16成员/15清单、CRC/全部hash、控制源码Git字节与旧helper原件均通过；包内默认CLI
+禁采和真实PS5.1命令解析通过。新接线27项通过，含来源桥的命令87项、原P/helper/A入口
+回归68项均无失败/跳过，计数不相加。目标B仍NOT_RUN，实际覆盖必须依据新回传裁决。

@@ -26,7 +26,12 @@
   Stage A入口68 passed，均0 failed/0 skipped；数量按命令分别记录，不相加成资格。真实
   PS5.1默认拒绝及显式CPU替身入口、控制器成功/模型失败/分析失败封包和后验检查通过。
   本机Python3.12.7；新模型入口在目标3.11及GPU上的实际执行仍待验证。
-- [ ] 当前最高优先级：完成固定B小包；预算仅一个新模型进程/一个
+- [x] B控制版本固定c58c65b94b5a33d6fb7b49cfa195edec4d348aed；唯一
+  `cupti_timeline_b_c58c65b94b5a_delivery.zip`为48,019 bytes，SHA256
+  `9c24ad3f12d59794dc401706081e5de53e101d78ddc8b4b2b6709bfc6252d5fe`。
+  16成员/15项清单、CRC/hash、Git实际控制源码、原helper复用及隔离默认禁采检查通过。
+  准确传输路径与整段PS5.1命令在忽略的本地CUPTI_TIMELINE_B_DELIVERY.md/STAGE_B.ps1。
+- [ ] 当前最高优先级：待用户执行固定B并回传；预算仅一个新模型进程/一个
   CUPTI session，零Nsight/零micro；模型硬300s、离线分析180s，固定一次或硬失败即停。
   目标真实PyTorch覆盖、768缺口闭合、观测扰动和新COE准入仍NOT_RUN/NOT_ASSESSED。
 
