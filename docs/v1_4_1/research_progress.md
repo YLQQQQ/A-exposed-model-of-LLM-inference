@@ -1,6 +1,41 @@
 # ExposedPath 科研进度清单
 
-## 7.219 增量三点真实A回执审查通过；B待用户显式启动（2026-10-20，当前）
+## 7.220 增量三点Pilot在768的提交效果证据门阻塞；不续七槽（2026-10-21，当前）
+
+- [x] 回传失败ZIP11,457,863 bytes，SHA256
+  `176dc97ed38db012d023103d247425c94e170f17e894064a4806e3ec99f42a11`；184成员/183清单、
+  CRC/安全路径/全部hash通过，manifest SHA256
+  `4e2a349513d5dd1189a98352086a9977fba375c1b32bd81db9cd2f7321231e44`。原A的23个
+  文件逐字节保留，原delivery/launcher及421项实际源码匹配8197f0d，非部署身份冲突。
+- [x] 新512、768均模型exit0、profile进程exit0且未超时、SQLite export PASS；512两token
+  消费完成，768在`preparation_both_token_admission`拒绝：
+  `OBS_PREP_BOTH_TOKEN_ADMISSION:['ENGINEERING_SCOPE_SUBMIT_MAPPING']`。
+  本批1 COMPLETE、1 BLOCKED、7 NOT_RUN、0完整block；1536尚未运行，不能形成相邻
+  signed差/R或据失败推断1536资格，不从旧批拼接补齐。
+- [x] 独立Raw/Canonical核对：40,709条runtime、13,408条kernel、348条Memcpy、568条
+  Memset数量一致，全部runtime的行ID/名称/时间/correlation/返回码/callchain逐行一致。
+  Request内56次成功`cudaMemsetAsync_v3020`无关联设备效果，**全部在Prefill**；首条
+  runtime36560/correlation170542，距Request开始3.756075ms。该Prefill另141次目标调用
+  有映射，Decode目标调用1次有映射；不能把56项整体隔离到未来窗口或填为零。
+- [x] 56条correlation在原kernel/Memcpy/Memset/sync表均无命中；已检查全部六种CUPTI
+  表的correlation字段，无driver/callchain/backtrace表，目标callchain均null，runtime表
+  没有count参数。原SQLite/导出副本与Canonical源hash一致；未建立可离线修复的解析遗漏
+  或替代关联。**直接拒绝原因确定，效果为何缺失/是否零payload仍UNKNOWN**；不声称
+  丢了56个真实设备操作、无操作或某个backend导致。依赖/terminal后续准入未完成。
+- [x] 可保留新512单次Pilot：首/第二token COE为3.418316/0.813147ms；只是单次结构记录，
+  不构成新增重复或负载趋势。旧合格256/512/2048、O/P及Formal原角色与结论不变。
+  审计命令`python .local/diagnostics/coe_incremental_failure_8197f0d_v0_1/review.py` exit0；
+  audit.json、56条CSV及只读SQLite副本保留；未重跑完整analyzer/Q0/CPU或GPU。
+
+计划调整：本次attempt保持BLOCKED，不重采/续跑/替补/清理；暂停追加输入点或下一矩阵。
+下一修复决策须针对这类调用的实例参数/明确效果关联或可证明的消费语义，不能仅增加长度
+常量、按无activity豁免或自动重启已暂停provider工程。当前没有可验证的纯离线修复依据；
+这不是“768推理不支持”或断言问题永远不可修复。当前最高优先级为将此精确失败事实交主
+窗口作有界修复可行性裁决，并继续保全已审研究证据。本轮仅审计与进度记录，无服务器
+操作/业务代码修改/新包；用户DOCX/Raw及原A/B/COE、1024 BLOCKED、Gate13限定PASS、
+Gate14 NOT_RUN、UNKNOWN/NOT_ASSESSED全部保持；不升级新Formal或全输入适配资格。
+
+## 7.219 增量三点真实A回执审查通过；B待用户显式启动（2026-10-20，历史；后续见7.220）
 
 - [x] 新A原ZIP108266 bytes，SHA256
   `c030e4dbb8739044aa64371ed579d92f511296f52fe0c7d96818750dd1b536bb`；23成员/22清单、
