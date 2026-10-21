@@ -25,7 +25,15 @@
   完整文件链/缺事件/哈希/旧版本/身份/后验冲突/UNKNOWN拒绝；外部CUDA/进程边界明确替身。
   本地Python3.12.7，不是目标3.11.16/GPU验证；复用已审A82项，不重跑Q0或无关检查。
   compileall exposedpath/analysis、变更文件py_compile及diff检查通过。
-- [ ] 控制实现先提交后绑定唯一B包/命令；目标事件B仍NOT_RUN，先交协调审查后用户执行。
+- [x] 控制实现先提交固定`38baca449d2f53ebb92b5422cda3944da44dc531`，执行/分析仍为
+  `6c744bf52daff3fc54571e264a0c34e3207aa1df`。唯一B包
+  `cupti_event_b_38baca449d2f_delivery.zip`，49,059 bytes，SHA256
+  `7858aec7e2aa80765233681e15202b0276dda97e2a7eebbf7c90175c66c120e8`；16成员/15项清单，
+  CRC/完整覆盖/hash、控制Git字节、未变probe与原A/SDK/环境参考的关联均通过。
+  仅小型控制/引用文件，无DLL/EXE/bundle。包内真实隔离CLI默认拒绝且不产生bytecode；
+  整段命令与launcher通过实际PS5.1解析。包审查在忽略的`cupti_event_b_delivery_v0_1/`。
+- [ ] 目标事件B仍NOT_RUN，先交协调审查后用户执行；准确命令保存于忽略的
+  `CUPTI_EVENT_STAGE_B.ps1`，唯一回传`cupti_event_38baca449d2f_once.zip`。
   新鲜2GiB参与卷检查；预计2～5分钟、回传约1MiB内均为估计，硬预算120秒不延长。
   历史总量null/UNKNOWN，长期50,000,000,000bytes目标独立，不遍历ACL/自动清理。
 

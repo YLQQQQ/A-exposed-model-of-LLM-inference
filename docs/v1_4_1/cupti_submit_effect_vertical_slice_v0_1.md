@@ -235,3 +235,10 @@ A receipt SHA256为`9d6d4000d07ea7d752c78f4d337f88fe35085e99995ee88242eae5a824ad
 本地新增控制边界及相关probe共45 passed/0 failed/0 skipped（6.57s），真实PS5.1和
 隔离Python读取已运行，外部进程/CUDA参数与event均为CPU替身；没有执行GPU或重编。
 目标B仍NOT_RUN；成功也不授PyTorch真实模型覆盖、1024效果修复、S事件依赖或A/COE资格。
+
+固定控制`38baca449d2f53ebb92b5422cda3944da44dc531`，native/分析继续使用
+`6c744bf52daff3fc54571e264a0c34e3207aa1df`。唯一B包
+`cupti_event_b_38baca449d2f_delivery.zip`为49,059 bytes，SHA256
+`7858aec7e2aa80765233681e15202b0276dda97e2a7eebbf7c90175c66c120e8`；
+16成员/15清单全部CRC/hash、真实A引用和源码核验通过，不含替换二进制或部署bundle。
+准确服务器路径/整段命令在忽略的本地交付记录中；先交协调审查，未执行B。
