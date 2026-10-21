@@ -127,3 +127,25 @@ SHA256 `9c24ad3f12d59794dc401706081e5de53e101d78ddc8b4b2b6709bfc6252d5fe`。
 16成员/15清单、CRC/全部hash、控制源码Git字节与旧helper原件均通过；包内默认CLI
 禁采和真实PS5.1命令解析通过。新接线27项通过，含来源桥的命令87项、原P/helper/A入口
 回归68项均无失败/跳过，计数不相加。目标B仍NOT_RUN，实际覆盖必须依据新回传裁决。
+
+## c58c65b目标B失败：初始化原始状态未保留
+
+回传ZIP59,045 bytes，SHA256
+`dc25d11710cd2a5ff3741f9a1204e3f2ed873544af4f9276573620ae80d7590f`；21成员/20清单、
+CRC/安全路径/全部hash通过，固定包控制文件和A参考匹配。真实模型加载、内容/配置/
+设备/输入检查及三次原暖机完成；PID13504退出1、未超时。异常为
+`CUPTI_TIMELINE_SESSION_OPEN_FAILED:3`，位于测量drain/请求执行之前。
+
+仅留下1条context、7条stream资源记录，无CUDA API callback或token marker。
+原生client的`need`丢弃具体CUptiResult，catch又统一返回3；因此确切失败操作、kind及
+原始错误码均未记录。资源已发出只能缩小初始化位置，不能将资源行当作API成功返回，
+也不能直接断定CUDA_EVENT不支持、权限不足或订阅冲突。关闭记录closed=true且累计
+errors=[1]，close_code=4不自动证明第二个独立关闭错误。
+
+后验A检查成功；原子进程process.json保留PID/exit。顶层receipt.process=null来自抛出
+先于赋值的控制流，不代表模型未执行。没有producer、token结果或COE输出，不能离线
+补成成功，也不能拿本次资源记录修复旧768/1024。
+
+下一步先在本地补齐初始化步骤/活动类型/原始CUptiResult的可测试记录，保留已有拒绝；
+不先删必需类型或调整初始化次序碰运气。此轮只读审查，未改业务代码/原件、重采、
+打包或操作服务器；目标模型覆盖仍BLOCKED。

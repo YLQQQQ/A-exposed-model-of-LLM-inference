@@ -1,6 +1,36 @@
 # ExposedPath 科研进度清单
 
-## 7.222 CUPTI时间线目标Stage A通过；准备单次768模型接回验证（2026-10-21，当前）
+## 7.223 新768模型诊断在CUPTI初始化失败；原始错误码缺失（2026-10-21，当前）
+
+- [x] 回传ZIP59,045 bytes，SHA256
+  `dc25d11710cd2a5ff3741f9a1204e3f2ed873544af4f9276573620ae80d7590f`；21成员/20清单、
+  CRC/安全路径/全部hash通过。manifest SHA256
+  `fda6ed5e7a2b3290c6ab1da4d5f570c6a12106e0b6cca189e1d0da73a47a1d47`。
+  原delivery/控制脚本/模型入口/launcher/A参考原件均与c58c65b固定包一致。
+- [x] 实际PID13504以exit1结束，未超时；模型内容、GPU UUID/PCI、Python3.11.16/
+  torch2.6.0+cu124、FP16/SDPA和[1,768]输入检查已完成，原三次暖机均完成。
+  首个明确异常为`CUPTI_TIMELINE_SESSION_OPEN_FAILED:3`，发生在subscription打开阶段，
+  早于原测前drain、测量请求和两token完成操作；未进入同次COE分析。
+- [x] 原capture与session/子进程PID及hash一致：open_code=3、close_code=4；仅1条context、
+  7条stream资源记录，无callbacks/markers。quality.closed=true、errors=[1]，无overflow/
+  dropped/query错误。close_code=4包含累计初始化错误，不能单独认定关闭又发生独立故障。
+- [x] 已确定记录缺陷：native初始化把所有CUPTI非成功码和异常合并成open_code=3，未
+  保留操作名、activity kind和原返回码。资源发出将位置缩小到stream dump/其后event启用
+  附近，但“已有资源行”不证明对应EnableAndDump成功返回，具体失败API仍UNKNOWN。
+  不认定权限、模型、零payload、某一库或某种activity为根因，不关闭必需观测来绕过。
+- [x] 采集后A检查已实际执行成功，原封存源码/库未变。顶层receipt.process为null是因
+  command先抛异常而未赋值；原one_model.process.json保留了真实PID/exit，不代表未启动。
+  原始回执/capture/ZIP保留，独立审查在本地忽略的`cupti_model768_c58c65b_failure_v0_1`。
+- [ ] 最高优先级：本地先设计/补齐可测试的初始化逐步返回事实及原始错误码，再据明确
+  原因决定最小修复与是否需要目标验证。当前没有可信参数/必要集合/COE；不重跑模型、
+  不重做A、不恢复输入矩阵或旧七槽。目标provider/PyTorch资格继续BLOCKED/NOT_ASSESSED。
+
+计划调整：本轮按用户报错进行只读诊断和事实收口，未修改业务代码或制作新包，未运行
+GPU/服务器命令。CPU/编译检查没有覆盖真实CUPTI初始化，是此前验证边界，不能追认GPU
+通过。研究方案/Pre-Pilot及生产S/A/B/COE未变；用户DOCX、Raw、旧BLOCKED/UNKNOWN、
+Gate13限定PASS和Gate14 NOT_RUN保持。
+
+## 7.222 CUPTI时间线目标Stage A通过；准备单次768模型接回验证（2026-10-21，历史；后续见7.223）
 
 - [x] 真实Stage A回传3,040,625 bytes，SHA256
   `89265f8ddcce6b513457b1d40f44eda325e058f9cf654cf53d40d05476ae5376`；231成员/230清单、
