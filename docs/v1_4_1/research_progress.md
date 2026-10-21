@@ -1,6 +1,37 @@
 # ExposedPath 科研进度清单
 
-## 7.226 新诊断库目标A通过；准备单次无LLM上下文启动诊断（2026-10-21，当前）
+## 7.227 启动诊断取得明确失败：CUDA_EVENT直接启用返回INVALID_KIND（2026-10-21，当前）
+
+- [x] 回传44,821 bytes、SHA256
+  `77403b1db387979784f3e3313cdb139fcc79ebc72e05c0942e78ebc0677e4fe9`；19成员/18清单、
+  CRC/路径安全/全部hash、控制源码与e017dca实际Git字节及原交付一致。manifest SHA256
+  `c12d34fcf63a9ab47a401f6a2c7c1ea57e0507d750cc69d9e7c962b9b70eecad`。
+  实际PID50800、exit2、未超时；执行后A完整核验已完成，原A/源码/库未变。
+- [x] UUID/PCI、torch2.6.0+cu124、已加载runtime路径/hash一致；64-byte逻辑张量/1条
+  显式流及订阅前drain完成，未加载LLM。成功订阅、线程设置、缓冲注册、双callback域，
+  以及RUNTIME/DRIVER/KERNEL/MEMCPY/MEMSET/SYNCHRONIZATION/CONTEXT/STREAM八项显式
+  启用均成功；最后`cuptiActivityEnable(kind=36, CUDA_EVENT)`原始返回21，明确失败。
+  相同12.4.127/API22 SDK `cupti_result.h`证明21为`CUPTI_ERROR_INVALID_KIND`；不是
+  控制器exit2或包装open3，不能称为权限失败、模型失败或1024尺寸问题。
+- [x] capture/session/probe/stdout四处失败事实一致；1 context/135 stream资源记录，
+  0 callback/0 marker；closed=true、errors=[1]，overflow/dropped/query错误均0。
+  close4含累计初始化错误，不另造关闭根因。原768暖机失败未保存原码，因此本次与其
+  共享初始化代码不等于已实证两个attempt同因；也未解决旧84次缺效果问题。
+- [x] 核对封存官方12.4.127 SDK/文档：record kind枚举存在不等于运行时接受独立enable。
+  官方12.9发布说明又明确旧版CUDA_EVENT与SYNCHRONIZATION记录收集耦合，提供了具体
+  修复候选依据；它不能替代目标12.4上事件记录实际发出及同次关联的验证。独立审查存
+  忽略的`cupti_startup_failure_e017_v0_1`，原ZIP/Raw/回执不覆盖。
+- [ ] 最高优先级：版本化区分“显式enable控制项”和“必须保留/验证的记录类型”，
+  审查以SYNCHRONIZATION取得CUDA_EVENT的固定API22方案，再做本地修复/回归及有限
+  事件/同步实物验证设计。不得在原入口临时吞21、自动fallback、填空event或直接判COE
+  合格；必须保留事件解码/依赖拒绝和旧读取版本。此修复及目标效果仍NOT_RUN。
+
+计划调整：当前从泛化“启动失败”收敛到具体enable操作拒绝，有可定位的采集器兼容
+问题；本轮只读审查原件/固定SDK及第一方说明，未修改生产代码、重跑测试、制作新包
+或安排服务器执行。研究方案/Pre-Pilot、S/A/B/COE及旧Formal不变；用户DOCX、Raw、
+旧BLOCKED/UNKNOWN、Gate13限定PASS和Gate14 NOT_RUN保持。
+
+## 7.226 新诊断库目标A通过；准备单次无LLM上下文启动诊断（2026-10-21，历史；后续见7.227）
 
 - [x] 新回传4,074,407 bytes、SHA256
   `ba1bd7a5b6b7d3963f7a11c50bca50345a553c1a41a5973a71031c53d87e0c2f`；411成员/410清单、
@@ -35,7 +66,8 @@
   表示用原规范化函数核对，是同一设备；未放宽设备门。PS5.1整段命令解析及入口正反
   CPU演练通过。唯一回传`cupti_startup_e017dcad666e_once.zip`；本地交付审查在忽略的
   `cupti_startup_b_delivery_v0_1`，准确服务器路径和命令仅存`.local/`。
-- [ ] 最高优先级：用户显式执行上述一次B并回传；预计2～5分钟，GPU子进程硬120秒、
+- [x] 当时最高优先级：用户显式执行上述一次B并回传，已在7.227核验为明确启动失败；
+  预计2～5分钟，GPU子进程硬120秒、
   启动新鲜2GiB，0模型/0 Nsight/1 CUPTI session。B仍NOT_RUN，目标失败接口和原始
   CUptiResult仍UNKNOWN；不会由小上下文通过追认模型故障或1024资格，不恢复负载系列。
 

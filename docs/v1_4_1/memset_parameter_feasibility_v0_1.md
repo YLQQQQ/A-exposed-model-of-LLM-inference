@@ -1,6 +1,34 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-19增补：通用输入适配的A/B选路 0.22（当前；仅选路，不实施）
+## 2026-10-21增补：CUPTI启动原始错误已定位 0.23（当前；仅诊断）
+
+**本次启动的直接失败点已确定，不再只有generic open3：**
+`cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CUDA_EVENT=36)` 返回原始CUptiResult21，
+相同API22头文件将其定义为`CUPTI_ERROR_INVALID_KIND`。其他8类显式启用及订阅均成功；
+不是本次权限/模型执行失败，也不是1024的尺寸准入结论。原768失败无原始码，暂不追认同因。
+
+输入为`cupti_startup_e017dcad666e_once.zip`，44,821 bytes，SHA256
+`77403b1db387979784f3e3313cdb139fcc79ebc72e05c0942e78ebc0677e4fe9`；19成员/18清单、
+全部hash/控制字节/同次PID和配置及后验A检查均通过。实际小上下文及drain完成，
+capture只有1 context/135 stream、0 callback/marker；原失败保持BLOCKED，未计算COE。
+
+**实现假设的具体问题：** `client.cpp`将9种可解码record kind都作为独立enable控制项。
+头文件枚举存在只证明该记录布局/编号存在；目标实际拒绝了最后这次启用。不能借其他
+8项成功或CPU ABI替身接受任意kind，把第9项也写成已验证可用。
+
+固定12.4.127官方归档（先前已封存，SHA256
+`6ad8df634d60e4bc96cf6914af71a5708f6460a25a39d0183780c6bdebfa60c7`）中的
+`include/cupti_result.h`、`include/cupti_activity.h`及`doc/html/api/`确认原码与接口。
+另据[NVIDIA 12.9发布说明](https://docs.nvidia.com/cupti/12.9.1/release-notes/release-notes.html#updates-in-cuda-12-9)，
+12.9之前CUDA_EVENT与SYNCHRONIZATION记录收集耦合；这是研究固定API22启用政策的依据，
+**不是对本机事件收集完整性的实物证明，也不证明21只可能由耦合引起**。
+
+下一项应为版本化的最小初始化修复：区分显式控制列表和所需记录列表，保留事件解码/
+来源/依赖拒绝；用实际event record/synchronization小例验证所需事件证据仍在，
+而不是简单删除一项来追绿。若缺事件来源或同次关联，仍拒绝，不自动换库/升级SDK/
+放宽COE。当前未实施/未制作部署包，服务器无需重跑本次入口。
+
+## 2026-10-19增补：通用输入适配的A/B选路 0.22（历史；仅选路，不实施）
 
 **唯一推荐B：保持当前执行栈，先进行两日封顶的限定CUPTI provider本地接通验证。**
 不是批准完整provider、目标模型或新实验。A暂不执行；B也未获得真实模型覆盖/COE资格。
