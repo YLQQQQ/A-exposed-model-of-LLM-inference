@@ -1,6 +1,48 @@
 # ExposedPath 科研进度清单
 
-## 7.239 COE确认性准备与后续Gate限定分支规划（2026-10-22，当前）
+## 7.240 统一论文主线；最小独立参考的本地文件链准备（2026-10-22，当前）
+
+- [x] 用户纠正7.239固定流程倾向：论文主线为完成语义驱动的必要活动—请求/阶段暴露
+  映射、可审计解释与适用边界，不缩为输入长度曲线，不预设拆篇。既有合同新增§9、
+  COE短稿新增§15的研究问题/方法/证据/价值/限制对应和统一骨架；旧A/B稿作为复用材料，
+  原定义、角色/旧Gate判定及技术报告历史裁决不改，不以新骨架宣布创新已成立。
+- [x] 512→2048继续优先作为首token主要signed ΔCOE/R比较；1024状态分叉、第二token
+  反向和O/P敏感性为补充证据，全部保留。4P1/12P1降为未批准、可调整的历史成本候选，
+  不作为必经先筛查再Formal路线；六次全正/旧bootstrap参数不是现行已定政策。资源
+  恢复后按问题/预算一次确定前瞻采集政策，不按结果方向追采/替补，不拼旧Pilot成Formal。
+- [x] 新增`tests/fixtures/coe_completion_reference_v0_1.json`：消费前人工固定必要k/m/d、
+  D2H terminal、预设count0逻辑节点及完成后提交排除，三个CPU例的独立手算COE为
+  20/5/1ns、原sync交集15/5/0ns、墙钟30ns、补集10/25/29ns。时间是CPU构造，不是
+  目标GPU预报；expected不来自analyzer的集合恢复或区间函数。既有回调/资源、producer/
+  drain fixture复用，只补0.3先验成员/结果对照，不复制collector或生产算法。
+- [x] 新`tests/test_coe_completion_reference.py`真实隔离`-I -S -B`子进程执行四文件hash
+  绑定→producer/marker及成功drain/copy/sync→scope→adapter/bridge0.3→结果文件。
+  已完成前驱仍在成员、操作内D2H纳入、完成后提交不纳入；缺非零效果、错流、缺count、
+  失败sync、晚terminal和重复记录均核对具体拒绝。源JSON逐字节不变，失败不产成功结果。
+  最初三正例因验证端误读不存在的complement_ns字段失败；按原接口明确派生wall−COE
+  后通过，未改生产接口/公式，也不把该验证代码错误写成生产缺陷。
+- [x] 最终相关CPU命令为`python -m pytest -q -ra -p no:cacheprovider
+  tests/test_coe_completion_reference.py tests/test_cupti_driver_queries.py
+  tests/test_cupti_callback_boundaries.py
+  tests/test_cupti_model1024.py::test_1024_real_producer_files_reach_explicit_03_two_token_consumer
+  tests/test_cupti_model1024.py::test_1024_rejects_real_file_chain_damage
+  tests/test_cupti_model1024.py::test_packaged_consumer_isolated_origin_and_tamper
+  --basetemp .local/coe_reference_verified_20261022 --junitxml .local/coe_reference_verified_20261022.xml`。
+  **72 passed / 0 failed / 0 skipped，5.39s**；Python3.12.7，不替代目标3.11.16/SDK/
+  真实GPU资格。语法、来源/链接与diff核对另留本地回执，不把这些计为新Q0或科研收益。
+- [ ] 仍缺当前provider下先验construction的目标成员/terminal和区间连接证据；仅针对
+  明确差额复用旧构造/工具，实际区间由独立参考核算，不重做完整Q0/旧Gate。CPU消费
+  准备已完成，不把CPU构造冒充GPU运行。新Formal身份封套/签署仅在决定做Formal时
+  才是前置，不为写论文强制先开发；当前Pilot/实例证据依原有限角色使用。
+- [x] EP-COE-01～03编号/状态保留为证据导航，不新增Gate或按编号强制串行执行。
+  旧Gate13限定PASS/Gate14 NOT_RUN保持；4096和其他目标GPU采集继续暂停，62b5a5a
+  交付/检查保留，无包/服务器命令/自动恢复。用户所说GPT能力暂受限不等于不能测试，
+  本轮照常做必要CPU验证；无GPU预算、collector/runner/生产S/A/B/COE或Raw改动。
+
+最高优先级：完成和审阅本地独立验证准备及统一证据骨架；资源恢复时围绕512→2048
+主要主张一次决定必要补证与预算，不把工具开发、固定采集次数或Gate数量代替科研判断。
+
+## 7.239 COE确认性准备与后续Gate限定分支规划（2026-10-22，历史；当前见7.240）
 
 - [x] 只读核对当前研究设计v7.1/实验协议v2.1 Pre-Pilot、旧Route A签署0.1.1及Gate13
   实际裁决；旧执行99f3bae/分析e19c308、60run/30profile限定PASS保持。新CUPTI/COE
@@ -4657,7 +4699,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 
 ## 1. 当前快照
 
-- 清单版本：`7.239`（顶部为当前任务；下方逐条旧记录保留历史，不能作为新执行授权）
+- 清单版本：`7.240`（顶部为当前任务；下方逐条旧记录保留历史，不能作为新执行授权）
 - 7.57路线收敛：[Route A执行/退出v0.2](gate8_route_a_execution_v0_2.md)把未来Gate8结论限定A_SCOPE_ENGINEERING_ONLY的五项实际证据，B/Derived后移，不冒充旧全链通过、不设真实unknown=0门。runner未固定attention backend，旧1-byte内部D2H/sync须纳入T；本地已知selector可能默认SDPA。复用快照工具新增qwen-request/0.1选择、回执0.2，限定7源文件；不读DLL/模型、不导入目标包。先RED后实现，21项工具测试（含隔离子进程禁止包导入/native/网络）及compileall/diff通过；未重跑核心全量，7.55的1379/5结果只属于当时实现。仅准备一次目标来源补证，无部署/实验；回传仍不能闭合必要依赖则停止，不扩搜索。
 - 7.56有界只读收口：[默认流后缀等价备忘录](gate8_request_suffix_equivalence_review_v0_1.md)。直接只读旧QwenSQLite：每候选request有3492K/3copy/3memset及3次stream sync，额外内部同步不能只按Token标签忽略；已记录Q同TID/context/NULL stream，不等于无遗漏。严格受证单FIFO Q条件下W_Q/唯一terminal/A可条件等价，W_full/B历史仍可能不同；独立反例显示另一blocking stream会使wait40与10不同。现有producer/资料未证明来源闭合，当前没有单个现成充分补证，不建议重复采集或再传泛化安装包。0.1实现及合同不改，服务器无动作；Gate7 PASS、新Q0/Gate8 NOT_RUN。
 - 7.55当前实现：[request/drain A范围amendment 0.1](gate8_request_drain_scope_amendment_v0_1.md)。用户批准前缀完成证书＋合格Q独立A资格；旧MC正文及S/A-B/Q0不改。新增文件入口/显式reader，保留原physical S/B，后缀证明不冒充W；源身份、真实drain scope、时序、资源重建、跨线程/迟发、后缀S失败均拒绝。仅SYNTHETIC_CONTROLLED_ORACLE来源，本地确定性验证不是新Q0资格；真实来源SOURCE_NOT_QUALIFIED，默认流尚不在首版支持域。collector暂停，无服务器动作。
@@ -4702,7 +4744,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 7.34后续用户回传（原件待收）：0.2首次export PASS，audit因`RAW_TABLE_MISSING:CUPTI_ACTIVITY_KIND_MEMSET` BLOCKED，尚未本地核验实际schema。先据对应版本的按需表规则审计，不默认缺表为空、不重采/重export；若只需分析adapter修复，使用原输入新目录离线复验。Gate8/新Q0仍NOT_RUN。
 - 7.33后续用户回传（原件待收）：07625b7的0.2窄受控capture已结束，run `controlled_20260926T133649Z_8dd7210fc970474eb1b6358a9e91d8cd`，plan/REP生成、capture exit0；未export/analysis/模型。本窗口尚未取得完整目录，不能声称trace语义或文件身份链通过。下一步仅到件只读审计及新run绑定后处理草案；Gate8/新Q0仍NOT_RUN。
 - 7.32验证：37项受控定向通过；本地Python3.12.7 CPU-only全量1169 passed/5 skipped（nvcc编译项），compileall/合同37/37/Canonical7模块/oracle/diff-check通过。不是目标机新native编译或采集资格。
-- 最近更新：`2026-10-22`（7.239）
+- 最近更新：`2026-10-22`（7.240）
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：原DOCX v2.1仍为Pre-Pilot；[重签G12-ROUTEA/0.1.1](gate12_protocol_signed_v0_1_1.json)仅对其随后旧路线A Formal及[收尾边界](gate12_closeout_v0_1_1.md)有效，不覆盖原文，也不授权新CUPTI/COE。新[确认性候选§8](completion_operation_contract_draft_v0_1.md)未签署；旧0.1签署保留。
 - 当前研究阶段：旧Gate13签署0.1.1限定Formal最终PASS保持；新CUPTI/COE完成组件/实例Engineering、bd377c三点Pilot及离线机制收口，正做限定确认性准备，不是新Formal或全Q0。4096及全部目标GPU采集因用户资源暂停，Gate14未启动；旧后处理BLOCKED不恢复。
@@ -4710,7 +4752,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前数据资格（7.131）：Gate6历史Engineering/Q0保持；[首批/暖机对照](gate11_warmup_policy_review_v0_1.md)及[共同w3 Pilot](gate11_policy_closeout_v0_1.md)仍只作政策依据、不混池/升级。已签署限定Formal60次执行/30条P1质量、归档终态及冻结统计全部接受，见[完整审查](gate13_local_review_v0_1.md)/[最终裁决](gate13_closeout_v0_1.json)；不是普遍测量有效性或完整新Q0认证。UNKNOWN/NOT_ASSESSED与旧资格边界保持。
 - 当前 Gate 状态（7.131）：Gate0～7历史PASS、Gate8限定Engineering PASS、Gate9分域PASS、[Gate10仅选定G1三点一次可行性PASS](gate10_closeout_v0_1.md)、[N1独立Engineering PASS](n1_model_feasibility_closeout_v0_1.md)、[Gate11限定Pilot政策PASS](gate11_policy_closeout_v0_1.md)、[Gate12限定0.1.1重签PASS](gate12_closeout_v0_1_1.md)；[Gate13签署路线A限定PASS](gate13_closeout_v0_1.json)、Gate14 NOT_RUN。容量/精度/稳定性未授，旧报告/UNKNOWN/NOT_ASSESSED保持。
 - 当前新路线数据资格（7.239）：[bd377c来源](cupti_input_pilot_sources_v0_1.json)仅9run/3block/18链限定Pilot，native/runner/DLL为6c744bf、控制/分析bd377c/bridge0.3；不是旧Nsight Formal重复、通用provider资格或无插桩性能。旧批GPU独占UNKNOWN、第二token反例与1024分叉保持。
-- 当前最高优先级（7.239）：审阅COE限定主张、直接缺口与EP-COE-01～03候选；资源恢复且另批预算后才可4P1筛查。保留62b5a5a交付不执行A/B、不自动恢复4096，不制作新包、不清理、不启动G2。
+- 当前最高优先级（7.240）：统一完成语义驱动的论文主线及证据骨架，补当前来源的独立正确性参考/CPU文件链；主要输入比较保留512→2048，1024分叉/观测敏感性为补充。4/12P1不是必经流程，恢复资源后一次定政策；保留62b5a5a交付不执行A/B、不自动恢复4096，不打包/清理/G2。本地测试未暂停。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -5094,6 +5136,10 @@ compile/graph后移。以下原任务保留编号及历史。
 
 ### COE限定分支检查点（7.239新增计划，不重排Gate0～14）
 
+**7.240调整：以下编号仅保留为证据目录，状态不升级，不是额外强制Gate或必须串行
+完成的工程流水线。** 已有证据直接复用，4P1/12P1均为历史可调整候选；当前安排以
+[合同§9](completion_operation_contract_draft_v0_1.md)及[统一骨架§15](coe_research_short_note_v0_1.md)为准。
+
 这是对旧Gate13之后新来源/候选对象的**有限增量路线**，不是旧Gate13重开、Gate15，
 也不追认新路线已经走完原Gate1～13。旧已完成项、OOM后移项和广域主矩阵均保留。
 
@@ -5103,8 +5149,9 @@ compile/graph后移。以下原任务保留编号及历史。
 | `EP-COE-02` 独立冻结 | `NOT_RUN` | 新协议精确绑定有限claim、来源版本/输入/角色/schema/封套、统计/排除与预算，经用户批准生效；旧Route A seal不兼容，当前Formal角色链未实现。不能仅写文档或改role放行。 |
 | `EP-COE-03` 新采验证与科学裁决 | `NOT_RUN` | 只能用新冻结之后的样本；逐run质量、完整block、两token及公平baseline与预定正/负/不确定裁决闭合，全部历史Pilot不混入。数据合格和主张获支持分别报告，无效应/混合也可诚实收口，不因此自动G2或宣称创新。 |
 
-唯一执行候选和成本见[合同§8](completion_operation_contract_draft_v0_1.md)。这三个检查点
-只补直接缺口；不恢复全Q0、全capture认证、引擎/hook、4096或广域负载扫描。
+历史执行候选和成本保留在[合同§8](completion_operation_contract_draft_v0_1.md)，不是当前
+唯一计划。这三个索引只整理直接证据；不恢复全Q0、全capture认证、引擎/hook、4096或
+广域负载扫描，不把新Formal封套强制为当前成文/Engineering证据使用的前置。
 
 ## 6. 已知问题与风险
 
@@ -5176,8 +5223,8 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 
 **7.26覆盖说明：** 已直接读取目标安装盘点回执及四份完整说明，四文件bytes/SHA256本地复核全部一致。CPU sampling lost-events段落不能证明CUDA/NVTX完整性；条件性teardown/flush建议不等于每会话认证；API subset与cuda-trace-all-apis适用性保留询证。组件hash来自服务器回执、非本地二进制复算。已准备[英文草稿及有限决策路线](gate8_nsys_vendor_inquiry_v0_1.md)，未发送。安装搜索结束，服务器无下一操作；不再执行7.25安装指令。无生产/冻结合同变化，无新测试或实验成绩。Q0影响矩阵继续有效但资格未取得；Gate7 PASS、Gate8 NOT_RUN，UNKNOWN阻塞科学验收。
 
-当前顺序（7.239覆盖）：旧Gate0～13按限定证据保持；当前走`EP-COE-01受限资格/政策 →
-EP-COE-02独立冻结 → EP-COE-03新采验证/裁决`的待审分支，目标GPU暂停，均非自动执行。
+当前安排（7.240覆盖）：旧Gate0～13按限定证据保持；完成本地独立参考、统一论文证据
+骨架与真正实验差额。EP-COE-01～03仅导航，不是新串行流水线；目标GPU暂停，均非自动执行。
 Gate14/G2继续后移。原总体顺序`Gate1合同→2 oracle→3 Raw→4 S→5 A/B→6 Q0→7 runner→
 8 Engineering→9～12正式准备→13 N1/G1→14 G2`保留为设计历史，不是接下来直接跑G2的授权。
 
@@ -5194,6 +5241,12 @@ Gate14/G2继续后移。原总体顺序`Gate1合同→2 oracle→3 Raw→4 S→5
 **Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
 ## 8. 计划调整记录
+
+7.240（2026-10-22）：用户要求结束固定工程流程，以统一完成语义—必要活动—请求/阶段
+暴露与解释边界为唯一论文主线；输入长度是实证轴之一，不拆篇。实际补独立construction/
+手算与当前0.3隔离文件消费，生产测量不改；CPU与待目标GPU证据分开。512→2048继续
+主要，1024/观测敏感性补充；4/12P1及EP-COE编号均非必经流程，未来按问题/预算一次定
+政策、不按方向追加。旧签署/角色/Raw/Gate保持；GPU暂停不等于CPU测试停用。
 
 7.239（2026-10-22）：用户要求COE确认性准备并核对后续Gate。保留旧Route A Gate13限定
 PASS，新增EP-COE-01～03轻量增量分支，不重排/重置旧Gate或以COE替换Gate14/G2。

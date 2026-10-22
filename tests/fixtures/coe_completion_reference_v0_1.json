@@ -1,0 +1,37 @@
+{
+  "schema_version": "coe-completion-independent-reference/0.1.0",
+  "role": "CPU_CONTROLLED_CONSTRUCTION_NOT_GPU_QUALIFICATION",
+  "expected_source": "HAND_SPECIFIED_BEFORE_CONSUMER_EXECUTION_NOT_ANALYZER_OUTPUT",
+  "clock": "CUPTI_TIMESTAMP_NS",
+  "units": "synthetic_ns_not_hardware_timing_prediction",
+  "operation": {"copy_api": "api6", "sync_api": "api8", "copy_interval": [40, 44], "sync_interval": [45, 70]},
+  "construction": [
+    "A kernel is submitted by runtime call1 with actual driver child2 before the completion operation.",
+    "Runtime call3 is a zero-byte logical memset on the same FIFO; it remains a logical submit and has no fabricated device effect.",
+    "Runtime call4 and driver child5 submit a nonzero 64-byte memset with a distinct effect.",
+    "The operation starts at runtime copy call6 entry; its driver child7 and 8-byte D2H effect are inside the operation.",
+    "Successful runtime stream sync call8 and driver child9 capture the preceding FIFO; Host-readable token17 follows the return.",
+    "A separate kernel submitted by calls60/61 only after Host completion is outside the captured set, even if it has the same stream."
+  ],
+  "members": ["k", "m", "d"],
+  "terminal": "d",
+  "logical_zero_call_ids": [3],
+  "excluded_after_completion": ["future-kernel"],
+  "cases": [
+    {"id": "active_suffix", "intervals": {"k": [30, 55], "m": [56, 60], "d": [61, 62]},
+     "manual_intersection_pieces": [[40, 55], [56, 60], [61, 62]],
+     "expected": {"coe_ns": 20, "sync_intersection_ns": 15, "operation_wall_ns": 30, "complement_ns": 10}},
+    {"id": "completed_kernel_retained", "intervals": {"k": [18, 20], "m": [56, 60], "d": [61, 62]},
+     "manual_intersection_pieces": [[56, 60], [61, 62]],
+     "expected": {"coe_ns": 5, "sync_intersection_ns": 5, "operation_wall_ns": 30, "complement_ns": 25}},
+    {"id": "work_complete_before_final_sync", "intervals": {"k": [18, 20], "m": [27, 29], "d": [42, 43]},
+     "manual_intersection_pieces": [[42, 43]],
+     "expected": {"coe_ns": 1, "sync_intersection_ns": 0, "operation_wall_ns": 30, "complement_ns": 29}}
+  ],
+  "limitations": [
+    "CPU construction exercises the real v0.3 file consumer, not CUDA execution or SDK timestamp accuracy.",
+    "No independent guarantee of pure Host blocking, net device-caused stall, or removable latency is asserted.",
+    "Current single-FIFO consumer rejects unresolved incoming or cross-stream work; this reference does not grant a new cross-stream support rule.",
+    "A future target validation must bind its own original record identities to these predeclared logical members; synthetic IDs or times cannot be copied into target evidence."
+  ]
+}
