@@ -31,6 +31,10 @@ Activity,Api,completion_overlap,recover_suffix=(_math.Activity,_math.Api,_math.c
 
 VERSION='submit-effect-bridge/0.1.0'
 INPUT_VERSION='submit-effect-evidence/0.1.0'
+SAMPLED_VERSION='submit-effect-bridge/0.2.0'
+SAMPLED_INPUT_VERSION='submit-effect-evidence/0.2.0'
+LEGACY_TIMING='LEGACY_API_ENCLOSES_CALLBACK'
+SAMPLED_TIMING='cupti-api22-distinct-api-callback-boundaries/0.2.0'
 SUBMITS={'cudaLaunchKernel':'KERNEL','cudaMemsetAsync':'MEMSET','cudaMemcpyAsync':'MEMCPY'}
 DRIVER_SUBMITS={'cuLaunchKernel':'KERNEL','cuMemsetD8Async':'MEMSET','cuMemcpyDtoHAsync':'MEMCPY'}
 SUBMITS.update(DRIVER_SUBMITS)
@@ -52,8 +56,42 @@ def key(r):return r['domain'],r['pid'],r['correlation']
 def same_scope(r,s):return all(r[k]==s[k] for k in ('pid','device','context','stream'))
 
 
+def validate_api_callback(a,c,*,policy=LEGACY_TIMING):
+    """Join by SDK identity, not by a presumed instrumentation envelope.
+
+    ActivityAPI.start/end time the API; client callback samples time the
+    subscriber body. API22 defines the correlation join, not containment of
+    either interval. The new narrow profile requires temporal intersection
+    as a consistency check, NOT a dependency or an error/tolerance estimate.
+    Both original intervals remain available; only ActivityAPI times enter
+    the existing submission/accounting math.
+    """
+    require(policy in (LEGACY_TIMING,SAMPLED_TIMING),'TIMING_POLICY')
+    if policy==LEGACY_TIMING:
+        require(c['tid']==a['tid'] and normal(c['name'])==normal(a['name']) and
+            a['start']<=c['start']<=c['end']<=a['end'] and a['return_code']==c['return_code'],
+            'API_CALLBACK_CONFLICT')
+        return None
+    require(all(integer(a.get(k)) and a[k]>0 for k in ('start','end')) and a['start']<=a['end'],'API_SCOPE')
+    require(all(integer(c.get(k)) and c[k]>0 for k in ('start','end')) and c['start']<=c['end'],'CALL_ORDER')
+    require(all(a.get(k)==c.get(k) for k in ('domain','pid','tid','correlation','return_code')) and
+        integer(a.get('cbid')) and a['cbid']==c.get('cbid') and
+        normal(a['name'])==normal(c['name']),'API_CALLBACK_CONFLICT')
+    require(max(a['start'],c['start'])<=min(a['end'],c['end']),'API_CALLBACK_TIME_CONFLICT')
+    relation=('EQUAL' if (a['start'],a['end'])==(c['start'],c['end']) else
+        'ACTIVITY_INSIDE_CALLBACK' if c['start']<=a['start']<=a['end']<=c['end'] else
+        'CALLBACK_INSIDE_ACTIVITY' if a['start']<=c['start']<=c['end']<=a['end'] else
+        'OVERLAP_NO_CONTAINMENT')
+    return dict(api_id=a['id'],callback_id=c['id'],relation=relation,
+        activity_interval_ns=[a['start'],a['end']],callback_sample_interval_ns=[c['start'],c['end']])
+
+
 def analyze_scope(v):
-    require(v.get('schema_version')==INPUT_VERSION,'VERSION')
+    require(v.get('schema_version') in (INPUT_VERSION,SAMPLED_INPUT_VERSION),'VERSION')
+    sampled=v['schema_version']==SAMPLED_INPUT_VERSION
+    policy=SAMPLED_TIMING if sampled else LEGACY_TIMING
+    require((sampled and v.get('api_callback_timing_policy')==policy) or
+        (not sampled and 'api_callback_timing_policy' not in v),'TIMING_POLICY')
     require(v.get('source') in ('HOST_ORACLE','HOST_SDK_DOUBLE','TARGET_CUPTI'),'SOURCE')
     s=v['scope'];q=v['quality']
     require(s['session_id']==v['session_id'] and s['pid']==v['pid'] and
@@ -85,14 +123,23 @@ def analyze_scope(v):
                 p['enter_seq']<c['enter_seq']<c['exit_seq']<p['exit_seq'] and
                 p['start']<=c['start']<=c['end']<=p['end'],'PARENT')
 
-    apis={};api_keys={};runtime=[]
+    if sampled:
+        # Sequences are acquired under a mutex; validate timestamps only within
+        # a thread, not an invented global inter-thread order.
+        threads=defaultdict(list)
+        for c in calls.values():
+            threads[c['tid']].extend(((c['enter_seq'],c['start']),(c['exit_seq'],c['end'])))
+        for events in threads.values():
+            ordered_events=sorted(events)
+            require(all(a[1]<=b[1] for a,b in zip(ordered_events,ordered_events[1:])),'CALL_THREAD_ORDER')
+    apis={};api_keys={};runtime=[];timing_counts=defaultdict(int)
     for a in v['apis']:
         require(a['id'] not in apis and key(a) not in api_keys,'API_DUPLICATE')
         require(a['domain'] in ('RUNTIME','DRIVER') and a['pid']==v['pid'] and
                 integer(a['start']) and integer(a['end']) and a['start']<=a['end'],'API_SCOPE')
         c=call_keys.get(key(a));require(c is not None,'API_CALLBACK_COVERAGE')
-        require(c['tid']==a['tid'] and normal(c['name'])==normal(a['name']) and
-            a['start']<=c['start']<=c['end']<=a['end'] and a['return_code']==c['return_code'],'API_CALLBACK_CONFLICT')
+        fact=validate_api_callback(a,c,policy=policy)
+        if sampled:timing_counts[fact['relation']]+=1
         apis[a['id']]=a;api_keys[key(a)]=a
         if a['domain']=='RUNTIME':runtime.append(a)
     owners=runtime+[a for a in apis.values() if a['domain']=='DRIVER' and
@@ -103,6 +150,9 @@ def analyze_scope(v):
             require(key(c) in api_keys,'RUNTIME_API_COVERAGE')
     for a in relevant:
         require(a['tid']==s['tid'] and s['request_start']<=a['start']<=a['end']<=s['completion_end'],'SCOPE')
+        if sampled:
+            c=call_keys[key(a)]
+            require(s['request_start']<=c['start']<=c['end']<=s['completion_end'],'CALLBACK_SCOPE')
         require(type(a['return_code']) is int and a['return_code']==0,'FAILED_API')
     for c in calls.values():
         if s['request_start']<=c['start']<s['completion_end']:
@@ -250,7 +300,7 @@ def analyze_scope(v):
             physical_activity_overlap_ns=sum(hi-lo for lo,hi in intervals),
             driver_api_interval_ns=[driver_api['start'],driver_api['end']] if driver_api else None,
             pure_host_blocking_ns=None))
-    return dict(schema_version=VERSION,status='VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS',
+    answer=dict(schema_version=SAMPLED_VERSION if sampled else VERSION,status='VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS',
         session_id=v['session_id'],source=v['source'],clock=v['clock'],
         members=[a.key for a in members],closed_prior_ids=prior,terminal=terminal['id'],
         logical_zero_call_ids=logical_zero,zero_projection='EMPTY_FIFO_NODE_PRESERVES_REAL_FIFO_ORDER',
@@ -263,3 +313,7 @@ def analyze_scope(v):
         operation_wall_ns=overlap['wall_ns'],activity_union=overlap['activity_union'],
         production_A_B_changed=False,pure_host_blocking=None,provider_qualification='NOT_GRANTED_BY_THIS_CONSUMER',
         formal_eligible=False)
+    if sampled:answer.update(api_callback_timing_policy=policy,api_callback_relation_counts=dict(timing_counts),
+        activity_timestamp_source='CUpti_ActivityAPI.start/end',
+        callback_timestamp_source='cuptiGetTimestamp sampled inside subscriber ENTER/EXIT')
+    return answer

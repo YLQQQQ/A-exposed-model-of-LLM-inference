@@ -1,6 +1,78 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-21增补：CUPTI启动原始错误已定位 0.23（当前；仅诊断）
+## 2026-10-22增补：真实768的API/callback双边界消费 0.24（当前；离线BLOCKED）
+
+本次不是“参数仍然缺失”。新768模型、初始化/关闭成功，真实count和设备效果已记录。
+封存ZIP `cupti_timeline_2be05ce6cefe_model768_once.zip`，3,108,692bytes，SHA256
+`358e6d1746c1b0270e4d1d1868f92691344b530ff4ca27968368a02feaa7edbf`；42/41 CRC/安全路径/
+全部hash通过。控制2be05ce、native/API22客户端6c744bf，原报告BLOCKED永久保留。
+
+### 双边界的含义与新旧读取
+
+固定A封存SDK的`cupti_activity.h`定义`CUpti_ActivityAPI.start/end`为function的ns时间，
+双0表示未取得时间；`cupti_callbacks.h`明确同domain callback的correlationId等于对应
+ActivityAPI的ID，可关联用户记录。头文件SHA256分别为
+`3796fb651d9983e407f2d007d8089f53a218e96b167a5452ab23908176b18b6e`与
+`9284e78c53d19528d020ee84b2036ae210fa392c8b8f6cba05e0cecb00471a94`，来源是已审
+`cupti_timeline_6c744bf52daf_static.zip`中的`cupti/include/`，不是较新版ABI的替代推断。
+实际[client](../../scripts/native_cupti_timeline/client.cpp)在subscriber ENTER/EXIT内部调用
+cuptiGetTimestamp，随后[core](../../scripts/native_cupti_timeline/core.h)保存参数、序号和parent；
+activity则逐字段复制SDK记录。**同一时钟不等于同一插桩点，SDK未保证某套区间包含另一套。**
+不要把两套时间差直接叫包装成本或纯Host阻塞。
+
+真实Prefill示例：record417/call622，runtime corr381、CBID51，PID27080/TID50908；
+activity `[2490881799278300,2490881799296500]`，callback采样
+`[2490881799277700,2490881799296500]`ns。旧activity包含callback门明确误拒绝。
+本次全部54,413对（runtime33,320、driver21,093）都呈现activity被callback包含，身份无冲突。
+
+新增独立`cupti-api22-distinct-api-callback-boundaries/0.2.0`，bridge/evidence/adapter0.2.0
+必须显式选择。关联凭domain/PID/correlation与TID/CBID/名称/返回一致；两套区间各自保留并
+检查有效时间、线程顺序、真实parent嵌套和request scope。另要求两区间相交，作为此有限
+profile的保守一致性门，而不是SDK保证或dependency依据。两方向包含或部分相交都不因
+方向单独拒绝；分离、未知时间、身份/版本冲突仍拒绝。无任意epsilon，无时间改写。
+提交、copy/sync包络及COE算术仍只使用原ActivityAPI时间；parent仍由实际callback栈证明。
+旧0.1.0默认读取/原判断保留，旧结果不重标。当前生产A/B、registry与采集器未改。
+
+### 完整离线审计之后的具体剩余支持缺口
+
+复用原控制器只读文件校验，验证原配置、双回执、producer/input/token/drain/marker及库
+来源。新目录`cupti_model768_boundary_v0_2/derived`保存新scope、输入绑定和逐记录审计；
+结束复读原清单不变。新时间门通过后两token仍`SUBMIT_EFFECT_PARENT`：
+
+| 真实独立driver API（首条API/call/corr/CBID） | 首token内次数 | 第二token累计次数 | 当前门的缺口 |
+| --- | ---: | ---: | --- |
+| cuDevicePrimaryCtxGetState：23/27/14/392 | 4410 | 8137 | 未注册，且顶层driver门要求runtime父节点 |
+| cuCtxGetCurrent：163/248/144/304 | 3352 | 6592 | 同上 |
+| cuKernelGetFunction：167/254/148/683 | 3098 | 6084 | 已有A-NON-SUBMIT-HANDLE，但bridge父节点门仍拒绝 |
+| cuFuncGetAttribute：414/620/379/85 | 56 | 56 | 未注册，且顶层driver门拒绝 |
+| cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags：415/621/380/451 | 112 | 112 | 同上 |
+
+这些是实际独立调用，不是“Raw丢了parent”的证明，更不能补造runtime父节点。本轮只修
+双边界消费，未自动新增查询分类/忽略这些API；仍需本地核对具体API语义和完整覆盖门。
+现有字段已齐，不因该消费者缺口要求服务器操作；若以后确有新缺证应另列实例。
+
+同原件完成参数/效果及后续结构核对，而非在新首错处停止取证：
+
+| 范围 | 实际memset参数/效果事实 | 局部S/COE裁决 |
+| --- | --- | --- |
+| 首token前缀 | 197次：141正长度有合法payload效果；56次实测count0无MEMSET | BLOCKED |
+| 第二token累计前缀 | 198次：142正长度＋56零长度 | BLOCKED；不是Decode新增198次 |
+
+首个零例call693/API472/corr435，native handle0，经CUPTI绑定context1/stream7；
+首个正例call622/API417/corr381，count1152、效果record416。两类保留逻辑API及实际依赖来源，
+**没有从count0直接授予准入，也没有回填旧1024**。
+独立诊断核映射、bytes/value、scope、提交截止、FIFO先后、D2H与物理sync区间，未见其他
+冲突。候选成员清单1905/3497未授予有效W；D2H候选terminal分别record30956/57914，
+对应物理sync record30958/57916，context1/stream7。其有效terminal/完整物理B和COE仍需
+整个支持门通过，当前`coe_ns=null`，不发布预算或占比。不是让分析器跳过父节点门后的有效结果。
+
+验证：真实记录先红后绿、双向/非包含相交、错身份/CBID/返回、分离时间/未知时间、
+父子/线程顺序/scope/版本冲突及真实producer两token CPU文件链；最终119pass/0fail/0skip
+33.80s，命令见科研进度7.231。本地3.12.7、CPU手工oracle20ns/1ns不冒充目标GPU验证。
+原文件链2.49s、两个token完整诊断9.09/9.43s，不扩大超时，不重跑模型/Q0，不制包。
+**裁决仍BLOCKED；下一项仅本地独立driver API消费支持核对，没有重采依据。**
+
+## 2026-10-21增补：CUPTI启动原始错误已定位 0.23（历史；仅诊断）
 
 **本次启动的直接失败点已确定，不再只有generic open3：**
 `cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CUDA_EVENT=36)` 返回原始CUptiResult21，

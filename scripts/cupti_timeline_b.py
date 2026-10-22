@@ -107,8 +107,13 @@ def with_postcheck(operation,check):
     finally:check()
 
 
-def analyze_model(folder,process,cfg):
-    """Bound by the controller and executed in a CPU-only isolated child."""
+def validate_model_files(folder,process,cfg):
+    """Read-only identity/producer verification, shared by live/offline readers.
+
+    Offline callers must authenticate the original archive/config before
+    resolving its file references locally. Relocation is not permission to
+    replace a source hash or to alter any execution contract field.
+    """
     folder=Path(folder);p=folder/'model_result.json'
     require(p.is_file(),'MODEL_RESULT')
     result=read(p)
@@ -170,6 +175,14 @@ def analyze_model(folder,process,cfg):
     expected=model.producer_scopes(cfg['session_id'],read(folder/'producer/host_boundaries.json'),
         read(folder/'producer/drain_ledger.json'),tokens)
     require(read(folder/'scope_producers.json')==expected,'SCOPE_PRODUCER_BINDING')
+    return raw,expected
+
+
+def analyze_model(folder,process,cfg):
+    """Bound by the controller and executed in a CPU-only isolated child."""
+    folder=Path(folder)
+    raw,expected=validate_model_files(folder,process,cfg)
+    current=policy_profile(cfg);native=POLICY_NATIVE_COMMIT if current else NATIVE_COMMIT
     from analysis.cupti_timeline import select_scope,analyze_files
     answers=[];errors=[];indexed={}
     for i,p in enumerate(expected):

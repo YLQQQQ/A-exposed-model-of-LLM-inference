@@ -1,6 +1,59 @@
 # ExposedPath 科研进度清单
 
-## 7.230 事件微例限定PASS后接回一次真实768完整链（2026-10-21实施，10-22固定交付，当前）
+## 7.231 真实768双时间边界最小修复；同原件离线审计仍BLOCKED（2026-10-22，当前）
+
+- [x] 核验`cupti_timeline_2be05ce6cefe_model768_once.zip`：3,108,692 bytes，SHA256
+  `358e6d1746c1b0270e4d1d1868f92691344b530ff4ca27968368a02feaa7edbf`；42成员/41清单，
+  CRC/安全路径/完整覆盖及全部hash通过，manifest
+  `ebbbc38b3bce4e894f28b5c8b1ebbe453a9e314c080f29c370abfca5d578d204`。
+  模型PID27080 exit0/未超时，init/close/flush成功、0丢失/溢出/查询错；两token
+  `[[29184],[6556]]`。执行控制仍2be05ce，native仍6c744bf；原分析6c744bf及BLOCKED不改。
+- [x] 根因由固定API22头文件与实际采样代码确认：`CUpti_ActivityAPI.start/end`是SDK的API
+  时间；callback时间是client在ENTER/EXIT订阅函数内调用`cuptiGetTimestamp`取得。
+  两者使用同一CUPTI时钟，但没有“activity必须包含callback采样”的SDK保证。
+  33,320 runtime＋21,093 driver共54,413对实际均是activity位于callback区间内，
+  domain/PID/correlation、TID/CBID/返回一致；含Prefill，不是只在历史前缀。
+- [x] 先以Prefill `record:417/callback622/corr381`的真实区间复现旧拒绝，再新增显式
+  `cupti-api22-distinct-api-callback-boundaries/0.2.0`与bridge/evidence/adapter 0.2.0。
+  以完整身份关联，分别验证两套区间、每线程序号/时间、真实父子与scope；时间相交仅为
+  该有限profile的一致性门，不是dependency或等待证明。不要求任一方向包含、不加epsilon、
+  不转换时钟/修改Raw。只使用原activity时间进入原提交/COE公式；未知时间、错身份、
+  分离区间、错父子/版本/scope仍拒绝。旧0.1.0默认分派及原判断保留。
+- [x] 抽出原控制器的只读`validate_model_files`，不复制身份门；同一封存副本核原配置、
+  真实A/event B引用、前后静态库/源码、producer/hash、warmup/input与两token marker链。
+  只对已绑定的model脚本/config文件引用作本地解析，不替换原字节或合同值。
+  新派生目录`cupti_model768_boundary_v0_2/derived`；源清单结束时复读不变。
+- [x] 继续审计两token，而非跨过时间门即报PASS：两者仍`SUBMIT_EFFECT_PARENT`。
+  具体是request内独立driver查询未获bridge支持（各有真实独立API行，不是Raw父子造假）：
+  `cuDevicePrimaryCtxGetState`首条record23/call27，`cuCtxGetCurrent` record163/call248，
+  `cuKernelGetFunction` record167/call254，`cuFuncGetAttribute` record414/call620，
+  `cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags` record415/call621。
+  第一token共11,028次、第二token累计20,981次。KernelGetFunction已有non-submit注册但
+  父节点门仍拒绝；其余四类尚未登记。本轮不新增分类或借时间修复豁免这些门。
+- [x] 参数/效果与后续结构分开核：首token197次memset＝141次正长度/合法效果＋56次实测零；
+  第二token累计198＝142正＋56零；零不是由无activity推断。已保存逐调用count/native stream/
+  返回/parent/效果来源，零节点不直接授予S/COE。另行核映射、payload、实际流、提交边界、
+  FIFO执行顺序及D2H/物理同步区间，未见额外冲突；候选成员1,905/3,497仅作诊断清单，
+  **不是已准入W或完整物理B**。D2H候选terminal为record30956/57914。
+  bridge仍拒绝，故两token COE均null，未发布局部COE预算/占比或新资格。
+- [x] 最终定向命令：`python -m pytest -q -ra -p no:cacheprovider
+  tests/test_cupti_callback_boundaries.py tests/test_submit_effect_bridge.py
+  tests/test_cupti_timeline_adapter.py tests/test_cupti_timeline_file_chain.py
+  tests/test_cupti_model_policy_reconnect.py tests/test_cupti_timeline_b.py
+  tests/test_cupti_timeline_model.py --basetemp .local/ccb_release --junitxml .local/ccb_release.xml`：
+  **119 passed/0 failed/0 skipped，33.80s**。包括真实记录回归、独立区间反例、旧分派、
+  只读真实文件链/错hash及两token手定20ns/1ns。外部设备数据是CPU替身；本地3.12.7，
+  不冒充目标3.11.16或CUDA资格。compileall exposedpath/analysis、变更py_compile/diff通过。
+  原件文件链核验2.49s，两token含独立诊断9.09s/9.43s；未重跑Q0/模型/微例。
+
+当前裁决：**BLOCKED，时间边界实现修复完成，但独立driver查询消费支持未闭合**。
+最高优先级仅现存原件的这项本地支持核对；没有重采/新服务器操作依据，不制包。
+详细逐记录证据在忽略的`cupti_model768_boundary_v0_2/`，补充说明见
+[取证审查0.24](memset_parameter_feasibility_v0_1.md)。
+不据本次零count回填旧768/1024；不恢复矩阵或旧七槽。原A/B/COE公式、旧Formal、
+Raw/ZIP/BLOCKED/UNKNOWN、用户DOCX、Gate13限定PASS/Gate14 NOT_RUN保持。
+
+## 7.230 事件微例限定PASS后接回一次真实768完整链（2026-10-21实施，10-22固定交付，历史；实物见7.231）
 
 - [x] 消费协调已审event B：49,309 bytes，SHA256
   `1b30ac79fa3e4dd0ee6776ab3e95d380f273fff97a13ed2a07052612dc66e5ed`；receipt
@@ -43,7 +96,8 @@
   producer_scopes同解释器AST不变。无DLL/EXE/bundle、新依赖或部署步骤。
   包内真实隔离默认入口拒绝；整段命令及launcher实用PS5.1解析通过。
   独立包审查在忽略的`cupti_model_policy_delivery_v0_1/review.json`。
-- [ ] 真实768完整链**NOT_RUN**；先交协调审查，通过后用户显式执行一次新目录。
+- [x] 发布时真实768完整链为NOT_RUN；随后用户执行并回传，实物消费BLOCKED见7.231。
+  以下保留当时交付/停止规则，不授权重跑：
   准确命令在忽略的`CUPTI_MODEL_POLICY_B.ps1`；唯一回传
   `cupti_timeline_2be05ce6cefe_model768_once.zip`。真实A及event B展开原件必须保持，
   缺失/变化直接停止，不重跑A/事件微例或自动重建原树。
