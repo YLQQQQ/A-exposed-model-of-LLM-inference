@@ -502,3 +502,234 @@ CUPTI0.3入口不输出完整五类A及整窗候选预算，保持NOT_ASSESSED**
 
 **结论：batch值得保留为解释的反证轴，暂不实施。** 首先完成本节端点复核的政策审定；
 若只想增加配置数或当前论文无需区分上述解释，则继续暂缓，而不是扩矩阵或collector。
+
+## 13. 理论关系、机制判别和工程差额（7.244，GPU暂停）
+
+2026-10-22～23；研究协议/ARS plan与CPU验证准备，不是新测量定义、Freeze或执行授权。
+暂停统一主稿继续扩写/修订；保留7.241受控准备、356a38f八次候选及4096原准备，不执行。
+本节只补此前未分开的关系和具体差额，沿用§14机制来源，不重做已有统计/组级分析。
+
+### 13.1 可以证明什么：量、位置和实际完成不是同一个变量
+
+令U为已合法恢复的必要活动**区间并集**，不是时长直接相加；a为目标phase起点，
+c为copy入口，r为配对成功sync返回，p为Host读取后的共同point，均取同一trace时钟。
+定义V=|U∩[a,r)|、F=|U∩[a,c)|、Q=|U∩[c,r)|。若a≤c≤r≤p且必要成员属于
+phase GPU观察scope，则严格有：
+
+`V=F+Q；0≤Q≤min(V,r−c)；V≤G_phase；Q≤G_phase；Q≤p−a。`
+
+若逐成员时长求和为C_sum，则V≤C_sum；存在重叠时可严格小于，C_sum也不是FLOPs、
+理想设备服务时间或GPU对Host的因果成本。上述G_phase含同一PID/device/context的
+观察活动，只有U确为其子集、窗口可比较时才允许这个界，不向未支持的ownership推广。
+
+证明只用半开区间的互斥分割/集合包含。它不是“纯Host阻塞的下界”。第二token的累计W
+含前一phase历史，故必须裁剪到本phase才有V≤G_phase；不能拿累计|U|和Decode G比较。
+非零必要集合可以Q=0，重叠成员只算一次。τ是合格terminal的完成时刻，τ≤r；`τ−c`
+包含间隙，既不等于Q，也不独立识别Host阻塞。
+
+对于**固定U、固定r**且c1≤c2≤r，精确有
+`Q(c1)−Q(c2)=|U∩[c1,c2)|∈[0,c2−c1]`。这说明更早到达可使Q不减，但不能用于
+把不同run的Q差分解成“Host效应”：真实c改变时，后续提交、设备轨迹或r也可能改变。
+当τ是这些成员的最晚完成时刻时，另有`Q≤max(0,τ−c)`，这个区间上界仍不是等待真值。
+
+实际性能保留Host时钟的`TTFT_H=h0_H−start_H`和后续`ITL_j=h_j_H−h_(j−1)_H`。
+h为实际读回后采样，不是token网络发送；r在程序顺序上先于h，h先于p。但Raw中的c/r/p
+与perf_counter的h不处于已校准同一数值域，**不能直接计算h_H−c_trace或h_H−τ_trace**。
+上面的Q≤p−a是trace投影界，不宣称它给出Host TTFT的已测误差界。H取copy入口前已返回的
+必要提交API中最晚返回至c的间隔，不把操作内随后提交的D2H排除出必要集合；D等时间
+位置量也不是Host净阻塞或包装耗时。
+
+一个仅用于推理的简化模型是假定所有必要工作已提交、其轨迹固定且连续为[0,τ)，
+Host到达c不改变设备推进、没有后提交D2H/Host有用工作/内部间隙，令`r=max(c,τ)`，
+Host完成`h=r+1`。这些条件**不适用于直接解释自然memcpy_and_sync**：实际D2H可在
+操作内提交，轨迹、API内部行为及尾部不是固定常数。独立CPU整点手算给出最小反例：
+
+- 固定U=[0,10)，c从8提前到2：Q从2变8，但h仍11。更早到达可以增加COE而不拖慢完成。
+- U=[0,10)、c=9时Q=1/h=11；换为U=[0,8)、c=2时Q=6/h=9。
+  COE变大同时完成更快；反向读即COE变小而完成更慢，否定跨运行的单变量性能推论。
+- U=[0,20)、c=19时Q=1/h=21，相比U=[0,10)、c=2的Q=8/h=11，
+  必要工作增多、完成变慢，COE反而减小。U=[0,4)∪[8,10)、c=2时Q=4，而τ−c=8。
+
+这里是CPU构造ticks，不是真实CUDA纳秒或新oracle资格。不同运行的c、设备轨迹、尾部
+都可改变，故COE增加/减少均不能单独推出实际完成变差/改善。若两端G都正，既定
+`R=G_high×(Q_high/G_high−Q_low/G_low)`，所以正R只是Q/G结构比增加的代数描述，
+不是对完成时延、根因或优化收益的判据。
+
+### 13.2 三个可证伪假设及最小判别，不新增采集流程
+
+**M1：端点正R伴随输入相关的必要后缀未在copy前消化，而非仅总活动同比例增加。**
+已有支持为bd377c三次端点正R及实际kernel执行位置；2048交集主要来自先行kernel，
+不是8-byte D2H。反例/约束是1024同布局分叉、第二token反向、O/P幅度敏感，静态布局
+或工作量不能单独解释全部幅度。缺少的是固定观测程序在新资源条件下的前瞻重现，不是
+再算旧CSV。最小干预沿保留的512/2048候选改变输入，固定P并报告F/V/Q/G和实际布局；
+若Q/G与R不重现，收缩端点规律；重现只加强条件化后缀描述，**不能单独分开工作量和
+实现/布局的因果份额**。八次候选不因此自动执行或改角色。
+
+**M2：重复的观测Host准备占用请求关键路径，能改变时延/到达位置，但不是全部幅度根因。**
+已有支持是O/P的现场工作确实减少、H全降；反证是D变化远大于H变化，1024高值H不是
+最大。缺少直接的低观测性能对照和更窄的准备消融。最小干预只使用下一小节的边界
+payload预备候选，保持数学计算、实际读取、同步和动态标记顺序；若现场准备减少而
+TTFT/ITL不改善，就否定该候选的性能预期，不能改用Q下降宣称成功。若仅trace位置或Q
+变化而Host性能不变，仅支持观测敏感性；若两者混合且波动较大，保持不可判别。
+
+**M3：同布局长值包含未被必要设备执行覆盖的操作间隔，观测实现可能影响它，但根因未知。**
+1024高值的108.717448ms内部未覆盖间隔和较少copy前完成进度是支持；它们不是硬件空闲
+或profiler因果证据。缺少的是同合同低观测运行是否也出现长完成时延。最小判别是将
+保留同一业务/完成政策的低观测参考与CUPTI观测分开、按预定次序复核实际TTFT/ITL：
+若无CUPTI仍出现长值，削弱“必须有CUPTI才出现”的强说法；仅CUPTI样本出现则支持
+继续审查观测敏感性，却不因有限未见证明自然路径绝无长值。此项不恢复内部驱动取证，
+也不能用不同运行的时钟/参数拼接解释旧1024。未知内部原因继续UNKNOWN。
+
+低观测参考只能观察其Host完成长值，不能在没有trace时断言“同布局/同108ms空隙也已
+复现”。同输入/backend并不证明两次kernel轨迹相同。因此该对照最多反驳观测实现的
+**必要条件**说法，不能精确标定CUPTI开销或分离旧run内部原因；两种机制可以共存。
+
+事实/来源直接复用[三点Pilot§14.2～14.5](coe_research_short_note_v0_1.md)、
+[全部位置来源](cupti_input_pilot_positions_v0_1.json)及[O/P实际结果](observation_preparation_engineering_v0_1.md)。
+上述三个问题不意味着三个新实验；未来资源/预算恢复时只选择能改变判断的一项，
+不把剩余内部机制全部设为前置。
+
+### 13.3 唯一优化候选：边界静态payload准备，先不改生产P
+
+源码核对定位到[`Gate8BoundaryRecorder.observe`](../../exposedpath/gate8_boundary.py)：
+每次重新deepcopy身份、构造静态payload、`validate_shape`并JSON编码。P helper虽已
+预备helper label，**没有消除此处重复准备**。选定的唯一候选是绑定run/request/ordinal
+后，在现有最后drain之前预校验并编码这些不变边界内容。时间戳、顺序检查、实际Host
+token、NVTX发出和CUDA调用保持现场执行；错身份/缓存/边界仍拒绝，不能把动态token
+读回放到准备阶段。它是**观测实现开销优化候选，不是已发现的模型算子优化**。
+
+在原runner中，请求开始record位于`t_start_ns`之后、forward之前，这段准备可以直接
+进入TTFT；首token完成采样后的record不会改变已记录的首token时间，却可能推迟下一
+Decode提交并进入后续ITL；末token后record主要影响trace point而不是已采末token时延。
+不能把所有三次准备都从TTFT减去。[实际顺序](../../exposedpath/runner.py)
+
+新增**仅测试内CPU原型**，调用真实边界schema，与原记录器在pass0/pass1下逐字节比较
+label/payload及动态时间/顺序。现场schema校验与编码确已移除，错run、缓存、顺序和时间
+仍拒绝。两轮小探针各三个CPU交替批次、每方案100次，三边界现场耗时分别处于
+0.767～0.952ms与0.0040～0.0056ms；**含准备的总成本**保留全部批次配对：首次旧/新为
+0.903/0.895、0.919/0.970、1.103/1.169ms，最终为0.890/0.878、0.896/0.886、0.890/0.895ms。
+总成本方向混合，不能宣称已降低或等价。这里只证明可移出该关键路径，不能
+外推目标GPU TTFT改善，更不能解释此前几十毫秒差异。本地Python3.12.7非目标3.11.16。
+
+该CPU计时使用Engineering身份、空marker sink及常数诊断时钟，只测Python现场工作；
+Pilot身份另作字节/顺序等价验证，未将两种身份计时混在一起。真实marker/采集/设备推进
+成本均未进入这个小计时，不能把微秒差当作目标机性能预报。
+
+这还是时间位置变换而非已证净优化。逐请求身份/标签准备的总成本必须连同setup另报；
+若产品侧request到达后才能准备，不得将其藏在到达之前，或把仅模型窗TTFT改善表述为
+端到端请求获益。当前先验证同一“resident＋drain后开始”的参考程序窗口，未来若要
+服务时延结论，必须同时给出含必要准备的可比端到端时间，不能换起点取得收益。
+
+未来性能主量必须是同一开始/Host-readable结束合同的TTFT或预定ITL，准备/setup成本另报。
+低观测参考无CUPTI/Nsight且不作逐API记录，但两方案都保留相同必要业务控制、实际读取及
+完成时钟；不能把现有“未开Nsight的P0”叫无包装。当前P.prepare限定pass1，**低观测P
+入口尚未具备**，需明确的新Engineering观测模式/身份，不能把旧role改名接入。CUPTI只
+解释对应观测运行，不用其时延代替低观测结果，不统一扣profiler成本。若要正式接入，
+必须另绑实现/hash及等价/失败文件链；本轮没有修改runner/helper或安装此原型。
+
+### 13.4 当前CUPTI接回完整A：复用点与停止差额
+
+可直接复用原[`a_accounting.py`](../../exposedpath_v141/a_accounting.py)原子分区、
+union/裁剪、五类互斥、同步优先级、子类守恒及invalid传播；
+[`submit_effect_bridge.py`](../../exposedpath_v141/submit_effect_bridge.py)0.3已保留实际API
+区间、typed效果边、逻辑零节点和query来源，`owners`已按runtime/root-driver筛选，
+嵌套driver不再次加入API墙钟。这一排重不是待重写算法。
+
+但完整A**不是把accounting_api_union_ns换字段名**，尚缺四项明确源合同连接：
+
+1. **Canonical/ABInputs lineage与ownership：** 新source的同钟point、完整request/phase
+   和producer身份必须经版本化投影进入ABInputs；不能伪造Nsight provider manifest、
+   把callback采样时刻当ActivityAPI时刻，或复用旧seal。
+2. **分类/submit证明：** 原A按旧API registry及correlation效果判定；新0.3的五类独立
+   driver查询、root driver提交、零payload逻辑提交不能凭名称/缺activity自动获得类别。
+   需新来源的精确domain/PID/CBID/返回/父子/效果证明桥，保留旧registry和旧读取。
+   原始分域correlation不能压成未经证明的同一整数，也不能为count0造activity。
+3. **完整同步集合：** 两个token的局部结果不是整窗每次物理同步的S覆盖。须枚举本窗
+   必需同步、内部driver同步及其捕获提交边界、W/terminal/validity，按原优先级从外层
+   API扣除同一片段。driver API行缺失时不拿callback包络补Host区间，未知保留。
+4. **全窗API owner及未解决量：** 现有owner去重/查询来源可复用，但需证明没有遗漏
+   standalone owner、窗口外/worker ownership或跨边界调用。opaque allocation仍须独立
+   admission，未知分类/未解决同步进入unattributed，不能自动转Host或non-submit。
+
+本轮直接向旧A提供独立CPU夹具：基准100 ticks为Host60/API20/wait10/residual10；
+若天真加入嵌套driver查询，其中5 ticks变unattributed；只有零memset而无设备效果时
+原A也保留5 ticks未知。它揭示旧入口所需证据，不是缺证场景应追绿的错误。
+**停止完整A接线：公式无需改，但新来源分类/同步投影合同尚未完整绑定，不能绕旧门。**
+当前不改A定义、registry、collector或输出可信全A；COE继续独立，不冒充Device wait。
+
+旧A接线的最小验收不是要求所有残余归零，而是：完整同钟窗口和typed API owner清单、
+全窗sync universe与S结果一一对应、对每个API片段有分类证明或显式未知、完整来源hash。
+输入完整但部分同步/类别不支持时仍可按原规则输出含unattributed的守恒结果并报告拒绝
+范围，不能把“全A”解读为“全部内部机制已解释”。局部token结果不足以给未审同步
+填VALID_EMPTY；没有实际Host API区间的内部同步也不能补造。该输入层协议未绑定前
+仅保留本节夹具/差额，不为显示五类而做不可信预算。
+
+### 13.5 batch与输出轴的短设计，仅审差额
+
+**batch候选**为L=512/1024/2048、B=1/2/4、输出2，共9个条件；**输出轴**独立为
+L512/B1、输出2/8/32。不得先做输入×batch×输出全交叉、动态batch或把旧样本拼入新block。
+未来若审三完整block，分别是27和9个新运行的**数量候选**，当前无GPU预算/固定顺序授权。
+batch的三block只能让各条件重复三次，不可能使九条件各占全部九位置；输出轴三条件可
+循环位置，但都不能消除漂移。最终顺序和主次比较必须执行前一次固定，不依结果改矩阵。
+
+最小实现/验证范围具体为：
+
+| 层 | batch差额 | 输出轴差额及共同验证 |
+|---|---|---|
+| 配置/身份 | `gate11_pilot`、`cupti_input_contract`与`one_configuration`目前固定B1；slot/run和摘要须同时绑定L/B/output | 计划与模型合同固定output2；显式新版本，旧0.1/0.2及历史角色不放宽。参数可声明不等于GPU资格 |
+| 输入/模型 | 构造并hash完整有序[B,L] input/mask、sample_indices及文件原字节，不能复制单行digest | 模型长度/词表/EOS按L+output核对；不改32周期输入、FP16/backend/P自然政策，未知预期token不能沿用29184/6556补齐 |
+| producer/P | `cupti_timeline_model.run`只取samples[0]，setup固定[1,L]；scope验证每步len1 | P.prepare/finish固定两label/used[0,1]，warmup/resident_capture也固定2。按全部输出步预备唯一标签，不改变实际读回与同步；原runner已循环output_len和向量Host读回 |
+| 实际完成 | 输出为[步数,B]真实Host ID，每步B个值都可读才是整次batched invocation完成点 | 存实际N+1个边界；缺步、重号、错run/sample或提前结束均拒绝。任一样本EOS按固定输出政策使整run排除/停止，不填充缺token、不中途缩B；EOS集合须显式绑定 |
+| S/COE与汇总 | 同一批量invocation按实际scope/顺序恢复，不分成B个独立请求 | producer_scopes、token_metrics、summarize、B后验读取均有“两token”限制，须联动改；W_j截止于各自sync，保留历史但不作Decode新增活动量，未来提交排除 |
+| A/预算/统计 | 每批只有一组全局完成时延，不提供每样本独立时延，不把预算乘B | Request/Prefill/Decode原子区间去重，操作间union；trace逐token窗口[p_(j−1),p_j)与必要历史分开，不能用Host的ITL作trace COE分母。run/block承担重复，token嵌套，不当独立样本；原A与COE分开 |
+
+上述边界内容正反例需覆盖[B,L]顺序/完整摘要、[N,B]实读值、缺step/错sample/EOS、
+提交/terminal失效及跨token去重；预期token的独立参考/低观测逐值配对必须分开，
+同配置两观测模式一致也不证明数学数值正确。旧B1/B4仅复用设计经验，不授新CUPTI资格。
+目前没有batch必须修改collector的证据；未知API/映射/依赖仍照常拒绝，不预告B2/B4必过。
+
+**用途和比较应随轴分开。** batch轴在每个固定L内，B4−B1的signed ΔQ和
+`R_B=Q_(L,4)−Q_(L,1)×G_(L,4)/G_(L,1)`为拟定端点比较，B2作预定中点描述；
+并报整批TTFT/实际输出数，不将TTFT除B称作每样本时延。它检验“仅输入长度触发的
+实现分支足以解释位置变化”的强说法，但B也可改变实现/布局；只有实际布局可比较时
+才给相应限制性判断，不能凭输入token总量相同强认负载等价。输入内比较按各固定B
+单列，全部signed及分母失效null保留，不跨batch/旧批拼block。
+
+输出轴的主用途是观察j=1～N−1的实际ITL序列及每run预定Decode平均ITL是否随生成
+推进改变，首tokenTTFT另报；COE_j/trace逐token窗与同窗GPU union仅作结构解释。
+共用前两步可以描述，不把输出2的第二token代表整个输出32。长生成的KV前缀、实际
+后续token以及按N暖机后的内存状态可能共同变化，不能把差异全归为“输出数量”因果。
+每run的后续步是相关重复，跨run/block才承担实验重复；不把几十个token扩成n。
+确切统计量/顺序/角色/预算须另审，未执行或不可评估的条件留空，不做插值或追单调。
+
+目前`validate_tokens`逐值拒绝EOS，原runner遇EOS停止；最后一个预定输出步出现EOS也
+不得静默改成成功政策。将来应同时记录实际步数和命中EOS的样本/步号，再按已审固定
+无EOS合同整run排除并硬停，不删除该失败点后补block。新增B或N需要相应完整输出
+校验依据，[2,1]旧参考不能广播/补齐为[N,B]；低观测逐值配对也不等于独立数值正确性。
+
+**输出轴存在实物容量风险，不能只解锁循环。** 当前固定DLL的Core上限是131072 calls、
+131072 records、2048 markers。仅为容量审查有限读取已封存bd377c的block1/G512 capture，
+复核该member SHA256 `41d2dd7f3ebbda7828b3dcc7f12a10822490c19fd39ecf4f486a136e317d0d88`：
+两token已有83333 callbacks/57558 records/19 markers；按Decode半开phase内ENTRY/start
+计数，增量为38874/26958/5。若后续步保持这一增量，输出8约316577 calls/219306 records，
+输出32约1249553/866298，均超固定上限；这是**条件化容量估算**，不是目标必然溢出的
+证明，后续实现可能改变。原flush不释放这些全会话数组，不能靠多flush宣称容量已够。
+本轮不扩collector或重编DLL，输出8/32实现/执行准备停在该明确资源差额，不能无声截断。
+临时12GiB及300s/180s也不自动成为长输出资格，须按计划实际保留量和容量另审。
+
+另一项成本来自[`analyze_model`](../../scripts/cupti_timeline_b.py)当前逐token调用
+`analyze_files`重复读取/建证据，再保存累计成员结果；输出增长会增加重复前缀及派生量，
+旧180秒分析时限不能外推。未来若解除容量门，最小实现应逐run复用已验证的同一Raw对象、
+保持每token独立截止点和完整审查，只保存可追溯成员/来源引用；不能截断前缀来省空间。
+这是后续方案差额，不是本轮许可扩建collector、换schema或重采的理由。
+
+**本轮完成与停点。** 真实源码核对、独立理论反例、边界CPU等价原型和旧A输入差额夹具
+完成；仅新增`tests/test_coe_mechanism_preparation.py`，初次定向16 passed/0 failed/0 skipped，
+0.94s为初次结果；继续补固定轨迹等式/历史裁剪及Pilot身份等价后，最终相关命令为
+`python -m pytest -q -ra -p no:cacheprovider tests/test_coe_mechanism_preparation.py
+--basetemp .local/coe_mechanism_final_20261023 --junitxml .local/coe_mechanism_final_20261023.xml`：
+**19 passed / 0 failed / 0 skipped，1.01s**。不是Q0/真实CUDA资格。CPU计时与容量小回执保存在本地
+`coe_mechanism_preparation_v0_1`；仅读取一份已审Raw用于新容量问题，未重建S/重算旧响应。
+主稿、runner/P、生产S/A/B/COE、registry/DLL、受控/8次配置、Raw及用户DOCX均不变。
+下一项本地选择应先审边界候选与低观测模式、或上述A输入合同的明确条款，不自动启动
+矩阵、部署包、服务器或GPU；当前未知根因/旧BLOCKED/Gate13限定PASS均保持。
