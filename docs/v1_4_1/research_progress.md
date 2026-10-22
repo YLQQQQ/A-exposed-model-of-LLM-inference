@@ -35,7 +35,21 @@
   Host读取及drain次序。封存九次summary只复算小型比较，旧18条精确Δ/R一致，不重跑
   Raw/S/Q0。py_compile/compileall、diff通过；本地3.12.7，目标3.11.16。目标路径/Git/
   Python/空间/模型为明确替身，原A不含的CUDART用封存file-fact；不冒称目标GPU资格。
-- [ ] 固定实现commit之后再绑定交付包身份，避免哈希自引用；目标机4096仍NOT_RUN。
+- [x] 固定实现/控制/分析`62b5a5a1d2e4b0b3cf63df66516cc93cfa74a5a6`后再绑定唯一
+  `cupti_input_62b5a5a1d2e4_delivery.zip`：**171,371 bytes**，SHA256
+  `a2b111af33441d2a5cbd80f042beec53adf66d8de6b883147a66e7699c7fb766`；manifest SHA256
+  `dc42f1105befef8d712502635d87b4ec2411b19ef3dbbdff4a5d756e64a789d9`，launcher SHA256
+  `0a0d57d35eb10049b95798efb68104df5813a55f7d82b7ec9bd4150dde88b973`。41成员/40清单、
+  CRC/安全路径/全覆盖hash、Git源码字节、二维输入/config/原A/event引用、PS5.1解析和
+  真实隔离合同入口通过。最终包的static main再于真实`-I`CPU进程中，使用封存A/event
+  及458源码文件验证、显式目标环境替身走到静态回执/封包，0模型/0session；这不是
+  服务器新A。审计见忽略的`cupti_configured_input_v0_2/`；服务器checkout仍从本批真实
+  native postcheck绑定6c744bf，现场再次严格核HEAD/clean/源码与已审DLL，不移动checkout。
+  原A receipt9d6d4000…971e、event receipt824183fc…ed9和未变组件资格复用，不重跑/重编。
+  控制交付与本地文档后续HEAD分开，包内无DLL/EXE/巨型domain/新采集器。
+- [ ] 协调审查后由用户执行默认A整段入口（本地`.local/CUPTI_CONFIGURED_STAGE_A.ps1`），
+  新A唯一回传`cupti_input_62b5a5a1d2e4_static.zip`；A未审前不提供直接B启动命令。
+  未来B唯一回传`cupti_input_62b5a5a1d2e4_engineering.zip`，结果仍待实例审查；4096 NOT_RUN。
 - [ ] 真实新A回执审查后才另给B命令。默认A只核包、固定checkout/source/library、原A/event、
   实际config、输入/角色、语法及新鲜参与卷12GiB；不加载CUDA/模型，不构建/安装。模型
   硬300s、分析硬180s，暂不扩大；预计5～12分钟含核验/封包，扩展原件0.3～0.8GiB、
