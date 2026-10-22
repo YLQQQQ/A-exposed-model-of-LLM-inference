@@ -1,0 +1,4242 @@
+{
+  "schema_version": "cupti-input-pilot-closeout/0.1.0",
+  "material_passport": {
+    "origin_skill": "academic-research-suite/experiment-agent",
+    "mode": "validate",
+    "origin_date": "2026-10-22",
+    "verification_status": "ANALYZED",
+    "version_label": "cupti-threepoint-v0.1"
+  },
+  "verdict": {
+    "status": "PASS_LIMITED_PILOT_EVIDENCE_REVIEW_NOT_FORMAL",
+    "archive": "cupti_input_bd377c860faf_pilot.zip",
+    "sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+    "runs": 9,
+    "complete_blocks": 3,
+    "token_chains": 18,
+    "excluded_runs": 0,
+    "original_zip_and_reports_unchanged": true,
+    "all_operation_gpu_unions_equal_COE": true,
+    "all_original_sync_intersections_zero": true,
+    "pure_Host_blocking": "NOT_IDENTIFIED",
+    "causal_root": "NOT_IDENTIFIED",
+    "formal_eligible": false,
+    "all_first_token_endpoint_R_positive": true,
+    "elapsed_seconds": 23.878124199982267,
+    "statistical_unit": "COMPLETE_BLOCK_NOT_TOKEN_OR_KERNEL",
+    "verification_status": "ANALYZED_RAW_ARITHMETIC_RECHECK_NOT_GPU_RERUN",
+    "old_data_pooled": false
+  },
+  "archive_reference": {
+    "archive": "cupti_input_bd377c860faf_pilot.zip",
+    "bytes": 107168583,
+    "sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+    "members": 400,
+    "manifest_entries": 399,
+    "manifest_sha256": "7de99a3981b26cf8539a29092f88c07eea51c7a919bf5742ad99b267df3283dc",
+    "safe_paths_unique_complete_index": true,
+    "CRC_and_all_399_hashes": "REUSED_USER_COORDINATOR_REVIEW",
+    "local_scope": "archive SHA/index; consumed file hashes; saved S membership; Raw interval/submission scans; signed arithmetic",
+    "no_full_analyzer_or_S_reconstruction": true,
+    "raw_expanded": false
+  },
+  "static_reference": {
+    "archive": "cupti_input_bd377c860faf_static.zip",
+    "bytes": 191323,
+    "sha256": "d7ddf5bc43fd1ad7e35d4e3f01de3bdd80bb277567e85fa298cae0fddf5ef1d5",
+    "receipt_sha256": "681193fd4557079312589725b126a1f8412efb257b6044fa88359b0a054e7828",
+    "manifest_sha256": "eabe1fdf2ca95bc5875acc2b7f752ed148ca12231a81ed671fa8b5795aa3a098",
+    "status": "STATIC_READY_FOR_REVIEW",
+    "matches_pilot_reviewed_static_sha256": true
+  },
+  "source_hash_checks": 205,
+  "execution_control_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+  "native_runner_DLL_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+  "policies": {
+    "bridge": "submit-effect-bridge/0.3.0",
+    "driver_queries": "cupti-api22-driver-queries/0.1.0",
+    "runtime_queries": "cupti-api22-runtime-queries/0.1.0",
+    "activity": "cupti-api22-activity-policy/0.2.0"
+  },
+  "qualified_scope": "THIS_NINE_RUN_PILOT_CLOSED_PRIOR_SINGLE_FIFO_LOCAL_COE_NOT_GENERAL_PROVIDER",
+  "membership_verification": "REUSE_COORDINATOR_NINE_RAW_MEMBERSHIP_REVIEW; NO_NEW_S_RECOVERY",
+  "local_verification": "CONSUMED_FILE_HASHES_RAW_ID_SUBMIT_SOURCE_INTERVAL_ARITHMETIC_AND_SIGNED_COMPARISONS",
+  "clock": "CUPTI_TIMESTAMP_NS; no cross-clock subtraction",
+  "tables": [
+    {
+      "path": "cupti_input_pilot_operations_v0_1.csv",
+      "bytes": 18843,
+      "sha256": "278a6e81b373a0956375440d7c4d09074d13f9aa29fd514656a2e0f337ccecab"
+    },
+    {
+      "path": "cupti_input_pilot_comparisons_v0_1.csv",
+      "bytes": 5276,
+      "sha256": "de0afcc0bf9f498d7cd5569ab1d75c19c203be5ea781c660a0e35414db559e10"
+    },
+    {
+      "path": "cupti_input_pilot_1024_mechanism_v0_1.csv",
+      "bytes": 4077,
+      "sha256": "5eb8ba1707aea896ef360f98d6cca13faad83a1e7b71201f6aa8dd625dc318a8"
+    }
+  ],
+  "runs": [
+    {
+      "run_id": "cupti-input-bd377c860faf-b1-G512P-pass1",
+      "block": 1,
+      "position": 1,
+      "input_tokens": 512,
+      "capture_sha256": "41d2dd7f3ebbda7828b3dcc7f12a10822490c19fd39ecf4f486a136e317d0d88",
+      "quality": {
+        "closed": true,
+        "errors": [],
+        "overflow": 0,
+        "dropped": 0,
+        "dropped_query_errors": 0,
+        "dropped_scopes": [
+          [
+            1,
+            7
+          ]
+        ]
+      },
+      "role": "Pilot",
+      "tokens": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+      "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+      "token_details": [
+        {
+          "token_index": 0,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b1-G512P-pass1",
+            "pid": 71372,
+            "tid": 60620,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511291938005100,
+            "request_start": 2511291939166600,
+            "completion_end": 2511292071788500,
+            "copy_api": "record:30593",
+            "sync_api": "record:30595",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              29184
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 0,
+            "phase": "Prefill",
+            "phase_start_ns": 2511291939166600,
+            "phase_end_ns": 2511292071788500,
+            "phase_ns": 132621900,
+            "coe_ns": 2403154,
+            "coe_phase_ratio": 0.018120340607395913,
+            "phase_gpu_union_ns": 39417788,
+            "coe_phase_gpu_ratio": 0.06096623179362576,
+            "operation_gpu_union_ns": 2403154,
+            "operation_wall_ns": 5060900,
+            "operation_complement_ns": 2657746,
+            "copy_wall_ns": 5041500,
+            "sync_wall_ns": 13600,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 2398802,
+            "memop_coe_ns": 4352,
+            "necessary_before_copy_ns": 37014634,
+            "copy_api_id": "record:30593",
+            "sync_api_id": "record:30595",
+            "copy_entry_ns": 2511292064345800,
+            "sync_return_ns": 2511292069406700,
+            "last_pre_copy_required_submission_return_ns": 2511292064096100,
+            "copy_entry_after_last_submission_ns": 249700,
+            "terminal_id": "record:30592",
+            "terminal_end_ns": 2511292069116336,
+            "terminal_after_copy_entry_ns": 4770536,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b1-G512P-pass1",
+            "block": 1,
+            "position": 1,
+            "input_tokens": 512,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 1.8120340607395913,
+            "gpu_coe_percent": 6.0966231793625765,
+            "member_count": 1905,
+            "kernel_count": 1818,
+            "kernel_complete_before_copy_count": 1743,
+            "kernel_active_in_operation_count": 75,
+            "kernel_sequence_layout_sha256": "f2fe56bcdb388ee845625a712dadf9065759b81ab2c08e3b2054dba16f348ba1",
+            "copy_entry_relative_phase_ns": 125179200,
+            "last_kernel_submit_relative_phase_ns": 124929500,
+            "last_kernel_end_relative_copy_ns": 4768264,
+            "before_first_operation_activity_ns": 1536188,
+            "internal_activity_gaps_ns": 831194,
+            "after_terminal_gap_ns": 290364,
+            "largest_operation_activity_gap_ns": 1536188,
+            "observed_accounting_api_union_in_phase_ns": 65795000,
+            "scope_source": "runs/cupti-input-bd377c860faf-b1-G512P-pass1/model/scope_token0.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b1-G512P-pass1/model/derived_token0/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b1-G512P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 0,
+              "end_relative_copy_ns": 1536188,
+              "ns": 1536188,
+              "preceding_ids": [],
+              "following_ids": [
+                "record:29339"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1856250,
+              "end_relative_copy_ns": 2326903,
+              "ns": 470653,
+              "preceding_ids": [
+                "record:30016"
+              ],
+              "following_ids": [
+                "record:30023"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 4770536,
+              "end_relative_copy_ns": 5060900,
+              "ns": 290364,
+              "preceding_ids": [
+                "record:30592"
+              ],
+              "following_ids": []
+            },
+            {
+              "start_relative_copy_ns": 2994611,
+              "end_relative_copy_ns": 3207794,
+              "ns": 213183,
+              "preceding_ids": [
+                "record:30416"
+              ],
+              "following_ids": [
+                "record:30430"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1646364,
+              "end_relative_copy_ns": 1684539,
+              "ns": 38175,
+              "preceding_ids": [
+                "record:29704"
+              ],
+              "following_ids": [
+                "record:29715"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1710075,
+              "end_relative_copy_ns": 1723547,
+              "ns": 13472,
+              "preceding_ids": [
+                "record:29836"
+              ],
+              "following_ids": [
+                "record:29847"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:30593",
+            "domain": "RUNTIME",
+            "correlation": 28678,
+            "cbid": 41,
+            "tid": 60620,
+            "start": 2511292064345800,
+            "end": 2511292069387300
+          },
+          "sync": {
+            "id": "record:30595",
+            "domain": "RUNTIME",
+            "correlation": 28679,
+            "cbid": 131,
+            "tid": 60620,
+            "start": 2511292069393100,
+            "end": 2511292069406700
+          },
+          "terminal": {
+            "id": "record:30592",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 28678,
+            "runtime_correlation": 0,
+            "pid": 71372,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511292069115280,
+            "end": 2511292069116336,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 0,
+          "memset_classes": {
+            "OBSERVED_POSITIVE": 85
+          }
+        },
+        {
+          "token_index": 1,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b1-G512P-pass1",
+            "pid": 71372,
+            "tid": 60620,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511291938005100,
+            "request_start": 2511291939166600,
+            "completion_end": 2511292177507000,
+            "copy_api": "record:57551",
+            "sync_api": "record:57553",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              6556
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 1,
+            "phase": "Decode",
+            "phase_start_ns": 2511292071788500,
+            "phase_end_ns": 2511292177507000,
+            "phase_ns": 105718500,
+            "coe_ns": 808028,
+            "coe_phase_ratio": 0.00764320341283692,
+            "phase_gpu_union_ns": 11475659,
+            "coe_phase_gpu_ratio": 0.07041233971835517,
+            "operation_gpu_union_ns": 808028,
+            "operation_wall_ns": 1334300,
+            "operation_complement_ns": 526272,
+            "copy_wall_ns": 1325000,
+            "sync_wall_ns": 7600,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 807067,
+            "memop_coe_ns": 961,
+            "necessary_before_copy_ns": 50085419,
+            "copy_api_id": "record:57551",
+            "sync_api_id": "record:57553",
+            "copy_entry_ns": 2511292174909100,
+            "sync_return_ns": 2511292176243400,
+            "last_pre_copy_required_submission_return_ns": 2511292174743800,
+            "copy_entry_after_last_submission_ns": 165300,
+            "terminal_id": "record:57550",
+            "terminal_end_ns": 2511292176229096,
+            "terminal_after_copy_entry_ns": 1319996,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b1-G512P-pass1",
+            "block": 1,
+            "position": 1,
+            "input_tokens": 512,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 0.7643203412836921,
+            "gpu_coe_percent": 7.041233971835517,
+            "member_count": 3497,
+            "kernel_count": 3408,
+            "kernel_complete_before_copy_count": 3394,
+            "kernel_active_in_operation_count": 14,
+            "kernel_sequence_layout_sha256": "f66af3794a29563f4114750cae3dac740644bce5a76c12cdf4c0ff198735d123",
+            "copy_entry_relative_phase_ns": 103120600,
+            "last_kernel_submit_relative_phase_ns": 102955300,
+            "last_kernel_end_relative_copy_ns": 1261852,
+            "before_first_operation_activity_ns": 311394,
+            "internal_activity_gaps_ns": 200574,
+            "after_terminal_gap_ns": 14304,
+            "largest_operation_activity_gap_ns": 311394,
+            "observed_accounting_api_union_in_phase_ns": 41445900,
+            "scope_source": "runs/cupti-input-bd377c860faf-b1-G512P-pass1/model/scope_token1.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b1-G512P-pass1/model/derived_token1/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b1-G512P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 0,
+              "end_relative_copy_ns": 311394,
+              "ns": 311394,
+              "preceding_ids": [],
+              "following_ids": [
+                "record:57318"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 950174,
+              "end_relative_copy_ns": 1018589,
+              "ns": 68415,
+              "preceding_ids": [
+                "record:57540"
+              ],
+              "following_ids": [
+                "record:57543"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 883550,
+              "end_relative_copy_ns": 949790,
+              "ns": 66240,
+              "preceding_ids": [
+                "record:57521"
+              ],
+              "following_ids": [
+                "record:57540"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1261852,
+              "end_relative_copy_ns": 1319419,
+              "ns": 57567,
+              "preceding_ids": [
+                "record:57543"
+              ],
+              "following_ids": [
+                "record:57550"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1319996,
+              "end_relative_copy_ns": 1334300,
+              "ns": 14304,
+              "preceding_ids": [
+                "record:57550"
+              ],
+              "following_ids": []
+            },
+            {
+              "start_relative_copy_ns": 363713,
+              "end_relative_copy_ns": 364449,
+              "ns": 736,
+              "preceding_ids": [
+                "record:57364"
+              ],
+              "following_ids": [
+                "record:57375"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:57551",
+            "domain": "RUNTIME",
+            "correlation": 54043,
+            "cbid": 41,
+            "tid": 60620,
+            "start": 2511292174909100,
+            "end": 2511292176234100
+          },
+          "sync": {
+            "id": "record:57553",
+            "domain": "RUNTIME",
+            "correlation": 54044,
+            "cbid": 131,
+            "tid": 60620,
+            "start": 2511292176235800,
+            "end": 2511292176243400
+          },
+          "terminal": {
+            "id": "record:57550",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 54043,
+            "runtime_correlation": 0,
+            "pid": 71372,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511292176228519,
+            "end": 2511292176229096,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 0,
+          "memset_classes": {
+            "OBSERVED_POSITIVE": 86
+          }
+        }
+      ],
+      "elapsed_local_seconds": 2.679927100019995
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b1-G1024P-pass1",
+      "block": 1,
+      "position": 2,
+      "input_tokens": 1024,
+      "capture_sha256": "17638a94ab3ec7f705b5366e65a88ba26a791986b5378e45061d1bbf78a190b0",
+      "quality": {
+        "closed": true,
+        "errors": [],
+        "overflow": 0,
+        "dropped": 0,
+        "dropped_query_errors": 0,
+        "dropped_scopes": [
+          [
+            1,
+            7
+          ]
+        ]
+      },
+      "role": "Pilot",
+      "tokens": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+      "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+      "token_details": [
+        {
+          "token_index": 0,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b1-G1024P-pass1",
+            "pid": 53456,
+            "tid": 14140,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511361231140000,
+            "request_start": 2511361232795400,
+            "completion_end": 2511361330391600,
+            "copy_api": "record:30649",
+            "sync_api": "record:30651",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              29184
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 0,
+            "phase": "Prefill",
+            "phase_start_ns": 2511361232795400,
+            "phase_end_ns": 2511361330391600,
+            "phase_ns": 97596200,
+            "coe_ns": 3115148,
+            "coe_phase_ratio": 0.03191874273793447,
+            "phase_gpu_union_ns": 57877385,
+            "coe_phase_gpu_ratio": 0.05382323337517754,
+            "operation_gpu_union_ns": 3115148,
+            "operation_wall_ns": 3397200,
+            "operation_complement_ns": 282052,
+            "copy_wall_ns": 3387700,
+            "sync_wall_ns": 7300,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 3024173,
+            "memop_coe_ns": 90975,
+            "necessary_before_copy_ns": 54762237,
+            "copy_api_id": "record:30649",
+            "sync_api_id": "record:30651",
+            "copy_entry_ns": 2511361325593400,
+            "sync_return_ns": 2511361328990600,
+            "last_pre_copy_required_submission_return_ns": 2511361325396200,
+            "copy_entry_after_last_submission_ns": 197200,
+            "terminal_id": "record:30648",
+            "terminal_end_ns": 2511361328965171,
+            "terminal_after_copy_entry_ns": 3371771,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b1-G1024P-pass1",
+            "block": 1,
+            "position": 2,
+            "input_tokens": 1024,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 3.191874273793447,
+            "gpu_coe_percent": 5.382323337517754,
+            "member_count": 1793,
+            "kernel_count": 1762,
+            "kernel_complete_before_copy_count": 1750,
+            "kernel_active_in_operation_count": 12,
+            "kernel_sequence_layout_sha256": "228c4c186948fbc57eca458687e4b4f96a0f9aceceeba9a767eb949b00931123",
+            "copy_entry_relative_phase_ns": 92798000,
+            "last_kernel_submit_relative_phase_ns": 92600800,
+            "last_kernel_end_relative_copy_ns": 3359643,
+            "before_first_operation_activity_ns": 30353,
+            "internal_activity_gaps_ns": 226270,
+            "after_terminal_gap_ns": 25429,
+            "largest_operation_activity_gap_ns": 122047,
+            "observed_accounting_api_union_in_phase_ns": 43011600,
+            "scope_source": "runs/cupti-input-bd377c860faf-b1-G1024P-pass1/model/scope_token0.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b1-G1024P-pass1/model/derived_token0/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b1-G1024P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 3218076,
+              "end_relative_copy_ns": 3340123,
+              "ns": 122047,
+              "preceding_ids": [
+                "record:30619"
+              ],
+              "following_ids": [
+                "record:30638"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 119664,
+              "end_relative_copy_ns": 180688,
+              "ns": 61024,
+              "preceding_ids": [
+                "record:30458"
+              ],
+              "following_ids": [
+                "record:30461"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 0,
+              "end_relative_copy_ns": 30353,
+              "ns": 30353,
+              "preceding_ids": [],
+              "following_ids": [
+                "record:30458"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 3371771,
+              "end_relative_copy_ns": 3397200,
+              "ns": 25429,
+              "preceding_ids": [
+                "record:30648"
+              ],
+              "following_ids": []
+            },
+            {
+              "start_relative_copy_ns": 425198,
+              "end_relative_copy_ns": 436270,
+              "ns": 11072,
+              "preceding_ids": [
+                "record:30572"
+              ],
+              "following_ids": [
+                "record:30619"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 3359643,
+              "end_relative_copy_ns": 3370715,
+              "ns": 11072,
+              "preceding_ids": [
+                "record:30641"
+              ],
+              "following_ids": [
+                "record:30648"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:30649",
+            "domain": "RUNTIME",
+            "correlation": 28846,
+            "cbid": 41,
+            "tid": 14140,
+            "start": 2511361325593400,
+            "end": 2511361328981100
+          },
+          "sync": {
+            "id": "record:30651",
+            "domain": "RUNTIME",
+            "correlation": 28847,
+            "cbid": 131,
+            "tid": 14140,
+            "start": 2511361328983300,
+            "end": 2511361328990600
+          },
+          "terminal": {
+            "id": "record:30648",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 28846,
+            "runtime_correlation": 0,
+            "pid": 53456,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511361328964115,
+            "end": 2511361328965171,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 84,
+          "memset_classes": {
+            "OBSERVED_ZERO": 84,
+            "OBSERVED_POSITIVE": 29
+          }
+        },
+        {
+          "token_index": 1,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b1-G1024P-pass1",
+            "pid": 53456,
+            "tid": 14140,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511361231140000,
+            "request_start": 2511361232795400,
+            "completion_end": 2511361427931300,
+            "copy_api": "record:57579",
+            "sync_api": "record:57581",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              6556
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 1,
+            "phase": "Decode",
+            "phase_start_ns": 2511361330391600,
+            "phase_end_ns": 2511361427931300,
+            "phase_ns": 97539700,
+            "coe_ns": 1187930,
+            "coe_phase_ratio": 0.012178938421996377,
+            "phase_gpu_union_ns": 11725829,
+            "coe_phase_gpu_ratio": 0.10130882856981796,
+            "operation_gpu_union_ns": 1187930,
+            "operation_wall_ns": 2184600,
+            "operation_complement_ns": 996670,
+            "copy_wall_ns": 2175400,
+            "sync_wall_ns": 7400,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 1186585,
+            "memop_coe_ns": 1345,
+            "necessary_before_copy_ns": 68415284,
+            "copy_api_id": "record:57579",
+            "sync_api_id": "record:57581",
+            "copy_entry_ns": 2511361424350600,
+            "sync_return_ns": 2511361426535200,
+            "last_pre_copy_required_submission_return_ns": 2511361424200000,
+            "copy_entry_after_last_submission_ns": 150600,
+            "terminal_id": "record:57578",
+            "terminal_end_ns": 2511361426509843,
+            "terminal_after_copy_entry_ns": 2159243,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b1-G1024P-pass1",
+            "block": 1,
+            "position": 2,
+            "input_tokens": 1024,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 1.2178938421996377,
+            "gpu_coe_percent": 10.130882856981795,
+            "member_count": 3385,
+            "kernel_count": 3352,
+            "kernel_complete_before_copy_count": 3338,
+            "kernel_active_in_operation_count": 14,
+            "kernel_sequence_layout_sha256": "97a9ce566b7958f22234ea9cf2f1acf1436d31f0b9359dca38f46dd91ee8668e",
+            "copy_entry_relative_phase_ns": 93959000,
+            "last_kernel_submit_relative_phase_ns": 93808400,
+            "last_kernel_end_relative_copy_ns": 1827757,
+            "before_first_operation_activity_ns": 489461,
+            "internal_activity_gaps_ns": 481852,
+            "after_terminal_gap_ns": 25357,
+            "largest_operation_activity_gap_ns": 489461,
+            "observed_accounting_api_union_in_phase_ns": 42854500,
+            "scope_source": "runs/cupti-input-bd377c860faf-b1-G1024P-pass1/model/scope_token1.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b1-G1024P-pass1/model/derived_token1/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b1-G1024P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 0,
+              "end_relative_copy_ns": 489461,
+              "ns": 489461,
+              "preceding_ids": [],
+              "following_ids": [
+                "record:57346"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1827757,
+              "end_relative_copy_ns": 2158218,
+              "ns": 330461,
+              "preceding_ids": [
+                "record:57571"
+              ],
+              "following_ids": [
+                "record:57578"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1757677,
+              "end_relative_copy_ns": 1812845,
+              "ns": 55168,
+              "preceding_ids": [
+                "record:57568"
+              ],
+              "following_ids": [
+                "record:57571"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 559349,
+              "end_relative_copy_ns": 610869,
+              "ns": 51520,
+              "preceding_ids": [
+                "record:57346"
+              ],
+              "following_ids": [
+                "record:57389"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1720045,
+              "end_relative_copy_ns": 1757357,
+              "ns": 37312,
+              "preceding_ids": [
+                "record:57549"
+              ],
+              "following_ids": [
+                "record:57568"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 2159243,
+              "end_relative_copy_ns": 2184600,
+              "ns": 25357,
+              "preceding_ids": [
+                "record:57578"
+              ],
+              "following_ids": []
+            }
+          ],
+          "copy": {
+            "id": "record:57579",
+            "domain": "RUNTIME",
+            "correlation": 54183,
+            "cbid": 41,
+            "tid": 14140,
+            "start": 2511361424350600,
+            "end": 2511361426526000
+          },
+          "sync": {
+            "id": "record:57581",
+            "domain": "RUNTIME",
+            "correlation": 54184,
+            "cbid": 131,
+            "tid": 14140,
+            "start": 2511361426527800,
+            "end": 2511361426535200
+          },
+          "terminal": {
+            "id": "record:57578",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 54183,
+            "runtime_correlation": 0,
+            "pid": 53456,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511361426508818,
+            "end": 2511361426509843,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 84,
+          "memset_classes": {
+            "OBSERVED_ZERO": 84,
+            "OBSERVED_POSITIVE": 30
+          }
+        }
+      ],
+      "elapsed_local_seconds": 2.409420699987095
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b1-G2048P-pass1",
+      "block": 1,
+      "position": 3,
+      "input_tokens": 2048,
+      "capture_sha256": "fadc99eaaf65d6e06cc3417bd29abc9c0d192e96d36c1eb96aa8363109bb6092",
+      "quality": {
+        "closed": true,
+        "errors": [],
+        "overflow": 0,
+        "dropped": 0,
+        "dropped_query_errors": 0,
+        "dropped_scopes": [
+          [
+            1,
+            7
+          ]
+        ]
+      },
+      "role": "Pilot",
+      "tokens": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+      "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+      "token_details": [
+        {
+          "token_index": 0,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b1-G2048P-pass1",
+            "pid": 30848,
+            "tid": 10924,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511427587319000,
+            "request_start": 2511427588290800,
+            "completion_end": 2511427795333800,
+            "copy_api": "record:30229",
+            "sync_api": "record:30231",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              29184
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 0,
+            "phase": "Prefill",
+            "phase_start_ns": 2511427588290800,
+            "phase_end_ns": 2511427795333800,
+            "phase_ns": 207043000,
+            "coe_ns": 79349730,
+            "coe_phase_ratio": 0.383252416164758,
+            "phase_gpu_union_ns": 144934612,
+            "coe_phase_gpu_ratio": 0.5474864071806395,
+            "operation_gpu_union_ns": 79349730,
+            "operation_wall_ns": 120935900,
+            "operation_complement_ns": 41586170,
+            "copy_wall_ns": 120909600,
+            "sync_wall_ns": 15600,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 79236548,
+            "memop_coe_ns": 113182,
+            "necessary_before_copy_ns": 65584882,
+            "copy_api_id": "record:30229",
+            "sync_api_id": "record:30231",
+            "copy_entry_ns": 2511427672376500,
+            "sync_return_ns": 2511427793312400,
+            "last_pre_copy_required_submission_return_ns": 2511427672259100,
+            "copy_entry_after_last_submission_ns": 117400,
+            "terminal_id": "record:30228",
+            "terminal_end_ns": 2511427793252826,
+            "terminal_after_copy_entry_ns": 120876326,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b1-G2048P-pass1",
+            "block": 1,
+            "position": 3,
+            "input_tokens": 2048,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 38.32524161647581,
+            "gpu_coe_percent": 54.74864071806395,
+            "member_count": 1793,
+            "kernel_count": 1762,
+            "kernel_complete_before_copy_count": 818,
+            "kernel_active_in_operation_count": 944,
+            "kernel_sequence_layout_sha256": "3fdc848443c0c9344d6ecdb8515f9a949680b06e3a7879a2d79046bdb82b0c43",
+            "copy_entry_relative_phase_ns": 84085700,
+            "last_kernel_submit_relative_phase_ns": 83968300,
+            "last_kernel_end_relative_copy_ns": 120873862,
+            "before_first_operation_activity_ns": 0,
+            "internal_activity_gaps_ns": 41526596,
+            "after_terminal_gap_ns": 59574,
+            "largest_operation_activity_gap_ns": 10718979,
+            "observed_accounting_api_union_in_phase_ns": 154328900,
+            "scope_source": "runs/cupti-input-bd377c860faf-b1-G2048P-pass1/model/scope_token0.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b1-G2048P-pass1/model/derived_token0/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b1-G2048P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 89488217,
+              "end_relative_copy_ns": 100207196,
+              "ns": 10718979,
+              "preceding_ids": [
+                "record:28977"
+              ],
+              "following_ids": [
+                "record:28988"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 105930491,
+              "end_relative_copy_ns": 115020264,
+              "ns": 9089773,
+              "preceding_ids": [
+                "record:30152"
+              ],
+              "following_ids": [
+                "record:30199"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 78951476,
+              "end_relative_copy_ns": 82947006,
+              "ns": 3995530,
+              "preceding_ids": [
+                "record:27709"
+              ],
+              "following_ids": [
+                "record:27720"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 68245425,
+              "end_relative_copy_ns": 71940284,
+              "ns": 3694859,
+              "preceding_ids": [
+                "record:26469"
+              ],
+              "following_ids": [
+                "record:26483"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 57340175,
+              "end_relative_copy_ns": 57772557,
+              "ns": 432382,
+              "preceding_ids": [
+                "record:24517"
+              ],
+              "following_ids": [
+                "record:24528"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 32484220,
+              "end_relative_copy_ns": 32912410,
+              "ns": 428190,
+              "preceding_ids": [
+                "record:20085"
+              ],
+              "following_ids": [
+                "record:20099"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:30229",
+            "domain": "RUNTIME",
+            "correlation": 28426,
+            "cbid": 41,
+            "tid": 10924,
+            "start": 2511427672376500,
+            "end": 2511427793286100
+          },
+          "sync": {
+            "id": "record:30231",
+            "domain": "RUNTIME",
+            "correlation": 28427,
+            "cbid": 131,
+            "tid": 10924,
+            "start": 2511427793296800,
+            "end": 2511427793312400
+          },
+          "terminal": {
+            "id": "record:30228",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 28426,
+            "runtime_correlation": 0,
+            "pid": 30848,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511427793251802,
+            "end": 2511427793252826,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 0,
+          "memset_classes": {
+            "OBSERVED_POSITIVE": 29
+          }
+        },
+        {
+          "token_index": 1,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b1-G2048P-pass1",
+            "pid": 30848,
+            "tid": 10924,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511427587319000,
+            "request_start": 2511427588290800,
+            "completion_end": 2511427883388000,
+            "copy_api": "record:57159",
+            "sync_api": "record:57161",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              6556
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 1,
+            "phase": "Decode",
+            "phase_start_ns": 2511427795333800,
+            "phase_end_ns": 2511427883388000,
+            "phase_ns": 88054200,
+            "coe_ns": 686172,
+            "coe_phase_ratio": 0.007792609551844205,
+            "phase_gpu_union_ns": 10255673,
+            "coe_phase_gpu_ratio": 0.06690657941219459,
+            "operation_gpu_union_ns": 686172,
+            "operation_wall_ns": 1540100,
+            "operation_complement_ns": 853928,
+            "copy_wall_ns": 1530800,
+            "sync_wall_ns": 7800,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 684828,
+            "memop_coe_ns": 1344,
+            "necessary_before_copy_ns": 154504113,
+            "copy_api_id": "record:57159",
+            "sync_api_id": "record:57161",
+            "copy_entry_ns": 2511427880689900,
+            "sync_return_ns": 2511427882230000,
+            "last_pre_copy_required_submission_return_ns": 2511427880578000,
+            "copy_entry_after_last_submission_ns": 111900,
+            "terminal_id": "record:57158",
+            "terminal_end_ns": 2511427882215329,
+            "terminal_after_copy_entry_ns": 1525429,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b1-G2048P-pass1",
+            "block": 1,
+            "position": 3,
+            "input_tokens": 2048,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 0.7792609551844205,
+            "gpu_coe_percent": 6.69065794121946,
+            "member_count": 3385,
+            "kernel_count": 3352,
+            "kernel_complete_before_copy_count": 3338,
+            "kernel_active_in_operation_count": 14,
+            "kernel_sequence_layout_sha256": "fc5ec09e7d6bdfbab51c6a84344832ebe54afd5954851555deea04a5a8796f60",
+            "copy_entry_relative_phase_ns": 85356100,
+            "last_kernel_submit_relative_phase_ns": 85244200,
+            "last_kernel_end_relative_copy_ns": 1296726,
+            "before_first_operation_activity_ns": 600026,
+            "internal_activity_gaps_ns": 239231,
+            "after_terminal_gap_ns": 14671,
+            "largest_operation_activity_gap_ns": 600026,
+            "observed_accounting_api_union_in_phase_ns": 35656400,
+            "scope_source": "runs/cupti-input-bd377c860faf-b1-G2048P-pass1/model/scope_token1.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b1-G2048P-pass1/model/derived_token1/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b1-G2048P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 0,
+              "end_relative_copy_ns": 600026,
+              "ns": 600026,
+              "preceding_ids": [],
+              "following_ids": [
+                "record:56926"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1296726,
+              "end_relative_copy_ns": 1524405,
+              "ns": 227679,
+              "preceding_ids": [
+                "record:57151"
+              ],
+              "following_ids": [
+                "record:57158"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1525429,
+              "end_relative_copy_ns": 1540100,
+              "ns": 14671,
+              "preceding_ids": [
+                "record:57158"
+              ],
+              "following_ids": []
+            },
+            {
+              "start_relative_copy_ns": 1148631,
+              "end_relative_copy_ns": 1150199,
+              "ns": 1568,
+              "preceding_ids": [
+                "record:57148"
+              ],
+              "following_ids": [
+                "record:57151"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 637242,
+              "end_relative_copy_ns": 638490,
+              "ns": 1248,
+              "preceding_ids": [
+                "record:56969"
+              ],
+              "following_ids": [
+                "record:56972"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1147095,
+              "end_relative_copy_ns": 1148311,
+              "ns": 1216,
+              "preceding_ids": [
+                "record:57129"
+              ],
+              "following_ids": [
+                "record:57148"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:57159",
+            "domain": "RUNTIME",
+            "correlation": 53763,
+            "cbid": 41,
+            "tid": 10924,
+            "start": 2511427880689900,
+            "end": 2511427882220700
+          },
+          "sync": {
+            "id": "record:57161",
+            "domain": "RUNTIME",
+            "correlation": 53764,
+            "cbid": 131,
+            "tid": 10924,
+            "start": 2511427882222200,
+            "end": 2511427882230000
+          },
+          "terminal": {
+            "id": "record:57158",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 53763,
+            "runtime_correlation": 0,
+            "pid": 30848,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511427882214305,
+            "end": 2511427882215329,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 0,
+          "memset_classes": {
+            "OBSERVED_POSITIVE": 30
+          }
+        }
+      ],
+      "elapsed_local_seconds": 2.4607041999697685
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b2-G1024P-pass1",
+      "block": 2,
+      "position": 1,
+      "input_tokens": 1024,
+      "capture_sha256": "fb335c740e7820a43d5e206fb33f802f727bd3a38da51d22351bf14500eae0ae",
+      "quality": {
+        "closed": true,
+        "errors": [],
+        "overflow": 0,
+        "dropped": 0,
+        "dropped_query_errors": 0,
+        "dropped_scopes": [
+          [
+            1,
+            7
+          ]
+        ]
+      },
+      "role": "Pilot",
+      "tokens": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+      "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+      "token_details": [
+        {
+          "token_index": 0,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b2-G1024P-pass1",
+            "pid": 34152,
+            "tid": 72572,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511494375711400,
+            "request_start": 2511494376706700,
+            "completion_end": 2511494638370600,
+            "copy_api": "record:30649",
+            "sync_api": "record:30651",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              29184
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 0,
+            "phase": "Prefill",
+            "phase_start_ns": 2511494376706700,
+            "phase_end_ns": 2511494638370600,
+            "phase_ns": 261663900,
+            "coe_ns": 46853457,
+            "coe_phase_ratio": 0.1790596906948188,
+            "phase_gpu_union_ns": 68586652,
+            "coe_phase_gpu_ratio": 0.6831279211587701,
+            "operation_gpu_union_ns": 46853457,
+            "operation_wall_ns": 159302500,
+            "operation_complement_ns": 112449043,
+            "copy_wall_ns": 159280500,
+            "sync_wall_ns": 14500,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 46345621,
+            "memop_coe_ns": 507836,
+            "necessary_before_copy_ns": 21733195,
+            "copy_api_id": "record:30649",
+            "sync_api_id": "record:30651",
+            "copy_entry_ns": 2511494477086800,
+            "sync_return_ns": 2511494636389300,
+            "last_pre_copy_required_submission_return_ns": 2511494476954100,
+            "copy_entry_after_last_submission_ns": 132700,
+            "terminal_id": "record:30648",
+            "terminal_end_ns": 2511494636340561,
+            "terminal_after_copy_entry_ns": 159253761,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b2-G1024P-pass1",
+            "block": 2,
+            "position": 1,
+            "input_tokens": 1024,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 17.90596906948188,
+            "gpu_coe_percent": 68.312792115877,
+            "member_count": 1793,
+            "kernel_count": 1762,
+            "kernel_complete_before_copy_count": 587,
+            "kernel_active_in_operation_count": 1175,
+            "kernel_sequence_layout_sha256": "228c4c186948fbc57eca458687e4b4f96a0f9aceceeba9a767eb949b00931123",
+            "copy_entry_relative_phase_ns": 100380100,
+            "last_kernel_submit_relative_phase_ns": 100247400,
+            "last_kernel_end_relative_copy_ns": 159251009,
+            "before_first_operation_activity_ns": 3682856,
+            "internal_activity_gaps_ns": 108717448,
+            "after_terminal_gap_ns": 48739,
+            "largest_operation_activity_gap_ns": 12787243,
+            "observed_accounting_api_union_in_phase_ns": 208485000,
+            "scope_source": "runs/cupti-input-bd377c860faf-b2-G1024P-pass1/model/scope_token0.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b2-G1024P-pass1/model/derived_token0/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b2-G1024P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 25131930,
+              "end_relative_copy_ns": 37919173,
+              "ns": 12787243,
+              "preceding_ids": [
+                "record:14643"
+              ],
+              "following_ids": [
+                "record:14655"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 76344967,
+              "end_relative_copy_ns": 88834100,
+              "ns": 12489133,
+              "preceding_ids": [
+                "record:20861"
+              ],
+              "following_ids": [
+                "record:20918"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 140071488,
+              "end_relative_copy_ns": 151166071,
+              "ns": 11094583,
+              "preceding_ids": [
+                "record:29393"
+              ],
+              "following_ids": [
+                "record:29407"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 59399159,
+              "end_relative_copy_ns": 69407829,
+              "ns": 10008670,
+              "preceding_ids": [
+                "record:18655"
+              ],
+              "following_ids": [
+                "record:18666"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 124013867,
+              "end_relative_copy_ns": 133954313,
+              "ns": 9940446,
+              "preceding_ids": [
+                "record:27068"
+              ],
+              "following_ids": [
+                "record:27112"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 108937647,
+              "end_relative_copy_ns": 118088178,
+              "ns": 9150531,
+              "preceding_ids": [
+                "record:24862"
+              ],
+              "following_ids": [
+                "record:24873"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:30649",
+            "domain": "RUNTIME",
+            "correlation": 28846,
+            "cbid": 41,
+            "tid": 72572,
+            "start": 2511494477086800,
+            "end": 2511494636367300
+          },
+          "sync": {
+            "id": "record:30651",
+            "domain": "RUNTIME",
+            "correlation": 28847,
+            "cbid": 131,
+            "tid": 72572,
+            "start": 2511494636374800,
+            "end": 2511494636389300
+          },
+          "terminal": {
+            "id": "record:30648",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 28846,
+            "runtime_correlation": 0,
+            "pid": 34152,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511494636339569,
+            "end": 2511494636340561,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 84,
+          "memset_classes": {
+            "OBSERVED_ZERO": 84,
+            "OBSERVED_POSITIVE": 29
+          }
+        },
+        {
+          "token_index": 1,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b2-G1024P-pass1",
+            "pid": 34152,
+            "tid": 72572,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511494375711400,
+            "request_start": 2511494376706700,
+            "completion_end": 2511494723975900,
+            "copy_api": "record:57579",
+            "sync_api": "record:57581",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              6556
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 1,
+            "phase": "Decode",
+            "phase_start_ns": 2511494638370600,
+            "phase_end_ns": 2511494723975900,
+            "phase_ns": 85605300,
+            "coe_ns": 885507,
+            "coe_phase_ratio": 0.010344067481803113,
+            "phase_gpu_union_ns": 15111987,
+            "coe_phase_gpu_ratio": 0.058596331508225886,
+            "operation_gpu_union_ns": 885507,
+            "operation_wall_ns": 1763100,
+            "operation_complement_ns": 877593,
+            "copy_wall_ns": 1752900,
+            "sync_wall_ns": 8200,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 884483,
+            "memop_coe_ns": 1024,
+            "necessary_before_copy_ns": 82813132,
+            "copy_api_id": "record:57579",
+            "sync_api_id": "record:57581",
+            "copy_entry_ns": 2511494721005400,
+            "sync_return_ns": 2511494722768500,
+            "last_pre_copy_required_submission_return_ns": 2511494720909200,
+            "copy_entry_after_last_submission_ns": 96200,
+            "terminal_id": "record:57578",
+            "terminal_end_ns": 2511494722692437,
+            "terminal_after_copy_entry_ns": 1687037,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b2-G1024P-pass1",
+            "block": 2,
+            "position": 1,
+            "input_tokens": 1024,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 1.0344067481803112,
+            "gpu_coe_percent": 5.859633150822589,
+            "member_count": 3385,
+            "kernel_count": 3352,
+            "kernel_complete_before_copy_count": 3339,
+            "kernel_active_in_operation_count": 13,
+            "kernel_sequence_layout_sha256": "97a9ce566b7958f22234ea9cf2f1acf1436d31f0b9359dca38f46dd91ee8668e",
+            "copy_entry_relative_phase_ns": 82634800,
+            "last_kernel_submit_relative_phase_ns": 82538600,
+            "last_kernel_end_relative_copy_ns": 1666045,
+            "before_first_operation_activity_ns": 0,
+            "internal_activity_gaps_ns": 801530,
+            "after_terminal_gap_ns": 76063,
+            "largest_operation_activity_gap_ns": 552092,
+            "observed_accounting_api_union_in_phase_ns": 37174400,
+            "scope_source": "runs/cupti-input-bd377c860faf-b2-G1024P-pass1/model/scope_token1.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b2-G1024P-pass1/model/derived_token1/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b2-G1024P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 219047,
+              "end_relative_copy_ns": 771139,
+              "ns": 552092,
+              "preceding_ids": [
+                "record:57444"
+              ],
+              "following_ids": [
+                "record:57455"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1350079,
+              "end_relative_copy_ns": 1495166,
+              "ns": 145087,
+              "preceding_ids": [
+                "record:57568"
+              ],
+              "following_ids": [
+                "record:57571"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1272736,
+              "end_relative_copy_ns": 1349727,
+              "ns": 76991,
+              "preceding_ids": [
+                "record:57549"
+              ],
+              "following_ids": [
+                "record:57568"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1687037,
+              "end_relative_copy_ns": 1763100,
+              "ns": 76063,
+              "preceding_ids": [
+                "record:57578"
+              ],
+              "following_ids": []
+            },
+            {
+              "start_relative_copy_ns": 1666045,
+              "end_relative_copy_ns": 1686365,
+              "ns": 20320,
+              "preceding_ids": [
+                "record:57571"
+              ],
+              "following_ids": [
+                "record:57578"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 52680,
+              "end_relative_copy_ns": 53448,
+              "ns": 768,
+              "preceding_ids": [
+                "record:57417"
+              ],
+              "following_ids": [
+                "record:57429"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:57579",
+            "domain": "RUNTIME",
+            "correlation": 54183,
+            "cbid": 41,
+            "tid": 72572,
+            "start": 2511494721005400,
+            "end": 2511494722758300
+          },
+          "sync": {
+            "id": "record:57581",
+            "domain": "RUNTIME",
+            "correlation": 54184,
+            "cbid": 131,
+            "tid": 72572,
+            "start": 2511494722760300,
+            "end": 2511494722768500
+          },
+          "terminal": {
+            "id": "record:57578",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 54183,
+            "runtime_correlation": 0,
+            "pid": 34152,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511494722691765,
+            "end": 2511494722692437,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 84,
+          "memset_classes": {
+            "OBSERVED_ZERO": 84,
+            "OBSERVED_POSITIVE": 30
+          }
+        }
+      ],
+      "elapsed_local_seconds": 2.6085847999784164
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b2-G2048P-pass1",
+      "block": 2,
+      "position": 2,
+      "input_tokens": 2048,
+      "capture_sha256": "91c1ba1a1c81d7644a37bac1fd9018f031e952bc51f7c83378a8a72e24f5d3a3",
+      "quality": {
+        "closed": true,
+        "errors": [],
+        "overflow": 0,
+        "dropped": 0,
+        "dropped_query_errors": 0,
+        "dropped_scopes": [
+          [
+            1,
+            7
+          ]
+        ]
+      },
+      "role": "Pilot",
+      "tokens": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+      "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+      "token_details": [
+        {
+          "token_index": 0,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b2-G2048P-pass1",
+            "pid": 57220,
+            "tid": 37720,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511566300943900,
+            "request_start": 2511566301852400,
+            "completion_end": 2511566500668000,
+            "copy_api": "record:30229",
+            "sync_api": "record:30231",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              29184
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 0,
+            "phase": "Prefill",
+            "phase_start_ns": 2511566301852400,
+            "phase_end_ns": 2511566500668000,
+            "phase_ns": 198815600,
+            "coe_ns": 90973368,
+            "coe_phase_ratio": 0.45757660867658273,
+            "phase_gpu_union_ns": 156330307,
+            "coe_phase_gpu_ratio": 0.5819304634257515,
+            "operation_gpu_union_ns": 90973368,
+            "operation_wall_ns": 115610400,
+            "operation_complement_ns": 24637032,
+            "copy_wall_ns": 115585500,
+            "sync_wall_ns": 16000,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 90122364,
+            "memop_coe_ns": 851004,
+            "necessary_before_copy_ns": 65356939,
+            "copy_api_id": "record:30229",
+            "sync_api_id": "record:30231",
+            "copy_entry_ns": 2511566382958400,
+            "sync_return_ns": 2511566498568800,
+            "last_pre_copy_required_submission_return_ns": 2511566382802600,
+            "copy_entry_after_last_submission_ns": 155800,
+            "terminal_id": "record:30228",
+            "terminal_end_ns": 2511566498477266,
+            "terminal_after_copy_entry_ns": 115518866,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b2-G2048P-pass1",
+            "block": 2,
+            "position": 2,
+            "input_tokens": 2048,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 45.757660867658274,
+            "gpu_coe_percent": 58.193046342575144,
+            "member_count": 1793,
+            "kernel_count": 1762,
+            "kernel_complete_before_copy_count": 740,
+            "kernel_active_in_operation_count": 1022,
+            "kernel_sequence_layout_sha256": "3fdc848443c0c9344d6ecdb8515f9a949680b06e3a7879a2d79046bdb82b0c43",
+            "copy_entry_relative_phase_ns": 81106000,
+            "last_kernel_submit_relative_phase_ns": 80950200,
+            "last_kernel_end_relative_copy_ns": 115474930,
+            "before_first_operation_activity_ns": 0,
+            "internal_activity_gaps_ns": 24545498,
+            "after_terminal_gap_ns": 91534,
+            "largest_operation_activity_gap_ns": 817979,
+            "observed_accounting_api_union_in_phase_ns": 149724800,
+            "scope_source": "runs/cupti-input-bd377c860faf-b2-G2048P-pass1/model/scope_token0.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b2-G2048P-pass1/model/derived_token0/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b2-G2048P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 15713161,
+              "end_relative_copy_ns": 16531140,
+              "ns": 817979,
+              "preceding_ids": [
+                "record:15559"
+              ],
+              "following_ids": [
+                "record:15571"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 36785482,
+              "end_relative_copy_ns": 37562566,
+              "ns": 777084,
+              "preceding_ids": [
+                "record:18389"
+              ],
+              "following_ids": [
+                "record:18400"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 50842550,
+              "end_relative_copy_ns": 51582577,
+              "ns": 740027,
+              "preceding_ids": [
+                "record:20309"
+              ],
+              "following_ids": [
+                "record:20353"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 38791390,
+              "end_relative_copy_ns": 39518266,
+              "ns": 726876,
+              "preceding_ids": [
+                "record:18921"
+              ],
+              "following_ids": [
+                "record:18933"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 21826084,
+              "end_relative_copy_ns": 22539648,
+              "ns": 713564,
+              "preceding_ids": [
+                "record:16501"
+              ],
+              "following_ids": [
+                "record:16513"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 54276193,
+              "end_relative_copy_ns": 54979933,
+              "ns": 703740,
+              "preceding_ids": [
+                "record:20907"
+              ],
+              "following_ids": [
+                "record:20922"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:30229",
+            "domain": "RUNTIME",
+            "correlation": 28426,
+            "cbid": 41,
+            "tid": 37720,
+            "start": 2511566382958400,
+            "end": 2511566498543900
+          },
+          "sync": {
+            "id": "record:30231",
+            "domain": "RUNTIME",
+            "correlation": 28427,
+            "cbid": 131,
+            "tid": 37720,
+            "start": 2511566498552800,
+            "end": 2511566498568800
+          },
+          "terminal": {
+            "id": "record:30228",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 28426,
+            "runtime_correlation": 0,
+            "pid": 57220,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511566498456818,
+            "end": 2511566498477266,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 0,
+          "memset_classes": {
+            "OBSERVED_POSITIVE": 29
+          }
+        },
+        {
+          "token_index": 1,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b2-G2048P-pass1",
+            "pid": 57220,
+            "tid": 37720,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511566300943900,
+            "request_start": 2511566301852400,
+            "completion_end": 2511566585672300,
+            "copy_api": "record:57159",
+            "sync_api": "record:57161",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              6556
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 1,
+            "phase": "Decode",
+            "phase_start_ns": 2511566500668000,
+            "phase_end_ns": 2511566585672300,
+            "phase_ns": 85004300,
+            "coe_ns": 593983,
+            "coe_phase_ratio": 0.006987681799626607,
+            "phase_gpu_union_ns": 12446774,
+            "coe_phase_gpu_ratio": 0.047721843427059894,
+            "operation_gpu_union_ns": 593983,
+            "operation_wall_ns": 1551600,
+            "operation_complement_ns": 957617,
+            "copy_wall_ns": 1542400,
+            "sync_wall_ns": 6900,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 573247,
+            "memop_coe_ns": 20736,
+            "necessary_before_copy_ns": 168183098,
+            "copy_api_id": "record:57159",
+            "sync_api_id": "record:57161",
+            "copy_entry_ns": 2511566582700400,
+            "sync_return_ns": 2511566584252000,
+            "last_pre_copy_required_submission_return_ns": 2511566582493500,
+            "copy_entry_after_last_submission_ns": 206900,
+            "terminal_id": "record:57158",
+            "terminal_end_ns": 2511566584229519,
+            "terminal_after_copy_entry_ns": 1529119,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b2-G2048P-pass1",
+            "block": 2,
+            "position": 2,
+            "input_tokens": 2048,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 0.6987681799626607,
+            "gpu_coe_percent": 4.772184342705989,
+            "member_count": 3385,
+            "kernel_count": 3352,
+            "kernel_complete_before_copy_count": 3338,
+            "kernel_active_in_operation_count": 14,
+            "kernel_sequence_layout_sha256": "fc5ec09e7d6bdfbab51c6a84344832ebe54afd5954851555deea04a5a8796f60",
+            "copy_entry_relative_phase_ns": 82032400,
+            "last_kernel_submit_relative_phase_ns": 81825500,
+            "last_kernel_end_relative_copy_ns": 1434720,
+            "before_first_operation_activity_ns": 598917,
+            "internal_activity_gaps_ns": 336219,
+            "after_terminal_gap_ns": 22481,
+            "largest_operation_activity_gap_ns": 598917,
+            "observed_accounting_api_union_in_phase_ns": 33840100,
+            "scope_source": "runs/cupti-input-bd377c860faf-b2-G2048P-pass1/model/scope_token1.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b2-G2048P-pass1/model/derived_token1/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b2-G2048P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 0,
+              "end_relative_copy_ns": 598917,
+              "ns": 598917,
+              "preceding_ids": [],
+              "following_ids": [
+                "record:56926"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1145826,
+              "end_relative_copy_ns": 1375168,
+              "ns": 229342,
+              "preceding_ids": [
+                "record:57129"
+              ],
+              "following_ids": [
+                "record:57148"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1434720,
+              "end_relative_copy_ns": 1528063,
+              "ns": 93343,
+              "preceding_ids": [
+                "record:57151"
+              ],
+              "following_ids": [
+                "record:57158"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1529119,
+              "end_relative_copy_ns": 1551600,
+              "ns": 22481,
+              "preceding_ids": [
+                "record:57158"
+              ],
+              "following_ids": []
+            },
+            {
+              "start_relative_copy_ns": 1394848,
+              "end_relative_copy_ns": 1400192,
+              "ns": 5344,
+              "preceding_ids": [
+                "record:57148"
+              ],
+              "following_ids": [
+                "record:57151"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 650501,
+              "end_relative_copy_ns": 651236,
+              "ns": 735,
+              "preceding_ids": [
+                "record:57046"
+              ],
+              "following_ids": [
+                "record:57057"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:57159",
+            "domain": "RUNTIME",
+            "correlation": 53763,
+            "cbid": 41,
+            "tid": 37720,
+            "start": 2511566582700400,
+            "end": 2511566584242800
+          },
+          "sync": {
+            "id": "record:57161",
+            "domain": "RUNTIME",
+            "correlation": 53764,
+            "cbid": 131,
+            "tid": 37720,
+            "start": 2511566584245100,
+            "end": 2511566584252000
+          },
+          "terminal": {
+            "id": "record:57158",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 53763,
+            "runtime_correlation": 0,
+            "pid": 57220,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511566584228463,
+            "end": 2511566584229519,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 0,
+          "memset_classes": {
+            "OBSERVED_POSITIVE": 30
+          }
+        }
+      ],
+      "elapsed_local_seconds": 2.4748486999887973
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b2-G512P-pass1",
+      "block": 2,
+      "position": 3,
+      "input_tokens": 512,
+      "capture_sha256": "e2dacf86f9e18925589aa94bab52ee5c2e4d875f62f446b8d8f9f2546a8fb661",
+      "quality": {
+        "closed": true,
+        "errors": [],
+        "overflow": 0,
+        "dropped": 0,
+        "dropped_query_errors": 0,
+        "dropped_scopes": [
+          [
+            1,
+            7
+          ]
+        ]
+      },
+      "role": "Pilot",
+      "tokens": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+      "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+      "token_details": [
+        {
+          "token_index": 0,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b2-G512P-pass1",
+            "pid": 68544,
+            "tid": 54416,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511636138252200,
+            "request_start": 2511636139340500,
+            "completion_end": 2511636241857300,
+            "copy_api": "record:30593",
+            "sync_api": "record:30595",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              29184
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 0,
+            "phase": "Prefill",
+            "phase_start_ns": 2511636139340500,
+            "phase_end_ns": 2511636241857300,
+            "phase_ns": 102516800,
+            "coe_ns": 2338357,
+            "coe_phase_ratio": 0.02280950049162674,
+            "phase_gpu_union_ns": 34891465,
+            "coe_phase_gpu_ratio": 0.06701802288897872,
+            "operation_gpu_union_ns": 2338357,
+            "operation_wall_ns": 2805900,
+            "operation_complement_ns": 467543,
+            "copy_wall_ns": 2795500,
+            "sync_wall_ns": 8200,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 2177557,
+            "memop_coe_ns": 160800,
+            "necessary_before_copy_ns": 32553108,
+            "copy_api_id": "record:30593",
+            "sync_api_id": "record:30595",
+            "copy_entry_ns": 2511636237350000,
+            "sync_return_ns": 2511636240155900,
+            "last_pre_copy_required_submission_return_ns": 2511636237242900,
+            "copy_entry_after_last_submission_ns": 107100,
+            "terminal_id": "record:30592",
+            "terminal_end_ns": 2511636240137378,
+            "terminal_after_copy_entry_ns": 2787378,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b2-G512P-pass1",
+            "block": 2,
+            "position": 3,
+            "input_tokens": 512,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 2.2809500491626737,
+            "gpu_coe_percent": 6.7018022888978726,
+            "member_count": 1905,
+            "kernel_count": 1818,
+            "kernel_complete_before_copy_count": 1804,
+            "kernel_active_in_operation_count": 14,
+            "kernel_sequence_layout_sha256": "f2fe56bcdb388ee845625a712dadf9065759b81ab2c08e3b2054dba16f348ba1",
+            "copy_entry_relative_phase_ns": 98009500,
+            "last_kernel_submit_relative_phase_ns": 97902400,
+            "last_kernel_end_relative_copy_ns": 2781266,
+            "before_first_operation_activity_ns": 0,
+            "internal_activity_gaps_ns": 449021,
+            "after_terminal_gap_ns": 18522,
+            "largest_operation_activity_gap_ns": 174143,
+            "observed_accounting_api_union_in_phase_ns": 45858700,
+            "scope_source": "runs/cupti-input-bd377c860faf-b2-G512P-pass1/model/scope_token0.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b2-G512P-pass1/model/derived_token0/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b2-G512P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 2552724,
+              "end_relative_copy_ns": 2726867,
+              "ns": 174143,
+              "preceding_ids": [
+                "record:30582"
+              ],
+              "following_ids": [
+                "record:30585"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 466784,
+              "end_relative_copy_ns": 597343,
+              "ns": 130559,
+              "preceding_ids": [
+                "record:30416"
+              ],
+              "following_ids": [
+                "record:30430"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 2277269,
+              "end_relative_copy_ns": 2393940,
+              "ns": 116671,
+              "preceding_ids": [
+                "record:30563"
+              ],
+              "following_ids": [
+                "record:30582"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 2787378,
+              "end_relative_copy_ns": 2805900,
+              "ns": 18522,
+              "preceding_ids": [
+                "record:30592"
+              ],
+              "following_ids": []
+            },
+            {
+              "start_relative_copy_ns": 791358,
+              "end_relative_copy_ns": 804830,
+              "ns": 13472,
+              "preceding_ids": [
+                "record:30490"
+              ],
+              "following_ids": [
+                "record:30504"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 2781266,
+              "end_relative_copy_ns": 2786258,
+              "ns": 4992,
+              "preceding_ids": [
+                "record:30585"
+              ],
+              "following_ids": [
+                "record:30592"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:30593",
+            "domain": "RUNTIME",
+            "correlation": 28678,
+            "cbid": 41,
+            "tid": 54416,
+            "start": 2511636237350000,
+            "end": 2511636240145500
+          },
+          "sync": {
+            "id": "record:30595",
+            "domain": "RUNTIME",
+            "correlation": 28679,
+            "cbid": 131,
+            "tid": 54416,
+            "start": 2511636240147700,
+            "end": 2511636240155900
+          },
+          "terminal": {
+            "id": "record:30592",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 28678,
+            "runtime_correlation": 0,
+            "pid": 68544,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511636240136258,
+            "end": 2511636240137378,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 0,
+          "memset_classes": {
+            "OBSERVED_POSITIVE": 85
+          }
+        },
+        {
+          "token_index": 1,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b2-G512P-pass1",
+            "pid": 68544,
+            "tid": 54416,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511636138252200,
+            "request_start": 2511636139340500,
+            "completion_end": 2511636328346500,
+            "copy_api": "record:57551",
+            "sync_api": "record:57553",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              6556
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 1,
+            "phase": "Decode",
+            "phase_start_ns": 2511636241857300,
+            "phase_end_ns": 2511636328346500,
+            "phase_ns": 86489200,
+            "coe_ns": 1313464,
+            "coe_phase_ratio": 0.015186451025099088,
+            "phase_gpu_union_ns": 15588007,
+            "coe_phase_gpu_ratio": 0.08426118874593783,
+            "operation_gpu_union_ns": 1313464,
+            "operation_wall_ns": 1774100,
+            "operation_complement_ns": 460636,
+            "copy_wall_ns": 1765400,
+            "sync_wall_ns": 6800,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 1201721,
+            "memop_coe_ns": 111743,
+            "necessary_before_copy_ns": 49166008,
+            "copy_api_id": "record:57551",
+            "sync_api_id": "record:57553",
+            "copy_entry_ns": 2511636325395800,
+            "sync_return_ns": 2511636327169900,
+            "last_pre_copy_required_submission_return_ns": 2511636325307500,
+            "copy_entry_after_last_submission_ns": 88300,
+            "terminal_id": "record:57550",
+            "terminal_end_ns": 2511636327156672,
+            "terminal_after_copy_entry_ns": 1760872,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b2-G512P-pass1",
+            "block": 2,
+            "position": 3,
+            "input_tokens": 512,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 1.5186451025099088,
+            "gpu_coe_percent": 8.426118874593783,
+            "member_count": 3497,
+            "kernel_count": 3408,
+            "kernel_complete_before_copy_count": 3394,
+            "kernel_active_in_operation_count": 14,
+            "kernel_sequence_layout_sha256": "f66af3794a29563f4114750cae3dac740644bce5a76c12cdf4c0ff198735d123",
+            "copy_entry_relative_phase_ns": 83538500,
+            "last_kernel_submit_relative_phase_ns": 83450200,
+            "last_kernel_end_relative_copy_ns": 1726888,
+            "before_first_operation_activity_ns": 47570,
+            "internal_activity_gaps_ns": 399838,
+            "after_terminal_gap_ns": 13228,
+            "largest_operation_activity_gap_ns": 298110,
+            "observed_accounting_api_union_in_phase_ns": 38082000,
+            "scope_source": "runs/cupti-input-bd377c860faf-b2-G512P-pass1/model/scope_token1.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b2-G512P-pass1/model/derived_token1/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b2-G512P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 1335882,
+              "end_relative_copy_ns": 1633992,
+              "ns": 298110,
+              "preceding_ids": [
+                "record:57540"
+              ],
+              "following_ids": [
+                "record:57543"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 0,
+              "end_relative_copy_ns": 47570,
+              "ns": 47570,
+              "preceding_ids": [],
+              "following_ids": [
+                "record:57318"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1186955,
+              "end_relative_copy_ns": 1225195,
+              "ns": 38240,
+              "preceding_ids": [
+                "record:57521"
+              ],
+              "following_ids": [
+                "record:57540"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1726888,
+              "end_relative_copy_ns": 1759816,
+              "ns": 32928,
+              "preceding_ids": [
+                "record:57543"
+              ],
+              "following_ids": [
+                "record:57550"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 268529,
+              "end_relative_copy_ns": 291505,
+              "ns": 22976,
+              "preceding_ids": [
+                "record:57364"
+              ],
+              "following_ids": [
+                "record:57375"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1760872,
+              "end_relative_copy_ns": 1774100,
+              "ns": 13228,
+              "preceding_ids": [
+                "record:57550"
+              ],
+              "following_ids": []
+            }
+          ],
+          "copy": {
+            "id": "record:57551",
+            "domain": "RUNTIME",
+            "correlation": 54043,
+            "cbid": 41,
+            "tid": 54416,
+            "start": 2511636325395800,
+            "end": 2511636327161200
+          },
+          "sync": {
+            "id": "record:57553",
+            "domain": "RUNTIME",
+            "correlation": 54044,
+            "cbid": 131,
+            "tid": 54416,
+            "start": 2511636327163100,
+            "end": 2511636327169900
+          },
+          "terminal": {
+            "id": "record:57550",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 54043,
+            "runtime_correlation": 0,
+            "pid": 68544,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511636327155616,
+            "end": 2511636327156672,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 0,
+          "memset_classes": {
+            "OBSERVED_POSITIVE": 86
+          }
+        }
+      ],
+      "elapsed_local_seconds": 2.458670300024096
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b3-G2048P-pass1",
+      "block": 3,
+      "position": 1,
+      "input_tokens": 2048,
+      "capture_sha256": "8c78e730b0901713b5810179ca38a8707ae48b4e2da06a4c9184add73e40b20c",
+      "quality": {
+        "closed": true,
+        "errors": [],
+        "overflow": 0,
+        "dropped": 0,
+        "dropped_query_errors": 0,
+        "dropped_scopes": [
+          [
+            1,
+            7
+          ]
+        ]
+      },
+      "role": "Pilot",
+      "tokens": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+      "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+      "token_details": [
+        {
+          "token_index": 0,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b3-G2048P-pass1",
+            "pid": 36920,
+            "tid": 62708,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511702733473300,
+            "request_start": 2511702734739900,
+            "completion_end": 2511702930838000,
+            "copy_api": "record:30229",
+            "sync_api": "record:30231",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              29184
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 0,
+            "phase": "Prefill",
+            "phase_start_ns": 2511702734739900,
+            "phase_end_ns": 2511702930838000,
+            "phase_ns": 196098100,
+            "coe_ns": 72420046,
+            "coe_phase_ratio": 0.3693051895964316,
+            "phase_gpu_union_ns": 158668567,
+            "coe_phase_gpu_ratio": 0.45642339481139954,
+            "operation_gpu_union_ns": 72420046,
+            "operation_wall_ns": 86623200,
+            "operation_complement_ns": 14203154,
+            "copy_wall_ns": 86601700,
+            "sync_wall_ns": 14200,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 72384656,
+            "memop_coe_ns": 35390,
+            "necessary_before_copy_ns": 86248521,
+            "copy_api_id": "record:30229",
+            "sync_api_id": "record:30231",
+            "copy_entry_ns": 2511702842599700,
+            "sync_return_ns": 2511702929222900,
+            "last_pre_copy_required_submission_return_ns": 2511702842492700,
+            "copy_entry_after_last_submission_ns": 107000,
+            "terminal_id": "record:30228",
+            "terminal_end_ns": 2511702929174341,
+            "terminal_after_copy_entry_ns": 86574641,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b3-G2048P-pass1",
+            "block": 3,
+            "position": 1,
+            "input_tokens": 2048,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 36.93051895964316,
+            "gpu_coe_percent": 45.642339481139956,
+            "member_count": 1793,
+            "kernel_count": 1762,
+            "kernel_complete_before_copy_count": 1002,
+            "kernel_active_in_operation_count": 760,
+            "kernel_sequence_layout_sha256": "3fdc848443c0c9344d6ecdb8515f9a949680b06e3a7879a2d79046bdb82b0c43",
+            "copy_entry_relative_phase_ns": 107859800,
+            "last_kernel_submit_relative_phase_ns": 107752800,
+            "last_kernel_end_relative_copy_ns": 86555473,
+            "before_first_operation_activity_ns": 0,
+            "internal_activity_gaps_ns": 14154595,
+            "after_terminal_gap_ns": 48559,
+            "largest_operation_activity_gap_ns": 716028,
+            "observed_accounting_api_union_in_phase_ns": 134714600,
+            "scope_source": "runs/cupti-input-bd377c860faf-b3-G2048P-pass1/model/scope_token0.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b3-G2048P-pass1/model/derived_token0/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b3-G2048P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 20059567,
+              "end_relative_copy_ns": 20775595,
+              "ns": 716028,
+              "preceding_ids": [
+                "record:20907"
+              ],
+              "following_ids": [
+                "record:20922"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 73931193,
+              "end_relative_copy_ns": 74610358,
+              "ns": 679165,
+              "preceding_ids": [
+                "record:29486"
+              ],
+              "following_ids": [
+                "record:29500"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 52082327,
+              "end_relative_copy_ns": 52759251,
+              "ns": 676924,
+              "preceding_ids": [
+                "record:26294"
+              ],
+              "following_ids": [
+                "record:26308"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 73045919,
+              "end_relative_copy_ns": 73627452,
+              "ns": 581533,
+              "preceding_ids": [
+                "record:28977"
+              ],
+              "following_ids": [
+                "record:28988"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 77003496,
+              "end_relative_copy_ns": 77572709,
+              "ns": 569213,
+              "preceding_ids": [
+                "record:29661"
+              ],
+              "following_ids": [
+                "record:29675"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 71012778,
+              "end_relative_copy_ns": 71576775,
+              "ns": 563997,
+              "preceding_ids": [
+                "record:28721"
+              ],
+              "following_ids": [
+                "record:28735"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:30229",
+            "domain": "RUNTIME",
+            "correlation": 28426,
+            "cbid": 41,
+            "tid": 62708,
+            "start": 2511702842599700,
+            "end": 2511702929201400
+          },
+          "sync": {
+            "id": "record:30231",
+            "domain": "RUNTIME",
+            "correlation": 28427,
+            "cbid": 131,
+            "tid": 62708,
+            "start": 2511702929208700,
+            "end": 2511702929222900
+          },
+          "terminal": {
+            "id": "record:30228",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 28426,
+            "runtime_correlation": 0,
+            "pid": 36920,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511702929173285,
+            "end": 2511702929174341,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 0,
+          "memset_classes": {
+            "OBSERVED_POSITIVE": 29
+          }
+        },
+        {
+          "token_index": 1,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b3-G2048P-pass1",
+            "pid": 36920,
+            "tid": 62708,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511702733473300,
+            "request_start": 2511702734739900,
+            "completion_end": 2511703031435900,
+            "copy_api": "record:57159",
+            "sync_api": "record:57161",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              6556
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 1,
+            "phase": "Decode",
+            "phase_start_ns": 2511702930838000,
+            "phase_end_ns": 2511703031435900,
+            "phase_ns": 100597900,
+            "coe_ns": 2766858,
+            "coe_phase_ratio": 0.0275041327900483,
+            "phase_gpu_union_ns": 16029392,
+            "coe_phase_gpu_ratio": 0.17261153760541884,
+            "operation_gpu_union_ns": 2766858,
+            "operation_wall_ns": 10974800,
+            "operation_complement_ns": 8207942,
+            "copy_wall_ns": 10962800,
+            "sync_wall_ns": 8700,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 2765706,
+            "memop_coe_ns": 1152,
+            "necessary_before_copy_ns": 171931101,
+            "copy_api_id": "record:57159",
+            "sync_api_id": "record:57161",
+            "copy_entry_ns": 2511703019243500,
+            "sync_return_ns": 2511703030218300,
+            "last_pre_copy_required_submission_return_ns": 2511703019143100,
+            "copy_entry_after_last_submission_ns": 100400,
+            "terminal_id": "record:57158",
+            "terminal_end_ns": 2511703030189537,
+            "terminal_after_copy_entry_ns": 10946037,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b3-G2048P-pass1",
+            "block": 3,
+            "position": 1,
+            "input_tokens": 2048,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 2.75041327900483,
+            "gpu_coe_percent": 17.261153760541884,
+            "member_count": 3385,
+            "kernel_count": 3352,
+            "kernel_complete_before_copy_count": 3147,
+            "kernel_active_in_operation_count": 205,
+            "kernel_sequence_layout_sha256": "fc5ec09e7d6bdfbab51c6a84344832ebe54afd5954851555deea04a5a8796f60",
+            "copy_entry_relative_phase_ns": 88405500,
+            "last_kernel_submit_relative_phase_ns": 88305100,
+            "last_kernel_end_relative_copy_ns": 10824566,
+            "before_first_operation_activity_ns": 6204816,
+            "internal_activity_gaps_ns": 1974363,
+            "after_terminal_gap_ns": 28763,
+            "largest_operation_activity_gap_ns": 6204816,
+            "observed_accounting_api_union_in_phase_ns": 51266500,
+            "scope_source": "runs/cupti-input-bd377c860faf-b3-G2048P-pass1/model/scope_token1.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b3-G2048P-pass1/model/derived_token1/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b3-G2048P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 0,
+              "end_relative_copy_ns": 6204816,
+              "ns": 6204816,
+              "preceding_ids": [],
+              "following_ids": [
+                "record:53684"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 7300170,
+              "end_relative_copy_ns": 7928134,
+              "ns": 627964,
+              "preceding_ids": [
+                "record:55017"
+              ],
+              "following_ids": [
+                "record:55028"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 9337470,
+              "end_relative_copy_ns": 9728956,
+              "ns": 391486,
+              "preceding_ids": [
+                "record:56915"
+              ],
+              "following_ids": [
+                "record:56926"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 10824566,
+              "end_relative_copy_ns": 10945269,
+              "ns": 120703,
+              "preceding_ids": [
+                "record:57151"
+              ],
+              "following_ids": [
+                "record:57158"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 8191205,
+              "end_relative_copy_ns": 8299140,
+              "ns": 107935,
+              "preceding_ids": [
+                "record:55810"
+              ],
+              "following_ids": [
+                "record:55821"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 10549751,
+              "end_relative_copy_ns": 10647735,
+              "ns": 97984,
+              "preceding_ids": [
+                "record:57148"
+              ],
+              "following_ids": [
+                "record:57151"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:57159",
+            "domain": "RUNTIME",
+            "correlation": 53763,
+            "cbid": 41,
+            "tid": 62708,
+            "start": 2511703019243500,
+            "end": 2511703030206300
+          },
+          "sync": {
+            "id": "record:57161",
+            "domain": "RUNTIME",
+            "correlation": 53764,
+            "cbid": 131,
+            "tid": 62708,
+            "start": 2511703030209600,
+            "end": 2511703030218300
+          },
+          "terminal": {
+            "id": "record:57158",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 53763,
+            "runtime_correlation": 0,
+            "pid": 36920,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511703030188769,
+            "end": 2511703030189537,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 0,
+          "memset_classes": {
+            "OBSERVED_POSITIVE": 30
+          }
+        }
+      ],
+      "elapsed_local_seconds": 2.4868374000070617
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b3-G512P-pass1",
+      "block": 3,
+      "position": 2,
+      "input_tokens": 512,
+      "capture_sha256": "a63016fd9ab7c96a758e4fc2cedfdf4c9c582d93d42fb2a29e1718cbfb9e4cb9",
+      "quality": {
+        "closed": true,
+        "errors": [],
+        "overflow": 0,
+        "dropped": 0,
+        "dropped_query_errors": 0,
+        "dropped_scopes": [
+          [
+            1,
+            7
+          ]
+        ]
+      },
+      "role": "Pilot",
+      "tokens": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+      "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+      "token_details": [
+        {
+          "token_index": 0,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b3-G512P-pass1",
+            "pid": 12544,
+            "tid": 34008,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511773486870300,
+            "request_start": 2511773488009900,
+            "completion_end": 2511773589955900,
+            "copy_api": "record:30593",
+            "sync_api": "record:30595",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              29184
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 0,
+            "phase": "Prefill",
+            "phase_start_ns": 2511773488009900,
+            "phase_end_ns": 2511773589955900,
+            "phase_ns": 101946000,
+            "coe_ns": 1834358,
+            "coe_phase_ratio": 0.01799342789319836,
+            "phase_gpu_union_ns": 28835217,
+            "coe_phase_gpu_ratio": 0.0636151966534533,
+            "operation_gpu_union_ns": 1834358,
+            "operation_wall_ns": 2183700,
+            "operation_complement_ns": 349342,
+            "copy_wall_ns": 2173400,
+            "sync_wall_ns": 8700,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 1832726,
+            "memop_coe_ns": 1632,
+            "necessary_before_copy_ns": 27000859,
+            "copy_api_id": "record:30593",
+            "sync_api_id": "record:30595",
+            "copy_entry_ns": 2511773586329400,
+            "sync_return_ns": 2511773588513100,
+            "last_pre_copy_required_submission_return_ns": 2511773586213400,
+            "copy_entry_after_last_submission_ns": 116000,
+            "terminal_id": "record:30592",
+            "terminal_end_ns": 2511773588458905,
+            "terminal_after_copy_entry_ns": 2129505,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b3-G512P-pass1",
+            "block": 3,
+            "position": 2,
+            "input_tokens": 512,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 1.799342789319836,
+            "gpu_coe_percent": 6.361519665345331,
+            "member_count": 1905,
+            "kernel_count": 1818,
+            "kernel_complete_before_copy_count": 1808,
+            "kernel_active_in_operation_count": 10,
+            "kernel_sequence_layout_sha256": "f2fe56bcdb388ee845625a712dadf9065759b81ab2c08e3b2054dba16f348ba1",
+            "copy_entry_relative_phase_ns": 98319500,
+            "last_kernel_submit_relative_phase_ns": 98203500,
+            "last_kernel_end_relative_copy_ns": 2105153,
+            "before_first_operation_activity_ns": 35500,
+            "internal_activity_gaps_ns": 259647,
+            "after_terminal_gap_ns": 54195,
+            "largest_operation_activity_gap_ns": 130207,
+            "observed_accounting_api_union_in_phase_ns": 42942300,
+            "scope_source": "runs/cupti-input-bd377c860faf-b3-G512P-pass1/model/scope_token0.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b3-G512P-pass1/model/derived_token0/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b3-G512P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 1761155,
+              "end_relative_copy_ns": 1891362,
+              "ns": 130207,
+              "preceding_ids": [
+                "record:30582"
+              ],
+              "following_ids": [
+                "record:30585"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 1686627,
+              "end_relative_copy_ns": 1760547,
+              "ns": 73920,
+              "preceding_ids": [
+                "record:30563"
+              ],
+              "following_ids": [
+                "record:30582"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 2129505,
+              "end_relative_copy_ns": 2183700,
+              "ns": 54195,
+              "preceding_ids": [
+                "record:30592"
+              ],
+              "following_ids": []
+            },
+            {
+              "start_relative_copy_ns": 0,
+              "end_relative_copy_ns": 35500,
+              "ns": 35500,
+              "preceding_ids": [],
+              "following_ids": [
+                "record:30430"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 2105153,
+              "end_relative_copy_ns": 2128481,
+              "ns": 23328,
+              "preceding_ids": [
+                "record:30585"
+              ],
+              "following_ids": [
+                "record:30592"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 215147,
+              "end_relative_copy_ns": 231307,
+              "ns": 16160,
+              "preceding_ids": [
+                "record:30442"
+              ],
+              "following_ids": [
+                "record:30457"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:30593",
+            "domain": "RUNTIME",
+            "correlation": 28678,
+            "cbid": 41,
+            "tid": 34008,
+            "start": 2511773586329400,
+            "end": 2511773588502800
+          },
+          "sync": {
+            "id": "record:30595",
+            "domain": "RUNTIME",
+            "correlation": 28679,
+            "cbid": 131,
+            "tid": 34008,
+            "start": 2511773588504400,
+            "end": 2511773588513100
+          },
+          "terminal": {
+            "id": "record:30592",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 28678,
+            "runtime_correlation": 0,
+            "pid": 12544,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511773588457881,
+            "end": 2511773588458905,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 0,
+          "memset_classes": {
+            "OBSERVED_POSITIVE": 85
+          }
+        },
+        {
+          "token_index": 1,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b3-G512P-pass1",
+            "pid": 12544,
+            "tid": 34008,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511773486870300,
+            "request_start": 2511773488009900,
+            "completion_end": 2511773678628400,
+            "copy_api": "record:57551",
+            "sync_api": "record:57553",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              6556
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 1,
+            "phase": "Decode",
+            "phase_start_ns": 2511773589955900,
+            "phase_end_ns": 2511773678628400,
+            "phase_ns": 88672500,
+            "coe_ns": 575287,
+            "coe_phase_ratio": 0.006487772420987341,
+            "phase_gpu_union_ns": 14031120,
+            "coe_phase_gpu_ratio": 0.041000789673240626,
+            "operation_gpu_union_ns": 575287,
+            "operation_wall_ns": 760300,
+            "operation_complement_ns": 185013,
+            "copy_wall_ns": 750500,
+            "sync_wall_ns": 8200,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 574326,
+            "memop_coe_ns": 961,
+            "necessary_before_copy_ns": 42291050,
+            "copy_api_id": "record:57551",
+            "sync_api_id": "record:57553",
+            "copy_entry_ns": 2511773676431900,
+            "sync_return_ns": 2511773677192200,
+            "last_pre_copy_required_submission_return_ns": 2511773676325600,
+            "copy_entry_after_last_submission_ns": 106300,
+            "terminal_id": "record:57550",
+            "terminal_end_ns": 2511773677177649,
+            "terminal_after_copy_entry_ns": 745749,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b3-G512P-pass1",
+            "block": 3,
+            "position": 2,
+            "input_tokens": 512,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 0.6487772420987341,
+            "gpu_coe_percent": 4.1000789673240625,
+            "member_count": 3497,
+            "kernel_count": 3408,
+            "kernel_complete_before_copy_count": 3406,
+            "kernel_active_in_operation_count": 2,
+            "kernel_sequence_layout_sha256": "f66af3794a29563f4114750cae3dac740644bce5a76c12cdf4c0ff198735d123",
+            "copy_entry_relative_phase_ns": 86476000,
+            "last_kernel_submit_relative_phase_ns": 86369700,
+            "last_kernel_end_relative_copy_ns": 711093,
+            "before_first_operation_activity_ns": 0,
+            "internal_activity_gaps_ns": 170462,
+            "after_terminal_gap_ns": 14551,
+            "largest_operation_activity_gap_ns": 72447,
+            "observed_accounting_api_union_in_phase_ns": 34894900,
+            "scope_source": "runs/cupti-input-bd377c860faf-b3-G512P-pass1/model/scope_token1.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b3-G512P-pass1/model/derived_token1/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b3-G512P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 553814,
+              "end_relative_copy_ns": 626261,
+              "ns": 72447,
+              "preceding_ids": [
+                "record:57540"
+              ],
+              "following_ids": [
+                "record:57543"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 489494,
+              "end_relative_copy_ns": 553429,
+              "ns": 63935,
+              "preceding_ids": [
+                "record:57521"
+              ],
+              "following_ids": [
+                "record:57540"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 711093,
+              "end_relative_copy_ns": 745173,
+              "ns": 34080,
+              "preceding_ids": [
+                "record:57543"
+              ],
+              "following_ids": [
+                "record:57550"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 745749,
+              "end_relative_copy_ns": 760300,
+              "ns": 14551,
+              "preceding_ids": [
+                "record:57550"
+              ],
+              "following_ids": []
+            }
+          ],
+          "copy": {
+            "id": "record:57551",
+            "domain": "RUNTIME",
+            "correlation": 54043,
+            "cbid": 41,
+            "tid": 34008,
+            "start": 2511773676431900,
+            "end": 2511773677182400
+          },
+          "sync": {
+            "id": "record:57553",
+            "domain": "RUNTIME",
+            "correlation": 54044,
+            "cbid": 131,
+            "tid": 34008,
+            "start": 2511773677184000,
+            "end": 2511773677192200
+          },
+          "terminal": {
+            "id": "record:57550",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 54043,
+            "runtime_correlation": 0,
+            "pid": 12544,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511773677177073,
+            "end": 2511773677177649,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 0,
+          "memset_classes": {
+            "OBSERVED_POSITIVE": 86
+          }
+        }
+      ],
+      "elapsed_local_seconds": 2.413493699976243
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b3-G1024P-pass1",
+      "block": 3,
+      "position": 3,
+      "input_tokens": 1024,
+      "capture_sha256": "f4a01563e044e4d11b8d5824901918930002233396cc1d6f2b97c418b3c528bc",
+      "quality": {
+        "closed": true,
+        "errors": [],
+        "overflow": 0,
+        "dropped": 0,
+        "dropped_query_errors": 0,
+        "dropped_scopes": [
+          [
+            1,
+            7
+          ]
+        ]
+      },
+      "role": "Pilot",
+      "tokens": [
+        [
+          29184
+        ],
+        [
+          6556
+        ]
+      ],
+      "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+      "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+      "token_details": [
+        {
+          "token_index": 0,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b3-G1024P-pass1",
+            "pid": 70868,
+            "tid": 40504,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511842984155100,
+            "request_start": 2511842985162600,
+            "completion_end": 2511843104573500,
+            "copy_api": "record:30649",
+            "sync_api": "record:30651",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              29184
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 0,
+            "phase": "Prefill",
+            "phase_start_ns": 2511842985162600,
+            "phase_end_ns": 2511843104573500,
+            "phase_ns": 119410900,
+            "coe_ns": 3299398,
+            "coe_phase_ratio": 0.02763062668483363,
+            "phase_gpu_union_ns": 66670739,
+            "coe_phase_gpu_ratio": 0.049487947028755745,
+            "operation_gpu_union_ns": 3299398,
+            "operation_wall_ns": 3517700,
+            "operation_complement_ns": 218302,
+            "copy_wall_ns": 3505200,
+            "sync_wall_ns": 10200,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 3263974,
+            "memop_coe_ns": 35424,
+            "necessary_before_copy_ns": 63371341,
+            "copy_api_id": "record:30649",
+            "sync_api_id": "record:30651",
+            "copy_entry_ns": 2511843099188300,
+            "sync_return_ns": 2511843102706000,
+            "last_pre_copy_required_submission_return_ns": 2511843098968300,
+            "copy_entry_after_last_submission_ns": 220000,
+            "terminal_id": "record:30648",
+            "terminal_end_ns": 2511843102680049,
+            "terminal_after_copy_entry_ns": 3491749,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b3-G1024P-pass1",
+            "block": 3,
+            "position": 3,
+            "input_tokens": 1024,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 2.763062668483363,
+            "gpu_coe_percent": 4.948794702875575,
+            "member_count": 1793,
+            "kernel_count": 1762,
+            "kernel_complete_before_copy_count": 1749,
+            "kernel_active_in_operation_count": 13,
+            "kernel_sequence_layout_sha256": "228c4c186948fbc57eca458687e4b4f96a0f9aceceeba9a767eb949b00931123",
+            "copy_entry_relative_phase_ns": 114025700,
+            "last_kernel_submit_relative_phase_ns": 113805700,
+            "last_kernel_end_relative_copy_ns": 3485349,
+            "before_first_operation_activity_ns": 0,
+            "internal_activity_gaps_ns": 192351,
+            "after_terminal_gap_ns": 25951,
+            "largest_operation_activity_gap_ns": 131551,
+            "observed_accounting_api_union_in_phase_ns": 51452700,
+            "scope_source": "runs/cupti-input-bd377c860faf-b3-G1024P-pass1/model/scope_token0.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b3-G1024P-pass1/model/derived_token0/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b3-G1024P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 292120,
+              "end_relative_copy_ns": 423671,
+              "ns": 131551,
+              "preceding_ids": [
+                "record:30415"
+              ],
+              "following_ids": [
+                "record:30458"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 3491749,
+              "end_relative_copy_ns": 3517700,
+              "ns": 25951,
+              "preceding_ids": [
+                "record:30648"
+              ],
+              "following_ids": []
+            },
+            {
+              "start_relative_copy_ns": 457463,
+              "end_relative_copy_ns": 471063,
+              "ns": 13600,
+              "preceding_ids": [
+                "record:30458"
+              ],
+              "following_ids": [
+                "record:30461"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 3442085,
+              "end_relative_copy_ns": 3455653,
+              "ns": 13568,
+              "preceding_ids": [
+                "record:30619"
+              ],
+              "following_ids": [
+                "record:30638"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 3456229,
+              "end_relative_copy_ns": 3468645,
+              "ns": 12416,
+              "preceding_ids": [
+                "record:30638"
+              ],
+              "following_ids": [
+                "record:30641"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 656630,
+              "end_relative_copy_ns": 665654,
+              "ns": 9024,
+              "preceding_ids": [
+                "record:30472"
+              ],
+              "following_ids": [
+                "record:30486"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:30649",
+            "domain": "RUNTIME",
+            "correlation": 28846,
+            "cbid": 41,
+            "tid": 40504,
+            "start": 2511843099188300,
+            "end": 2511843102693500
+          },
+          "sync": {
+            "id": "record:30651",
+            "domain": "RUNTIME",
+            "correlation": 28847,
+            "cbid": 131,
+            "tid": 40504,
+            "start": 2511843102695800,
+            "end": 2511843102706000
+          },
+          "terminal": {
+            "id": "record:30648",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 28846,
+            "runtime_correlation": 0,
+            "pid": 70868,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511843102678993,
+            "end": 2511843102680049,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 84,
+          "memset_classes": {
+            "OBSERVED_ZERO": 84,
+            "OBSERVED_POSITIVE": 29
+          }
+        },
+        {
+          "token_index": 1,
+          "scope": {
+            "session_id": "cupti-input-bd377c860faf-b3-G1024P-pass1",
+            "pid": 70868,
+            "tid": 40504,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "drain_end": 2511842984155100,
+            "request_start": 2511842985162600,
+            "completion_end": 2511843198297100,
+            "copy_api": "record:57579",
+            "sync_api": "record:57581",
+            "completion_proof": "HOST_TOKEN_READABLE",
+            "actual_token_ids": [
+              6556
+            ],
+            "ownership": "CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS"
+          },
+          "metrics": {
+            "schema_version": "cupti-token-metrics/0.1.0",
+            "token_index": 1,
+            "phase": "Decode",
+            "phase_start_ns": 2511843104573500,
+            "phase_end_ns": 2511843198297100,
+            "phase_ns": 93723600,
+            "coe_ns": 560381,
+            "coe_phase_ratio": 0.005979081042554917,
+            "phase_gpu_union_ns": 14409400,
+            "coe_phase_gpu_ratio": 0.0388899607200855,
+            "operation_gpu_union_ns": 560381,
+            "operation_wall_ns": 741100,
+            "operation_complement_ns": 180719,
+            "copy_wall_ns": 732900,
+            "sync_wall_ns": 6500,
+            "original_sync_intersection_ns": 0,
+            "kernel_coe_ns": 512029,
+            "memop_coe_ns": 48352,
+            "necessary_before_copy_ns": 80519758,
+            "copy_api_id": "record:57579",
+            "sync_api_id": "record:57581",
+            "copy_entry_ns": 2511843196263900,
+            "sync_return_ns": 2511843197005000,
+            "last_pre_copy_required_submission_return_ns": 2511843196166000,
+            "copy_entry_after_last_submission_ns": 97900,
+            "terminal_id": "record:57578",
+            "terminal_end_ns": 2511843196977505,
+            "terminal_after_copy_entry_ns": 713605,
+            "phase_gpu_scope": "OBSERVED_PID_DEVICE_CONTEXT_PHASE_NOT_CUMULATIVE_W",
+            "pure_host_blocking_ns": null,
+            "formal_eligible": false,
+            "run_id": "cupti-input-bd377c860faf-b3-G1024P-pass1",
+            "block": 3,
+            "position": 3,
+            "input_tokens": 1024,
+            "role": "Pilot",
+            "control_analysis_commit": "bd377c860faf16f9ac5cab1e85b99df101cc3676",
+            "native_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+            "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+            "phase_coe_percent": 0.5979081042554917,
+            "gpu_coe_percent": 3.88899607200855,
+            "member_count": 3385,
+            "kernel_count": 3352,
+            "kernel_complete_before_copy_count": 3345,
+            "kernel_active_in_operation_count": 7,
+            "kernel_sequence_layout_sha256": "97a9ce566b7958f22234ea9cf2f1acf1436d31f0b9359dca38f46dd91ee8668e",
+            "copy_entry_relative_phase_ns": 91690400,
+            "last_kernel_submit_relative_phase_ns": 91592500,
+            "last_kernel_end_relative_copy_ns": 704613,
+            "before_first_operation_activity_ns": 57769,
+            "internal_activity_gaps_ns": 95455,
+            "after_terminal_gap_ns": 27495,
+            "largest_operation_activity_gap_ns": 78239,
+            "observed_accounting_api_union_in_phase_ns": 38502600,
+            "scope_source": "runs/cupti-input-bd377c860faf-b3-G1024P-pass1/model/scope_token1.json",
+            "result_source": "runs/cupti-input-bd377c860faf-b3-G1024P-pass1/model/derived_token1/result.json",
+            "capture_source": "runs/cupti-input-bd377c860faf-b3-G1024P-pass1/model/timeline/capture.json"
+          },
+          "membership_reused": "COORDINATOR_REVIEWED_S_NOT_RECONSTRUCTED",
+          "max_gaps": [
+            {
+              "start_relative_copy_ns": 553542,
+              "end_relative_copy_ns": 631781,
+              "ns": 78239,
+              "preceding_ids": [
+                "record:57549"
+              ],
+              "following_ids": [
+                "record:57568"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 0,
+              "end_relative_copy_ns": 57769,
+              "ns": 57769,
+              "preceding_ids": [],
+              "following_ids": [
+                "record:57455"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 713605,
+              "end_relative_copy_ns": 741100,
+              "ns": 27495,
+              "preceding_ids": [
+                "record:57578"
+              ],
+              "following_ids": []
+            },
+            {
+              "start_relative_copy_ns": 704613,
+              "end_relative_copy_ns": 712837,
+              "ns": 8224,
+              "preceding_ids": [
+                "record:57571"
+              ],
+              "following_ids": [
+                "record:57578"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 679365,
+              "end_relative_copy_ns": 684869,
+              "ns": 5504,
+              "preceding_ids": [
+                "record:57568"
+              ],
+              "following_ids": [
+                "record:57571"
+              ]
+            },
+            {
+              "start_relative_copy_ns": 65641,
+              "end_relative_copy_ns": 66409,
+              "ns": 768,
+              "preceding_ids": [
+                "record:57503"
+              ],
+              "following_ids": [
+                "record:57549"
+              ]
+            }
+          ],
+          "copy": {
+            "id": "record:57579",
+            "domain": "RUNTIME",
+            "correlation": 54183,
+            "cbid": 41,
+            "tid": 40504,
+            "start": 2511843196263900,
+            "end": 2511843196996800
+          },
+          "sync": {
+            "id": "record:57581",
+            "domain": "RUNTIME",
+            "correlation": 54184,
+            "cbid": 131,
+            "tid": 40504,
+            "start": 2511843196998500,
+            "end": 2511843197005000
+          },
+          "terminal": {
+            "id": "record:57578",
+            "kind": "MEMCPY",
+            "domain": "DRIVER",
+            "correlation": 54183,
+            "runtime_correlation": 0,
+            "pid": 70868,
+            "tid": 0,
+            "cbid": 0,
+            "return_code": 0,
+            "start": 2511843196976737,
+            "end": 2511843196977505,
+            "device": 0,
+            "context": 1,
+            "stream": 7,
+            "bytes": 8,
+            "value": 0,
+            "copy_kind": 2,
+            "src_kind": 3,
+            "dst_kind": 1,
+            "graph": 0,
+            "graph_node": 0,
+            "flags": 0,
+            "event": 0,
+            "name": "",
+            "grid": [
+              0,
+              0,
+              0
+            ],
+            "block": [
+              0,
+              0,
+              0
+            ],
+            "dynamic_shared": 0
+          },
+          "logical_zero_calls": 84,
+          "memset_classes": {
+            "OBSERVED_ZERO": 84,
+            "OBSERVED_POSITIVE": 30
+          }
+        }
+      ],
+      "elapsed_local_seconds": 2.9371050999616273
+    }
+  ],
+  "high_1024_top_kernel_layout_groups": [
+    {
+      "run_id": "cupti-input-bd377c860faf-b2-G1024P-pass1",
+      "block": "2",
+      "input_tokens": "1024",
+      "token_index": "0",
+      "symbol": "ampere_fp16_s1688gemm_fp16_64x128_sliced1x2_ldg8_f2f_tn",
+      "grid": "(140, 8, 1)",
+      "threads": "(128, 1, 1)",
+      "dynamic_shared": "0",
+      "count": "56",
+      "phase_execution_union_ns": "10103576",
+      "coe_ns": "6786257",
+      "first_submit_return_relative_copy_ns": "-84461000",
+      "last_submit_return_relative_copy_ns": "-907800",
+      "member_ids": "record:1216;record:1271;record:2295;record:2350;record:3374;record:3429;record:4453;record:4508;record:5532;record:5587;record:6611;record:6666;record:7690;record:7745;record:8769;record:8824;record:9848;record:9903;record:10927;record:10982;record:12006;record:12061;record:13085;record:13140;record:14164;record:14219;record:15243;record:15298;record:16322;record:16377;record:17401;record:17456;record:18480;record:18535;record:19559;record:19614;record:20638;record:20693;record:21717;record:21772;record:22796;record:22851;record:23875;record:23930;record:24954;record:25009;record:26033;record:26088;record:27112;record:27167;record:28191;record:28246;record:29270;record:29325;record:30349;record:30404"
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b2-G1024P-pass1",
+      "block": "2",
+      "input_tokens": "1024",
+      "token_index": "0",
+      "symbol": "ampere_fp16_s1688gemm_fp16_64x128_sliced1x2_ldg8_f2f_tn",
+      "grid": "(24, 8, 2)",
+      "threads": "(128, 1, 1)",
+      "dynamic_shared": "0",
+      "count": "28",
+      "phase_execution_union_ns": "4949534",
+      "coe_ns": "3352969",
+      "first_submit_return_relative_copy_ns": "-84225700",
+      "last_submit_return_relative_copy_ns": "-754200",
+      "member_ids": "record:1328;record:2407;record:3486;record:4565;record:5644;record:6723;record:7802;record:8881;record:9960;record:11039;record:12118;record:13197;record:14276;record:15355;record:16434;record:17513;record:18592;record:19671;record:20750;record:21829;record:22908;record:23987;record:25066;record:26145;record:27224;record:28303;record:29382;record:30461"
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b2-G1024P-pass1",
+      "block": "2",
+      "input_tokens": "1024",
+      "token_index": "0",
+      "symbol": "_ZN2at6native29vectorized_elementwise_kernelILi4EZZZNS0_61_GLOBAL__N__bd18916b_23_ActivationSiluKernel_cu_f0a75338_526811silu_kernelERNS_18TensorIteratorBaseEENKUlvE_clEvENKUlvE3_clEvEUlN3c104HalfEE_St5arrayIPcLy2EEEEviT0_T1_",
+      "grid": "(17920, 1, 1)",
+      "threads": "(128, 1, 1)",
+      "dynamic_shared": "0",
+      "count": "28",
+      "phase_execution_union_ns": "4032866",
+      "coe_ns": "2992617",
+      "first_submit_return_relative_copy_ns": "-84417200",
+      "last_submit_return_relative_copy_ns": "-985300",
+      "member_ids": "record:1227;record:2306;record:3385;record:4464;record:5543;record:6622;record:7701;record:8780;record:9859;record:10938;record:12017;record:13096;record:14175;record:15254;record:16333;record:17412;record:18491;record:19570;record:20649;record:21728;record:22807;record:23886;record:24965;record:26044;record:27123;record:28202;record:29281;record:30360"
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b2-G1024P-pass1",
+      "block": "2",
+      "input_tokens": "1024",
+      "token_index": "0",
+      "symbol": "ampere_fp16_s1688gemm_fp16_128x128_ldg8_f2f_stages_32x1_tn",
+      "grid": "(1187, 8, 1)",
+      "threads": "(128, 1, 1)",
+      "dynamic_shared": "0",
+      "count": "1",
+      "phase_execution_union_ns": "2760046",
+      "coe_ns": "2760046",
+      "first_submit_return_relative_copy_ns": "-306700",
+      "last_submit_return_relative_copy_ns": "-306700",
+      "member_ids": "record:30619"
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b2-G1024P-pass1",
+      "block": "2",
+      "input_tokens": "1024",
+      "token_index": "0",
+      "symbol": "_ZN43_GLOBAL__N__c5dc35cd_10_SoftMax_cu_0af7be2120softmax_warp_forwardIfffLi10ELb0ELb0EEEvPT0_PKT_iiiPKbib",
+      "grid": "(3072, 1, 1)",
+      "threads": "(32, 4, 1)",
+      "dynamic_shared": "0",
+      "count": "28",
+      "phase_execution_union_ns": "3320136",
+      "coe_ns": "2500175",
+      "first_submit_return_relative_copy_ns": "-85424400",
+      "last_submit_return_relative_copy_ns": "-1922900",
+      "member_ids": "record:900;record:1979;record:3058;record:4137;record:5216;record:6295;record:7374;record:8453;record:9532;record:10611;record:11690;record:12769;record:13848;record:14927;record:16006;record:17085;record:18164;record:19243;record:20322;record:21401;record:22480;record:23559;record:24638;record:25717;record:26796;record:27875;record:28954;record:30033"
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b2-G1024P-pass1",
+      "block": "2",
+      "input_tokens": "1024",
+      "token_index": "0",
+      "symbol": "_ZN2at6native29vectorized_elementwise_kernelILi4EZZZNS0_49_GLOBAL__N__97375e57_16_TensorCompare_cu_71e06f4e20isneginf_kernel_implERNS_18TensorIteratorBaseEENKUlvE_clEvENKUlvE0_clEvEUlfE_St5arrayIPcLy2EEEEviT0_T1_",
+      "grid": "(24576, 1, 1)",
+      "threads": "(128, 1, 1)",
+      "dynamic_shared": "0",
+      "count": "28",
+      "phase_execution_union_ns": "3208715",
+      "coe_ns": "2303345",
+      "first_submit_return_relative_copy_ns": "-85401100",
+      "last_submit_return_relative_copy_ns": "-1905300",
+      "member_ids": "record:911;record:1990;record:3069;record:4148;record:5227;record:6306;record:7385;record:8464;record:9543;record:10622;record:11701;record:12780;record:13859;record:14938;record:16017;record:17096;record:18175;record:19254;record:20333;record:21412;record:22491;record:23570;record:24649;record:25728;record:26807;record:27886;record:28965;record:30044"
+    }
+  ],
+  "full_local_kernel_group_csv": {
+    "path": ".local/diagnostics/cupti_input_threepoint_review_v0_1_verified/kernel_groups.csv",
+    "sha256": "63bbb202db38403029e0f14f632e05399f3d2f599f98f57f0da2252b08e5ebe9"
+  },
+  "interpretation_limits": [
+    "COE not pure Host blocking or reducible latency",
+    "operation GPU union equals COE in all 18",
+    "three blocks do not guarantee precision or general monotonicity",
+    "original sync metric and A/B unchanged",
+    "second token has cumulative W but phase-only GPU denominator",
+    "no P0 transfer or cross-provider paired curve"
+  ],
+  "fallacy_scan": {
+    "coverage": "11/11",
+    "items": [
+      {
+        "kind": "Simpson",
+        "status": "CHECKED",
+        "note": "block/token stratified; no pooled trend substituted"
+      },
+      {
+        "kind": "Ecological_pseudoreplication",
+        "status": "CHECKED",
+        "note": "three complete blocks, not 18 independent tokens or kernels"
+      },
+      {
+        "kind": "Berkson_selection",
+        "status": "LIMIT",
+        "note": "fixed workload/support subset; no population or all-input qualification"
+      },
+      {
+        "kind": "Collider",
+        "status": "CHECKED",
+        "note": "no conditioning/exclusion based on COE magnitude or sign"
+      },
+      {
+        "kind": "Base_rate",
+        "status": "NOT_APPLICABLE",
+        "note": "no diagnostic probability or classification"
+      },
+      {
+        "kind": "Regression_to_mean",
+        "status": "CAUTION",
+        "note": "high1024 retained; no claim it will regress or define a regime"
+      },
+      {
+        "kind": "Survivorship",
+        "status": "CHECKED",
+        "note": "all nine valid runs retained; historical failures separately preserved"
+      },
+      {
+        "kind": "Look_elsewhere",
+        "status": "CHECKED",
+        "note": "locked endpoint and midpoint descriptions; no p-value testing"
+      },
+      {
+        "kind": "Forking_paths",
+        "status": "CAUTION",
+        "note": "signed R predeclared; new mechanism inspection is post-hoc exploratory"
+      },
+      {
+        "kind": "Correlation_causation",
+        "status": "CAUTION",
+        "note": "no GPU-only blocking, scheduler, hardware or profiler causal attribution"
+      },
+      {
+        "kind": "Reverse_causality",
+        "status": "LIMIT",
+        "note": "temporal positions measured; mediator causal contributions not identified"
+      }
+    ]
+  }
+}
