@@ -12,7 +12,7 @@ function ExactSHA([string]$Path) {
     finally {$Digest.Dispose();$InputFile.Dispose()}
 }
 $Config=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'delivery.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-if ($Config.schema_version -ne 'CUPTI-INPUT-PILOT/0.1.0') {throw 'Pilot version conflict; STOP'}
+if ($Config.schema_version -notin @('CUPTI-INPUT-PILOT/0.1.0','CUPTI-INPUT-PLAN/0.2.0')) {throw 'Input plan version conflict; STOP'}
 $Seen=@{}
 foreach ($Item in $Config.bootstrap_files) {
     $Name=[string]$Item.path

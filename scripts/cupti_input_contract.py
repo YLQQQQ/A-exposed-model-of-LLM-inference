@@ -15,6 +15,9 @@ import sys
 VERSION='CUPTI-INPUT-PILOT/0.1.0'
 MODEL='cupti-timeline-model/0.3.0'
 CONTROL='cupti-timeline-stage-b/0.3.0'
+PLAN_VERSION='CUPTI-INPUT-PLAN/0.2.0'
+PLAN_MODEL='cupti-timeline-model/0.4.0'
+PLAN_CONTROL='cupti-timeline-stage-b/0.4.0'
 NATIVE='6c744bf52daff3fc54571e264a0c34e3207aa1df'
 POLICIES=dict(consumer_version='submit-effect-bridge/0.3.0',
     timing_policy='cupti-api22-distinct-api-callback-boundaries/0.2.0',
@@ -25,15 +28,25 @@ def require(ok,reason):
     if not ok:raise ValueError('CUPTI_INPUT_'+reason)
 
 
-def schedule(batch_id,commit):
-    require(isinstance(commit,str) and re.fullmatch('[0-9a-f]{40}',commit),'COMMIT')
-    # Reuse the existing producer's prospective Pilot identity contract ONLY.
-    # This does not inherit its Nsight observation/analysis qualification.
-    # Explicit source layouts: repository scripts/ vs flat reviewed delivery.
+def role_policy():
     here=Path(__file__).resolve()
     source=here.parents[1]/'exposedpath/gate11_pilot.py' if here.parent.name=='scripts' else here.with_name('producer_policy.py')
     spec=importlib.util.spec_from_file_location('_cupti_role_plan',source)
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+    return module
+
+
+def schedule(batch_id,commit,*,plan=None):
+    require(isinstance(commit,str) and re.fullmatch('[0-9a-f]{40}',commit),'COMMIT')
+    # Reuse the existing producer's prospective Pilot identity contract ONLY.
+    # This does not inherit its Nsight observation/analysis qualification.
+    # Explicit source layouts: repository scripts/ vs flat reviewed delivery.
+    module=role_policy()
+    if plan is not None:
+        rows=module.cupti_plan_schedule(batch_id,NATIVE,plan)
+        return [dict(deepcopy(p),version='CUPTI-INPUT-SLOT/0.2.0',controller_commit=commit,
+            producer_binding=deepcopy(p) if plan['role']=='Pilot' else None,
+            data_role=plan['role'],nsight_profiles=0,cupti_sessions=1) for p in rows]
     require(module.CUPTI_INPUT_VERSION=='CUPTI-INPUT-PRODUCER-PILOT/0.1.0','ROLE_POLICY_VERSION')
     original=module.cupti_schedule
     return [dict(deepcopy(p),version='CUPTI-INPUT-SLOT/0.1.0',controller_commit=commit,
@@ -62,6 +75,21 @@ def bind_producer(cfg):
 
 
 def validate_model(c):
+    if c.get('schema_version')==PLAN_MODEL:
+        plan=c.get('input_plan');role_policy().validate_cupti_plan(plan)
+        expected=dict(batch_size=1,output_tokens=2,warmup_count=3,repeat_count=1,role=plan['role'],
+            completion_policy='HOST_READABLE_P',model_process_budget=1,nsight_profiles=0,torch_profiler=False,
+            native_commit=NATIVE,activity_policy_version='cupti-api22-activity-policy/0.2.0',**POLICIES)
+        require(all(type(c.get(k)) is type(v) and c[k]==v for k,v in expected.items()),'MODEL_CONTRACT')
+        slot=c.get('input_slot');require(isinstance(slot,dict) and any(slot==s for s in
+            schedule(slot.get('batch_id'),c.get('control_commit'),plan=plan)),'SLOT_BINDING')
+        require(c.get('input_tokens')==slot['input_tokens'] and type(c.get('input_tokens')) is int
+            and c.get('run_id')==slot['run_id'] and
+            c.get('session',{}).get('activity_policy_version')==c['activity_policy_version'],'INPUT_OR_SESSION_BINDING')
+        validate_output_policy(c.get('output_validation'),plan['role'])
+        require(isinstance(c.get('model_limits'),dict) and c['input_tokens']+2<=c['model_limits'].get('max_position_embeddings',0),
+            'MODEL_CAPACITY_OR_VOCAB')
+        return NATIVE
     require(c.get('schema_version')==MODEL,'MODEL_VERSION')
     expected=dict(batch_size=1,output_tokens=2,warmup_count=3,repeat_count=1,role='Pilot',
         completion_policy='HOST_READABLE_P',model_process_budget=1,nsight_profiles=0,torch_profiler=False,
@@ -73,6 +101,36 @@ def validate_model(c):
     require(type(c.get('input_tokens')) is int and c['input_tokens']==p['input_tokens'] and c['run_id']==p['run_id']
         and c.get('session',{}).get('activity_policy_version')==c['activity_policy_version'],'INPUT_OR_SESSION_BINDING')
     return NATIVE
+
+
+def validate_output_policy(policy,role):
+    require(isinstance(policy,dict) and set(policy)=={'version','mode','expected_token_ids'}
+        and policy['version']=='cupti-output-validation/0.2.0','OUTPUT_POLICY')
+    if policy['mode']=='OBSERVED_ENGINEERING':
+        require(role=='Engineering' and policy['expected_token_ids'] is None,'OUTPUT_POLICY')
+    else:
+        require(policy['mode']=='EXACT_REFERENCE' and role in ('Pilot','Engineering'),'OUTPUT_POLICY')
+        require(isinstance(policy['expected_token_ids'],list) and len(policy['expected_token_ids'])==2
+            and all(isinstance(v,list) and len(v)==1 and type(v[0]) is int and v[0]>=0
+                for v in policy['expected_token_ids']),'OUTPUT_POLICY')
+    return policy
+
+
+def validate_tokens(ids,policy,model):
+    require(isinstance(ids,list) and len(ids)==2 and all(isinstance(v,list) and len(v)==1
+        and type(v[0]) is int and 0<=v[0]<model['vocab_size'] and v[0] not in model['eos_token_ids'] for v in ids),
+        'TOKEN_VALUES_OR_EOS')
+    if policy['mode']=='EXACT_REFERENCE':require(ids==policy['expected_token_ids'],'TOKEN_REFERENCE')
+    return dict(mode=policy['mode'],actual_token_ids=ids,
+        independent_content_reference=policy['mode']=='EXACT_REFERENCE',numerical_correctness='NOT_ASSESSED')
+
+
+def model_limits(config):
+    eos=config.get('eos_token_id');eos=eos if isinstance(eos,list) else [eos]
+    require(type(config.get('vocab_size')) is int and config['vocab_size']>0 and
+        type(config.get('max_position_embeddings')) is int and all(type(v) is int and 0<=v<config['vocab_size'] for v in eos),
+        'MODEL_LIMITS')
+    return dict(vocab_size=config['vocab_size'],max_position_embeddings=config['max_position_embeddings'],eos_token_ids=eos)
 
 
 def input_identity(prompt,length,model_config=None):
@@ -153,26 +211,34 @@ def token_metrics(raw,scope,result,index,phase_start):
         pure_host_blocking_ns=None,formal_eligible=False)
 
 
-def summarize(slots,rows):
-    require(len(rows)==len(slots)==9,'INCOMPLETE_BLOCKS')
+def summarize(slots,rows,*,plan=None):
+    if plan is not None:
+        role_policy().validate_cupti_plan(plan)
+        require(slots and slots==schedule(slots[0]['batch_id'],slots[0]['controller_commit'],plan=plan),'SLOT_PLAN')
+    require(len(rows)==len(slots)==(9 if plan is None else plan['blocks']*len(plan['input_lengths'])),'INCOMPLETE_BLOCKS')
     require([r['slot'] for r in rows]==slots,'SLOT_IDENTITY_OR_ORDER')
     for r in rows:require([v['token_index'] for v in r['metrics']]==[0,1],'TOKEN_COVERAGE')
     comparisons=[]
-    for block in (1,2,3):
+    blocks=[1,2,3] if plan is None else list(range(1,plan['blocks']+1))
+    for block in blocks:
         by_length={r['slot']['input_tokens']:r for r in rows if r['slot']['block']==block}
-        require(set(by_length)=={512,1024,2048},'INCOMPLETE_BLOCKS')
+        require(set(by_length)==({512,1024,2048} if plan is None else set(plan['input_lengths'])),'INCOMPLETE_BLOCKS')
         for token in (0,1):
-            for low,high in ((512,1024),(1024,2048),(512,2048)):
+            pairs=[dict(low=a,high=b,role='PRIMARY_ENDPOINT' if token==0 and (a,b)==(512,2048)
+                else 'PREDECLARED_DESCRIPTION') for a,b in ((512,1024),(1024,2048),(512,2048))] if plan is None else [
+                    v for v in plan['comparisons'] if token in v['token_indices']]
+            for comparison in pairs:
+                low,high=comparison['low'],comparison['high']
                 a,b=(by_length[n]['metrics'][token] for n in (low,high))
                 ga,gb=a['phase_gpu_union_ns'],b['phase_gpu_union_ns']
                 defined=type(ga) is int and ga>0 and type(gb) is int and gb>=0
                 value=Fraction(b['coe_ns'])-Fraction(a['coe_ns'])*Fraction(gb,ga) if defined else None
                 comparisons.append(dict(block=block,token_index=token,low=low,high=high,
-                    comparison_role='PRIMARY_ENDPOINT' if token==0 and (low,high)==(512,2048) else 'PREDECLARED_DESCRIPTION',
+                    comparison_role=comparison['role'],
                     delta_coe_ns=b['coe_ns']-a['coe_ns'],R_ns=float(value) if value is not None else None,
                     R_exact=dict(numerator=value.numerator,denominator=value.denominator) if value is not None else None,
                     R_undefined_reason=None if defined else 'NONPOSITIVE_OR_INVALID_LOW_PHASE_GPU_UNION',
                     coe_phase_percentage_point_delta=100*(b['coe_phase_ratio']-a['coe_phase_ratio'])))
-    return dict(schema_version='cupti-input-pilot-summary/0.1.0',complete_blocks=[1,2,3],rows=rows,
+    return dict(schema_version='cupti-input-pilot-summary/0.1.0' if plan is None else 'cupti-input-summary/0.2.0',complete_blocks=blocks,rows=rows,
         comparisons=comparisons,statistical_unit='COMPLETE_BLOCK_NOT_TOKEN',
         stable_precision='NOT_ASSESSED',old_samples_pooled=False,pure_host_blocking=None,formal_eligible=False)

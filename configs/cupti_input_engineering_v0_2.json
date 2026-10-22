@@ -1,0 +1,8 @@
+{
+  "schema_version": "CUPTI-INPUT-PLAN/0.2.0",
+  "role": "Engineering",
+  "input_lengths": [4096],
+  "blocks": 1,
+  "orders": [[4096]],
+  "comparisons": []
+}

@@ -12,6 +12,46 @@ ORDERS = (('G32','N0','Nm','N16','G512'), ('G512','Nm','N16','N0','G32'),
 CONDITIONS = {'G32':(32,None), 'G512':(512,None), 'N0':(32,'V0'),
               'Nm':(32,'Vmarker'), 'N16':(32,'Vsync')}
 CUPTI_INPUT_VERSION='CUPTI-INPUT-PRODUCER-PILOT/0.1.0'
+CUPTI_PLAN_VERSION='CUPTI-INPUT-PLAN/0.2.0'
+CUPTI_PRODUCER_VERSION='CUPTI-INPUT-PRODUCER-PILOT/0.2.0'
+
+
+def validate_cupti_plan(plan):
+    """Finite declaration, not a list of qualified input sizes or a GPU probe."""
+    require(isinstance(plan,dict) and set(plan)=={'schema_version','role','input_lengths','blocks','orders','comparisons'}
+        and plan['schema_version']==CUPTI_PLAN_VERSION and plan['role'] in ('Pilot','Engineering'),'CUPTI_PLAN')
+    lengths=plan['input_lengths'];orders=plan['orders'];count=plan['blocks']
+    require(isinstance(lengths,list) and lengths and all(type(n) is int and n>=32 and n%32==0 for n in lengths)
+        and len(lengths)==len(set(lengths)) and type(count) is int and count>0
+        and count*len(lengths)<=64 and isinstance(orders,list) and len(orders)==count,'CUPTI_PLAN_SIZE')
+    require(all(isinstance(order,list) and len(order)==len(lengths) and all(type(n) is int for n in order)
+        and set(order)==set(lengths) for order in orders),'CUPTI_PLAN_ORDER')
+    comparisons=plan['comparisons'];seen=set()
+    require(isinstance(comparisons,list),'CUPTI_PLAN_COMPARISONS')
+    for v in comparisons:
+        require(isinstance(v,dict) and set(v)=={'low','high','role','token_indices'} and
+            type(v['low']) is int and type(v['high']) is int and v['low'] in lengths and v['high'] in lengths
+            and v['low']<v['high'] and v['role'] in ('PRIMARY','SECONDARY') and
+            isinstance(v['token_indices'],list) and v['token_indices'] and
+            all(type(i) is int and i in (0,1) for i in v['token_indices']) and
+            len(v['token_indices'])==len(set(v['token_indices'])),'CUPTI_PLAN_COMPARISON')
+        for i in v['token_indices']:
+            key=(v['low'],v['high'],i)
+            require(key not in seen,'CUPTI_PLAN_DUPLICATE_COMPARISON');seen.add(key)
+    return plan
+
+
+def cupti_plan_schedule(batch_id,native_commit,plan):
+    validate_cupti_plan(plan)
+    require(isinstance(batch_id,str) and re.fullmatch('[A-Za-z0-9_-]{1,32}',batch_id),'CUPTI_PLAN_BATCH')
+    require(native_commit=='6c744bf52daff3fc54571e264a0c34e3207aa1df','CUPTI_PLAN_NATIVE')
+    return [dict(version=CUPTI_PRODUCER_VERSION,batch_id=batch_id,execution_commit=native_commit,
+        plan=deepcopy(plan),block=b,position=p,condition=f'G{n}P',input_tokens=n,
+        batch_size=1,output_tokens=2,warmup_count=3,repeat_count=1,
+        run_id=f'{batch_id}-b{b}-G{n}P-pass1',pair_id=f'{batch_id}-b{b}',pass_id='pass1',
+        observation_variant='P',purpose='CUPTI_CANDIDATE_INPUT_RESPONSE_ONLY',
+        warmup_position='BEFORE_SUBSCRIPTION_OUTSIDE_MEASURED_LEDGER',declaration_role='PRE_EXECUTION',formal_eligible=False)
+        for b,order in enumerate(plan['orders'],1) for p,n in enumerate(order,1)]
 
 
 def cupti_schedule(batch_id,native_commit):
@@ -60,6 +100,11 @@ def schedule(batch_id, *, blocks=3):
 
 def validate_binding(value):
     require(isinstance(value,dict),'BINDING')
+    if value.get('version')==CUPTI_PRODUCER_VERSION:
+        require(value.get('plan',{}).get('role')=='Pilot' and any(value==r and
+            all(type(value[k]) is type(v) for k,v in r.items()) for r in
+            cupti_plan_schedule(value.get('batch_id'),value.get('execution_commit'),value.get('plan'))),'CUPTI_PLAN_BINDING')
+        return value
     if value.get('version')==CUPTI_INPUT_VERSION:
         require(any(value==r and all(type(value[k]) is type(v) for k,v in r.items())
             for r in cupti_schedule(value.get('batch_id'),value.get('execution_commit'))),'CUPTI_BINDING')

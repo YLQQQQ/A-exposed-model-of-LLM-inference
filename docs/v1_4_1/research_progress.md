@@ -1,6 +1,55 @@
 # ExposedPath 科研进度清单
 
-## 7.236 独立CUPTI三点Pilot收口与1024高值机制审查（2026-10-22，当前）
+## 7.237 通用输入计划与单次4096 Engineering准备（2026-10-22，当前）
+
+- [x] 用户调整最高优先级：先做4096单实例完整链，不执行7.236的九次增量候选；后者保留
+  为历史未执行计划。2048仅是已测最高点，不是模型、24GB显存或支持域上限。目标是为
+  后续“保持/趋缓/反转”研究检查适用性，本次一个样本不能裁决响应形状或稳定规律。
+- [x] 新`CUPTI-INPUT-PLAN/0.2.0`从配置声明长度列表、block数、每block完整顺序和
+  主/次比较；稳定run身份绑定plan与控制commit。逐点`inputs`绑定文件字节、完整二维
+  input/mask摘要和输出校验政策。采集、producer、两token消费者和完整block汇总复用
+  同一入口；不按长度复制脚本或增加schema分支。旧0.1三点合同、0.1/0.2/0.3单run读取
+  保留，新0.4仅为配置/角色/资源回执封套，bridge0.3及两查询政策、S/COE/迁移未改变。
+- [x] 独立机器计划`configs/cupti_input_engineering_v0_2.json`固定[4096]、1block、1P1、
+  1session/0Nsight、warmup3/repeat1、batch1/output2。P helper、自然Host-readable边界、
+  三次窗外暖机及测量drain均不移动；不插Cpre、不重编6c744bf DLL/SDK。原runner/P源码及
+  `resident_capture`函数保持；新metadata不授予输入长度GPU资格。
+- [x] 模型config原字节660bytes、SHA256
+  `98d2ff8cc47488d08a2b0b3acf4eb99ef210779b42bd48605f6b8e36acdbf670`与既有模型清单一致；
+  max_position_embeddings32768、vocab151936，4096+2仅通过配置层长度/词表检查。新输入
+  沿封存32token周期与全1mask，文件/二维摘要重新绑定；未知4096输出不借用旧长度答案。
+  版本化`OBSERVED_ENGINEERING`仅校验实际两Host值的shape/vocab/EOS/身份、producer和
+  完成链一致；独立数值正确性/跨运行token parity未验证。此模式拒绝Pilot角色，不降低
+  旧精确token参考政策，不宣称得到一个已独立验证的预期token参考。
+- [x] 新显存回执只在session/测量窗外查询前后设备free/total，重置后记录PyTorch allocator
+  allocated/reserved峰值；峰值覆盖resident模型/输入基线＋3warmup＋测量，**不是整卡峰值、
+  不分摊到phase**。整卡峰值保持null。记录固定131072 callbacks/131072 activities/2048
+  markers容量的使用量和原始质量状态，溢出/丢失/未知或依赖缺口仍拒绝，不扩collector。
+- [x] 测试先行：旧入口11失败/1通过，失败为没有plan/输出政策/显存回执能力；新增与受影响
+  定向最终命令`python -m pytest -q -ra -p no:cacheprovider tests/test_cupti_configured_plan.py
+  tests/test_cupti_input_pilot.py tests/test_cupti_pilot_reference_dispatch.py tests/test_cupti_timeline_b.py
+  tests/test_cupti_model1024.py --basetemp .local/cplan_final --junitxml .local/cplan_final.xml`为
+  **76 passed/0 failed/0 skipped，188.74s**。覆盖单/多点、不同block及顺序、独立Engineering/
+  Pilot、实际二维身份/两token/旧读取、signed负值与零分母、完整block、真实A/event核验
+  到实际`-I/-S`消费者/汇总/单ZIP及容量失败即停；独立原runner CPU替身确认P准备、
+  Host读取及drain次序。封存九次summary只复算小型比较，旧18条精确Δ/R一致，不重跑
+  Raw/S/Q0。py_compile/compileall、diff通过；本地3.12.7，目标3.11.16。目标路径/Git/
+  Python/空间/模型为明确替身，原A不含的CUDART用封存file-fact；不冒称目标GPU资格。
+- [ ] 固定实现commit之后再绑定交付包身份，避免哈希自引用；目标机4096仍NOT_RUN。
+- [ ] 真实新A回执审查后才另给B命令。默认A只核包、固定checkout/source/library、原A/event、
+  实际config、输入/角色、语法及新鲜参与卷12GiB；不加载CUDA/模型，不构建/安装。模型
+  硬300s、分析硬180s，暂不扩大；预计5～12分钟含核验/封包，扩展原件0.3～0.8GiB、
+  ZIP20～80MiB为估计，4k的实际峰值/记录量未知，不能保证。历史总容量null/UNKNOWN、
+  长期目标<50,000,000,000bytes单列；无历史遍历/ACL/自动清理。
+
+计划调整：暂停原中间点九槽，不恢复旧失败批次或1024/provider/hook/引擎/输出轴。
+4096若独立通过，再审1536/4096重复和少量2048同期参照；本轮不预授权该批，不拼跨批
+配对block。任何长度/OOM/超时/容量/身份/映射/依赖/terminal硬失败立即停止，1槽完成
+即停，无重试/替补/追加。成功只限该实例Engineering适用性，不是Formal、纯Host阻塞、
+负载规律或论文贡献。原始数据、历史BLOCKED/UNKNOWN及用户DOCX保持；Gate13限定PASS、
+Gate14 NOT_RUN不变。
+
+## 7.236 独立CUPTI三点Pilot收口与1024高值机制审查（2026-10-22，历史；当前见7.237）
 
 - [x] 新A已由用户执行且真实回执审查后显式启动B；A单包191,323 bytes，SHA256
   `d7ddf5bc43fd1ad7e35d4e3f01de3bdd80bb277567e85fa298cae0fddf5ef1d5`，receipt SHA256

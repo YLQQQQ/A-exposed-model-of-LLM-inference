@@ -1,4 +1,4 @@
-"""Explicit finite 768/1024 Engineering versions. Imported without Torch/CUDA.
+"""Legacy finite versions and configured input plans. Imported without CUDA.
 
 Resident setup and three original warmups precede subscription. The unchanged
 runner supplies the measured drain and two Host-readable token operations.
@@ -44,7 +44,7 @@ def input_contract():
 
 def validate_contract(c):
     version=c.get('schema_version')
-    if version=='cupti-timeline-model/0.3.0':return input_contract().validate_model(c)
+    if version in ('cupti-timeline-model/0.3.0','cupti-timeline-model/0.4.0'):return input_contract().validate_model(c)
     require(version in ('cupti-timeline-model/0.1.0','cupti-timeline-model/0.1.1','cupti-timeline-model/0.2.0'),'CONTRACT_VERSION')
     current=version!='cupti-timeline-model/0.1.0';finite=version=='cupti-timeline-model/0.2.0'
     expected=dict(schema_version=version,input_tokens=1024 if finite else 768,batch_size=1,
@@ -73,8 +73,8 @@ def preparer(config):
     from exposedpath.observation_preparation import Execution
     class EngineeringPreparation(Execution):
         def __init__(self):
-            self.axis=config['schema_version']=='cupti-timeline-model/0.3.0'
-            self.binding=dict(version='CUPTI-TIMELINE-MODEL/PILOT-0.1' if self.axis else 'CUPTI-TIMELINE-MODEL/0.3' if config['schema_version']=='cupti-timeline-model/0.2.0' else 'CUPTI-TIMELINE-MODEL/0.2' if config['schema_version']=='cupti-timeline-model/0.1.1'
+            self.axis=config['role']=='Pilot'
+            self.binding=dict(version='CUPTI-TIMELINE-MODEL/PLAN-0.2' if config['schema_version']=='cupti-timeline-model/0.4.0' else 'CUPTI-TIMELINE-MODEL/PILOT-0.1' if self.axis else 'CUPTI-TIMELINE-MODEL/0.3' if config['schema_version']=='cupti-timeline-model/0.2.0' else 'CUPTI-TIMELINE-MODEL/0.2' if config['schema_version']=='cupti-timeline-model/0.1.1'
                 else 'CUPTI-TIMELINE-MODEL/0.1',run_id=config['run_id'],
                 role=config['role'],input_tokens=config['input_tokens'],output_tokens=2)
             self.variant='P';self.closed=True;self.used=[]
@@ -98,8 +98,11 @@ def resident_capture(runner,session,resident,fields,out,preparation,observer):
 def producer_scopes(session_id,host,drains,tokens,*,input_tokens=768,contract=None):
     if contract is not None:
         validate_contract(contract)
-        require(contract['schema_version']=='cupti-timeline-model/0.3.0' and input_tokens==contract['input_tokens']
-            and tokens.get('pilot')==contract['pilot'],'SCOPE_INPUT_VERSION')
+        planned=contract['schema_version']=='cupti-timeline-model/0.4.0'
+        require(input_tokens==contract['input_tokens'] and
+            (tokens.get('input_slot')==contract['input_slot'] if planned else
+             contract['schema_version']=='cupti-timeline-model/0.3.0' and tokens.get('pilot')==contract['pilot']),
+            'SCOPE_INPUT_VERSION')
     else:require(type(input_tokens) is int and input_tokens in (768,1024),'SCOPE_INPUT_VERSION')
     require(tokens.get('early_eos') is False and tokens.get('actual_input_tokens')==input_tokens and
         tokens.get('actual_output_tokens')==2 and len(tokens.get('token_ids',[]))==2 and
@@ -120,10 +123,28 @@ def producer_scopes(session_id,host,drains,tokens,*,input_tokens=768,contract=No
         token_label='EXPOSEDPATH_BOUNDARY_V1:'+encode(payloads[i+1])) for i in range(2)]
 
 
+def memory_snapshot(cuda,position,device):
+    """No synchronization. Called only outside resident_capture, not per-token.
+
+    CUDA mem_get_info is an instantaneous device-wide free/total query; Torch
+    peaks are allocator-only, covering resident baseline + warmups + measurement.
+    They are NOT the peak occupancy of the whole GPU or a measured phase.
+    """
+    require(position in ('BEFORE_WARMUPS_AND_SESSION','AFTER_CAPTURE_CLOSED'),'MEMORY_POSITION')
+    free,total=map(int,cuda.mem_get_info(device))
+    return dict(position=position,logical_device=device,outside_measured_window=True,
+        free_device_bytes=free,total_device_bytes=total,
+        allocator_allocated_bytes=int(cuda.memory_allocated(device)),
+        allocator_reserved_bytes=int(cuda.memory_reserved(device)),
+        allocator_peak_allocated_bytes=int(cuda.max_memory_allocated(device)),
+        allocator_peak_reserved_bytes=int(cuda.max_memory_reserved(device)),device_total_peak_bytes=None)
+
+
 def run(config_path,out,*,enabled=False):
     require(enabled is True,'EXPLICIT_OPT_IN')
     c=read(config_path)
-    role_binding=input_contract().bind_producer(c) if c.get('schema_version')=='cupti-timeline-model/0.3.0' else None
+    planned=c.get('schema_version')=='cupti-timeline-model/0.4.0'
+    role_binding=input_contract().bind_producer(c) if c.get('schema_version')=='cupti-timeline-model/0.3.0' or planned and c.get('role')=='Pilot' else None
     native_commit=validate_contract(c);out=Path(out).resolve()
     require(not out.exists(),'NO_OVERWRITE_RESUME_RETRY');out.mkdir(parents=True,exist_ok=False)
     # The parent verifies checkout/source/library identity before this import.
@@ -134,12 +155,14 @@ def run(config_path,out,*,enabled=False):
     require(sha(c['prompt'])==c['prompt_sha256'],'INPUT_HASH')
     prompt=read(c['prompt']);cfg=read(Path(c['model'])/'config.json')
     from exposedpath.coe_input_pilot import validate_input,INCREMENTAL_VERSION,MIDPOINT_VERSION
-    pilot=c['schema_version']=='cupti-timeline-model/0.3.0'
-    finite=c['schema_version']=='cupti-timeline-model/0.2.0' or pilot
-    input_identity=(input_contract().input_identity(prompt,c['input_tokens'],cfg) if pilot else
+    pilot=c['role']=='Pilot'
+    finite=c['schema_version']=='cupti-timeline-model/0.2.0' or pilot or planned
+    input_identity=(input_contract().input_identity(prompt,c['input_tokens'],cfg) if pilot or planned else
         validate_input(prompt,cfg,1,version=MIDPOINT_VERSION if finite else INCREMENTAL_VERSION))
     require(prompt['fixed_input_tokens']==c['input_tokens'],'INPUT_LENGTH')
     if finite:require(input_identity==c.get('input_identity'),'INPUT_IDENTITY')
+    if planned:require(sha(Path(c['model'])/'config.json')==c['model_config_sha256'] and
+        input_contract().model_limits(cfg)==c['model_limits'],'MODEL_CONFIG_HASH')
     import torch
     require(str(torch.__version__)=='2.6.0+cu124' and torch.version.cuda=='12.4','TORCH_VERSION')
     require(Path(sys.executable).resolve()==Path(c['target_python']).resolve() and
@@ -152,6 +175,8 @@ def run(config_path,out,*,enabled=False):
         normalized_pci(device['pci_bus_id'])==normalized_pci(c['gpu_pci']),'DEVICE_IDENTITY')
     from exposedpath import runner
     model,tokenizer,_,actual_device=runner.load_model(c['model'],3,allow_fallback=False)
+    if planned:require((tokenizer.eos_token_id if isinstance(tokenizer.eos_token_id,list) else [tokenizer.eos_token_id])==c['model_limits']['eos_token_ids'],
+        'TOKENIZER_EOS_BINDING')
     require(actual_device=='cuda:0' and str(model.dtype)=='torch.float16' and model.training is False and
         model.config.model_type=='qwen2' and model.config._attn_implementation=='sdpa' and
         model.config.use_cache is True,'LOADED_CONFIGURATION')
@@ -166,7 +191,10 @@ def run(config_path,out,*,enabled=False):
         torch_origin=str(Path(torch.__file__).resolve()),runner_source_sha256=sha(runner.__file__),
         source_role='NEW_PROVIDER_ENGINEERING_NOT_NSIGHT_TIMING_EQUIVALENCE',
         **(dict(input_identity=input_identity) if finite else {}),
-        **(dict(pilot=c['pilot'],producer_policy_binding=role_binding) if pilot else {})))
+        **(dict(pilot=c['pilot'],producer_policy_binding=role_binding) if pilot else {}),
+        **(dict(input_slot=c['input_slot'],input_plan=c['input_plan'],output_validation=c['output_validation'],
+            model_limits=c['model_limits'],
+            model_config_sha256=c['model_config_sha256']) if planned else {})))
     fields=dict(experiment_id='cupti-submit-effect-engineering',wmpc_id=c['run_id'],run_id=c['run_id'],
         run_role='PILOT' if pilot else 'ENGINEERING',data_role=c['role'],pass_id='pass1',attempt_id='once',pid=os.getpid(),
         wmpc_manifest_sha256=sha(config_path),prompt_sha256=c['prompt_sha256'],runner_git_commit=native_commit,
@@ -181,15 +209,21 @@ def run(config_path,out,*,enabled=False):
             early_eos=result['early_eos'],prepared_labels=p['prepared_labels'],preparation=p)
         if finite:tokens['input_identity']=input_identity
         if pilot:tokens['pilot']=deepcopy(c['pilot'])
+        if planned:tokens['input_slot']=deepcopy(c['input_slot'])
         write(out/'tokens.json',tokens)
     from exposedpath.cupti_timeline import CaptureSession
     session=CaptureSession(c['session'],out/'timeline',allow_target_capture=True)
+    if planned:
+        torch.cuda.reset_peak_memory_stats(0)
+        write(out/'memory_before.json',memory_snapshot(torch.cuda,'BEFORE_WARMUPS_AND_SESSION',0))
     try:receipt=resident_capture(runner,session,resident,fields,out,preparation,observed)
-    finally:preparation.invalidate()
+    finally:
+        preparation.invalidate()
+        if planned:write(out/'memory_after.json',memory_snapshot(torch.cuda,'AFTER_CAPTURE_CLOSED',0))
     require(read(receipt)['status']=='COMPLETE','PRODUCER_INCOMPLETE')
     host=read(out/'producer/host_boundaries.json');drains=read(out/'producer/drain_ledger.json')
     scopes=producer_scopes(c['session']['session_id'],host,drains,tokens,input_tokens=c['input_tokens'],
-        **(dict(contract=c) if pilot else {}))
+        **(dict(contract=c) if pilot or planned else {}))
     write(out/'scope_producers.json',scopes)
     result=dict(schema_version='cupti-timeline-model-result/0.1.0',
         status='MODEL_CAPTURE_COMPLETE_PENDING_ANALYSIS',pid=os.getpid(),role=c['role'],
@@ -199,10 +233,12 @@ def run(config_path,out,*,enabled=False):
         setup_sha256=sha(out/'setup.json'),warmup_sha256=sha(out/'warmup_completed.json'),
         provider_qualification='NOT_GRANTED',A_COE_admission='NOT_ASSESSED')
     if c['schema_version']!='cupti-timeline-model/0.1.0':
-        result.update(schema_version='cupti-timeline-model-result/0.3.0' if pilot else 'cupti-timeline-model-result/0.2.0' if finite else 'cupti-timeline-model-result/0.1.1',native_commit=native_commit,
+        result.update(schema_version='cupti-timeline-model-result/0.4.0' if planned else 'cupti-timeline-model-result/0.3.0' if pilot else 'cupti-timeline-model-result/0.2.0' if finite else 'cupti-timeline-model-result/0.1.1',native_commit=native_commit,
             control_commit=c['control_commit'],activity_policy_version=c['activity_policy_version'],
             model_entry_sha256=sha(__file__))
     if pilot:result['pilot']=deepcopy(c['pilot'])
+    if planned:result.update(input_slot=c['input_slot'],memory_before_sha256=sha(out/'memory_before.json'),
+        memory_after_sha256=sha(out/'memory_after.json'))
     write(out/'model_result.json',result)
     return 0
 
