@@ -1,4 +1,4 @@
-"""One same-process 768-token Engineering capture. Imported without Torch/CUDA.
+"""Explicit finite 768/1024 Engineering versions. Imported without Torch/CUDA.
 
 Resident setup and three original warmups precede subscription. The unchanged
 runner supplies the measured drain and two Host-readable token operations.
@@ -37,9 +37,9 @@ def write(path,value):
 
 def validate_contract(c):
     version=c.get('schema_version')
-    require(version in ('cupti-timeline-model/0.1.0','cupti-timeline-model/0.1.1'),'CONTRACT_VERSION')
-    current=version=='cupti-timeline-model/0.1.1'
-    expected=dict(schema_version=version,input_tokens=768,batch_size=1,
+    require(version in ('cupti-timeline-model/0.1.0','cupti-timeline-model/0.1.1','cupti-timeline-model/0.2.0'),'CONTRACT_VERSION')
+    current=version!='cupti-timeline-model/0.1.0';finite=version=='cupti-timeline-model/0.2.0'
+    expected=dict(schema_version=version,input_tokens=1024 if finite else 768,batch_size=1,
         output_tokens=2,warmup_count=3,repeat_count=1,role='Engineering',completion_policy='HOST_READABLE_P',
         model_process_budget=1,nsight_profiles=0,torch_profiler=False,
         native_commit=POLICY_NATIVE_COMMIT if current else NATIVE_COMMIT)
@@ -51,6 +51,11 @@ def validate_contract(c):
             and c.get('session',{}).get('activity_policy_version')==c['activity_policy_version']
             and re.fullmatch('[0-9a-f]{40}',c.get('control_commit','')),'CONTRACT_POLICY')
     else:require('activity_policy_version' not in c and 'control_commit' not in c,'CONTRACT_LEGACY')
+    if finite:
+        require(all(c.get(k)==v for k,v in dict(consumer_version='submit-effect-bridge/0.3.0',
+            timing_policy='cupti-api22-distinct-api-callback-boundaries/0.2.0',
+            driver_query_policy='cupti-api22-driver-queries/0.1.0',
+            runtime_query_policy='cupti-api22-runtime-queries/0.1.0').items()),'CONTRACT_CONSUMER_POLICY')
     return expected['native_commit']
 
 
@@ -61,9 +66,9 @@ def preparer(config):
     class EngineeringPreparation(Execution):
         def __init__(self):
             self.axis=False
-            self.binding=dict(version='CUPTI-TIMELINE-MODEL/0.2' if config['schema_version']=='cupti-timeline-model/0.1.1'
+            self.binding=dict(version='CUPTI-TIMELINE-MODEL/0.3' if config['schema_version']=='cupti-timeline-model/0.2.0' else 'CUPTI-TIMELINE-MODEL/0.2' if config['schema_version']=='cupti-timeline-model/0.1.1'
                 else 'CUPTI-TIMELINE-MODEL/0.1',run_id=config['run_id'],
-                role='Engineering',input_tokens=768,output_tokens=2)
+                role='Engineering',input_tokens=config['input_tokens'],output_tokens=2)
             self.variant='P';self.closed=True;self.used=[]
     return EngineeringPreparation()
 
@@ -82,8 +87,9 @@ def resident_capture(runner,session,resident,fields,out,preparation,observer):
                 invocation_observer=observer)
 
 
-def producer_scopes(session_id,host,drains,tokens):
-    require(tokens.get('early_eos') is False and tokens.get('actual_input_tokens')==768 and
+def producer_scopes(session_id,host,drains,tokens,*,input_tokens=768):
+    require(type(input_tokens) is int and input_tokens in (768,1024),'SCOPE_INPUT_VERSION')
+    require(tokens.get('early_eos') is False and tokens.get('actual_input_tokens')==input_tokens and
         tokens.get('actual_output_tokens')==2 and len(tokens.get('token_ids',[]))==2 and
         all(len(v)==1 and type(v[0]) is int and v[0]>=0 for v in tokens['token_ids']) and
         len(tokens.get('prepared_labels',[]))==2,'TOKEN_COMPLETION')
@@ -113,9 +119,11 @@ def run(config_path,out,*,enabled=False):
     model_fact=verify_model_inventory(c['model'],c['inventory'],c['inventory_sha256'])
     require(sha(c['prompt'])==c['prompt_sha256'],'INPUT_HASH')
     prompt=read(c['prompt']);cfg=read(Path(c['model'])/'config.json')
-    from exposedpath.coe_input_pilot import validate_input,INCREMENTAL_VERSION
-    validate_input(prompt,cfg,1,version=INCREMENTAL_VERSION)
-    require(prompt['fixed_input_tokens']==768,'INPUT_LENGTH')
+    from exposedpath.coe_input_pilot import validate_input,INCREMENTAL_VERSION,MIDPOINT_VERSION
+    finite=c['schema_version']=='cupti-timeline-model/0.2.0'
+    input_identity=validate_input(prompt,cfg,1,version=MIDPOINT_VERSION if finite else INCREMENTAL_VERSION)
+    require(prompt['fixed_input_tokens']==c['input_tokens'],'INPUT_LENGTH')
+    if finite:require(input_identity==c.get('input_identity'),'INPUT_IDENTITY')
     import torch
     require(str(torch.__version__)=='2.6.0+cu124' and torch.version.cuda=='12.4','TORCH_VERSION')
     require(Path(sys.executable).resolve()==Path(c['target_python']).resolve() and
@@ -135,12 +143,13 @@ def run(config_path,out,*,enabled=False):
     resident=dict(model=model,input_ids=torch.tensor(ids,dtype=torch.long,device='cuda:0'),
         attention_mask=torch.tensor(mask,dtype=torch.long,device='cuda:0'),eos_token_id=tokenizer.eos_token_id)
     write(out/'setup.json',dict(schema_version='cupti-model-setup/0.1.0',model_content=model_fact,
-        input_sha256=c['prompt_sha256'],input_shape=[1,768],torch_version=str(torch.__version__),
+        input_sha256=c['prompt_sha256'],input_shape=[1,c['input_tokens']],torch_version=str(torch.__version__),
         cuda_version=torch.version.cuda,device=device,loaded_backend=model.config._attn_implementation,
         dtype=str(model.dtype),warmup_count=3,subscription_position='AFTER_SETUP_AND_WARMUPS_BEFORE_EXISTING_DRAIN',
         executable=str(Path(sys.executable).resolve()),python_version=list(sys.version_info[:3]),
         torch_origin=str(Path(torch.__file__).resolve()),runner_source_sha256=sha(runner.__file__),
-        source_role='NEW_PROVIDER_ENGINEERING_NOT_NSIGHT_TIMING_EQUIVALENCE'))
+        source_role='NEW_PROVIDER_ENGINEERING_NOT_NSIGHT_TIMING_EQUIVALENCE',
+        **(dict(input_identity=input_identity) if finite else {})))
     fields=dict(experiment_id='cupti-submit-effect-engineering',wmpc_id=c['run_id'],run_id=c['run_id'],
         run_role='ENGINEERING',data_role='Engineering',pass_id='pass1',attempt_id='once',pid=os.getpid(),
         wmpc_manifest_sha256=sha(config_path),prompt_sha256=c['prompt_sha256'],runner_git_commit=native_commit,
@@ -152,6 +161,7 @@ def run(config_path,out,*,enabled=False):
             token_ids=[list(b.host_token_ids) for b in result['token_ready_boundaries']],
             actual_input_tokens=result['actual_input_tokens'],actual_output_tokens=result['actual_output_tokens'],
             early_eos=result['early_eos'],prepared_labels=p['prepared_labels'],preparation=p)
+        if finite:tokens['input_identity']=input_identity
         write(out/'tokens.json',tokens)
     from exposedpath.cupti_timeline import CaptureSession
     session=CaptureSession(c['session'],out/'timeline',allow_target_capture=True)
@@ -159,7 +169,7 @@ def run(config_path,out,*,enabled=False):
     finally:preparation.invalidate()
     require(read(receipt)['status']=='COMPLETE','PRODUCER_INCOMPLETE')
     host=read(out/'producer/host_boundaries.json');drains=read(out/'producer/drain_ledger.json')
-    scopes=producer_scopes(c['session']['session_id'],host,drains,tokens)
+    scopes=producer_scopes(c['session']['session_id'],host,drains,tokens,input_tokens=c['input_tokens'])
     write(out/'scope_producers.json',scopes)
     result=dict(schema_version='cupti-timeline-model-result/0.1.0',
         status='MODEL_CAPTURE_COMPLETE_PENDING_ANALYSIS',pid=os.getpid(),role='Engineering',
@@ -168,8 +178,8 @@ def run(config_path,out,*,enabled=False):
         token_sha256=sha(out/'tokens.json'),scope_producers_sha256=sha(out/'scope_producers.json'),
         setup_sha256=sha(out/'setup.json'),warmup_sha256=sha(out/'warmup_completed.json'),
         provider_qualification='NOT_GRANTED',A_COE_admission='NOT_ASSESSED')
-    if c['schema_version']=='cupti-timeline-model/0.1.1':
-        result.update(schema_version='cupti-timeline-model-result/0.1.1',native_commit=native_commit,
+    if c['schema_version']!='cupti-timeline-model/0.1.0':
+        result.update(schema_version='cupti-timeline-model-result/0.2.0' if finite else 'cupti-timeline-model-result/0.1.1',native_commit=native_commit,
             control_commit=c['control_commit'],activity_policy_version=c['activity_policy_version'],
             model_entry_sha256=sha(__file__))
     write(out/'model_result.json',result)

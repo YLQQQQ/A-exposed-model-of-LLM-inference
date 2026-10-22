@@ -1,6 +1,51 @@
 # ExposedPath 科研进度清单
 
-## 7.232 同一768原件独立driver查询支持及两token局部COE离线PASS（2026-10-22，当前）
+## 7.233 新1024单实例完整链接线与待审交付（2026-10-22，当前）
+
+- [x] 用户协调窗口已独立复现7.232两token数值和canonical摘要，并接受该实例限定局部
+  COE Engineering PASS。本轮据此准备一个**新1024**，不是修补旧1024或恢复矩阵。
+- [x] 新有限model/control/result合同0.2.0只允许1024/1/2、warmup3/repeat1、Engineering、
+  P自然Host-readable、1模型进程/1 CUPTI session/0 Nsight。旧768的0.1.0/0.1.1声明、
+  默认消费及拒绝保留；不将旧配置改长度后视为兼容。P的prepare/finish和resident_capture
+  沿用原执行逻辑，无新同步、流切换、collector或DLL重编。
+- [x] 从已核验的4da800旧批次封存原件只复用固定输入及token值：1024输入文件SHA256
+  `34970dc2503f63a2856c05bf61a516497ede70fe3016b6df55fec223f640e7f5`，shape[1,1024]，
+  input_ids摘要`2b7fe832741dc1a4cef632eb7a1884b9a507afbe3f64f9c036c93d2127c946d1`，
+  mask摘要`7df2cc7e9970d84acf6f81c67f40889c6bb4f4b10af74fb9a0acb1380af7b0b9`。
+  输入、原token记录、原manifest与归档清单绑定；预期逐值[[29184],[6556]]。
+  新执行仍须实测一致、无early EOS，setup/token/producer/drain及配置独立绑定。
+  原1024分析BLOCKED不升级，也不沿用其profile资格。
+- [x] 显式选择7.232的bridge/evidence/adapter0.3.0、driver/runtime查询政策0.1.0及双时间
+  边界政策0.2.0。隔离CPU子进程只加载四个精确hash的消费文件；原6c744bf checkout提供
+  未改公共模块，实际origin另写回执，拒绝旧reader预加载或第三方同名模块。采集仍使用
+  真实A验证的6c744bf DLL/SDK/runner/P；控制/分析commit与native身份分开，非文档HEAD替代。
+  零节点仍需实参和全部scope/FIFO条件，正长度缺效果、未知查询/提交、PTSZ、丢失/溢出、
+  错身份或依赖/terminal不闭合均拒绝；两token完整消费，第二集合可含历史前缀。
+- [x] tests-first新增有限身份与文件链红例后实现。最终命令
+  `python -m pytest -q -ra -p no:cacheprovider tests/test_cupti_model1024.py
+  tests/test_cupti_model_policy_reconnect.py tests/test_cupti_timeline_b.py
+  tests/test_cupti_timeline_model.py tests/test_cupti_timeline_file_chain.py
+  --basetemp .local/cm1024_release_final --junitxml .local/cm1024_release.xml`：
+  **57 passed/0 failed/0 skipped，35.76s**。包含实际-I/-S CPU消费及封包、1024原runner
+  两token/drain、完整input/mask/旧域拒绝、错token/版本/来源、正长度缺效果与非零失败传播、
+  PS5.1双回执门。模型/设备/A检查/空间查询在编排测试中是明确替身；本地3.12.7不等于
+  目标3.11.16/GPU资格。compileall/py_compile/diff通过；没有重跑Q0、微例或目标A。
+- [x] 同一真实768原件只读回归：再次核原ZIP与41项源清单、原producer文件链；两token
+  完整结果canonical摘要仍为`d68c1354…163559`/`fc9abd90…894cbd`，COE仍6.429676/
+  0.667420ms，耗时8.35/10.41s，Raw/旧报告不变。新记录在忽略的
+  `cupti_model1024_local_v0_1/real768_regression.json`。未用旧结果代替1024实际资格。
+- [ ] 新1024目标机执行及两token实物准入：**NOT_RUN**。先固定实现commit，再绑定唯一
+  控制/消费包；阶段A/事件微例的真实回执与既有库直接复用，不重编、不重跑A。
+  默认入口拒绝模型执行；仅协调审查包和显式双回执身份后允许用户执行一次。
+
+预算仍是模型硬300s、CPU分析硬180s，新鲜参与卷12GiB，同卷不重复计数；时间粗估5～10
+分钟、最终保留20～150MiB，非保证。长期总量null/UNKNOWN、目标<50,000,000,000 bytes
+另列，不遍历历史ACL/清理。任何硬失败或固定1次完成即停，无重试/追加/替补；UNKNOWN
+writer拒绝封包。成功也仅待审的新实例Engineering，不授纯Host阻塞、完整物理B、跨provider
+等价或新Formal。旧Raw/BLOCKED/UNKNOWN、生产A/B/COE及Gate13限定PASS/Gate14 NOT_RUN
+保持；用户DOCX不改不纳提交。本轮最高优先级只交协调审查新1024包，未操作服务器。
+
+## 7.232 同一768原件独立driver查询支持及两token局部COE离线PASS（2026-10-22，历史；新任务见7.233）
 
 - [x] 继续复用7.231封存ZIP与展开原件，SHA256
   `358e6d1746c1b0270e4d1d1868f92691344b530ff4ca27968368a02feaa7edbf`；原ZIP、41项清单

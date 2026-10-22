@@ -98,7 +98,8 @@ def test_capture_starts_only_after_setup_and_three_original_warmups(tmp_path):
     assert 'model_setup' not in measured
 
 
-def test_original_runner_produces_two_bound_tokens_and_drain_with_cpu_model(tmp_path,monkeypatch):
+@pytest.mark.parametrize('length',[768,1024])
+def test_original_runner_produces_two_bound_tokens_and_drain_with_cpu_model(tmp_path,monkeypatch,length):
     import os
     from exposedpath import runner
     from test_runner_token_ready import _FakeInput,_FakeModel,_FakeToken,_patch_cpu_torch
@@ -108,7 +109,7 @@ def test_original_runner_produces_two_bound_tokens_and_drain_with_cpu_model(tmp_
     monkeypatch.setattr(runner.torch.cuda,'is_initialized',lambda:False)
     monkeypatch.setattr(runner.torch.cuda.nvtx,'mark',lambda label:None)
     events=[]
-    class Input(_FakeInput):shape=(1,768)
+    class Input(_FakeInput):shape=(1,length)
     resident=dict(model=_FakeModel(iter(_FakeToken([10+i%2],events) for i in range(8))),
         input_ids=Input(),attention_mask=object(),eos_token_id=None)
     class Session:
@@ -117,7 +118,11 @@ def test_original_runner_produces_two_bound_tokens_and_drain_with_cpu_model(tmp_
         def nvtx_sink(self,nvtx):
             from contextlib import nullcontext
             return nullcontext()
-    m=module();c=config();p=m.preparer(c);observed={}
+    m=module();c=config()
+    if length==1024:
+        from tests.test_cupti_model1024 import contract
+        c=contract()
+    p=m.preparer(c);observed={}
     fields=dict(experiment_id='e',wmpc_id='w',run_id=c['run_id'],pass_id='pass1',attempt_id='once',
         pid=os.getpid(),wmpc_manifest_sha256='a'*64,prompt_sha256='b'*64,runner_git_commit=m.NATIVE_COMMIT,
         runner_git_dirty=False,runner_source_sha256=hashlib.sha256(Path(runner.__file__).read_bytes()).hexdigest())
@@ -125,6 +130,6 @@ def test_original_runner_produces_two_bound_tokens_and_drain_with_cpu_model(tmp_
     receipt=m.resident_capture(runner,Session(),resident,fields,tmp_path,p,observer)
     assert json.loads(Path(receipt).read_text())['status']=='COMPLETE'
     assert events==['capture_open','host_read','host_read','capture_close']
-    assert observed['result']['actual_input_tokens']==768 and observed['result']['early_eos'] is False
+    assert observed['result']['actual_input_tokens']==length and observed['result']['early_eos'] is False
     assert observed['preparation']['consumed_token_indices']==[0,1]
     assert json.loads((tmp_path/'producer/drain_ledger.json').read_text())['drains'][0]['status']=='COMPLETE'

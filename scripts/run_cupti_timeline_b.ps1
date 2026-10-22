@@ -27,7 +27,7 @@ if ($ReviewedAReceiptSha256 -ine $Config.reviewed_a_receipt_sha256) {
 }
 $Arguments = @('--package',$PackageRoot,'--run-reviewed-model',
     '--reviewed-a-receipt-sha256',$ReviewedAReceiptSha256.ToLowerInvariant())
-if ($Config.schema_version -eq 'cupti-timeline-stage-b/0.1.1') {
+if ($Config.schema_version -in @('cupti-timeline-stage-b/0.1.1','cupti-timeline-stage-b/0.2.0')) {
     if ($ReviewedEventReceiptSha256 -notmatch '^[a-fA-F0-9]{64}$' -or
         $ReviewedEventReceiptSha256 -ine $Config.reviewed_event_receipt_sha256) {
         throw 'Reviewed event receipt conflict; STOP'

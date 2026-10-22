@@ -212,10 +212,11 @@ def test_new_control_actual_isolated_consumer_failure_propagation_and_postcheck(
 
 
 @pytest.mark.parametrize('event_hash',[None,'b'*64,'c'*64])
-def test_ps51_new_model_gate_requires_both_reviewed_receipts(tmp_path,event_hash):
+@pytest.mark.parametrize('version',['cupti-timeline-stage-b/0.1.1','cupti-timeline-stage-b/0.2.0'])
+def test_ps51_new_model_gate_requires_both_reviewed_receipts(tmp_path,event_hash,version):
     script=ROOT/'scripts/run_cupti_timeline_b.ps1';(tmp_path/script.name).write_bytes(script.read_bytes())
     driver=tmp_path/'cupti_timeline_b.py';driver.write_text('from pathlib import Path\nPath(__file__).with_name("entered.txt").write_text("CPU_ONLY")\n')
-    put(tmp_path/'delivery.json',dict(schema_version='cupti-timeline-stage-b/0.1.1',python=sys.executable,
+    put(tmp_path/'delivery.json',dict(schema_version=version,python=sys.executable,
         reviewed_a_receipt_sha256='a'*64,reviewed_event_receipt_sha256='b'*64,
         bootstrap_files=[dict(path=driver.name,sha256=sha(driver))]))
     ps=Path(os.environ['SystemRoot'])/'System32/WindowsPowerShell/v1.0/powershell.exe'
