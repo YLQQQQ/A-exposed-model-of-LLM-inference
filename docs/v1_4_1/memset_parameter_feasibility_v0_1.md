@@ -17,6 +17,12 @@ S/COE与查询政策不变；暖机仍三次在订阅前、测量ledger外，不
 同步移动/旧数据升级。完整命令、原件hash、预算和停止条件见[7.234](research_progress.md)。
 本次仍为候选Pilot待执行，不签署Formal，不将COE解释为纯Host阻塞。
 
+控制/分析固定`4ea08bb33684caf722b3f0109dc617cd3704cd78`，native仍6c744bf。唯一
+`cupti_input_4ea08bb33684_delivery.zip`为185,672 bytes，SHA256
+`337f539b85801583495997fac87a2af173bd5a822186cfade05dbf6cd5a5f7a9`。
+42成员/41项清单、CRC/hash、Git源码/原输入/原回执引用、隔离角色和consumer加载以及PS5.1
+解析已本地核验；新A和九槽真实执行均NOT_RUN。交付只先提供A命令，不提前给B启动命令。
+
 ## 2026-10-22增补：复用已审消费者的新1024有限接线 0.26（历史；当前见0.27）
 
 协调窗口接受0.25同一768实例的限定局部COE Engineering PASS。本次只准备一个新1024

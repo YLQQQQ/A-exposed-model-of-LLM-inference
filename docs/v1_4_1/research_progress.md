@@ -37,7 +37,17 @@
   input/mask/role/token/依赖/terminal负例、signed/零R/完整block、PS5.1三路径分派。
   模型/设备/静态目标门/空间为明确CPU替身，本地3.12.7不等于目标3.11.16或九次GPU资格。
   未重跑完整Q0/旧110项/微例，不运行服务器、CUDA、模型或Nsight。
-- [ ] 新九次Pilot：**NOT_RUN**；唯一包在实现提交后固定，默认A仅字节/原生身份/语法/
+- [x] 实现控制/分析固定`4ea08bb33684caf722b3f0109dc617cd3704cd78`，随后生成唯一包
+  `cupti_input_4ea08bb33684_delivery.zip`：**185,672 bytes**，SHA256
+  `337f539b85801583495997fac87a2af173bd5a822186cfade05dbf6cd5a5f7a9`，清单SHA256
+  `ea0c0cee9dbff21c7e9678b53952b62876d83d1bfd57a57345e01493275f43f2`；42成员/41项清单。
+  CRC/安全路径/全覆盖hash、实际Git blob、三份原输入、原A/event B及1024原件引用均通过。
+  十项公共/原生源与6c744bf相同，四消费源与3cba2be相同，resident_capture同解释器AST
+  不变；新控制与producer身份overlay不冒充旧native执行身份，不更换目标checkout或重编。
+  包内实际-I/-S loader验证九槽合同、producer origin/hash和四消费origin/hash，未导入torch；
+  缺显式开关拒绝采集。PS5.1完整A命令/launcher解析、Python3.11语法检查通过（非3.11
+  运行或GPU证明）。独立交付核验见忽略的`cupti_input_pilot_local_v0_1/delivery_review.json`。
+- [ ] 新九次Pilot及新阶段A：**NOT_RUN**；默认A仅字节/原生身份/语法/
   角色与输入合同/新鲜空间核验；B必须先审新的真实A，再显式绑定其receipt hash，旧A和
   event B仅作为原生资格引用，不代替新A。硬失败或固定9槽完成即停，无重试/替补/追加。
 
