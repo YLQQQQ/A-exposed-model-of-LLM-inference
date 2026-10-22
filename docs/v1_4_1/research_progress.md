@@ -1,6 +1,53 @@
 # ExposedPath 科研进度清单
 
-## 7.240 统一论文主线；最小独立参考的本地文件链准备（2026-10-22，当前）
+## 7.241 当前CUPTI独立受控连接可执行准备；统一正文增补（2026-10-22，当前）
+
+- [x] 用户接受7.240，未重复其72项检查。复用原
+  `scripts/gate8_qualification_token.cu`及已审6c744bf client.dll/CUPTI12.4.127/API22/
+  activity-policy0.2、CaptureSession与adapter/bridge0.3；原程序无memset出口，因此仅新增
+  `scripts/coe_cupti_controlled.cu`的ABI1及0/4-byte转发，不开发新collector、不重编DLL、
+  不扩大跨流/event/graph或生产S/A/B/COE支持域。实际绑定、程序/入口和局限见候选合同§10。
+- [x] 固定`configs/coe_cupti_controlled_v0_1.json`：成功drain后early kernel17/early wait、
+  非零memset4、late kernel23、零memset0、D2H4/paired wait/Host值23、完成后future
+  kernel29。先验必要成员为early/非零memset/late/D2H，terminal=D2H；早完成成员保留，
+  count0保留逻辑节点而不造activity，未来提交排除。成员截止于paired sync提交边界，
+  不是copy入口；只授局部必要后缀，不冒充完整物理W/B。构造Pinned4与自然Pageable token
+  行为不同，不以受控通过授自然内部阻塞资格。
+- [x] 新`coe_cupti_controlled.py`接通原session→side/同钟步骤标记→capture→独立reference→
+  scope→原0.3消费者→成员/terminal/算术对照。reference先从构造固定逻辑成员，再用真实
+  domain/PID/TID/CBID/correlation/父子桥映射Raw ID；独立端点扫描只用未来Raw时长，不调
+  被测S/COE生成expected。init在session打开后、drain前，避免遗漏实际context资源建立。
+  显式-I/-S源码来源、加载runtime路径/hash、设备身份、原错误及120秒子进程停止接线保留；
+  默认无授权即拒绝，无封包/重试/清理，目标配置/执行身份尚未发布。
+- [x] `scripts/build_coe_cupti_controlled.py`真实使用固定12.4.127头文件/nvcc12.4.131，
+  legacy default、显式sm_89及shared CUDART完成编译/链接、11个导出和imports核验；
+  生成DLL139264bytes，未加载/执行、未初始化CUDA或GPU。第一次受限环境cl访问异常，
+  保留原失败；相同源码/参数在非沙箱编译成功，不推断更深根因。本地MSVC14.44.35207
+  （非目标14.38）显式allow-unsupported-compiler，仅授本地真实SDK编译检查，不授目标资格。
+  日志/build.json留忽略的`coe_controlled_prepare_v0_1/native_compile_1/2`，不提交二进制。
+- [x] 新测试先揭示缺接线及side参数/身份/完成后排除验证缺口，再最小实现。相关命令
+  `python -m pytest -q -ra -p no:cacheprovider tests/test_coe_cupti_controlled.py
+  --basetemp .local/coe_controlled_verified_20261022b
+  --junitxml .local/coe_controlled_verified_20261022b.xml`：**24 passed / 0 failed / 0 skipped，1.95s**。
+  独立-I/-S/-B子进程实际走side/Raw文件→reference→原0.3消费，源字节不变；错参数/run、
+  缺正长度效果、错流/失败同步、重复、晚前驱、错零值及未来边界均核对具体拒绝。
+  另覆盖固定CBID及闭合初始化的零correlation不被伪造为唯一ID；相关Raw仍保留。
+  session/init顺序、120秒/原退出码检查使用明确Host/进程替身，不称GPU覆盖；Python3.12.7
+  与目标3.11.16差异保留。未重复全量/Q0或旧72项。
+- [x] 原短稿新增§16实质正文工作段，串联问题、方法、独立正确性、原限定Formal与COE
+  各角色实证、公平参照及限制；复用原表/来源，不增图表或长评审流程。三点Pilot三正R、
+  1024分叉/第二token反向/O-P敏感性、18链同操作GPU union=COE及完整timeline同答全部
+  保留。新GPU受控证据和冻结后前瞻结果均留NOT_RUN/空白，不预写支持，不保证论文增量。
+- [ ] 仍依赖目标机：当前产物/运行环境真实身份、真实参数与效果/资源/流关联、Host值23、
+  零丢失/关闭、实际Raw区间与独立答案；目标程序尚未构建/运行。若出现未支持调用或依赖
+  则具体拒绝，不扩collector。该项未完成不冒充全Q0或新Formal。
+- [x] 4096及全部目标GPU采集继续用户暂缓，无部署包/服务器命令/自动恢复；旧Gate13限定
+  PASS、Gate14 NOT_RUN、Raw/BLOCKED/UNKNOWN/NOT_ASSESSED及用户DOCX/大型原ZIP均保持。
+
+最高优先级：审阅本地可执行准备与正文；目标独立验证只在资源恢复、目标身份/构建及
+预算另审后执行。来源正确性与512→2048前瞻重现分开，不按数值方向追采，不增强制Gate。
+
+## 7.240 统一论文主线；最小独立参考的本地文件链准备（2026-10-22，历史；当前见7.241）
 
 - [x] 用户纠正7.239固定流程倾向：论文主线为完成语义驱动的必要活动—请求/阶段暴露
   映射、可审计解释与适用边界，不缩为输入长度曲线，不预设拆篇。既有合同新增§9、
@@ -5223,8 +5270,9 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 
 **7.26覆盖说明：** 已直接读取目标安装盘点回执及四份完整说明，四文件bytes/SHA256本地复核全部一致。CPU sampling lost-events段落不能证明CUDA/NVTX完整性；条件性teardown/flush建议不等于每会话认证；API subset与cuda-trace-all-apis适用性保留询证。组件hash来自服务器回执、非本地二进制复算。已准备[英文草稿及有限决策路线](gate8_nsys_vendor_inquiry_v0_1.md)，未发送。安装搜索结束，服务器无下一操作；不再执行7.25安装指令。无生产/冻结合同变化，无新测试或实验成绩。Q0影响矩阵继续有效但资格未取得；Gate7 PASS、Gate8 NOT_RUN，UNKNOWN阻塞科学验收。
 
-当前安排（7.240覆盖）：旧Gate0～13按限定证据保持；完成本地独立参考、统一论文证据
-骨架与真正实验差额。EP-COE-01～03仅导航，不是新串行流水线；目标GPU暂停，均非自动执行。
+当前安排（7.241覆盖）：旧Gate0～13按限定证据保持；当前CUPTI受控连接的编译/本地文件
+准备与统一正文已完成，实际GPU验证仍NOT_RUN；本地独立参考与原证据骨架继续复用，
+仅保留明确的目标实验差额。EP-COE-01～03仅导航，不是新串行流水线；目标GPU暂停，均非自动执行。
 Gate14/G2继续后移。原总体顺序`Gate1合同→2 oracle→3 Raw→4 S→5 A/B→6 Q0→7 runner→
 8 Engineering→9～12正式准备→13 N1/G1→14 G2`保留为设计历史，不是接下来直接跑G2的授权。
 
@@ -5241,6 +5289,11 @@ Gate14/G2继续后移。原总体顺序`Gate1合同→2 oracle→3 Raw→4 S→5
 **Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
 ## 8. 计划调整记录
+
+7.241（2026-10-22）：用户接受7.240，转入现有受控程序/当前DLL的窄域可执行准备。
+只补0/4-byte memset入口、先验构造与独立Raw端点reference到0.3消费者；真实本地SDK
+编译链接/CPU文件链不授目标GPU资格。统一正文新增到原短稿，不新建多稿/图；目标证据
+与前瞻结果空置，无部署包/服务器/GPU/新预算，4096暂停。原冻结与历史Formal不受影响。
 
 7.240（2026-10-22）：用户要求结束固定工程流程，以统一完成语义—必要活动—请求/阶段
 暴露与解释边界为唯一论文主线；输入长度是实证轴之一，不拆篇。实际补独立construction/

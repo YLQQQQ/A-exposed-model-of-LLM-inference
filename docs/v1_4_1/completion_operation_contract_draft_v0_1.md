@@ -321,3 +321,73 @@ hash绑定，再消费producer/marker→成功drain/copy/sync→scope文件→ad
 EP-COE-01～03编号保留，仅作“直接证据／冻结／前瞻结果”的导航；不是新增强制Gate
 流水线，不自动授予PASS或GPU预算。4096和其他目标GPU采集继续暂停，无包/命令。
 GPT未来可用能力受限不构成停用本地CPU测试的理由；本轮照常完成相关检查。
+
+## 10. 当前provider的受控连接：可执行准备0.1（7.241，目标NOT_RUN）
+
+复用的实际程序是[`gate8_qualification_token.cu`](../../scripts/gate8_qualification_token.cu)：
+legacy NULL流，单int kernel、Pinned D2H、stream同步和Host读回。原源码字节不改。
+原程序缺少memset出口，因此仅由[`coe_cupti_controlled.cu`](../../scripts/coe_cupti_controlled.cu)
+include它并增加`ep_coe_abi=1`和`ep_memset(size_t,int)`；后者只允许0或4bytes并转发
+原`cudaMemsetAsync`。它是受控程序，不是新collector，不复制S/COE。
+
+采集复用`exposedpath.cupti_timeline.CaptureSession`、已审6c744bf的client.dll
+（SHA256 `5e0ffa4b332652c6107cb278ed300ddc9b1bc0e201a370dbe1040cb463d2247a`）、
+CUPTI12.4.127/API22及activity-policy0.2；消费复用adapter/bridge0.3、distinct-boundaries0.2
+和五类精确driver-query政策0.1。真实A/event-B引用仍为7.201及后续已审原件，不能用
+本地新程序的编译成功替代它们。本轮未重建或加载client.dll。
+
+### 10.1 先验构造与独立答案
+
+固定计划[`coe_cupti_controlled_v0_1.json`](../../configs/coe_cupti_controlled_v0_1.json)
+在读取未来Raw之前给定以下顺序，所有调用同一Host线程/实际NULL流：
+
+`成功device drain → request point → kernel(17) → 成功early stream wait →
+memset(4,0) → kernel(23) → memset(0,123) → copy D2H(4) → 成功paired stream wait →
+Host读回23 → token point → future kernel(29) → future wait`。
+
+- 必要设备成员固定为early kernel、4-byte memset、late kernel、D2H；early kernel
+  被early wait强制完成，仍须保留在必要集合中，不能按pending删除。
+- 0-byte memset保留为实测参数/逻辑提交节点，预期无设备activity；若参数缺失、实际
+  非零而缺效果，或零参数却有冲突效果，则拒绝，不能因程序预期0而覆盖Raw实参。
+- terminal预先固定D2H，不从被测S的最大end选择；实际端点须证明先行成员已完成且
+  D2H不晚于配对成功sync。配对sync捕获的提交边界是截止点，D2H在copy内部提交也必须纳入。
+- Host读回/point之后才调用的future kernel排除；不做跨流、event或graph资格外推。
+  原init/资源建立在成功drain之前，仅用于闭合历史和资源身份，不冒充本次局部后缀。
+
+独立参考分两层：构造决定逻辑成员/terminal/排除项；当前捕获的显式步骤范围、domain/
+PID/TID/CBID/correlation及真实父子关系只把它们映射到Raw ID。时间答案由这些实际
+Raw区间单独作端点计数扫描，得到copy入口→paired sync返回内的union交集、原sync
+交集、墙钟和补集。参考不调用`recover_suffix`、`completion_overlap`或S结果生成expected。
+先保存reference，再调用被测0.3文件消费者逐项比较。CPU测试的16/11ns等数字**不是**
+未来GPU时间预期；合法零交集不失败，交集大也不构成额外成功依据。
+
+### 10.2 已接通的文件链与边界
+
+[`coe_cupti_controlled.py`](../../scripts/coe_cupti_controlled.py)提供既有session的最小接线：
+精确源码/库/设备配置 → 隔离模块来源 → 原session先打开 → init/资源身份 → 构造步骤及
+side.json → session close/质量 → capture.json → 先验reference → scope文件 →
+原adapter/bridge0.3结果 → 成员/terminal/算术对照。callback采样与API activity边界仍
+各按原0.2规则核验，不新添容差。Raw和side只读，新派生目录不覆盖。
+
+默认没有执行授权即拒绝；未来显式入口复用原有bounded-process helper，以单进程、
+单session、零模型/零Nsight、硬120秒为上限，无封包/重试/清理。超时沿用UNKNOWN writer
+记录，不把终止父进程当作子进程都已退出。配置需要另批执行身份、实际程序build/hash、
+已审client/CUPTI/runtime、GPU UUID/PCI/可见掩码和新输出路径；本轮不填目标配置、
+不提供服务器命令或部署包，GPU暂停状态不变。
+
+### 10.3 本地验证与目标仍缺的事实
+
+本地实际用CUDA12.4.127头文件、nvcc12.4.131、legacy默认流、显式sm_89、shared
+CUDART完成编译/链接和11个ABI导出/import检查，未执行或加载生成DLL。最初受限执行
+中cl以访问异常失败；同源码/同参数在非沙箱编译环境成功，两份原始日志均保留，
+不推断更深层根因。本地MSVC14.44与目标已审14.38不同，且本地用了显式
+`--allow-unsupported-compiler`；这**不授目标工具链资格**。未来目标构建不沿用该本地开关，
+不重编已审collector。CPU替身检查真实步骤、side/marker、隔离文件消费者和具体拒绝，
+不是实际CUDA执行，也没有重跑7.240的72项检查。
+
+目标仍须取得：目标编译产物/实际加载runtime身份；真实callback参数、资源/流/父子关联
+及设备效果；early成员已完成、0字节实参、D2H terminal和Host值23；丢失/溢出/关闭为0；
+最后用实际区间独立对照。任一未知或不支持调用均停止，不扩collector/跨流支持。
+本构造是**Pinned 4-byte**单FIFO参考，不等于自然PyTorch的Pageable token复制行为，
+即便将来通过，也只关闭该来源的这项受控连接差额，不授全部Q0、自然内部阻塞、
+完整物理B、COE Formal或负载规律。新GPU结果与前瞻复核均保持NOT_RUN。
