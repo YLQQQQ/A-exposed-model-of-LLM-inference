@@ -82,7 +82,11 @@ def static(package):
     error=None;status='BLOCKED';verification=None;runtime=None
     try:
         runtime=check_runtime(c)
-        ctx=b.checked_a(c,stage,m);verification=ctx['verification']
+        # The batch contract is not a single-run observation contract. Derive
+        # the already-defined run profile for native A + event reference checks
+        # only; this neither executes nor qualifies the first (or any) slot.
+        reference=one_configuration(c,c['slots'][0])
+        ctx=b.checked_a(reference,stage,m);verification=ctx['verification']
         m.write(out/'static_precheck.json',verification)
         resource=stage['startup_resources'](out,archive,dict(ctx['acfg'],temporary_required_bytes=12*2**30))
         m.write(out/'resources.json',resource)

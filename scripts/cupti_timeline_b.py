@@ -98,6 +98,9 @@ def checked_event(c,m):
 
 
 def checked_a(c,stage,m):
+    require(c.get('schema_version') in (None,'cupti-timeline-stage-b/0.1.0',
+        'cupti-timeline-stage-b/0.1.1','cupti-timeline-stage-b/0.2.0','cupti-timeline-stage-b/0.3.0'),
+        'REFERENCE_CONTRACT_VERSION')
     if policy_profile(c):
         ctx=event_control().checked_a(c,stage,m)
         ctx['verification']['event_reference']=checked_event(c,m)

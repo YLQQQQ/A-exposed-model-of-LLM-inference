@@ -1,6 +1,45 @@
 # ExposedPath 科研进度清单
 
-## 7.234 配置驱动的CUPTI三点候选Pilot接线与待审交付（2026-10-22，当前）
+## 7.235 三点Pilot总合同A回执分派修复（2026-10-22，当前）
+
+- [x] 只读核验`cupti_input_4ea08bb33684_static.zip`：4,886 bytes，SHA256
+  `726aaca8707be4bc8421ca79bb054d8f1d0693badc2fbac4066f7008fcf1e775`，3成员/2清单，
+  CRC、安全路径和全部hash通过。receipt SHA256
+  `823a0dd390e9fe54b0edeb3e841c6dae704bd73d79a4be33324eb818095edc73`，错误确为
+  `CUPTI_TIMELINE_B_A_RECEIPT`，verification为null，实际模型/session均0。配置与4ea08bb
+  原交付语义一致，原包/回执/BLOCKED不改；本地核验见忽略的
+  `cupti_input_reference_fix_v0_1/failure_review.json`。
+- [x] 根因：A入口把`CUPTI-INPUT-PILOT/0.1.0`批次合同直接传给只识别单run合同的
+  `checked_a`，走了7fa36ef/receipt0.1.0旧分支；真实有效引用是6c744bf/receipt0.1.2
+  加已审event B。此前102项中的外部静态门替身遮蔽了该分派，不能将其视为目标A已通过。
+- [x] 最小修复：A先用已有`one_configuration`从已验证批次派生单run参考配置，再执行
+  原6c744bf A＋event B完整核验；仅核原生资格引用，不执行/授予任何槽位资格。单run
+  `checked_a`显式拒绝批次和未知schema；保留None/0.1.0旧合同及0.1.1/0.2.0/0.3.0
+  已知分派。没有把总合同加进单run白名单、篡改原回执或回填hash。
+- [x] 先红后绿的封存证据回归：旧代码重现10失败/1通过（正向真实错误同原件），新代码
+  11项通过。真实原交付、A及event B ZIP均验证全清单/hash；458份native源码按原字节
+  索引与Git内容绑定恢复，真实receipt、manifest、源码及库引用/版本验证不被整体mock。
+  完整静态main正向经资源、语法、九槽输入/角色、回执和封包；错批次/单run版本、A/event
+  hash/版本、源码冲突按具体原因拒绝。B沿逐run配置，真实pre/finally核验覆盖模型边界
+  CPU失败及运行后A冲突；失败保留1 BLOCKED/8 NOT_RUN，无分析/后续模型执行。
+  路径重定位、目标HEAD/clean、目标Python/模块加载/空间为明确环境替身；原A未携带的
+  CUDART本地字节检查为封存file-fact替身，不能声称目标DLL/新A/GPU资格通过。
+- [x] 最终定向命令`python -m pytest -q -ra -p no:cacheprovider
+  tests/test_cupti_pilot_reference_dispatch.py tests/test_cupti_input_pilot.py
+  tests/test_cupti_timeline_b.py tests/test_cupti_event_b.py tests/test_cupti_model1024.py
+  --basetemp .local/cip_ref_final --junitxml .local/cip_ref_final.xml`：
+  **79 passed/0 failed/0 skipped，249.15s**。复用未改S/COE和既有目标证据，不重跑完整Q0、
+  历史A或微例；compileall/py_compile/diff通过。本地Python3.12.7，目标3.11.16尚未执行。
+- [ ] 新修复包阶段A与9槽Pilot：**NOT_RUN**。先提交修复固定控制/分析身份，再生成新
+  输出名的单包交协调审查；不覆盖4ea08bb失败目录，不沿用其新A身份，不重跑历史A/
+  event微例，不重编DLL。native实际checkout仍6c744bf，需未来静态阶段fresh核验。
+
+九槽、P完成政策、warmup、原输入字节、0.3 S/COE、预算迁移及signed统计不变；没有新
+测量语义或Formal签署。预算沿7.234，硬失败/固定9次即停，无重试/替补/自动清理；新A
+真实原件审查后才给B命令。历史总量UNKNOWN，参与卷新鲜12GiB另核。旧Gate、Raw、
+BLOCKED/UNKNOWN及用户DOCX保持。本轮最高优先级是最小修复交付协调审查，无服务器操作。
+
+## 7.234 配置驱动的CUPTI三点候选Pilot接线与待审交付（2026-10-22，历史；当前见7.235）
 
 - [x] 用户接受768/1024实例完整链后，准备新的512/1024/2048三点Pilot；旧Engineering、
   旧Nsight/Pilot及1024历史BLOCKED均不升级、不拼接。新1024原件
