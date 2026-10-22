@@ -30,6 +30,16 @@
   --basetemp .local/cip_ref_final --junitxml .local/cip_ref_final.xml`：
   **79 passed/0 failed/0 skipped，249.15s**。复用未改S/COE和既有目标证据，不重跑完整Q0、
   历史A或微例；compileall/py_compile/diff通过。本地Python3.12.7，目标3.11.16尚未执行。
+- [x] 先固定控制/分析`bd377c860faf16f9ac5cab1e85b99df101cc3676`，再生成唯一修复交付
+  `cupti_input_bd377c860faf_delivery.zip`：**191,942 bytes**，SHA256
+  `9ed2975064c889e2e65d268e300a7d43e292d58114e6a22af365a390855e36e0`，manifest SHA256
+  `39bd5f4df822a74acc258cf6b792cb1c3e1d3425cc8253344e9e32594f5c8373`。46成员/45清单，
+  CRC/安全路径/全覆盖hash、Git源码、原输入和A/event引用、隔离loader及PS5.1解析通过。
+  包附旧失败回执/清单和真实回归源码，原件不变；原P/model/输入合同/producer政策与4ea
+  相同，四个消费者与3cba2be相同，DLL/SDK/runner仍6c744bf。
+  另在真实-I进程中直接加载最终包内static main，用上述真实A/event文件及明确环境替身
+  完整走到静态回执/封包：0模型/0session，不是目标机A。证据为忽略的
+  `cupti_input_reference_fix_v0_1/delivery_review.json`及`packaged_static_cpu/review.json`。
 - [ ] 新修复包阶段A与9槽Pilot：**NOT_RUN**。先提交修复固定控制/分析身份，再生成新
   输出名的单包交协调审查；不覆盖4ea08bb失败目录，不沿用其新A身份，不重跑历史A/
   event微例，不重编DLL。native实际checkout仍6c744bf，需未来静态阶段fresh核验。
