@@ -34,9 +34,22 @@
   完整结果canonical摘要仍为`d68c1354…163559`/`fc9abd90…894cbd`，COE仍6.429676/
   0.667420ms，耗时8.35/10.41s，Raw/旧报告不变。新记录在忽略的
   `cupti_model1024_local_v0_1/real768_regression.json`。未用旧结果代替1024实际资格。
-- [ ] 新1024目标机执行及两token实物准入：**NOT_RUN**。先固定实现commit，再绑定唯一
-  控制/消费包；阶段A/事件微例的真实回执与既有库直接复用，不重编、不重跑A。
-  默认入口拒绝模型执行；仅协调审查包和显式双回执身份后允许用户执行一次。
+- [x] 先提交实现固定控制/分析`9d3f8f351426a41f12507cc932890ed5c5dca1ce`，再生成唯一
+  `cupti_model1024_9d3f8f351426_reviewed_delivery.zip`：**101,629 bytes**，SHA256
+  `bdc561cae76155f1e51408368d467a04e22cf85b78145e506a749e56b3503b59`；清单SHA256
+  `152843ca2d01078aff532cec53c53d20f1c5db63a5d77a61bb8e2c11e49dda83`。
+  native/runner仍6c744bf；四个CPU消费源与已通过3cba2be逐blob相同，九个公共/原生源
+  与6c744bf逐blob不变，resident_capture同解释器AST相同。真实A/event B回执及库直接
+  复用，不重编、不重跑A、不更换checkout。新控制/分析身份不冒充原生执行身份。
+- [x] ZIP/安全路径/完整清单/hash、Git源码、固定输入/reference、原A/event B字节、
+  Python3.11语法解析和PS5.1整段命令/launcher解析通过；包内实际-I/-S CPU loader
+  origin核验通过且没有导入torch，默认入口在读模型/加载库/写输出之前拒绝。
+  本地包构建首稿CSV编码名错误留下独立partial目录；修正仅忽略的构建脚本并使用新
+  输出名，不覆盖partial。审查脚本首稿PS参数传法错误亦仅修本地审查，未改交付代码。
+  最终审查记录为忽略的`cupti_model1024_local_v0_1/delivery_review.json`。
+- [ ] 新1024目标机执行及两token实物准入：**NOT_RUN**。完整显式命令在忽略的
+  `CUPTI_MODEL1024_REVIEWED_B.ps1`，准确单ZIP回传`cupti_timeline_9d3f8f351426_model1024_once.zip`。
+  仅协调审查包并确认后由用户执行，绑定真实A及event B回执，不裸跑EXE/DLL。
 
 预算仍是模型硬300s、CPU分析硬180s，新鲜参与卷12GiB，同卷不重复计数；时间粗估5～10
 分钟、最终保留20～150MiB，非保证。长期总量null/UNKNOWN、目标<50,000,000,000 bytes

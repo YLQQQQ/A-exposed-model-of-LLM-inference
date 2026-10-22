@@ -24,6 +24,13 @@ bridge、查询规则及未改完成操作区间函数。公共模块只来自�
 模型，不重跑A、不裸跑DLL、不并采Nsight。模型300s、分析180s、临时12GiB；未知writer
 不强行归档，无重试/清理。正长度缺效果、参数或scope不闭合仍BLOCKED；新实例NOT_RUN。
 
+固定控制/分析提交`9d3f8f351426a41f12507cc932890ed5c5dca1ce`；native/runner/DLL仍6c744bf。
+单包`cupti_model1024_9d3f8f351426_reviewed_delivery.zip`，101,629 bytes，SHA256
+`bdc561cae76155f1e51408368d467a04e22cf85b78145e506a749e56b3503b59`。
+包内四消费者源码与3cba2be相同，九项公共/原生源与6c744bf相同；全部清单/hash/CRC、
+固定输入引用、真实回执、隔离loader实际origin及默认拒绝、PS5.1解析通过。语法/CPU
+演练不声称目标3.11或1024 GPU准入已通过，亦不提前宣布一般provider资格。
+
 ## 2026-10-22增补：同一768原件的独立查询支持与局部COE 0.25（历史；新接线见0.26）
 
 **本实例限定Engineering消费PASS，不需要重采。** 新结果不改原BLOCKED服务器回执或
