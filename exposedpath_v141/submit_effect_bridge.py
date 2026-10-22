@@ -35,6 +35,8 @@ SAMPLED_VERSION='submit-effect-bridge/0.2.0'
 SAMPLED_INPUT_VERSION='submit-effect-evidence/0.2.0'
 LEGACY_TIMING='LEGACY_API_ENCLOSES_CALLBACK'
 SAMPLED_TIMING='cupti-api22-distinct-api-callback-boundaries/0.2.0'
+QUERY_VERSION='submit-effect-bridge/0.3.0'
+QUERY_INPUT_VERSION='submit-effect-evidence/0.3.0'
 SUBMITS={'cudaLaunchKernel':'KERNEL','cudaMemsetAsync':'MEMSET','cudaMemcpyAsync':'MEMCPY'}
 DRIVER_SUBMITS={'cuLaunchKernel':'KERNEL','cuMemsetD8Async':'MEMSET','cuMemcpyDtoHAsync':'MEMCPY'}
 SUBMITS.update(DRIVER_SUBMITS)
@@ -87,8 +89,15 @@ def validate_api_callback(a,c,*,policy=LEGACY_TIMING):
 
 
 def analyze_scope(v):
-    require(v.get('schema_version') in (INPUT_VERSION,SAMPLED_INPUT_VERSION),'VERSION')
-    sampled=v['schema_version']==SAMPLED_INPUT_VERSION
+    require(v.get('schema_version') in (INPUT_VERSION,SAMPLED_INPUT_VERSION,QUERY_INPUT_VERSION),'VERSION')
+    query_profile=v['schema_version']==QUERY_INPUT_VERSION
+    sampled=v['schema_version']!=INPUT_VERSION
+    from .cupti_driver_queries import (VERSION as QUERY_POLICY,query_rule,RULES,NESTED_HELPERS,DRIVER_OPERATIONS,
+        RUNTIME_VERSION,RUNTIME_RULES,runtime_query_rule)
+    require((query_profile and v.get('driver_query_policy')==QUERY_POLICY) or
+        (not query_profile and 'driver_query_policy' not in v),'DRIVER_QUERY_POLICY')
+    require((query_profile and v.get('runtime_query_policy')==RUNTIME_VERSION) or
+        (not query_profile and 'runtime_query_policy' not in v),'RUNTIME_QUERY_POLICY')
     policy=SAMPLED_TIMING if sampled else LEGACY_TIMING
     require((sampled and v.get('api_callback_timing_policy')==policy) or
         (not sampled and 'api_callback_timing_policy' not in v),'TIMING_POLICY')
@@ -142,8 +151,58 @@ def analyze_scope(v):
         if sampled:timing_counts[fact['relation']]+=1
         apis[a['id']]=a;api_keys[key(a)]=a
         if a['domain']=='RUNTIME':runtime.append(a)
+    query_rules={}
+    def ancestors(c):
+        yield c
+        while c.get('parent_id') is not None:
+            c=calls[c['parent_id']];yield c
+    if query_profile:
+        def local_callback(c):
+            a=api_keys.get(key(c))
+            return ((c['start']<s['completion_end'] and s['request_start']<c['end']) or
+                (a is not None and a['start']<s['completion_end'] and s['request_start']<a['end']))
+        for c in calls.values():
+            if not local_callback(c):continue
+            if c['domain']=='RUNTIME':require(c.get('parent_id') is None,'NESTED_RUNTIME_UNSUPPORTED')
+            if c['name'] in RULES:
+                a=api_keys.get(key(c))
+                # Preserve the existing parent-callback bridge when a nested
+                # driver API activity is absent; never synthesize its duration.
+                # A root call, unlike that child, needs its own API envelope.
+                require(a is not None or c.get('parent_id') in calls,'DRIVER_API_COVERAGE')
+                query_rules[c['id']]=query_rule(a,c)
+            elif c['name'] in RUNTIME_RULES:
+                query_rules[c['id']]=runtime_query_rule(api_keys.get(key(c)),c)
+        # Query semantics must not hide work or physical completion on the
+        # same call or any real descendant, even if its interval is short.
+        for e in v['effects']:
+            c=call_keys.get(key(e))
+            if c is not None:require(not any(x['id'] in query_rules for x in ancestors(c)),
+                'QUERY_DEVICE_EFFECT:'+str(e['id']))
+        for fact in [*v['synchronizations'],*v.get('internal_completions',[])]:
+            c=calls.get(fact.get('driver_call_id')) or call_keys.get((fact.get('domain'),v['pid'],fact['correlation']))
+            if c is not None:require(not any(x['id'] in query_rules for x in ancestors(c)),
+                'QUERY_SYNCHRONIZATION:'+str(fact['id']))
+        for c in calls.values():
+            if (c['name'],c.get('cbid')) not in DRIVER_OPERATIONS:continue
+            if any(x['id'] in query_rules for x in list(ancestors(c))[1:]):
+                require(False,('QUERY_SYNCHRONIZATION:' if normal(c['name'])=='cuStreamSynchronize' else
+                    'QUERY_DEVICE_SUBMISSION:')+str(c['id']))
+        for c in calls.values():
+            if c['domain']!='DRIVER' or not local_callback(c):continue
+            if c.get('parent_id') is None:require(key(c) in api_keys,'DRIVER_API_COVERAGE')
+            if c['id'] in query_rules:continue
+            if c.get('parent_id') is None:
+                require((c['name'],c['cbid']) in DRIVER_OPERATIONS and normal(c['name']) in DRIVER_SUBMITS,
+                    'DRIVER_ROOT_API_UNSUPPORTED:'+str(c['id'])+':'+c['name'])
+            else:
+                root=list(ancestors(c))[-1]
+                require((c['name'],c['cbid']) in DRIVER_OPERATIONS or
+                    NESTED_HELPERS.get((c['name'],c['cbid']))==normal(root['name']),
+                    'DRIVER_NESTED_API_UNSUPPORTED:'+str(c['id'])+':'+c['name'])
     owners=runtime+[a for a in apis.values() if a['domain']=='DRIVER' and
-        call_keys[key(a)].get('parent_id') is None and normal(a['name']) in DRIVER_SUBMITS]
+        call_keys[key(a)].get('parent_id') is None and
+        (normal(a['name']) in DRIVER_SUBMITS or call_keys[key(a)]['id'] in query_rules)]
     relevant=[a for a in owners if a['start']<s['completion_end'] and s['request_start']<a['end']]
     for c in calls.values():
         if c['domain']=='RUNTIME' and s['request_start']<=c['start']<s['completion_end']:
@@ -157,7 +216,7 @@ def analyze_scope(v):
     for c in calls.values():
         if s['request_start']<=c['start']<s['completion_end']:
             require(type(c['return_code']) is int and c['return_code']==0,'FAILED_API')
-            if c['domain']=='DRIVER':require(c.get('parent_id') in calls or
+            if c['domain']=='DRIVER':require(c['id'] in query_rules or c.get('parent_id') in calls or
                 (c.get('parent_id') is None and normal(c['name']) in DRIVER_SUBMITS and key(c) in api_keys),'PARENT')
 
     copy=apis.get(s['copy_api']);sync=apis.get(s['sync_api'])
@@ -219,6 +278,7 @@ def analyze_scope(v):
     for a in sorted(relevant,key=lambda a:(a['start'],a['end'])):
         n=normal(a['name'])
         if n=='cudaStreamSynchronize':continue
+        if call_keys[key(a)]['id'] in query_rules:continue
         if n not in SUBMITS:
             # Do not silently call an unknown API non-submit.
             from .a_api_classification import classify_a_api_name
@@ -226,6 +286,8 @@ def analyze_scope(v):
             continue
         require(a['end']<=sync['start'],'SUBMISSION_BOUNDARY')
         c=call_keys[key(a)];require(same_scope(c,s),'SCOPE')
+        if query_profile:
+            require(isinstance(c.get('params'),dict) and integer(c['params'].get('native_stream')),'PARAMETERS')
         es=mapped[a['id']]
         if SUBMITS[n] in ('MEMSET','MEMCPY'):
             p=c.get('params');require(isinstance(p,dict) and integer(p.get('count'))
@@ -300,7 +362,7 @@ def analyze_scope(v):
             physical_activity_overlap_ns=sum(hi-lo for lo,hi in intervals),
             driver_api_interval_ns=[driver_api['start'],driver_api['end']] if driver_api else None,
             pure_host_blocking_ns=None))
-    answer=dict(schema_version=SAMPLED_VERSION if sampled else VERSION,status='VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS',
+    answer=dict(schema_version=QUERY_VERSION if query_profile else SAMPLED_VERSION if sampled else VERSION,status='VALID_UNDER_DECLARED_SUPPORT_ASSUMPTIONS',
         session_id=v['session_id'],source=v['source'],clock=v['clock'],
         members=[a.key for a in members],closed_prior_ids=prior,terminal=terminal['id'],
         logical_zero_call_ids=logical_zero,zero_projection='EMPTY_FIFO_NODE_PRESERVES_REAL_FIFO_ORDER',
@@ -316,4 +378,32 @@ def analyze_scope(v):
     if sampled:answer.update(api_callback_timing_policy=policy,api_callback_relation_counts=dict(timing_counts),
         activity_timestamp_source='CUpti_ActivityAPI.start/end',
         callback_timestamp_source='cuptiGetTimestamp sampled inside subscriber ENTER/EXIT')
+    if query_profile:
+        rows=[]
+        for a in sorted(relevant,key=lambda a:(a['start'],a['end'])):
+            c=call_keys[key(a)]
+            rows.append(dict(api_id=a['id'],callback_id=c['id'],domain=a['domain'],name=a['name'],
+                start=a['start'],end=a['end'],return_code=a['return_code']))
+        # Exactly one outermost API owns each nested interval; driver children
+        # remain observable provenance, not another addition to API wall cost.
+        facts=[]
+        for cid,rule in query_rules.items():
+            c=calls[cid];a=api_keys.get(key(c));root=list(ancestors(c))[-1];owner=api_keys.get(key(root))
+            require(owner is not None,'DRIVER_API_COVERAGE')
+            facts.append(dict(api_id=a['id'] if a else None,callback_id=cid,pid=c['pid'],tid=c['tid'],
+                domain=c['domain'],correlation=c['correlation'],cbid=c['cbid'],name=c['name'],
+                parent_id=c.get('parent_id'),api_interval_ns=[a['start'],a['end']] if a else None,
+                callback_sample_interval_ns=[c['start'],c['end']],return_code=c['return_code'],
+                budget_owner_api_id=owner['id'],rule_id=rule['domain']+'/'+rule['name']))
+        merged=[]
+        for row in rows:
+            if merged and row['start']<=merged[-1][1]:merged[-1][1]=max(merged[-1][1],row['end'])
+            else:merged.append([row['start'],row['end']])
+        answer.update(driver_query_policy=QUERY_POLICY,runtime_query_policy=RUNTIME_VERSION,
+            driver_queries=[r for r in facts if r['domain']=='DRIVER'],
+            runtime_queries=[r for r in facts if r['domain']=='RUNTIME'],
+            query_rule_sources={r['domain']+'/'+r['name']:r for r in query_rules.values()},
+            accounting_api_sources=rows,accounting_api_union_ns=sum(hi-lo for lo,hi in merged),
+            accounting_interpretation='OBSERVED_API_WALL_NOT_PURE_CPU; SYNC_NOT_RECLASSIFIED',
+            independent_driver_submit_api_ids=[a['id'] for a in ordered if a['domain']=='DRIVER'])
     return answer

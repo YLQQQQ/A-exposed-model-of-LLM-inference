@@ -1,6 +1,93 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-22增补：真实768的API/callback双边界消费 0.24（当前；离线BLOCKED）
+## 2026-10-22增补：同一768原件的独立查询支持与局部COE 0.25（当前）
+
+**本实例限定Engineering消费PASS，不需要重采。** 新结果不改原BLOCKED服务器回执或
+旧消费者结论，不追认其他768/1024运行。输入仍为0.24所列358e6d17…edbf封存ZIP；
+同一原件中的模型/token/drain及库/producer身份通过，源清单与原ZIP结束复核不变。
+
+### 精确、独立、版本化的查询规则
+
+新[规则模块](../../exposedpath_v141/cupti_driver_queries.py)与bridge/evidence/adapter0.3.0
+独立于冻结registry和生产A/B。必须显式选择driver政策0.1.0、runtime政策0.1.0及7.231的
+双时间边界政策，旧0.1/0.2默认不变。不是按名称前缀、成功返回或无设备活动授予类别。
+
+| DRIVER名称 | API22 CBID | CUDA12.4.1文档依据 |
+| --- | ---: | --- |
+| cuDevicePrimaryCtxGetState | 392 | [主context状态查询](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-driver-api/group__CUDA__PRIMARY__CTX.html) |
+| cuCtxGetCurrent | 304 | [调用线程当前context查询](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-driver-api/group__CUDA__CTX.html) |
+| cuKernelGetFunction | 683 | [kernel的函数句柄查询](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-driver-api/group__CUDA__LIBRARY.html) |
+| cuFuncGetAttribute | 85 | [函数属性查询](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-driver-api/group__CUDA__EXEC.html) |
+| cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags | 451 | [occupancy计算接口](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-driver-api/group__CUDA__OCCUPANCY.html) |
+
+domain、完整名称、API/callback CBID、PID/TID/correlation及返回必须一致。保留实际
+API时间、callback采样、父子及来源；独立driver查询不虚构runtime父节点，不进设备提交/W。
+non-submit不保证非阻塞或纯CPU。来源header为原A的cupti_driver_cbid.h，SHA256
+`7cf5ee908f7254a188a8a6df3886b1d4bde84061b5cd57c0fcb0b7a6d40dd4f3`。
+
+继续完整消费时四类RUNTIME查询也暴露未注册：cudaGetDevice17、cudaGetLastError10、
+cudaDeviceGetAttribute200、cudaOccupancyMaxActiveBlocksPerMultiprocessor210。新候选政策
+精确绑定这些接口，依据CUDA12.4.1[设备查询](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__DEVICE.html)、
+[线程错误状态读取/重置](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__ERROR.html)及
+[occupancy计算](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__OCCUPANCY.html)。
+cupti_runtime_cbid.h SHA256为`f944b378887cd4b44f22025e46fdcdf977ad75847911403d4c7bc4742793a68a`。
+这四项是接完本次已采文件链的必要支持，不是泛化“Get=non-submit”；错误返回或意外效果/
+同步/提交子调用（包括count0）、未知接口、身份/线程/scope冲突仍拒绝。
+
+独立调用必须有独立API activity，嵌套callback可沿原已验证父子桥使用真实runtime包络。
+本次85次嵌套occupancy没有独立driver activity，保持api_id/api_interval为null；不生成
+假行或用callback样本充当API时长。其独立身份仍在，预算只由外层runtime计一次。
+cuCtxGetDevice16、cuDeviceGetAttribute9、cuStreamIsCapturing499只允许既有精确runtime
+祖先桥，不授予这些接口独立调用的新资格。112次独立cuLaunchKernel307全部仍需真实
+native stream实参、原返回、设备效果、scope/FIFO/提交截止和terminal检查。
+
+### 同一原件完整离线结果
+
+| 量（ms，计数除外） | 首token / Prefill | 第二token完成操作 |
+| --- | ---: | ---: |
+| phase墙钟 | 114.791300 | 89.631900 |
+| phase GPU union | 59.226680 | 18.522961 |
+| copy API墙钟 | 10.601800 | 1.483800 |
+| copy入口→配对sync返回 | 10.613400 | 1.492700 |
+| COE（kernel＋MemOp） | 6.429676（6.294605＋0.135071） | 0.667420（0.666108＋0.001312） |
+| 原末尾sync交集 | 0 | 0 |
+| 操作补集 | 4.183724 | 0.825280 |
+| COE/phase | 5.6012% | 0.7446% |
+| 合格局部必要成员数 | 1905 | 3497，含历史前缀 |
+| memset参数/效果 | 141正长度＋56实测零 | 累计142正长度＋56实测零 |
+
+首token成员为1762 kernel、141 MEMSET、2 MEMCPY；第二token累计为3352、142、3，
+不能以累计W活动量充当Decode新增GPU活动。必要成员在copy之前执行的union为
+52.797004/77.082221ms；后者同样是累计前缀，不是Decode新增量。零节点保留API预算和
+FIFO提交顺序，不虚构设备activity。terminal为真实D2H record30956/57914，对应物理
+sync30958/57916，均context1/stream7；配对sync成功，必要成员在其完成前闭合。
+
+独立Raw参考不调用候选集合恢复生成答案：按typed correlation、真实parent和流序恢复
+提交截止内的全部局部成员，保留早已完成前缀/操作内D2H，排除同步边界后的提交；
+再用独立端点扫描核COE、原sync交集及补集。成员/terminal与新消费者逐项相同。
+独立/嵌套查询及全部root API都有来源清单，root包络sum与union一致（首56.706300ms、
+第二token累计92.508700ms），无重复/遗漏；该覆盖量**含sync API**，不是新的CUDA API
+类别预算，不重分类sync，不产生新A。CUPTI观测时序不直接迁移到旧Nsight或P0。
+
+### 交付与裁决边界
+
+新派生目录`cupti_model768_queries_v0_3_final/`包含完整result、memset coverage、独立Raw
+成员/区间证明、输入绑定及最终消费者复读；原41个源文件和旧BLOCKED不变。原件文件链
+1.33s、含独立参考的两token审计8.36/10.87s；最后新增保守scope门后复读5.01/5.75s，
+结果canonical SHA分别`d68c1354…163559`、`fc9abd90…894cbd`与保存结果一致。
+最初独立参考把完整必要union误比为既有字段的操作裁剪union，断言失败的partial目录
+仍保留；只修正参考字段口径，不改候选数学/Raw，随后独立成员与端点核验通过。
+
+最终定向CPU回归152pass/0fail/0skip，28.73s；命令见7.232。真实记录正例及反例覆盖
+未知/错CBID、query意外效果/同步/零提交子调用、真实submit缺效果/参数、缺API、重复、
+跨scope、嵌套API缺时间与预算去重、旧分派拒绝。CPU oracle不是新目标机实验或Q0。
+
+**裁决PASS只限这次Engineering实例的成功drain后closed-prior单FIFO局部COE。**
+完整物理B仍NOT_ASSESSED；COE、API墙钟与补集都不是纯Host阻塞/可消除时延，不授新Formal、
+统计规律或方法优越性。旧768/1024及原BLOCKED/UNKNOWN不升级，不恢复任何输入矩阵。
+本实例无剩余消费阻塞，不需要服务器操作/重采，不制作部署包。
+
+## 2026-10-22增补：真实768的API/callback双边界消费 0.24（历史；新消费见0.25）
 
 本次不是“参数仍然缺失”。新768模型、初始化/关闭成功，真实count和设备效果已记录。
 封存ZIP `cupti_timeline_2be05ce6cefe_model768_once.zip`，3,108,692bytes，SHA256

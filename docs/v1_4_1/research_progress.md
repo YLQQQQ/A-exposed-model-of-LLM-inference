@@ -1,6 +1,62 @@
 # ExposedPath 科研进度清单
 
-## 7.231 真实768双时间边界最小修复；同原件离线审计仍BLOCKED（2026-10-22，当前）
+## 7.232 同一768原件独立driver查询支持及两token局部COE离线PASS（2026-10-22，当前）
+
+- [x] 继续复用7.231封存ZIP与展开原件，SHA256
+  `358e6d1746c1b0270e4d1d1868f92691344b530ff4ca27968368a02feaa7edbf`；原ZIP、41项清单
+  文件、原BLOCKED报告及7.231派生结果均不改。新输出为忽略的
+  `cupti_model768_queries_v0_3_final/`，输入/源码、A/event B、producer/input/warmup/token/drain
+  文件链再次严格核验；控制仍2be05ce、native仍6c744bf，不伪称新分析代码执行过模型。
+- [x] 新独立`cupti-api22-driver-queries/0.1.0`精确绑定DRIVER域/名称/CBID：
+  cuDevicePrimaryCtxGetState392、cuCtxGetCurrent304、cuKernelGetFunction683、
+  cuFuncGetAttribute85、cuOccupancyMaxActiveBlocksPerMultiprocessorWithFlags451。
+  依据固定CUDA12.4.1功能文档与封存API22头文件，不按Get前缀或缺activity分类。
+  API/callback身份、原时间、返回和来源保留；non-submit不等于非阻塞/纯CPU成本。
+  查询不进W，不补runtime父节点；意外效果、同步、含零提交的子调用、未知API/CBID等仍拒绝。
+- [x] 贯通后发现同批四类runtime查询也未注册，故仅在新消费者中补精确
+  `cupti-api22-runtime-queries/0.1.0`：cudaGetDevice17、cudaGetLastError10、
+  cudaDeviceGetAttribute200、cudaOccupancyMaxActiveBlocksPerMultiprocessor210。
+  这是完成同一链的必要消费支持，不改生产/冻结registry；旧0.1/0.2默认分派保持。
+  bridge/evidence/adapter0.3.0须显式选择上述两政策及既有双时间边界政策。
+- [x] 独立调用必须有自己的API activity；已验证的嵌套callback父子/效果桥不被误加同一要求。
+  本次85条嵌套occupancy callback无独立driver API行，保留API时间null及真实runtime包络，
+  不补造时间。嵌套API只保留来源，不再次计入外层预算；独立driver launch112次仍检查
+  实参native stream、成功返回、合法效果及提交/完成截止，且只计一次。API窗内但callback
+  采样跨边界不能因筛选而漏掉；新版本保守拒绝scope冲突。预算来源含sync API包络，
+  其union只用于覆盖/去重核对，不把sync重分类进CUDA API或生成新A。
+- [x] 新版本完整消费两token及零逻辑节点：首token197次memset＝141正长度合法效果＋56零；
+  第二token累计198＝142正＋56零。零节点保留API和FIFO顺序，无虚构GPU activity。
+  独立Raw参考按实际父子、typed correlation与流序恢复成员，再独立端点扫描核区间；
+  不调用S/COE集合恢复生成expected。成员为1905/3497，terminal为record30956/57914，
+  两token均通过声明的closed-prior单FIFO局部支持门；第二token集合含历史前缀。
+- [x] 本实例限定COE：首token6.429676ms（kernel6.294605、MemOp0.135071），
+  第二token0.667420ms（kernel0.666108、MemOp0.001312）；原末尾sync交集均0。
+  操作墙钟10.613400/1.492700ms，补集4.183724/0.825280ms；phase长114.791300/89.631900ms，
+  COE/phase为5.6012%/0.7446%。第二token phase GPU union18.522961ms，不能使用累计W
+  活动量充当Decode新增活动。完整成员/效果/查询/预算来源及独立参考均保留。
+- [x] 最终定向命令`python -m pytest -q -ra -p no:cacheprovider
+  tests/test_cupti_driver_queries.py tests/test_cupti_callback_boundaries.py
+  tests/test_submit_effect_bridge.py tests/test_cupti_timeline_adapter.py
+  tests/test_cupti_timeline_file_chain.py tests/test_cupti_model_policy_reconnect.py
+  tests/test_cupti_timeline_b.py tests/test_cupti_timeline_model.py
+  --basetemp .local/cdq_verified --junitxml .local/cdq_verified.xml`：
+  **152 passed/0 failed/0 skipped，28.73s**。先红后绿的真实记录/独立反例含错CBID/未知调用、
+  查询效果/同步/零提交子调用、真实提交缺效果/参数、重号、跨scope及嵌套预算去重。
+  CPU hand oracle20ns/1ns不冒充目标GPU资格；本地Python3.12.7，目标原件3.11.16。
+  compileall/py_compile/diff通过；未重跑Q0、模型、微例或编译，不新增采集设施。
+- [x] 原文件链1.33s，含独立参考的两token离线审计8.36s/10.87s；最终新增保守门后用同一
+  原件重新消费5.01s/5.75s，与已保存结果canonical hash逐字段一致，未重复展开大原件。
+  `verified_consumer_recheck.json`绑定最终实际源码；源清单结束复核不变。
+
+裁决：**PASS，仅本实例、成功drain后的closed-prior单FIFO局部COE Engineering消费**。
+没有剩余本实例阻塞，不需要服务器操作/重采/打包；原服务器BLOCKED、旧分析拒绝及
+7.231结论保留为历史，新版本通过由独立派生记录关联。完整物理B仍NOT_ASSESSED，
+不是纯Host阻塞、跨provider时序等价或新Formal，不授予一般PyTorch/其他输入资格，
+不回填旧1024、不恢复矩阵/七槽。详见[取证审查0.25](memset_parameter_feasibility_v0_1.md)。
+生产A/B/COE公式、旧冻结registry/协议、用户DOCX、Raw/UNKNOWN及Gate13限定PASS/Gate14
+NOT_RUN保持。最高优先级为本次离线结论交协调审查，无新GPU执行计划。
+
+## 7.231 真实768双时间边界最小修复；同原件离线审计仍BLOCKED（2026-10-22，历史；新版本见7.232）
 
 - [x] 核验`cupti_timeline_2be05ce6cefe_model768_once.zip`：3,108,692 bytes，SHA256
   `358e6d1746c1b0270e4d1d1868f92691344b530ff4ca27968368a02feaa7edbf`；42成员/41清单，

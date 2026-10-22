@@ -11,6 +11,7 @@ from pathlib import Path
 
 from exposedpath_v141.submit_effect_bridge import (analyze_scope,normal,require,DRIVER_SUBMITS,
     LEGACY_TIMING,SAMPLED_TIMING,SAMPLED_INPUT_VERSION)
+from exposedpath_v141.cupti_driver_queries import VERSION as DRIVER_QUERY_POLICY,RUNTIME_VERSION
 
 VERSION='cupti-timeline-adapter/0.1.0'
 
@@ -31,7 +32,7 @@ def marker_ranges(rows):
     return dict(ranges=ranges,points=points)
 
 
-def select_scope(raw,producer,*,timing_policy=LEGACY_TIMING):
+def select_scope(raw,producer,*,timing_policy=LEGACY_TIMING,driver_query_policy=None):
     """Join original producer labels to this capture's own CUPTI clock.
 
     Producer/token files must be bound by the caller's input manifest. This
@@ -74,15 +75,17 @@ def select_scope(raw,producer,*,timing_policy=LEGACY_TIMING):
         context=c['context'],stream=c['stream'],drain_end=drain['end'],request_start=start,completion_end=end,
         copy_api=copy['id'],sync_api=sync['id'],completion_proof='HOST_TOKEN_READABLE',
         actual_token_ids=deepcopy(producer['actual_token_ids']),ownership='CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS')
-    evidence=to_evidence(raw,scope,timing_policy=timing_policy)
+    evidence=to_evidence(raw,scope,timing_policy=timing_policy,driver_query_policy=driver_query_policy)
     physical=one((s for s in evidence['synchronizations'] if s['domain']=='RUNTIME' and
         s['correlation']==drain['correlation'] and s['flags']==4),'DRAIN_PHYSICAL_SYNC')
     require(physical['context']==scope['context'] and drain['start']<=physical['start']<=physical['end']<=drain['end'],'DRAIN_SCOPE')
     return scope
 
 
-def to_evidence(raw,scope,*,timing_policy=LEGACY_TIMING):
+def to_evidence(raw,scope,*,timing_policy=LEGACY_TIMING,driver_query_policy=None):
     require(timing_policy in (LEGACY_TIMING,SAMPLED_TIMING),'TIMING_POLICY')
+    require(driver_query_policy is None or
+        (driver_query_policy==DRIVER_QUERY_POLICY and timing_policy==SAMPLED_TIMING),'DRIVER_QUERY_POLICY')
     require(raw.get('schema_version')=='cupti-timeline-capture/0.1.0','CAPTURE_VERSION')
     if 'initialization' in raw:
         from exposedpath.cupti_timeline import validate_startup_data
@@ -183,18 +186,22 @@ def to_evidence(raw,scope,*,timing_policy=LEGACY_TIMING):
         closed_prior_resource_ids=prior_resources,
         closed_initialization_callback_ids=sorted(removed),scope=deepcopy(scope))
     if timing_policy==SAMPLED_TIMING:answer['api_callback_timing_policy']=timing_policy
+    if driver_query_policy is not None:
+        answer.update(schema_version='submit-effect-evidence/0.3.0',driver_query_policy=driver_query_policy,
+            runtime_query_policy=RUNTIME_VERSION)
     return answer
 
 
-def analyze_files(capture_path,scope_path,output,*,timing_policy=LEGACY_TIMING):
+def analyze_files(capture_path,scope_path,output,*,timing_policy=LEGACY_TIMING,driver_query_policy=None):
     a,b=Path(capture_path).resolve(),Path(scope_path).resolve();out=Path(output).resolve()
     require(not any(p.is_relative_to(out) for p in (a,b)),'OUTPUT_CONTAINS_INPUT')
     if out.exists():raise FileExistsError(out)
     ab=a.read_bytes();bb=b.read_bytes()
     raw=json.loads(ab);scope=json.loads(bb)
-    result=analyze_scope(to_evidence(raw,scope,timing_policy=timing_policy))
+    result=analyze_scope(to_evidence(raw,scope,timing_policy=timing_policy,driver_query_policy=driver_query_policy))
     require(a.read_bytes()==ab and b.read_bytes()==bb,'SOURCE_CHANGED')
-    value=dict(schema_version='cupti-timeline-adapter/0.2.0' if timing_policy==SAMPLED_TIMING else VERSION,input=dict(capture_sha256=hashlib.sha256(ab).hexdigest(),
+    version='cupti-timeline-adapter/0.3.0' if driver_query_policy is not None else 'cupti-timeline-adapter/0.2.0' if timing_policy==SAMPLED_TIMING else VERSION
+    value=dict(schema_version=version,input=dict(capture_sha256=hashlib.sha256(ab).hexdigest(),
         scope_sha256=hashlib.sha256(bb).hexdigest(),clock=raw['clock'],collector='INDEPENDENT_CUPTI'),result=result)
     out.mkdir(parents=True,exist_ok=False)
     with (out/'result.json').open('x',encoding='utf8') as f:json.dump(value,f,ensure_ascii=False,indent=2)
