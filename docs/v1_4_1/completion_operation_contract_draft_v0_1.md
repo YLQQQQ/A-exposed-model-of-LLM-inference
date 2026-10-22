@@ -391,3 +391,108 @@ CUDART完成编译/链接和11个ABI导出/import检查，未执行或加载生�
 本构造是**Pinned 4-byte**单FIFO参考，不等于自然PyTorch的Pageable token复制行为，
 即便将来通过，也只关闭该来源的这项受控连接差额，不授全部Q0、自然内部阻塞、
 完整物理B、COE Formal或负载规律。新GPU结果与前瞻复核均保持NOT_RUN。
+
+## 11. 512→2048前瞻复核候选0.1（7.242，未授权执行）
+
+Material Passport：research-protocol / ARS experiment-agent plan；2026-10-22；本地配置
+准备，不是新实验或Freeze。唯一主要问题固定为：**同一模型内容、P自然Host-readable
+政策和CUPTI观测实现下，首token必要活动在完成操作内的执行量是否再次出现超出phase
+GPU union同比例参照的响应？** COE不是纯Host阻塞或它的近似；第二token完整报告，
+1024分叉及O/P幅度敏感性作为既有补充证据，不另加槽、不拼旧样本。
+
+### 11.1 推荐4完整block/8P1的依据和范围
+
+候选顺序为`512→2048；2048→512；2048→512；512→2048`。正反次序各两次，每点
+在两个执行位置各两次，前两块/后两块也各含一次正反。每run新进程，w3/r1、batch1、
+output2、FP16/eager/SDPA和原P/完成边界不变。位置平衡不消除非线性漂移、外部竞争或
+跨run相关；新进程不等于统计上已独立。
+
+已有bd377c三block首token端点R为+70.513613/+80.496420/+62.326314ms；1024的
+3.115148/46.853457/3.299398ms和第二token反向说明不能用端点三正保证平稳。选择四块
+是**在每种次序至少有两次、能作顺序/留一描述的最小平衡预算**，不是由三样本估计出
+功效或精度。两块仅每次序一次；三块不能正反等数；六块没有现成的精度/功效依据，
+故本次不机械继承旧4P1/12P1方案。四块只能作固定观测程序的有限前瞻重现，不能冻结
+普遍稳定域、10/5ms精度、阈值、P0时延组成或硬件因果。
+
+### 11.2 可检查的声明和复用入口
+
+机器声明为[`coe_endpoint_replication_v0_1.json`](../../configs/coe_endpoint_replication_v0_1.json)，
+包含原512/2048输入**文件字节**、完整[1,L] input/mask摘要及逐值token参考
+`[[29184],[6556]]`，模型清单摘要沿bd377c原件；不重构/归一化输入。内嵌原严格
+`CUPTI-INPUT-PLAN/0.2.0`，没有新增长度schema或角色。小型CPU适配
+[`coe_replication_prepare.py`](../../scripts/coe_replication_prepare.py)只做声明/输入绑定，
+调用现有`schedule`、`one_configuration`和`summarize`；原采集、producer、两token准入、
+预算/空间及失败停止链不改。`execution_plan.json`与`preparation.json`是本地准备产物，
+不是可执行交付、真实执行seal或运行授权。
+
+候选当前用已有Pilot角色，`execution_commit=null`、`gpu_authorized=false`、
+`formal_eligible=false`。如要将新数据称正式确认性证据，必须执行前完成当前来源直接
+正确性差额审查、资格/排除/协议签署及相应Formal身份封套，不能把本计划改个role就
+升级。本文没有实施或要求现在开发该封套；旧Engineering/Pilot不升级。
+
+主量为每完整block的`R=Q2048−Q512×G2048/G512`，主要统计量是四block等权平均R；
+同报signed ΔQ、全部原值、mean/median/range、两次序均值、前两/后两均值和留一完整
+block均值。分母无效则R=null并列明block，不加epsilon、不用其余块冒充完整主要均值。
+第二token独立列为次要，不把其累计W当Decode新增活动，不视token/kernel/sync为重复。
+不预定bootstrap或p值，不用重采样次数冒充样本量，不调整旧10/5ms目标后宣称达到。
+
+数据质量、科学方向、论文增量分别裁决：
+
+- **质量**：身份/输入/输出、成功drain、参数/正长度效果、依赖/scope/terminal、
+  dropped/overflow等沿原硬门；失败立即停，已完成/失败/未运行槽位全保留。不得按R、
+  占比、零/负值排除，也不拼不完整block。
+- **方向性复核**：若主要平均R、两次序均值及全部留一均值都正，仅支持“本批固定P
+  的方向性响应重现”；它不要求四次全正、不提供显著性/总体可靠性。平均与敏感性均
+  负则不支持正响应；零、方向冲突、未定义或质量缺证则不确定/不可评估。ΔQ另报，
+  正R不自动等于绝对Q增加。全部结果均不触发补采、替补或更换统计法。
+- **论文**：正向复核不证明COE优于同操作GPU union或完整依赖timeline；反向/混合会
+  收缩“输入端点稳定响应”的描述，但不抹去已验证成员/算术。质量失败只限制该次
+  适用性，不作为方法无价值或正假设成立的证据。新颖性与解释用途仍需独立论证。
+
+公平参照保留API墙钟/可审计API union、原sync交集、phase GPU union、同操作GPU
+union和完整依赖timeline、H/D/成员/提交及布局。旧来源已合格A/overlay单列；**当前
+CUPTI0.3入口不输出完整五类A及整窗候选预算，保持NOT_ASSESSED**，不能用局部API union
+冒充或从COE直接相加。主R不依赖该整窗A资格，不为这批复核暗增accounting工程。
+
+### 11.3 资源及停止点
+
+已封存九run展开文件共1,970,793,104bytes；512/2048六run分别合计656,624,234/
+653,506,526bytes，以同量级外推8run约1.63GiB。候选预留展开保留1.5～3GiB、ZIP
+80～200MiB、参与卷新鲜12GiB；历史YLQ总量仍UNKNOWN，长期<50,000,000,000bytes另管。
+原process回执没有elapsed字段，不能把旧估时当已测端到端耗时；本批30～55分钟仅
+规划估计。现有模型300s/分析180s×8的子进程时限之和64分钟，不含身份/I/O/封包，
+不是整批墙钟保证。固定八槽或任一硬失败即停，无自动重试、替补、续批、清理。
+
+执行前必须另审资源恢复/环境、当前来源受控GPU证据、最终角色/政策/预算、实际执行/
+分析commit和输入身份、新静态回执及空间、显式授权。本轮不构造交付或命令，不恢复
+4096/1024/provider/hook/batch采集；7.241程序、编译及24项证据直接复用。
+
+## 12. batch参数化影响清单（7.242，只读审查；未实现）
+
+当前CUPTI计划/model合同仍是batch1、输入[1,L]、两token各一Host ID。**底层runner已
+支持[B,L]运算不等于当前入口已支持B。** 具体位置和最小差额如下，不修改这些文件：
+
+| 层与当前限制 | 若将来扩为[B,L]的最小差额 |
+|---|---|
+| [`cupti_input_contract.py`](../../scripts/cupti_input_contract.py)的`input_identity`要求单sample、shape[1,L]；`validate_model`固定1 | 配置单独声明B，记录有序sample_indices和完整B行input/mask/shape摘要；即使每行相同也不能复用单行digest。输入文件字节另绑；不是按L豁免 |
+| [`gate11_pilot.py`](../../exposedpath/gate11_pilot.py)的`cupti_plan_schedule`、[`cupti_input_pilot.py`](../../scripts/cupti_input_pilot.py)的`one_configuration`均固定batch1 | 版本化配置、slot/run/producer身份含B；旧0.1/0.2读取不放宽。B与L为不同轴，不改旧身份或把旧B1/B4加入新block |
+| [`cupti_timeline_model.py`](../../scripts/cupti_timeline_model.py)只构造`samples[0]`，setup和consumer验证shape[1,L]；scope逐token要求len1 | 依sample顺序构造全部B行tensor，贯通setup/input/token/producer/hash检查；逐token保存B个实际Host ID，输出矩阵为[2,B]，不得填缺失值或预设各样本相同 |
+| [`runner.py`](../../exposedpath/runner.py)的`run_one_invocation`已用shape提取B、向量argmax和B个Host ID；P的[`Execution.prepare`](../../exposedpath/observation_preparation.py)缓存绑定包含manifest摘要的完整identity | 可复用原`.cpu().reshape(-1).tolist()`批量读回和P闭包，不新增同步；未来由新版本manifest摘要传递B/样本顺序绑定，并验证实际输出数量，不必为B重写P helper，不借改变L偷偷解锁 |
+| runner当前任一sample出现EOS即结束整个batch；新消费者`validate_tokens`/`producer_scopes`仍要求每token长度1 | 明确保留“任何样本early EOS则整次排除/停止”的有限政策，先不做动态batch/逐样本结束。逐token向量均已Host-readable才是整批锚点；当前不提供每样本独立完成时间 |
+| 当前S/COE输入scope和`token_metrics`是PID/context/stream/单invocation，非batch维度；`summarize`按L成块 | 作为**一次batched invocation**恢复合格实际提交前缀和terminal，保留已完成成员；不把数学数据依赖/每样本ownership凭B拆分。Request/phase和候选操作union一次去重，不乘B、不跨sync累加B |
+
+旧`batch_load.py`已有512/B1/B4有序样本、token矩阵/EOS及边界经验；只复用工程设计，
+不授当前CUPTI/P包装batch资格。旧B4 Prefill局部可用而Request/Decode BLOCKED保持。
+新CUPTI的core以实际uint64 count/bytes、PID/TID、context/stream/correlation及kernel布局
+记录，无batch1专用过滤；当前证据**没有要求修改collector的依据**。先改producer/输入/
+消费者适配才有意义；若将来真出现未知API、容量/映射/依赖缺口则原样拒绝，不能预告必过。
+
+具体科研用途只保留一个：未来若输入端点响应得到有限复核，在固定L和P下改变B，检验
+“较多必要活动在copy后执行，仅依赖输入长度触发的某组实现/布局切换”这一解释。
+若固定L、可比较布局下COE/G仍明显改变，将削弱该**仅由输入长度分支解释**；若G增加
+但位置/比例不变，则限制把端点响应推广为所有工作量增长。布局和位置一起变化仍无法
+分离内部因果；单次零/负或未知不决定方向。B不等于L、同样总token数也不是同负载。
+该用途依赖实际分支/成员/位置，不以更大wait为选点目标，不授并发用户请求研究。
+
+**结论：batch值得保留为解释的反证轴，暂不实施。** 首先完成本节端点复核的政策审定；
+若只想增加配置数或当前论文无需区分上述解释，则继续暂缓，而不是扩矩阵或collector。

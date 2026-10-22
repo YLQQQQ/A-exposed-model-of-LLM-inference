@@ -1,6 +1,53 @@
 # ExposedPath 科研进度清单
 
-## 7.241 当前CUPTI独立受控连接可执行准备；统一正文增补（2026-10-22，当前）
+## 7.242 512→2048前瞻复核声明/CPU接线；batch只读影响审查（2026-10-22，当前）
+
+- [x] 复用7.241受控程序、真实SDK编译和24项检查，没有重跑/改写；目标受控GPU证据、
+  4096及其余GPU采集仍NOT_RUN/用户暂缓。本轮无CUDA初始化、模型、服务器、部署包或
+  batch实现；旧Gate13限定PASS、Gate14 NOT_RUN和所有角色/UNKNOWN/BLOCKED保持。
+- [x] 明确推荐**4完整配对block/8P1**：512→2048、2048→512、2048→512、512→2048，
+  每次序两次，早/晚各一次；是可重复比较次序的最小平衡预算，不机械沿旧4P1/12P1。
+  依据bd377c三正R及1024分叉/第二token反向/O-P敏感性，不由n=3估出功效或精度；
+  新进程/位置平衡不证明独立或平稳。只审固定P/CUPTI的有限前瞻响应，不授P0或纯阻塞。
+- [x] 新机器声明`configs/coe_endpoint_replication_v0_1.json`绑定原512/2048文件字节、
+  完整[1,L] input/mask摘要、精确两token参考、原模型清单、6c744bf/0.2/0.3政策，
+  内嵌现有严格CUPTI-INPUT-PLAN/0.2.0。候选仍Pilot，execution_commit=null、授权false、
+  Formal=false；未来若要Formal必须执行前另有资格/签署/封套，不通过改role升级。
+- [x] `scripts/coe_replication_prepare.py`只接声明→已有schedule/one_configuration→
+  input/hash/角色/预算检查及原summarize，再补等权R mean、median/range、次序、早晚和
+  留一完整block描述。保留全部signed Δ/R，分母无效为null，不靠其他块补主要均值，
+  不新增bootstrap/p值/阈值或执行入口。旧生产runner、S/COE、registry、总合同和汇总接口未改。
+- [x] 同一封存ZIP仅读取两份小输入和部署metadata并核hash，未重算旧CSV/Raw/S。真实
+  512/2048原字节均通过新prepare生成8槽本地计划；旧六run展开1,310,130,760bytes，
+  同量级8run约1.63GiB，预算保留1.5～3GiB、ZIP80～200MiB、新鲜12GiB。旧process
+  回执缺elapsed字段，端到端历史耗时保持null；30～55分钟只是估计，模型300/分析180
+  秒×8＝64分钟子进程时限总和，不含核验/封包，不是整批保证；历史长期总量UNKNOWN不改。
+- [x] 新定向测试先12失败揭示缺入口，再实现。最终命令
+  `python -m pytest -q -ra -p no:cacheprovider tests/test_coe_replication_prepare.py
+  --basetemp .local/coe_replication_verified2_20261022
+  --junitxml .local/coe_replication_verified2_20261022.xml`：**16 passed / 0 failed / 0 skipped，3.44s**。
+  覆盖真实配置/单run合同、完整block/R负与零/未定义、次序/留一、缺token/来源/hash和
+  错输入/角色/排程、声明R与实际公式冲突及准备后源码变更拒绝；两长度各以原两token文件fixture走真实-I/-S/-B消费者，未跑旧测试。
+  首次两文件测试未显式接已装jsonschema而失败，补CPU依赖来源后成功，不是生产缺陷；
+  未取消隔离、安装依赖或加载torch/CUDA。本地3.12.7不冒充目标3.11.16。
+- [x] 原合同新增§11前瞻声明及§12 batch影响表，原短稿增§16.6具体结果如何改论文。
+  平均R/次序与留一方向只决定本批有限复核的支持/不支持/不确定；数据质量和论文增量
+  各自判断，不按正负补采或替补。1024与观测敏感性仍为原角色补充；完整timeline同答、
+  同操作union=COE的公平参照保留。当前CUPTI0.3不输出全五类A/整窗迁移预算，明确
+  NOT_ASSESSED，不用API union冒充；主R无需为此扩accounting。
+- [x] batch审查定位：model入口/输入摘要固定[1,L]、slot固定B1、token/scope消费固定len1；
+  底层runner及P批量Host读回可复用，未来最小差额在完整矩阵/逐样本token/角色与身份，
+  不是预设改collector。单位是一次batched invocation，任一early EOS沿有限政策停止，
+  不给每样本独立时延或并发ownership，不乘B预算。旧B1/B4只给工程经验，不继承CUPTI资格。
+  具体用途保留为固定L下反证“仅输入长度分支解释”，本轮不实现、不增加采集轴。
+- [ ] 执行前仍需资源恢复、当前provider受控目标证据、最终角色/统计/预算和停止政策
+  审定、真实执行/分析及输入绑定、新静态回执/空间、显式授权。当前只完成可审查准备，
+  不宣布前瞻实验、Q0或新Formal通过。用户DOCX、大ZIP和原Raw均不变、不提交。
+
+最高优先级：审阅合同§11及机器声明；资源恢复后才决定实际采集角色/政策和预算。
+batch继续只读审查结论，7.241目标受控验证不由本轮CPU准备替代，无自动服务器下一步。
+
+## 7.241 当前CUPTI独立受控连接可执行准备；统一正文增补（2026-10-22，历史；当前见7.242）
 
 - [x] 用户接受7.240，未重复其72项检查。复用原
   `scripts/gate8_qualification_token.cu`及已审6c744bf client.dll/CUPTI12.4.127/API22/
@@ -5270,7 +5317,8 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 
 **7.26覆盖说明：** 已直接读取目标安装盘点回执及四份完整说明，四文件bytes/SHA256本地复核全部一致。CPU sampling lost-events段落不能证明CUDA/NVTX完整性；条件性teardown/flush建议不等于每会话认证；API subset与cuda-trace-all-apis适用性保留询证。组件hash来自服务器回执、非本地二进制复算。已准备[英文草稿及有限决策路线](gate8_nsys_vendor_inquiry_v0_1.md)，未发送。安装搜索结束，服务器无下一操作；不再执行7.25安装指令。无生产/冻结合同变化，无新测试或实验成绩。Q0影响矩阵继续有效但资格未取得；Gate7 PASS、Gate8 NOT_RUN，UNKNOWN阻塞科学验收。
 
-当前安排（7.241覆盖）：旧Gate0～13按限定证据保持；当前CUPTI受控连接的编译/本地文件
+当前安排（7.242覆盖）：512→2048前瞻候选声明及batch只读影响审查完成，尚未审定执行。
+旧Gate0～13按限定证据保持；当前CUPTI受控连接的编译/本地文件
 准备与统一正文已完成，实际GPU验证仍NOT_RUN；本地独立参考与原证据骨架继续复用，
 仅保留明确的目标实验差额。EP-COE-01～03仅导航，不是新串行流水线；目标GPU暂停，均非自动执行。
 Gate14/G2继续后移。原总体顺序`Gate1合同→2 oracle→3 Raw→4 S→5 A/B→6 Q0→7 runner→
@@ -5289,6 +5337,11 @@ Gate14/G2继续后移。原总体顺序`Gate1合同→2 oracle→3 Raw→4 S→5
 **Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
 ## 8. 计划调整记录
+
+7.242（2026-10-22）：推荐独立4block/8P1端点复核候选，正反次序各两次；现有配置驱动
+复用，仅补声明/身份与描述汇总接线，不固定成工程流水线或授Formal。batch只审影响，
+不实施；不默认修改collector。GPU/4096暂停，无服务器/部署包/新采集；旧冻结、Formal、
+Raw及用户DOCX保持。数据质量、有限方向重现与论文增量分别裁决，零/反向/未知不触发追加。
 
 7.241（2026-10-22）：用户接受7.240，转入现有受控程序/当前DLL的窄域可执行准备。
 只补0/4-byte memset入口、先验构造与独立Raw端点reference到0.3消费者；真实本地SDK
