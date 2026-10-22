@@ -65,18 +65,18 @@
   "tables": [
     {
       "path": "cupti_input_pilot_operations_v0_1.csv",
-      "bytes": 18843,
-      "sha256": "278a6e81b373a0956375440d7c4d09074d13f9aa29fd514656a2e0f337ccecab"
+      "bytes": 18824,
+      "sha256": "b09232975ec6ba9927dccd9b36c2ffc348ce5c8c3a586314fc74aadd4fc86330"
     },
     {
       "path": "cupti_input_pilot_comparisons_v0_1.csv",
-      "bytes": 5276,
-      "sha256": "de0afcc0bf9f498d7cd5569ab1d75c19c203be5ea781c660a0e35414db559e10"
+      "bytes": 5257,
+      "sha256": "95280d93d1889672447eaf05f2b83b9ee564e7c331b5382f6f98fbe5323decf4"
     },
     {
       "path": "cupti_input_pilot_1024_mechanism_v0_1.csv",
-      "bytes": 4077,
-      "sha256": "5eb8ba1707aea896ef360f98d6cca13faad83a1e7b71201f6aa8dd625dc318a8"
+      "bytes": 4073,
+      "sha256": "76d99c2cffce8dab6e5e7972623cbbf1b6fcb4354b32714185c84c4504522f30"
     }
   ],
   "runs": [
