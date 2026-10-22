@@ -1,6 +1,6 @@
 # ExposedPath 科研进度清单
 
-## 7.230 事件微例限定PASS后接回一次真实768完整链（2026-10-21，当前）
+## 7.230 事件微例限定PASS后接回一次真实768完整链（2026-10-21实施，10-22固定交付，当前）
 
 - [x] 消费协调已审event B：49,309 bytes，SHA256
   `1b30ac79fa3e4dd0ee6776ab3e95d380f273fff97a13ed2a07052612dc66e5ed`；receipt
@@ -34,7 +34,19 @@
   版本拒绝、原runner两token/drain、完整封包/失败传播；手定COE仍20ns/1ns。
   本地Python3.12.7，外部CUDA/模型/进程或静态门明确CPU替身，不是目标3.11/GPU资格。
   compileall exposedpath/analysis、变更py_compile及diff检查通过；未重跑A/Q0/微例或编译。
-- [ ] 实现提交后绑定唯一待审包及整段命令；真实模型完整链**NOT_RUN**，先交协调审查。
+- [x] 控制/模型入口提交固定`2be05ce6cefe69de46bdfcae513ed55c3b3cd4e8`；native/runner/
+  S/COE仍`6c744bf52daff3fc54571e264a0c34e3207aa1df`，不切目标checkout。
+  唯一待审`cupti_model_2be05ce6cefe_delivery.zip`，64,422 bytes，SHA256
+  `0680c5e1548543693ccc22f480ea133afc78c92c5ddc674779f007744ba39a82`。
+  21成员/20清单、CRC/安全路径/全部hash、Git控制源码、真实A/B原引用及旧768输入/权重
+  inventory字节一致；7项native/runner/helper/S核心逐blob不变，resident_capture与
+  producer_scopes同解释器AST不变。无DLL/EXE/bundle、新依赖或部署步骤。
+  包内真实隔离默认入口拒绝；整段命令及launcher实用PS5.1解析通过。
+  独立包审查在忽略的`cupti_model_policy_delivery_v0_1/review.json`。
+- [ ] 真实768完整链**NOT_RUN**；先交协调审查，通过后用户显式执行一次新目录。
+  准确命令在忽略的`CUPTI_MODEL_POLICY_B.ps1`；唯一回传
+  `cupti_timeline_2be05ce6cefe_model768_once.zip`。真实A及event B展开原件必须保持，
+  缺失/变化直接停止，不重跑A/事件微例或自动重建原树。
   固定硬预算：模型300秒、同次CPU消费180秒；新鲜参与卷12GiB，不遍历历史ACL。
   时间估5～10分钟，最终保留估20～150MiB，均非保证；长期总量null/UNKNOWN与
   <50,000,000,000bytes目标分开，不自动清理。一次完成或任何硬失败即停。

@@ -274,3 +274,12 @@ receipt SHA256：`824183fcea1e4ca5d0f3423cfedf6fb791379bc80a4f3dd47318854a0fac0e
 GPU/模型边界为CPU替身，未运行模型/CUDA/Nsight或重编；目标768仍NOT_RUN。
 模型硬300秒、CPU消费硬180秒，新鲜参与卷12GiB；预计5～10分钟、保留20～150MiB为估计。
 长期总量UNKNOWN独立，不复读历史ACL。先固定包交协调审查，由用户另行执行。
+
+2026-10-22固定交付：控制/producer入口`2be05ce6cefe69de46bdfcae513ed55c3b3cd4e8`；
+native/runner/S/COE继续`6c744bf52daff3fc54571e264a0c34e3207aa1df`。
+唯一`cupti_model_2be05ce6cefe_delivery.zip`，64,422 bytes，SHA256
+`0680c5e1548543693ccc22f480ea133afc78c92c5ddc674779f007744ba39a82`；21成员/20清单
+CRC/路径/hash、原A/事件B/输入/模型inventory绑定通过；7项核心源码与6c逐blob一致，
+原resident_capture和producer_scopes同解释器AST一致。新包不含二进制或部署bundle。
+包内隔离默认入口及PS5.1命令/launcher解析通过；准确路径及命令仅存本地忽略的交付说明。
+目标真实模型仍NOT_RUN，不因包审查/CPU成功而称新768或1024已合格。
