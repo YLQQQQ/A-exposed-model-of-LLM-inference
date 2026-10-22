@@ -11,6 +11,22 @@ ORDERS = (('G32','N0','Nm','N16','G512'), ('G512','Nm','N16','N0','G32'),
           ('G32','N16','N0','Nm','G512'))
 CONDITIONS = {'G32':(32,None), 'G512':(512,None), 'N0':(32,'V0'),
               'Nm':(32,'Vmarker'), 'N16':(32,'Vsync')}
+CUPTI_INPUT_VERSION='CUPTI-INPUT-PRODUCER-PILOT/0.1.0'
+
+
+def cupti_schedule(batch_id,native_commit):
+    """Role only: resident warmups are observed before the single session.
+
+    This is not the old Gate11 warmup request-plan contract or a provider grant.
+    """
+    require(isinstance(batch_id,str) and re.fullmatch('[A-Za-z0-9_-]{1,40}',batch_id),'CUPTI_BATCH_ID')
+    require(native_commit=='6c744bf52daff3fc54571e264a0c34e3207aa1df','CUPTI_NATIVE_COMMIT')
+    return [dict(version=CUPTI_INPUT_VERSION,batch_id=batch_id,execution_commit=native_commit,block=b,position=p,
+        condition=f'G{n}P',input_tokens=n,batch_size=1,output_tokens=2,warmup_count=3,repeat_count=1,
+        run_id=f'{batch_id}-b{b}-G{n}P-pass1',pair_id=f'{batch_id}-b{b}',pass_id='pass1',
+        observation_variant='P',purpose='CUPTI_CANDIDATE_INPUT_RESPONSE_ONLY',
+        warmup_position='BEFORE_SUBSCRIPTION_OUTSIDE_MEASURED_LEDGER',declaration_role='PRE_EXECUTION',formal_eligible=False)
+        for b,order in enumerate(((512,1024,2048),(1024,2048,512),(2048,512,1024)),1) for p,n in enumerate(order,1)]
 
 
 def require(ok, reason):
@@ -44,6 +60,10 @@ def schedule(batch_id, *, blocks=3):
 
 def validate_binding(value):
     require(isinstance(value,dict),'BINDING')
+    if value.get('version')==CUPTI_INPUT_VERSION:
+        require(any(value==r and all(type(value[k]) is type(v) for k,v in r.items())
+            for r in cupti_schedule(value.get('batch_id'),value.get('execution_commit'))),'CUPTI_BINDING')
+        return value
     from . import coe_pilot
     if coe_pilot.active(value): return coe_pilot.validate_binding(value)
     from . import gate11_warmup as warmup

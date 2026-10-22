@@ -1,6 +1,54 @@
 # ExposedPath 科研进度清单
 
-## 7.233 新1024单实例完整链接线与待审交付（2026-10-22，当前）
+## 7.234 配置驱动的CUPTI三点候选Pilot接线与待审交付（2026-10-22，当前）
+
+- [x] 用户接受768/1024实例完整链后，准备新的512/1024/2048三点Pilot；旧Engineering、
+  旧Nsight/Pilot及1024历史BLOCKED均不升级、不拼接。新1024原件
+  `cupti_timeline_9d3f8f351426_model1024_once.zip`本地核验：12,008,953 bytes，SHA256
+  `46bbfb8d4e284397a6896e38968f25a3508e965c63a4cf4ed2a35093441e0f99`，75成员/74项清单，
+  CRC、安全路径及全部hash通过。receipt SHA256
+  `03fabaa5b7a7833b60da8473adc1dcaf16ba231db1bb61b8d3ccdcdde298cab3`，native仍6c744bf且
+  pre/post clean。用未改0.3消费者只读复核两token，COE4.083948/0.775739ms，canonical
+  `7ee482a1…c04c36`/`5262eee1…9277b7`与保存结果相同，9.07/11.12s；来源记录为忽略的
+  `cupti_input_pilot_local_v0_1/reference1024_review.json`。仅实例可评估，不授长度通用资格。
+- [x] 新`cupti_input_contract.py`统一长度参数、32-token周期构造、完整batch input/mask摘要、
+  manifest和两token消费；配置合法不等于GPU资格。三份输入均从已封存4da800交付原字节
+  复用，512/1024/2048文件SHA分别`3ed19233…9cb85`/`34970dc2…0e7f5`/`07f34a24…97e64`。
+  每个新run仍需实测token、成功drain、参数/效果、scope、依赖、terminal和质量全部闭合。
+- [x] model/control/result独立0.3角色接线；新producer政策
+  `CUPTI-INPUT-PRODUCER-PILOT/0.1.0`明确原生暖机在订阅前、测量ledger外，避免误套旧Pilot
+  ledger内暖机计划。原runner、P prepare/finish、resident_capture测量方法、DLL/SDK和四个
+  S/COE消费者文件保持；角色overlay精确hash和origin校验，旧角色/旧768/1024读取不放宽。
+  控制/分析身份将绑定实际新提交；native/实际checkout仍6c744bf，不用文档HEAD替代。
+- [x] 新`cupti_input_pilot.py`贯通配置→逐run manifest→原采集argv→producer/receipt→
+  Canonical→两token准入/COE→完整block汇总。固定顺序512/1024/2048、1024/2048/512、
+  2048/512/1024，9新P1/9独立CUPTI session/0 Nsight，batch1/output2/warmup3/repeat1。
+  首token端点signed ΔCOE及R为主要比较，中点相邻变化及全部第二token为预定描述；
+  R保留精确分数，分母无效为null、不加epsilon。保留phase/operation GPU union、copy/
+  sync/operation墙钟、补集、kernel/MemOp、已完成成员及提交/terminal位置。第二token
+  phase GPU量不使用累计W代替，不跨sync求B和，不拆解纯Host阻塞。
+- [x] 最终定向命令`python -m pytest -q -ra -p no:cacheprovider
+  tests/test_cupti_input_pilot.py tests/test_cupti_model1024.py
+  tests/test_cupti_model_policy_reconnect.py tests/test_cupti_timeline_model.py
+  tests/test_cupti_timeline_file_chain.py tests/test_gate11_pilot.py
+  --basetemp .local/cip_final --junitxml .local/cip_final.xml`：
+  **102 passed/0 failed/0 skipped，91.69s**。包含三长度实际producer文件消费、原P方法和
+  runner两token/drain、真实隔离CPU子进程消费/封包、九槽/首失败保留七未运行、错新Ahash、
+  input/mask/role/token/依赖/terminal负例、signed/零R/完整block、PS5.1三路径分派。
+  模型/设备/静态目标门/空间为明确CPU替身，本地3.12.7不等于目标3.11.16或九次GPU资格。
+  未重跑完整Q0/旧110项/微例，不运行服务器、CUDA、模型或Nsight。
+- [ ] 新九次Pilot：**NOT_RUN**；唯一包在实现提交后固定，默认A仅字节/原生身份/语法/
+  角色与输入合同/新鲜空间核验；B必须先审新的真实A，再显式绑定其receipt hash，旧A和
+  event B仅作为原生资格引用，不代替新A。硬失败或固定9槽完成即停，无重试/替补/追加。
+
+资源：每模型硬300s、每分析硬180s，九槽子进程硬预算之和72分钟（不含身份核验/I/O/封包）；
+实际估30～60分钟，展开保留约2～4GiB、单ZIP约0.1～0.4GiB，均非保证。各参与卷新鲜
+12GiB空间、同卷不重复计数；历史总量null/UNKNOWN，长期<50,000,000,000 bytes目标另列，
+不遍历历史ACL、不自动清理。未知writer拒绝封包。最高优先级仅交新包协调审查及新A。
+生产A/B/COE、旧冻结协议与数据角色、Raw/UNKNOWN/BLOCKED、Gate13限定PASS/Gate14 NOT_RUN
+均保持；用户DOCX不改不纳提交。无新Formal签署或跨provider时序等价主张。
+
+## 7.233 新1024单实例完整链接线与待审交付（2026-10-22，历史；当前见7.234）
 
 - [x] 用户协调窗口已独立复现7.232两token数值和canonical摘要，并接受该实例限定局部
   COE Engineering PASS。本轮据此准备一个**新1024**，不是修补旧1024或恢复矩阵。

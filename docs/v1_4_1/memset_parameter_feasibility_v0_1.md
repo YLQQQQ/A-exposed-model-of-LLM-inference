@@ -1,6 +1,23 @@
 # Batch4 memset参数取证可行性审查 0.1
 
-## 2026-10-22增补：复用已审消费者的新1024有限接线 0.26（当前）
+## 2026-10-22增补：配置驱动的三点候选Pilot 0.27（当前）
+
+用户已接受768/1024实例链。本地核验新1024原件75成员/74清单及全部hash，未改0.3消费
+复读两tokenCOE4.083948/0.775739ms、canonical摘要与保存结果一致；旧1024 Nsight BLOCKED
+保持。新九次不是重试旧批次，也不把单实例资格或输入参数合法性当作新run准入。
+
+统一长度配置/完整input-mask身份复用原512/1024/2048输入字节，0.3 model/control/result
+及独立Pilot producer角色只补身份与编排。原P方法、resident_capture、6c744bf DLL/SDK、
+S/COE与查询政策不变；暖机仍三次在订阅前、测量ledger外，不伪造旧Pilot暖机ledger。
+固定三个位置平衡block、9新P1/9 session/0 Nsight。两token完整保留；首token端点ΔCOE/R
+主要，中点signed变化及第二token描述；R分母无效保持未知，不把累计W当Decode新增活动。
+
+本地102项定向CPU文件链通过，模型/设备/目标身份与空间为明确替身；不授目标3.11/GPU
+或一般provider资格。默认新A仅静态，B需新A原件审查和receipt hash；无重编/新collector/
+同步移动/旧数据升级。完整命令、原件hash、预算和停止条件见[7.234](research_progress.md)。
+本次仍为候选Pilot待执行，不签署Formal，不将COE解释为纯Host阻塞。
+
+## 2026-10-22增补：复用已审消费者的新1024有限接线 0.26（历史；当前见0.27）
 
 协调窗口接受0.25同一768实例的限定局部COE Engineering PASS。本次只准备一个新1024
 完整链，不恢复旧矩阵、七槽、512/2048，不回填旧1024；CUPTI结果不拼入旧Nsight曲线。
