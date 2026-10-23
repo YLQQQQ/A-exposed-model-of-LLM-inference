@@ -161,6 +161,24 @@ Git快照与部署控制0.1.1追加（2026-10-23）：
 仍c8、collector仍6c，文档HEAD不替代二者。本轮不推送/操作服务器/GPU，不覆盖旧目录。
 目标14.38构建及受控验证仍NOT_RUN；prepare默认无CUDA，成功后才由用户另行显式执行。
 
+repair2最终包内验证（2026-10-23）：控制实现已固定
+`38692c101b8eec5a5a0305cfa8c215504ae3cd49`，执行/分析仍c8，不随本条文档提交变化。
+唯一待审`coe_controlled_c8f3dad_repair2_delivery.zip`：758640bytes，SHA256
+`0d0cc232d9206c88047d7f401c573d117f378faf0ac9e636dc501a3553afc66c`；16成员/15项
+新清单、CRC/安全路径/无重复/全覆盖hash通过。索引SHA256
+`aa66604e1dca5c9c6e96f7ed531a28af705e7603c1a8d6016ac79515dc50a115`；launcher1708bytes、
+SHA256 `948b84ff76ea80274707be4bf8f3be05c5d344a48d8ee9235aa4d60024605b3b`。
+从最终ZIP解压、设置测试用COE_REPAIR_TEST_PACKAGE再执行同一定向文件：**26 passed /
+0 failed / 0 skipped，108.20s**；basetemp为.local/dp2_final，XML为本地
+coe_controlled_deployment_v0_1_1/final_package_tests.xml。真实包内-I/-S/-B入口、授权/
+原A/event、真实Git和失败封包链；目标资产/构建/3.11环境替身范围如上，不冒称目标
+构建通过。最终PS5.1 parser通过，13项研究Git blob及原授权/原索引再次核验未变。
+单包复制到目标transfer、新repair2_delivery目录；默认prepare无CUDA，成功不自动execute。
+待审整段命令保存在本地transfer同名前缀commands.md，不需要用户复制散件。失败或未来
+显式execute后仅回传transfer/coe_controlled_c8f3dad_repair2_once.zip；未知writer仍拒绝封包。
+本轮未推送，DOCX及大型原件未纳提交；当前最高优先级为协调审查这一固定单包，目标
+构建/受控继续NOT_RUN，不自动重试、追加或恢复其他实验。
+
 ## 7.247 输出2的batch参数化最小接线（2026-10-23，历史；当前见7.248）
 
 - [x] 按已审batch影响清单完成本地实现。新增有限`CUPTI-INPUT-PLAN/0.3.0`与
