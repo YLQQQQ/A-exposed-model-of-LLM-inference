@@ -14,10 +14,47 @@ CONDITIONS = {'G32':(32,None), 'G512':(512,None), 'N0':(32,'V0'),
 CUPTI_INPUT_VERSION='CUPTI-INPUT-PRODUCER-PILOT/0.1.0'
 CUPTI_PLAN_VERSION='CUPTI-INPUT-PLAN/0.2.0'
 CUPTI_PRODUCER_VERSION='CUPTI-INPUT-PRODUCER-PILOT/0.2.0'
+CUPTI_BATCH_PLAN_VERSION='CUPTI-INPUT-PLAN/0.3.0'
+CUPTI_BATCH_PRODUCER_VERSION='CUPTI-INPUT-PRODUCER-PILOT/0.3.0'
+
+
+def cupti_condition_key(condition):
+    require(isinstance(condition,dict) and set(condition)=={'input_tokens','batch_size'} and
+        type(condition['input_tokens']) is int and condition['input_tokens']>=32 and condition['input_tokens']%32==0 and
+        type(condition['batch_size']) is int and condition['batch_size'] in (1,2,4),'CUPTI_BATCH_CONDITION')
+    return f'G{condition["input_tokens"]}B{condition["batch_size"]}P'
+
+
+def validate_cupti_batch_plan(plan):
+    require(set(plan)=={'schema_version','role','conditions','blocks','orders','comparisons'} and
+        plan['schema_version']==CUPTI_BATCH_PLAN_VERSION and plan['role'] in ('Engineering','Pilot'),'CUPTI_BATCH_PLAN')
+    conditions=plan['conditions'];count=plan['blocks']
+    require(isinstance(conditions,list) and conditions and type(count) is int and count>0 and
+        count*len(conditions)<=64,'CUPTI_BATCH_PLAN_SIZE')
+    keys=[cupti_condition_key(c) for c in conditions]
+    require(len(set(keys))==len(keys) and isinstance(plan['orders'],list) and len(plan['orders'])==count and
+        all(isinstance(o,list) and len(o)==len(keys) and all(isinstance(k,str) for k in o) and set(o)==set(keys)
+            for o in plan['orders']),'CUPTI_BATCH_PLAN_ORDER')
+    by=dict(zip(keys,conditions));seen=set()
+    require(isinstance(plan['comparisons'],list),'CUPTI_BATCH_PLAN_COMPARISONS')
+    for v in plan['comparisons']:
+        require(isinstance(v,dict) and set(v)=={'low','high','role','token_indices'} and
+            v['low'] in by and v['high'] in by and v['low']!=v['high'] and v['role'] in ('PRIMARY','SECONDARY') and
+            isinstance(v['token_indices'],list) and v['token_indices'] and
+            all(type(i) is int and i in (0,1) for i in v['token_indices']) and
+            len(v['token_indices'])==len(set(v['token_indices'])),'CUPTI_BATCH_PLAN_COMPARISON')
+        a,b=by[v['low']],by[v['high']]
+        require((a['input_tokens']==b['input_tokens'] and a['batch_size']<b['batch_size']) or
+            (a['batch_size']==b['batch_size'] and a['input_tokens']<b['input_tokens']),'CUPTI_BATCH_COMPARISON_AXIS')
+        for i in v['token_indices']:
+            k=(v['low'],v['high'],i);require(k not in seen,'CUPTI_BATCH_DUPLICATE_COMPARISON');seen.add(k)
+    return plan
 
 
 def validate_cupti_plan(plan):
     """Finite declaration, not a list of qualified input sizes or a GPU probe."""
+    if isinstance(plan,dict) and plan.get('schema_version')==CUPTI_BATCH_PLAN_VERSION:
+        return validate_cupti_batch_plan(plan)
     require(isinstance(plan,dict) and set(plan)=={'schema_version','role','input_lengths','blocks','orders','comparisons'}
         and plan['schema_version']==CUPTI_PLAN_VERSION and plan['role'] in ('Pilot','Engineering'),'CUPTI_PLAN')
     lengths=plan['input_lengths'];orders=plan['orders'];count=plan['blocks']
@@ -45,6 +82,15 @@ def cupti_plan_schedule(batch_id,native_commit,plan):
     validate_cupti_plan(plan)
     require(isinstance(batch_id,str) and re.fullmatch('[A-Za-z0-9_-]{1,32}',batch_id),'CUPTI_PLAN_BATCH')
     require(native_commit=='6c744bf52daff3fc54571e264a0c34e3207aa1df','CUPTI_PLAN_NATIVE')
+    if plan['schema_version']==CUPTI_BATCH_PLAN_VERSION:
+        by={cupti_condition_key(c):c for c in plan['conditions']}
+        return [dict(version=CUPTI_BATCH_PRODUCER_VERSION,batch_id=batch_id,execution_commit=native_commit,
+            plan=deepcopy(plan),block=b,position=p,condition=k,**by[k],output_tokens=2,warmup_count=3,repeat_count=1,
+            run_id=f'{batch_id}-b{b}-{k}-pass1',pair_id=f'{batch_id}-b{b}',pass_id='pass1',
+            observation_variant='P',purpose='CUPTI_CANDIDATE_BATCH_INPUT_STRUCTURE_ONLY',
+            completion_unit='WHOLE_BATCH_INVOCATION',warmup_position='BEFORE_SUBSCRIPTION_OUTSIDE_MEASURED_LEDGER',
+            declaration_role='PRE_EXECUTION',formal_eligible=False)
+            for b,order in enumerate(plan['orders'],1) for p,k in enumerate(order,1)]
     return [dict(version=CUPTI_PRODUCER_VERSION,batch_id=batch_id,execution_commit=native_commit,
         plan=deepcopy(plan),block=b,position=p,condition=f'G{n}P',input_tokens=n,
         batch_size=1,output_tokens=2,warmup_count=3,repeat_count=1,
@@ -100,7 +146,7 @@ def schedule(batch_id, *, blocks=3):
 
 def validate_binding(value):
     require(isinstance(value,dict),'BINDING')
-    if value.get('version')==CUPTI_PRODUCER_VERSION:
+    if value.get('version') in (CUPTI_PRODUCER_VERSION,CUPTI_BATCH_PRODUCER_VERSION):
         require(value.get('plan',{}).get('role')=='Pilot' and any(value==r and
             all(type(value[k]) is type(v) for k,v in r.items()) for r in
             cupti_plan_schedule(value.get('batch_id'),value.get('execution_commit'),value.get('plan'))),'CUPTI_PLAN_BINDING')

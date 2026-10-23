@@ -912,3 +912,31 @@ wait0.016635、residual0.333165、unattributed0ms；COE union3.211182ms从submit
 证明保存S的语义正确性，当前CUPTI来源的目标受控正确性验证仍NOT_RUN。
 本次无生产A/B、collector、runner、模型、GPU或协议变更；只授予此封存数据的候选来源
 预览状态。旧Formal、Gate13限定PASS、Pilot角色、UNKNOWN/BLOCKED及GPU暂停保持。
+
+## 16. 两输出步的batch参数化接线（7.247，本地实现）
+
+沿§12/§13影响清单，新增`CUPTI-INPUT-PLAN/0.3.0`有限条件声明，条件键包含输入长度
+和batch_size（当前仅1/2/4）；对应model/control为0.5.0。旧0.2计划和旧单样本身份仍按原
+版本读取，不因新参数合法而取得GPU资格。此处没有批准或生成新矩阵/采集预算。
+
+输入构造仍是同一32-token周期、全1 mask；每个batch内为同一固定输入的有序副本。
+`cupti-input-identity/0.2.0`对完整`[B,L]` input_ids、mask、shape及sample_indices分别绑定，
+实际tensor使用全部行。新run/slot、P准备缓存、manifest、producer、token scope和报告贯通
+该身份；不能用单行摘要或单行token广播替代。输出固定为实际`[2,B]`；Pilot须逐值匹配
+预先绑定的矩阵，Engineering观察模式明确没有独立内容正确性参考。
+
+复用原runner及P的prepare/finish/Host读取实现，每步只有一次整批向量的自然Host-readable
+完成锚点。整批是一个请求内部invocation；不产生B份独立时延或重复。任一样本EOS、
+少输出、错顺序或错token拒绝整次分析，保留真实短输出，不补token、不做动态batch。
+
+独立`cupti_batch_accounting.py`消费同一Raw及两条保存S，复用7.246迁移算法；原公式A、
+COE、扩展completion exposure分别写文件，以来源/hash索引接入完整block汇总。不能
+跨Raw拼预算、重复加token或单sync B；来源缺口使预算拒绝，不填零。新隔离消费者显式
+绑定八项源码，旧四文件来源合同保持。迁移适配0.1.1仅修正已验证runtime→driver父子
+同步的覆盖记数：物理记录携带driver correlation时同时覆盖其合法runtime根；一次只计
+一个同步，重复物理记录/错parent/未匹配callback仍拒绝。公式、优先级和生产A/B不变，
+不重算或替换7.246封存结果。
+
+本地CPU文件链与Host替身不授予batch GPU资格。容量、真实参数/效果、依赖及terminal仍
+逐新run判定；collector容量不扩展。GPU恢复后的第一项保持7.241受控正确性验证，
+batch实测、8P1、4096继续NOT_RUN/暂停；本轮无部署包或目标执行命令。

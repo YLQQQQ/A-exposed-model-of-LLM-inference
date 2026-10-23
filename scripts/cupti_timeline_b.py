@@ -43,13 +43,21 @@ def components(package):
     return stage,stage['support']()
 
 
-def policy_profile(c):return c.get('schema_version') in ('cupti-timeline-stage-b/0.1.1','cupti-timeline-stage-b/0.2.0','cupti-timeline-stage-b/0.3.0','cupti-timeline-stage-b/0.4.0')
+def policy_profile(c):return c.get('schema_version') in ('cupti-timeline-stage-b/0.1.1','cupti-timeline-stage-b/0.2.0','cupti-timeline-stage-b/0.3.0','cupti-timeline-stage-b/0.4.0','cupti-timeline-stage-b/0.5.0')
 
 
-def finite_profile(c):return c.get('schema_version') in ('cupti-timeline-stage-b/0.2.0','cupti-timeline-stage-b/0.3.0','cupti-timeline-stage-b/0.4.0')
+def finite_profile(c):return c.get('schema_version') in ('cupti-timeline-stage-b/0.2.0','cupti-timeline-stage-b/0.3.0','cupti-timeline-stage-b/0.4.0','cupti-timeline-stage-b/0.5.0')
 
 
-def planned_profile(c):return c.get('schema_version')=='cupti-timeline-stage-b/0.4.0'
+def batch_profile(c):return c.get('schema_version')=='cupti-timeline-stage-b/0.5.0'
+
+
+def planned_profile(c):return c.get('schema_version') in ('cupti-timeline-stage-b/0.4.0','cupti-timeline-stage-b/0.5.0')
+
+
+def batch_accounting():
+    spec=importlib.util.spec_from_file_location('_cupti_batch_accounting',Path(__file__).with_name('cupti_batch_accounting.py'))
+    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
 
 
 def pilot_profile(c):return c.get('schema_version')=='cupti-timeline-stage-b/0.3.0' or planned_profile(c) and c['plan']['role']=='Pilot'
@@ -102,7 +110,7 @@ def checked_event(c,m):
 
 def checked_a(c,stage,m):
     require(c.get('schema_version') in (None,'cupti-timeline-stage-b/0.1.0',
-        'cupti-timeline-stage-b/0.1.1','cupti-timeline-stage-b/0.2.0','cupti-timeline-stage-b/0.3.0','cupti-timeline-stage-b/0.4.0'),
+        'cupti-timeline-stage-b/0.1.1','cupti-timeline-stage-b/0.2.0','cupti-timeline-stage-b/0.3.0','cupti-timeline-stage-b/0.4.0','cupti-timeline-stage-b/0.5.0'),
         'REFERENCE_CONTRACT_VERSION')
     if policy_profile(c):
         ctx=event_control().checked_a(c,stage,m)
@@ -145,14 +153,14 @@ def validate_model_files(folder,process,cfg):
     result=read(p)
     current=policy_profile(cfg);finite=finite_profile(cfg);pilot=pilot_profile(cfg);native=POLICY_NATIVE_COMMIT if current else NATIVE_COMMIT
     length=configured_length(cfg)
-    planned=planned_profile(cfg)
-    require(cfg.get('schema_version') in (None,'cupti-timeline-stage-b/0.1.0','cupti-timeline-stage-b/0.1.1','cupti-timeline-stage-b/0.2.0','cupti-timeline-stage-b/0.3.0','cupti-timeline-stage-b/0.4.0'),'MODEL_VERSION')
+    planned=planned_profile(cfg);batched=batch_profile(cfg);batch=cfg['model_contract']['batch_size'] if batched else 1
+    require(cfg.get('schema_version') in (None,'cupti-timeline-stage-b/0.1.0','cupti-timeline-stage-b/0.1.1','cupti-timeline-stage-b/0.2.0','cupti-timeline-stage-b/0.3.0','cupti-timeline-stage-b/0.4.0','cupti-timeline-stage-b/0.5.0'),'MODEL_VERSION')
     if current:
         if finite:consumer_policy(cfg)
         require(cfg['native_commit']==result.get('native_commit')==native and (finite or cfg['analysis_commit']==native)
             and result.get('control_commit')==cfg['controller_commit'] and result.get('activity_policy_version')==cfg['activity_policy_version']==POLICY
             and result.get('model_entry_sha256')==sha(cfg['model_script']),'MODEL_VERSION')
-    require(result.get('schema_version')==('cupti-timeline-model-result/0.4.0' if planned else 'cupti-timeline-model-result/0.3.0' if pilot else 'cupti-timeline-model-result/0.2.0' if finite else 'cupti-timeline-model-result/0.1.1' if current else 'cupti-timeline-model-result/0.1.0') and
+    require(result.get('schema_version')==('cupti-timeline-model-result/0.5.0' if batched else 'cupti-timeline-model-result/0.4.0' if planned else 'cupti-timeline-model-result/0.3.0' if pilot else 'cupti-timeline-model-result/0.2.0' if finite else 'cupti-timeline-model-result/0.1.1' if current else 'cupti-timeline-model-result/0.1.0') and
         result.get('status')=='MODEL_CAPTURE_COMPLETE_PENDING_ANALYSIS' and result.get('role')==('Pilot' if pilot else 'Engineering')
         and result.get('pid')==process['pid'] and result.get('config_sha256')==sha(cfg['model_config']),'MODEL_RESULT')
     paths={'capture_sha256':'timeline/capture.json','session_receipt_sha256':'timeline/receipt.json',
@@ -195,7 +203,7 @@ def validate_model_files(folder,process,cfg):
     require((planned or tokens['token_ids']==cfg['expected_token_ids']) and tokens['identity']==ledger['requests'][0]['identity'] and
         tokens['pid']==process['pid'],'TOKEN_REFERENCE')
     setup=read(folder/'setup.json');warmup=read(folder/'warmup_completed.json')
-    require(setup['input_sha256']==cfg['prompt_sha256'] and setup['input_shape']==[1,length] and
+    require(setup['input_sha256']==cfg['prompt_sha256'] and setup['input_shape']==[batch,length] and
         setup['runner_source_sha256']==ledger['runner_source_sha256'] and setup['python_version']==[3,11,16] and
         setup['loaded_backend']=='sdpa' and setup['torch_version']=='2.6.0+cu124' and
         warmup['completed_count']==3 and warmup['subscription_active'] is False,'SETUP_WARMUP_BINDING')
@@ -204,13 +212,13 @@ def validate_model_files(folder,process,cfg):
     model=importlib.util.module_from_spec(spec);spec.loader.exec_module(model)
     if finite:
         mc=read(cfg['model_config']);model.validate_contract(mc)
-        require(mc['schema_version']==('cupti-timeline-model/0.4.0' if planned else 'cupti-timeline-model/0.3.0' if pilot else 'cupti-timeline-model/0.2.0') and mc['run_id']==cfg['run_id']
+        require(mc['schema_version']==('cupti-timeline-model/0.5.0' if batched else 'cupti-timeline-model/0.4.0' if planned else 'cupti-timeline-model/0.3.0' if pilot else 'cupti-timeline-model/0.2.0') and mc['run_id']==cfg['run_id']
             and mc['control_commit']==cfg['controller_commit'] and mc['native_commit']==native
             and all(mc.get(k)==cfg[k] for k in ('consumer_version','timing_policy','driver_query_policy','runtime_query_policy')),'MODEL_VERSION')
         require(sha(mc['prompt'])==mc['prompt_sha256']==cfg['prompt_sha256'],'INPUT_HASH')
         from exposedpath.coe_input_pilot import input_identity,MIDPOINT_VERSION
-        actual=model.input_contract().input_identity(read(mc['prompt']),length) if pilot or planned else input_identity(read(mc['prompt']),version=MIDPOINT_VERSION)
-        require(actual['shape']==[1,length] and actual==mc.get('input_identity')==cfg.get('input_identity')
+        actual=model.input_contract().configured_identity(read(mc['prompt']),mc) if pilot or planned else input_identity(read(mc['prompt']),version=MIDPOINT_VERSION)
+        require(actual['shape']==[batch,length] and actual==mc.get('input_identity')==cfg.get('input_identity')
             ==setup.get('input_identity')==tokens.get('input_identity'),'INPUT_IDENTITY')
         if pilot:
             require(result.get('pilot')==tokens.get('pilot')==setup.get('pilot')==cfg.get('pilot')==mc['pilot']
@@ -226,6 +234,13 @@ def validate_model_files(folder,process,cfg):
             require(setup.get('model_limits')==mc['model_limits']==cfg['model_limits'],'MODEL_LIMITS')
             model.input_contract().validate_tokens(tokens['token_ids'],cfg['output_validation'],setup['model_limits'])
             require(tokens['early_eos'] is False,'TOKEN_EOS')
+            if batched:require(result.get('batch_size')==setup.get('batch_size')==tokens.get('batch_size')==batch and
+                result.get('input_identity')==actual and tokens.get('status')=='COMPLETE' and
+                setup.get('schema_version')=='cupti-model-setup/0.2.0' and setup.get('dtype')=='torch.float16' and
+                setup.get('cuda_version')=='12.4' and setup.get('sample_indices')==tokens.get('sample_indices')==list(range(batch)) and
+                setup.get('output_shape_expected')==tokens.get('output_shape')==[2,batch] and
+                setup.get('completion_unit')==tokens.get('completion_unit')=='WHOLE_BATCH_INVOCATION' and
+                tokens.get('actual_output_tokens_per_sample')==[2]*batch and tokens.get('eos_hits')==[],'BATCH_FILE_BINDING')
             for name,pos in [('memory_before.json','BEFORE_WARMUPS_AND_SESSION'),('memory_after.json','AFTER_CAPTURE_CLOSED')]:
                 fact=read(folder/name)
                 require(fact['position']==pos and fact['outside_measured_window'] is True and fact['logical_device']==0
@@ -246,24 +261,29 @@ def analyze_model(folder,process,cfg):
     current=policy_profile(cfg);finite=finite_profile(cfg);pilot=pilot_profile(cfg);planned=planned_profile(cfg);native=POLICY_NATIVE_COMMIT if current else NATIVE_COMMIT
     from analysis.cupti_timeline import select_scope,analyze_files
     options=consumer_policy(cfg) if finite else {}
-    answers=[];errors=[];indexed={};metrics=[];previous_end=None
+    answers=[];errors=[];indexed={};metrics=[];previous_end=None;scopes=[];accounting=None
     for i,p in enumerate(expected):
         try:
             scope=select_scope(raw,p,**options);scope_path=folder/f'scope_token{i}.json'
+            if batch_profile(cfg):batch_accounting().validate_token_copy(raw,scope,cfg['model_contract']['batch_size'])
             with scope_path.open('x',encoding='utf8') as f:json.dump(scope,f,indent=2)
             answer=analyze_files(folder/'timeline/capture.json',scope_path,folder/f'derived_token{i}',**options)
-            answers.append(answer);indexed[i]=answer['result']
+            answers.append(answer);indexed[i]=answer['result'];scopes.append(scope)
             if pilot or planned:
                 spec=importlib.util.spec_from_file_location('_pilot_metrics',Path(__file__).with_name('cupti_input_contract.py'))
                 shared=importlib.util.module_from_spec(spec);spec.loader.exec_module(shared)
-                metrics.append(shared.token_metrics(raw,scope,answer['result'],i,
-                    scope['request_start'] if i==0 else previous_end))
+                metric=shared.token_metrics(raw,scope,answer['result'],i,scope['request_start'] if i==0 else previous_end)
+                if batch_profile(cfg):metric.update(batch_size=cfg['model_contract']['batch_size'],completion_unit='WHOLE_BATCH_INVOCATION')
+                metrics.append(metric)
                 previous_end=scope['completion_end']
         except Exception as exc:errors.append(dict(token_index=i,error=type(exc).__name__+':'+str(exc)))
     if current:
         coverage=memset_coverage(raw,expected,indexed)
         with (folder/'memset_coverage.json').open('x',encoding='utf8') as f:json.dump(coverage,f,indent=2)
-    report=dict(schema_version='cupti-timeline-model-review/0.4.0' if planned else 'cupti-timeline-model-review/0.3.0' if pilot else 'cupti-timeline-model-review/0.2.0' if finite else 'cupti-timeline-model-review/0.1.1' if current else 'cupti-timeline-model-review/0.1.0',status='BOTH_TOKENS_EVIDENCE_COMPLETE_PENDING_REVIEW' if not errors else 'BLOCKED',
+    if batch_profile(cfg) and not errors:
+        try:accounting=batch_accounting().write_accounting(folder,raw,scopes,answers,cfg)
+        except ValueError as exc:errors.append(dict(token_index=None,stage='SAME_SOURCE_BUDGET',error=str(exc)))
+    report=dict(schema_version='cupti-timeline-model-review/0.5.0' if batch_profile(cfg) else 'cupti-timeline-model-review/0.4.0' if planned else 'cupti-timeline-model-review/0.3.0' if pilot else 'cupti-timeline-model-review/0.2.0' if finite else 'cupti-timeline-model-review/0.1.1' if current else 'cupti-timeline-model-review/0.1.0',status='BOTH_TOKENS_EVIDENCE_COMPLETE_PENDING_REVIEW' if not errors else 'BLOCKED',
         errors=errors,token_results=answers,capture_sha256=sha(folder/'timeline/capture.json'),
         provider_qualification='NOT_GRANTED',production_A_B_changed=False,old_instance_repair=False,
         pure_host_blocking=None,formal_eligible=False)
@@ -274,6 +294,8 @@ def analyze_model(folder,process,cfg):
         consumer_version=cfg['consumer_version'],timing_policy=cfg['timing_policy'],
         driver_query_policy=cfg['driver_query_policy'],runtime_query_policy=cfg['runtime_query_policy'])
     if pilot:report.update(role='Pilot',pilot=cfg['pilot'],metrics=metrics)
+    if batch_profile(cfg):report.update(batch_size=cfg['model_contract']['batch_size'],output_shape=[2,cfg['model_contract']['batch_size']],
+        completion_unit='WHOLE_BATCH_INVOCATION',batch_accounting=accounting)
     if planned:
         report.update(role=cfg['plan']['role'],input_slot=cfg['input_slot'],metrics=metrics,
             token_validation=cfg['output_validation'],independent_output_content_reference=cfg['output_validation']['mode']=='EXACT_REFERENCE',
@@ -384,8 +406,9 @@ def run_capture(package,c,stage,m,out,archive,reviewed,reviewed_event,finite,cur
         m.write(out/'resources.json',stage['startup_resources'](out,archive,resource_cfg))
         forbidden=('CUDA_INJECTION64_PATH','NVTX_INJECTION64_PATH','NV_COMPUTE_PROFILER_INJECTION_PATH')
         require(not any(os.environ.get(k) for k in forbidden),'EXTERNAL_PROFILER_ENVIRONMENT')
+        input_path=package/c.get('input_path',f'input_{length}.json')
         model_cfg=dict(c['model_contract'],**{k:c[k] for k in ('model','inventory_sha256','prompt_sha256','gpu_uuid','gpu_pci','target_python','site_root')},
-            inventory=str(package/'model_sha256.csv'),prompt=str(package/f'input_{length}.json'),
+            inventory=str(package/'model_sha256.csv'),prompt=str(input_path),
             session=dict(client=c['client']['path'],client_sha256=c['client']['sha256'],
                 cupti=c['cupti']['path'],cupti_sha256=c['cupti']['sha256'],session_id=c['session_id']))
         if current:model_cfg['session']['activity_policy_version']=POLICY
@@ -404,7 +427,7 @@ def run_capture(package,c,stage,m,out,archive,reviewed,reviewed_event,finite,cur
             c['code_root'],c['site_root'],'--config',str(out/'model_config.json'),'--output',str(out/'model'),
             '--run-reviewed-model']
         m.write(out/'execution_plan.json',dict(argv=argv,budget=c['budget'],role='Pilot' if pilot else 'Engineering',input_tokens=length,
-            output_tokens=2,batch_size=1,warmup_count=3,automatic_retry=False))
+            output_tokens=2,batch_size=model_cfg['batch_size'],warmup_count=3,automatic_retry=False))
         try:
             process=m.command(argv,out,out/'one_model',env=env,timeout=300)
             require(process['status']=='EXITED' and process['exit_code']==0 and not process['timed_out'],'MODEL_EXIT')
@@ -420,7 +443,7 @@ def run_capture(package,c,stage,m,out,archive,reviewed,reviewed_event,finite,cur
                 analyse_boot=('import sys,runpy,json;sys.dont_write_bytecode=True;'
                     'p=sys.argv.pop(1);sys.path[:0]=sys.argv[1:3];del sys.argv[1:3];'
                     'c=json.load(open(sys.argv[3]));m=runpy.run_path(p);'
-                    'runpy.run_path(str(__import__("pathlib").Path(p).with_name("cupti_input_contract.py")))["bind_producer"](c) if c["schema_version"]=="cupti-timeline-stage-b/0.3.0" or c["schema_version"]=="cupti-timeline-stage-b/0.4.0" and c["plan"]["role"]=="Pilot" else None;'
+                    'runpy.run_path(str(__import__("pathlib").Path(p).with_name("cupti_input_contract.py")))["bind_producer"](c) if c["schema_version"] in ("cupti-timeline-stage-b/0.3.0","cupti-timeline-stage-b/0.4.0","cupti-timeline-stage-b/0.5.0") and (c["schema_version"]=="cupti-timeline-stage-b/0.3.0" or c["plan"]["role"]=="Pilot") else None;'
                     'b=runpy.run_path(str(__import__("pathlib").Path(p).with_name("cupti_model_consumer.py")));'
                     'fact=b["bind_consumer"](c);'
                     'json.dump(fact,open(str(__import__("pathlib").Path(sys.argv[1])/"consumer_binding.json"),"x"),indent=2);'
@@ -442,7 +465,7 @@ def run_capture(package,c,stage,m,out,archive,reviewed,reviewed_event,finite,cur
             except BaseException as exc:postcheck_error=type(exc).__name__+':'+str(exc);raise
         status=f'MODEL{length}_BOTH_TOKENS_COMPLETE_STOP_FOR_REVIEW'
     except BaseException as exc:error=type(exc).__name__+':'+str(exc)
-    m.write(out/'receipt.json',dict(schema_version='cupti-timeline-stage-b-receipt/0.4.0' if planned_profile(c) else 'cupti-timeline-stage-b-receipt/0.3.0' if pilot else 'cupti-timeline-stage-b-receipt/0.2.0' if finite else 'cupti-timeline-stage-b-receipt/0.1.1' if current else 'cupti-timeline-stage-b-receipt/0.1.0',phase='B',status=status,error=error,
+    m.write(out/'receipt.json',dict(schema_version='cupti-timeline-stage-b-receipt/0.5.0' if batch_profile(c) else 'cupti-timeline-stage-b-receipt/0.4.0' if planned_profile(c) else 'cupti-timeline-stage-b-receipt/0.3.0' if pilot else 'cupti-timeline-stage-b-receipt/0.2.0' if finite else 'cupti-timeline-stage-b-receipt/0.1.1' if current else 'cupti-timeline-stage-b-receipt/0.1.0',phase='B',status=status,error=error,
         controller_commit=c['controller_commit'],native_commit=native,analysis_commit=c['analysis_commit'],
         reviewed_a_receipt_sha256=reviewed,package_index_sha256=sha(package/'package_manifest.json'),process=process,
         post_execution_static_rechecked=postchecked,role='Pilot' if pilot else 'Engineering',budget=c['budget'],

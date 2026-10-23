@@ -1,6 +1,46 @@
 # ExposedPath 科研进度清单
 
-## 7.246 同源CUPTI原公式A与COE区间迁移（2026-10-23，当前）
+## 7.247 输出2的batch参数化最小接线（2026-10-23，当前）
+
+- [x] 按已审batch影响清单完成本地实现。新增有限`CUPTI-INPUT-PLAN/0.3.0`与
+  model/control 0.5.0；条件、slot/run及producer身份包含batch_size，当前参数范围1/2/4，
+  输出固定2、warmup3/repeat1、原P自然Host-readable政策。旧单样本/旧计划版本不扩域。
+  没有新增或启动矩阵、8P1、4096，也不生成部署包。
+- [x] 完整有序`[B,L]`输入及mask绑定，维持原32-token周期和全1 mask、批内重复固定输入；
+  tensor使用所有行。输出保存真实`[2,B]`及每样本token，Pilot逐值检查预先绑定的矩阵；
+  Engineering观察模式不声称独立数值正确性。P prepare/finish及runner测量实现直接复用，
+  每步整批一次Host读取；任一样本early EOS/少输出拒绝整次，短输出原样保存，不广播、
+  补token或把B个样本当独立请求/重复。
+- [x] 新[batch预算连接器](../../scripts/cupti_batch_accounting.py)将同一Raw、两条保存S、
+  token/producer及完整input身份接到独立原公式A/COE/扩展completion exposure文件及hash
+  索引；汇总保留三口径原值，按完整block作预定signed ΔCOE/R，不拼不完整block。
+  新隔离消费者显式绑定八项来源文件，旧四文件读取保留；生产A/B、S/COE公式及collector
+  未变，不重新执行7.246九run迁移或旧测试。细节见[合同§16](completion_operation_contract_draft_v0_1.md#16-两输出步的batch参数化接线7247本地实现)。
+- [x] 新真实文件链暴露一处保守误拒绝：物理sync携带driver correlation时，迁移适配仅
+  计driver callback而遗漏已验证runtime根。独立父子/重复/错parent反例后，版本0.1.1
+  以明确parent关系覆盖两层且每条物理sync只计一次；预算公式/来源规则不变，不重算
+  或覆盖0.1.0历史结果。缺真实同步、未知调用、正字节缺效果仍拒绝。
+- [x] 最终命令`python -m pytest -q -ra -p no:cacheprovider tests/test_cupti_batch.py
+  --basetemp .local/b247 --junitxml .local/b247.xml`：**26 passed / 0 failed / 0 skipped**，
+  207.30s。包括完整输入/hash/版本/身份、原runner两次向量读取、任一样本EOS、8/16/32-byte
+  token复制绑定、真实文件链/S/预算、负差/零R/未定义分母、缺效果/未知提交/坏drain、
+  来源篡改/错模块、三口径去重/守恒、完整block及立即停止。独立手算Request165ns：
+  原wait16、COE21、重叠16、新迁移5（submit4+Host1），扩展completion21；两阶段严格
+  分解。测试使用相同数值的B1/B2/B4以免将预期负载趋势写成通过条件。
+  实际`-I/-S`子进程沿封存6c744bf来源树和明确八文件overlay执行，真实A/event回执与
+  合同校验未mock；仅模型、目标Python/site、目标HEAD/导入及空间查询为明确CPU替身。
+  第二槽溢出时为完成/失败/未运行/未运行，0完整block且不产生总汇。
+  此前fixture未同步绑定字段及275字符临时路径失败均保留，改短本地basetemp解决环境
+  限制，不改质量门/断言；语法编译和diff检查通过。未运行旧72/24/21或全仓/Q0。
+- [ ] batch目标GPU资格NOT_RUN。真实batch容量、提交效果、依赖、terminal、输出正确性及
+  目标Python3.11.16行为待逐新run核验；本地Python3.12.7的Host/SDK/时间线替身不是GPU
+  或新Q0证据。旧Gate13限定PASS、历史数据角色、UNKNOWN/BLOCKED均保持。
+
+最高优先级：本地batch接线已收口；GPU资源恢复后的第一项仍是7.241已准备的受控正确性
+验证。无服务器/GPU执行或新部署包；用户DOCX、原Raw和不利结果保留。此前Git push
+被安全审核阻断的目的地授权限制保持，本轮不重复外发尝试。
+
+## 7.246 同源CUPTI原公式A与COE区间迁移（2026-10-23，历史；当前见7.247）
 
 - [x] 用户将优先级调整为实际COE→扩展A归属；新增独立
   [cupti_a_migration.py](../../analysis/cupti_a_migration.py)，不改生产A/B、registry、S、

@@ -25,7 +25,7 @@ from exposedpath_v141.cupti_driver_queries import (
 from exposedpath_v141.intervals import atomic_segments
 from exposedpath_v141.submit_effect_bridge import validate_api_callback, SAMPLED_TIMING
 
-VERSION = 'cupti-a-coe-migration-preview/0.1.0'
+VERSION = 'cupti-a-coe-migration-preview/0.1.1'
 ROLE = 'EXPLORATORY_SAME_CUPTI_SOURCE_PREVIEW_NOT_FORMAL_A'
 CATEGORIES = ('host', 'submit', 'non_submit', 'device_wait', 'residual', 'unattributed')
 SYNC_NAMES = {('RUNTIME', 'cudaStreamSynchronize', 131), ('DRIVER', 'cuStreamSynchronize', 126)}
@@ -251,6 +251,21 @@ def audit_run(raw, scopes, saved_results):
             gap('SUBMIT_PROOF_MISSING', records[eid])
     internal = {f['source_record_id']: f for f in proof['internal_synchronizations']}
     mapped_sync_apis = Counter(); mapped_sync_calls = Counter()
+
+    def sync_callback_coverage_ids(callback):
+        """Count one physical sync for both sides of a sampled API/driver pair.
+
+        CUPTI exposes the runtime callback as the parent and the driver callback
+        as its child.  A physical synchronization record is allowed to carry
+        the child correlation, so the parent must be marked through the already
+        verified parent relation as well.  This does not create a second sync or
+        infer a mapping from time alone.
+        """
+        parent = root(callback)
+        ids={callback['id']}
+        if (parent['domain'], parent['name'], parent['cbid']) in SYNC_NAMES:
+            ids.add(parent['id'])
+        return ids
     physical = [r for r in records.values() if r['kind'] == 'SYNC' and overlaps((r['start'], r['end']), request)]
     for y in sorted(physical, key=lambda r: (r['start'], r['id'])):
         fact = internal.get(y['id'])
@@ -258,7 +273,7 @@ def audit_run(raw, scopes, saved_results):
             owner = owners.get(fact['runtime_api_id']); d = calls.get(fact['driver_call_id'])
             require(owner is not None and d is not None and root(d)['id'] == owner['callback_id'] and
                 (d['domain'], d['name'], d['cbid']) in SYNC_NAMES and d['return_code'] == 0, 'INTERNAL_SYNC_IDENTITY')
-            mapped_sync_calls[d['id']] += 1
+            for cid in sync_callback_coverage_ids(d):mapped_sync_calls[cid] += 1
             actual = apikeys.get(key(d))
             if actual is None or fact['driver_api_interval_ns'] is None:
                 gap('INTERNAL_SYNC_HOST_API_INTERVAL_MISSING', y, owner_api_id=owner['id'],
@@ -281,8 +296,8 @@ def audit_run(raw, scopes, saved_results):
                 gap('PHYSICAL_SYNC_HOST_API_MISSING', y); continue
             require(c['return_code'] == 0 and all(c[k] == scope[k] for k in ('pid','tid','device','context','stream')),
                 'SYNC_SCOPE')
-            for match in candidates:
-                mapped_sync_calls[match['id']] += 1
+            covered=set().union(*(sync_callback_coverage_ids(match) for match in candidates))
+            for cid in covered:mapped_sync_calls[cid] += 1
             api_id = actual['id']; host = [actual['start'], actual['end']]
             ids = [eid for eid in member_ids if eid in effect_owner and effect_owner[eid] in submit_sources and
                 submit_sources[effect_owner[eid]]['end'] <= host[0]]
