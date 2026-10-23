@@ -70,8 +70,33 @@ Git报告i/lf、w/crlf。只读核6c与c8的该文件Git blob相同，均2465byt
 此包仅整合传输，不是已修复入口，不部署/恢复旧prepare、不覆盖旧目录。部署落盘修复
 尚未实现，本轮未改生产代码、运行测试或操作服务器/GPU；受控仍NOT_RUN。
 
-当前最高优先级：收口已定位的部署落盘字节一致性，再以单ZIP交付，不让用户手工逐个
-改文件或重跑旧失败入口；目标构建/身份及现场门满足后才显式运行一次受控程序。
+部署修复实现追加（2026-10-23；原“尚未实现”保留为上次历史状态）：
+
+- [x] 新增独立控制适配`coe_controlled_deployment.py`和PS5.1入口，不改c8研究代码、
+  预期hash、受控程序、collector或原A/COE。直接验证现场HEAD=c8；不回退6c、不reset、
+  不机械checkout。13项源码逐一核固定Git blob模式/长度/SHA及当前字节，只接受完全
+  相同或精确全量LF→CRLF展开；全清单预检后备份差异并二进制落盘/fsync，再核原hash
+  与clean。混合行尾/真实改动、缺项、错blob/hash、staged或无关修改均拒绝，无全局
+  Git设置修改，无PowerShell文本管道转换编码。写前计划及原始字节留在新attempt。
+- [x] 新attempt只接受旧prepare的源码身份BLOCKED且program/config/build缺席、未执行
+  的状态；原授权/索引/执行身份和逐项退出状态严格核验，未知writer不放行。旧receipt/
+  日志只读快照并复制进新证据，原目录不改；新输出固定repair1，准备和执行槽各一次，
+  失败不恢复旧入口。默认prepare不初始化CUDA，显式execute仍沿用原120秒单次入口。
+- [x] 原授权3458bytes及原8载荷逐字节保留；新索引覆盖明确的authorization compatibility
+  记录，原authorizer继续用原批准索引校验原授权。只接通固定blob落盘及未构建失败后
+  的新路径，不制造新批准、不扩预算/权限。控制提交与c8执行/6c collector分别绑定。
+- [x] 命令`python -m pytest -q -ra -p no:cacheprovider tests/test_coe_controlled_deployment.py
+  --basetemp .local/dp7 --junitxml .local/dp7.xml`：**20 passed / 0 failed / 0 skipped，
+  54.41s**。真实Git跨提交未变CRLF、LF/CRLF恢复、未知/混合内容拒绝、全预检无部分
+  覆盖、staged/无关修改、真实原授权/A/event文件链、旧BLOCKED接续、prepare不执行及
+  execute拒绝产物篡改/重复、失败回传ZIP。旧未实现和开发期失败记录保留；fixture的
+  GBK读取、MSYS本地clone权限及非隔离namespace污染已分别改为显式UTF8、只读Git
+  alternates和匹配-I/-S来源隔离，不改生产身份门/断言追绿。目标工具/构建/3.11环境
+  为明确CPU替身，本机3.12.7；旧24/72/26/10及Q0/collector检查未重跑。针对性Python
+  语法及真实PS5.1 parser通过；最终ZIP包内入口回归与交付hash随后单独记录。
+
+当前最高优先级：核最终修复ZIP内入口并交协调审查，不再让用户手工逐个改文件或
+重跑旧失败入口；目标构建/身份及现场门满足后才由用户显式运行一次受控程序。
 不重启通用前置排错/新设施。真实受控
 通过并另获确认后才考虑一个L512/B2实例；Batch矩阵、性能验证、4096、长输出、旧8P1均
 未启动。原A/COE/E、Gate13限定PASS、旧Raw/UNKNOWN/BLOCKED和用户DOCX保持。
