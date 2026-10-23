@@ -109,8 +109,22 @@ Git报告i/lf、w/crlf。只读核6c与c8的该文件Git blob相同，均2465byt
 工具/构建/3.11环境仍明确CPU替身；目标构建及GPU受控均NOT_RUN，不能据此授资格。
 本轮本地提交/待审交付，未推送、未操作服务器/GPU；DOCX、旧失败及Raw均保持。
 
-当前最高优先级：协调审查这一单ZIP，再由用户只传该ZIP并运行默认prepare，不再手工
-逐个改文件或重跑旧失败入口；目标构建/身份及现场门满足后才显式运行一次受控程序。
+repair1真实prepare失败审查（2026-10-23）：回传ZIP24761bytes，SHA256
+`88daa7e8e2204375af22bf411272b4ba1486b44c02848a7e638e12a1a75484c6`；27成员/26项清单，
+CRC、安全路径、无重复、全覆盖hash及manifest hash均通过。真实错误为
+`CONTROLLED_REPAIR_WORKTREE_NOT_CLEAN_AFTER_REPAIR`，不是外层PS throw。实际程序
+已走过13项逐文件写后字节校验，停在Git clean复核、source binding与构建之前；包内
+无build/run_config/once，受控GPU仍NOT_RUN。三份备份（gate8 CUDA源码及两个包入口）
+与固定c8 blob的精确LF→CRLF展开独立吻合；旧receipt SHA c54952dd…85d2dbc且新报告
+previous_evidence_unchanged=true。新鲜磁盘free366056738816bytes，非空间门失败。
+失败控制版本未保存Git status的具体stdout/变更路径，因此不能认定剩余项是行尾、
+真实修改或索引/配置问题。本地真实Git的true/input/false小型只读机制探查未复现本次
+写后失败，不当作目标机事实。不放宽clean、不改源码/预期hash、不机械重试prepare，
+保留原BLOCKED及ZIP；需一次限定checkout的只读Git/源码快照补齐缺失事实，不查ACL、
+不采集GPU、不新增collector。详情在本地repair1_failure_review_v0_1。
+
+当前最高优先级：先取得上述缺失的具体Git变更列表并定位原因，再决定最小部署修复；
+不重跑旧prepare、不让用户逐文件改源码。目标构建/身份及现场门满足后才显式运行受控。
 不重启通用前置排错/新设施。真实受控
 通过并另获确认后才考虑一个L512/B2实例；Batch矩阵、性能验证、4096、长输出、旧8P1均
 未启动。原A/COE/E、Gate13限定PASS、旧Raw/UNKNOWN/BLOCKED和用户DOCX保持。
