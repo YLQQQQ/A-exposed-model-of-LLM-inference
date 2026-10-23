@@ -89,8 +89,30 @@ def validate_api_callback(a,c,*,policy=LEGACY_TIMING):
 
 
 def analyze_scope(v):
-    require(v.get('schema_version') in (INPUT_VERSION,SAMPLED_INPUT_VERSION,QUERY_INPUT_VERSION),'VERSION')
-    query_profile=v['schema_version']==QUERY_INPUT_VERSION
+    instance_profile=v.get('schema_version')=='submit-effect-evidence/0.3.1'
+    require(v.get('schema_version') in (INPUT_VERSION,SAMPLED_INPUT_VERSION,QUERY_INPUT_VERSION,
+                                      'submit-effect-evidence/0.3.1'),'VERSION')
+    query_profile=v['schema_version'] in (QUERY_INPUT_VERSION,'submit-effect-evidence/0.3.1')
+    instances=None
+    if instance_profile:
+        from analysis.cupti_call_instances import CallInstances,POLICY
+        require(v.get('call_instance_policy')==POLICY,'CALL_INSTANCE_POLICY')
+        instances=CallInstances(v['callbacks'],v['pid'])
+    else:require('call_instance_policy' not in v,'CALL_INSTANCE_POLICY')
+    def api_key(r):
+        return (*key(r),r['cbid'],r['tid']) if instance_profile else key(r)
+    def call_for(r):
+        if instances is None:return call_keys.get(key(r))
+        if r.get('kind') in ('KERNEL','MEMSET','MEMCPY'):
+            c=instances.effect(r)
+            require(r.get('submit_callback_id')==(c['id'] if c else None),'EFFECT_INSTANCE_CONFLICT')
+        elif r.get('kind')=='API':
+            c=instances.api(r)
+            require(r.get('callback_id')==c['id'],'API_INSTANCE_CONFLICT')
+        else:
+            c=instances.unique(key(r))
+            if 'callback_id' in r:require(c is not None and r['callback_id']==c['id'],'CALL_INSTANCE_CONFLICT')
+        return c
     sampled=v['schema_version']!=INPUT_VERSION
     from .cupti_driver_queries import (VERSION as QUERY_POLICY,query_rule,RULES,NESTED_HELPERS,DRIVER_OPERATIONS,
         RUNTIME_VERSION,RUNTIME_RULES,runtime_query_rule)
@@ -122,8 +144,10 @@ def analyze_scope(v):
             and c['start']<=c['end'] and c['enter_seq']<c['exit_seq'],'CALL_ORDER')
         require(not sequences.intersection((c['enter_seq'],c['exit_seq'])),'SEQUENCE_DUPLICATE')
         sequences.update((c['enter_seq'],c['exit_seq']))
-        require(key(c) not in call_keys,'CALL_CORRELATION_DUPLICATE')
-        calls[c['id']]=c;call_keys[key(c)]=c
+        if not instance_profile:
+            require(key(c) not in call_keys,'CALL_CORRELATION_DUPLICATE')
+            call_keys[key(c)]=c
+        calls[c['id']]=c
     for c in calls.values():
         parent=c.get('parent_id')
         if parent is not None:
@@ -143,13 +167,13 @@ def analyze_scope(v):
             require(all(a[1]<=b[1] for a,b in zip(ordered_events,ordered_events[1:])),'CALL_THREAD_ORDER')
     apis={};api_keys={};runtime=[];timing_counts=defaultdict(int)
     for a in v['apis']:
-        require(a['id'] not in apis and key(a) not in api_keys,'API_DUPLICATE')
+        require(a['id'] not in apis and api_key(a) not in api_keys,'API_DUPLICATE')
         require(a['domain'] in ('RUNTIME','DRIVER') and a['pid']==v['pid'] and
                 integer(a['start']) and integer(a['end']) and a['start']<=a['end'],'API_SCOPE')
-        c=call_keys.get(key(a));require(c is not None,'API_CALLBACK_COVERAGE')
+        c=call_for(a);require(c is not None,'API_CALLBACK_COVERAGE')
         fact=validate_api_callback(a,c,policy=policy)
         if sampled:timing_counts[fact['relation']]+=1
-        apis[a['id']]=a;api_keys[key(a)]=a
+        apis[a['id']]=a;api_keys[api_key(a)]=a
         if a['domain']=='RUNTIME':runtime.append(a)
     query_rules={}
     def ancestors(c):
@@ -158,29 +182,29 @@ def analyze_scope(v):
             c=calls[c['parent_id']];yield c
     if query_profile:
         def local_callback(c):
-            a=api_keys.get(key(c))
+            a=api_keys.get(api_key(c))
             return ((c['start']<s['completion_end'] and s['request_start']<c['end']) or
                 (a is not None and a['start']<s['completion_end'] and s['request_start']<a['end']))
         for c in calls.values():
             if not local_callback(c):continue
             if c['domain']=='RUNTIME':require(c.get('parent_id') is None,'NESTED_RUNTIME_UNSUPPORTED')
             if c['name'] in RULES:
-                a=api_keys.get(key(c))
+                a=api_keys.get(api_key(c))
                 # Preserve the existing parent-callback bridge when a nested
                 # driver API activity is absent; never synthesize its duration.
                 # A root call, unlike that child, needs its own API envelope.
                 require(a is not None or c.get('parent_id') in calls,'DRIVER_API_COVERAGE')
                 query_rules[c['id']]=query_rule(a,c)
             elif c['name'] in RUNTIME_RULES:
-                query_rules[c['id']]=runtime_query_rule(api_keys.get(key(c)),c)
+                query_rules[c['id']]=runtime_query_rule(api_keys.get(api_key(c)),c)
         # Query semantics must not hide work or physical completion on the
         # same call or any real descendant, even if its interval is short.
         for e in v['effects']:
-            c=call_keys.get(key(e))
+            c=call_for(e)
             if c is not None:require(not any(x['id'] in query_rules for x in ancestors(c)),
                 'QUERY_DEVICE_EFFECT:'+str(e['id']))
         for fact in [*v['synchronizations'],*v.get('internal_completions',[])]:
-            c=calls.get(fact.get('driver_call_id')) or call_keys.get((fact.get('domain'),v['pid'],fact['correlation']))
+            c=calls.get(fact.get('driver_call_id')) or call_for({**fact,'pid':v['pid']})
             if c is not None:require(not any(x['id'] in query_rules for x in ancestors(c)),
                 'QUERY_SYNCHRONIZATION:'+str(fact['id']))
         for c in calls.values():
@@ -190,7 +214,7 @@ def analyze_scope(v):
                     'QUERY_DEVICE_SUBMISSION:')+str(c['id']))
         for c in calls.values():
             if c['domain']!='DRIVER' or not local_callback(c):continue
-            if c.get('parent_id') is None:require(key(c) in api_keys,'DRIVER_API_COVERAGE')
+            if c.get('parent_id') is None:require(api_key(c) in api_keys,'DRIVER_API_COVERAGE')
             if c['id'] in query_rules:continue
             if c.get('parent_id') is None:
                 require((c['name'],c['cbid']) in DRIVER_OPERATIONS and normal(c['name']) in DRIVER_SUBMITS,
@@ -201,28 +225,28 @@ def analyze_scope(v):
                     NESTED_HELPERS.get((c['name'],c['cbid']))==normal(root['name']),
                     'DRIVER_NESTED_API_UNSUPPORTED:'+str(c['id'])+':'+c['name'])
     owners=runtime+[a for a in apis.values() if a['domain']=='DRIVER' and
-        call_keys[key(a)].get('parent_id') is None and
-        (normal(a['name']) in DRIVER_SUBMITS or call_keys[key(a)]['id'] in query_rules)]
+        call_for(a).get('parent_id') is None and
+        (normal(a['name']) in DRIVER_SUBMITS or call_for(a)['id'] in query_rules)]
     relevant=[a for a in owners if a['start']<s['completion_end'] and s['request_start']<a['end']]
     for c in calls.values():
         if c['domain']=='RUNTIME' and s['request_start']<=c['start']<s['completion_end']:
-            require(key(c) in api_keys,'RUNTIME_API_COVERAGE')
+            require(api_key(c) in api_keys,'RUNTIME_API_COVERAGE')
     for a in relevant:
         require(a['tid']==s['tid'] and s['request_start']<=a['start']<=a['end']<=s['completion_end'],'SCOPE')
         if sampled:
-            c=call_keys[key(a)]
+            c=call_for(a)
             require(s['request_start']<=c['start']<=c['end']<=s['completion_end'],'CALLBACK_SCOPE')
         require(type(a['return_code']) is int and a['return_code']==0,'FAILED_API')
     for c in calls.values():
         if s['request_start']<=c['start']<s['completion_end']:
             require(type(c['return_code']) is int and c['return_code']==0,'FAILED_API')
             if c['domain']=='DRIVER':require(c['id'] in query_rules or c.get('parent_id') in calls or
-                (c.get('parent_id') is None and normal(c['name']) in DRIVER_SUBMITS and key(c) in api_keys),'PARENT')
+                (c.get('parent_id') is None and normal(c['name']) in DRIVER_SUBMITS and api_key(c) in api_keys),'PARENT')
 
     copy=apis.get(s['copy_api']);sync=apis.get(s['sync_api'])
     require(copy in relevant and sync in relevant and normal(copy['name'])=='cudaMemcpyAsync'
         and normal(sync['name'])=='cudaStreamSynchronize' and copy['end']<=sync['start'],'COMPLETION_PAIR')
-    cc=call_keys[key(copy)];sc=call_keys[key(sync)]
+    cc=call_for(copy);sc=call_for(sync)
     require(same_scope(cc,s) and same_scope(sc,s),'SCOPE')
     require(isinstance(cc['params'],dict) and cc['params'].get('copy_kind')==2 and
         integer(cc['params'].get('count')) and cc['params']['count']>0,'D2H_PARAMETERS')
@@ -231,7 +255,7 @@ def analyze_scope(v):
         seen=set()
         while c['domain']!='RUNTIME':
             if c.get('parent_id') is None:
-                require(normal(c['name']) in DRIVER_SUBMITS and key(c) in api_keys,'PARENT')
+                require(normal(c['name']) in DRIVER_SUBMITS and api_key(c) in api_keys,'PARENT')
                 return c
             require(c['id'] not in seen and c.get('parent_id') in calls,'PARENT')
             seen.add(c['id']);c=calls[c['parent_id']]
@@ -246,9 +270,10 @@ def analyze_scope(v):
         effects[e['id']]=e
         if e['end']<=s['drain_end']:
             prior.append(e['id']);continue
-        c=call_keys.get(key(e));direct=None
+        c=call_for(e);direct=None
         if e['kind']=='MEMCPY' and e.get('runtime_correlation',0):
-            direct=call_keys.get(('RUNTIME',e['pid'],e['runtime_correlation']))
+            direct=(instances.unique(('RUNTIME',e['pid'],e['runtime_correlation'])) if instances else
+                    call_keys.get(('RUNTIME',e['pid'],e['runtime_correlation'])))
             require(direct is not None and normal(direct['name'])=='cudaMemcpyAsync','COPY_RUNTIME_CORRELATION')
         require(c is not None or direct is not None,'UNASSIGNED_EFFECT')
         if c is not None:
@@ -256,7 +281,7 @@ def analyze_scope(v):
             require(c['context']==root['context'],'SCOPE')
             if direct is not None:require(root['id']==direct['id'],'COPY_RUNTIME_CORRELATION')
         else:root=direct
-        a=api_keys.get(key(root))
+        a=api_keys.get(api_key(root))
         require(a is not None and normal(a['name']) in SUBMITS,'EFFECT_BRIDGE')
         if a['start']>=s['completion_end']:continue
         require(same_scope(e,s) and same_scope(root,s),'SCOPE')
@@ -278,14 +303,14 @@ def analyze_scope(v):
     for a in sorted(relevant,key=lambda a:(a['start'],a['end'])):
         n=normal(a['name'])
         if n=='cudaStreamSynchronize':continue
-        if call_keys[key(a)]['id'] in query_rules:continue
+        if call_for(a)['id'] in query_rules:continue
         if n not in SUBMITS:
             # Do not silently call an unknown API non-submit.
             from .a_api_classification import classify_a_api_name
             require(classify_a_api_name(n)[0]=='non_submit','API_SEMANTICS:'+n)
             continue
         require(a['end']<=sync['start'],'SUBMISSION_BOUNDARY')
-        c=call_keys[key(a)];require(same_scope(c,s),'SCOPE')
+        c=call_for(a);require(same_scope(c,s),'SCOPE')
         if query_profile:
             require(isinstance(c.get('params'),dict) and integer(c['params'].get('native_stream')),'PARAMETERS')
         es=mapped[a['id']]
@@ -306,7 +331,7 @@ def analyze_scope(v):
 
     sync_rows=[]
     for y in v['synchronizations']:
-        c=call_keys.get((y['domain'],v['pid'],y['correlation']))
+        c=call_for({**y,'pid':v['pid']})
         require(c is not None,'SYNC_BRIDGE')
         root=logical_runtime(c)
         if root['id']==sc['id']:sync_rows.append(y)
@@ -334,7 +359,7 @@ def analyze_scope(v):
     overlap=completion_overlap((copy['start'],copy['end']),(sync['start'],sync['end']),[(a.start,a.end) for a in members])
     internal=[]
     for fact in v.get('internal_completions',[]):
-        d=calls[fact['driver_call_id']];root=logical_runtime(d);a=api_keys[key(root)]
+        d=calls[fact['driver_call_id']];root=logical_runtime(d);a=api_keys[api_key(root)]
         require(root['id']==fact['runtime_call_id'] and same_scope(d,s) and
             same_scope(root,s) and d['domain']=='DRIVER' and normal(d['name'])=='cuStreamSynchronize' and
             fact['flags']==3 and (fact['context'],fact['stream'])==(s['context'],s['stream']) and
@@ -356,7 +381,7 @@ def analyze_scope(v):
         intervals=[(max(e['start'],fact['start']),min(e['end'],fact['end'])) for e in necessary]
         intervals=[(lo,hi) for lo,hi in intervals if lo<hi]
         # FIFO activity intervals have already been verified disjoint above.
-        driver_api=api_keys.get(key(d))
+        driver_api=api_keys.get(api_key(d))
         internal.append(dict(source_record_id=fact['id'],runtime_api_id=a['id'],driver_call_id=d['id'],
             necessary_member_ids=[e['id'] for e in necessary],physical_interval_ns=[fact['start'],fact['end']],
             physical_activity_overlap_ns=sum(hi-lo for lo,hi in intervals),
@@ -381,14 +406,14 @@ def analyze_scope(v):
     if query_profile:
         rows=[]
         for a in sorted(relevant,key=lambda a:(a['start'],a['end'])):
-            c=call_keys[key(a)]
+            c=call_for(a)
             rows.append(dict(api_id=a['id'],callback_id=c['id'],domain=a['domain'],name=a['name'],
                 start=a['start'],end=a['end'],return_code=a['return_code']))
         # Exactly one outermost API owns each nested interval; driver children
         # remain observable provenance, not another addition to API wall cost.
         facts=[]
         for cid,rule in query_rules.items():
-            c=calls[cid];a=api_keys.get(key(c));root=list(ancestors(c))[-1];owner=api_keys.get(key(root))
+            c=calls[cid];a=api_keys.get(api_key(c));root=list(ancestors(c))[-1];owner=api_keys.get(api_key(root))
             require(owner is not None,'DRIVER_API_COVERAGE')
             facts.append(dict(api_id=a['id'] if a else None,callback_id=cid,pid=c['pid'],tid=c['tid'],
                 domain=c['domain'],correlation=c['correlation'],cbid=c['cbid'],name=c['name'],
@@ -406,4 +431,7 @@ def analyze_scope(v):
             accounting_api_sources=rows,accounting_api_union_ns=sum(hi-lo for lo,hi in merged),
             accounting_interpretation='OBSERVED_API_WALL_NOT_PURE_CPU; SYNC_NOT_RECLASSIFIED',
             independent_driver_submit_api_ids=[a['id'] for a in ordered if a['domain']=='DRIVER'])
+    if instance_profile:
+        answer.update(schema_version='submit-effect-bridge/0.3.1',call_instance_policy=v['call_instance_policy'],
+                      correlation_groups=instances.inventory())
     return answer

@@ -32,7 +32,7 @@ def marker_ranges(rows):
     return dict(ranges=ranges,points=points)
 
 
-def select_scope(raw,producer,*,timing_policy=LEGACY_TIMING,driver_query_policy=None):
+def select_scope(raw,producer,*,timing_policy=LEGACY_TIMING,driver_query_policy=None,call_instance_policy=None):
     """Join original producer labels to this capture's own CUPTI clock.
 
     Producer/token files must be bound by the caller's input manifest. This
@@ -56,11 +56,17 @@ def select_scope(raw,producer,*,timing_policy=LEGACY_TIMING,driver_query_policy=
     helper=one((r for r in parsed['ranges'] if r['tid']==tid and r['label']==producer['helper_label']),'HELPER_RANGE')
     start=one((r for r in parsed['points'] if r['tid']==tid and r['label']==producer['request_label']),'REQUEST_POINT')['time']
     end=one((r for r in parsed['points'] if r['tid']==tid and r['label']==producer['token_label']),'TOKEN_POINT')['time']
-    calls={(c['domain'],c['pid'],c['correlation']):c for c in raw['callbacks']}
+    instances=None
+    if call_instance_policy is not None:
+        from .cupti_call_instances import CallInstances,POLICY
+        require(call_instance_policy==POLICY and driver_query_policy==DRIVER_QUERY_POLICY,'CALL_INSTANCE_POLICY')
+        instances=CallInstances(raw['callbacks'],raw['pid'])
+    calls={(c['domain'],c['pid'],c['correlation']):c for c in raw['callbacks']} if instances is None else {}
     apis=[]
     for r in raw['records']:
         if r['kind']=='API' and r['domain']=='RUNTIME':
-            c=calls.get((r['domain'],r['pid'],r['correlation']));require(c is not None,'API_CALLBACK')
+            c=instances.api(r) if instances else calls.get((r['domain'],r['pid'],r['correlation']))
+            require(c is not None,'API_CALLBACK')
             apis.append({**r,'name':normal(c['name'])})
     drain=one((a for a in apis if a['name']=='cudaDeviceSynchronize' and a['tid']==tid and
         dr['start']<=a['start']<=a['end']<=dr['end']),'DRAIN_API')
@@ -69,20 +75,21 @@ def select_scope(raw,producer,*,timing_policy=LEGACY_TIMING,driver_query_policy=
     sync=one((a for a in apis if a['name']=='cudaStreamSynchronize' and a['tid']==tid and
         helper['start']<=a['start']<=a['end']<=helper['end']),'SYNC_API')
     require(all(a['return_code']==0 for a in (drain,copy,sync)),'FAILED_COMPLETION')
-    c=calls[(copy['domain'],copy['pid'],copy['correlation'])]
+    c=instances.api(copy) if instances else calls[(copy['domain'],copy['pid'],copy['correlation'])]
     require(drain['end']<=start<=helper['start']<=copy['start']<=copy['end']<=sync['start']<=sync['end']<=end<=helper['end'],'COMPLETION_ORDER')
     scope=dict(session_id=producer['session_id'],pid=producer['pid'],tid=tid,device=c['device'],
         context=c['context'],stream=c['stream'],drain_end=drain['end'],request_start=start,completion_end=end,
         copy_api=copy['id'],sync_api=sync['id'],completion_proof='HOST_TOKEN_READABLE',
         actual_token_ids=deepcopy(producer['actual_token_ids']),ownership='CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS')
-    evidence=to_evidence(raw,scope,timing_policy=timing_policy,driver_query_policy=driver_query_policy)
+    evidence=to_evidence(raw,scope,timing_policy=timing_policy,driver_query_policy=driver_query_policy,
+                         call_instance_policy=call_instance_policy)
     physical=one((s for s in evidence['synchronizations'] if s['domain']=='RUNTIME' and
         s['correlation']==drain['correlation'] and s['flags']==4),'DRAIN_PHYSICAL_SYNC')
     require(physical['context']==scope['context'] and drain['start']<=physical['start']<=physical['end']<=drain['end'],'DRAIN_SCOPE')
     return scope
 
 
-def to_evidence(raw,scope,*,timing_policy=LEGACY_TIMING,driver_query_policy=None):
+def to_evidence(raw,scope,*,timing_policy=LEGACY_TIMING,driver_query_policy=None,call_instance_policy=None):
     require(timing_policy in (LEGACY_TIMING,SAMPLED_TIMING),'TIMING_POLICY')
     require(driver_query_policy is None or
         (driver_query_policy==DRIVER_QUERY_POLICY and timing_policy==SAMPLED_TIMING),'DRIVER_QUERY_POLICY')
@@ -104,8 +111,14 @@ def to_evidence(raw,scope,*,timing_policy=LEGACY_TIMING,driver_query_policy=None
         if more<=removed:break
         removed.update(more)
     calls={k:c for k,c in all_calls.items() if k not in removed}
-    keys={(c['domain'],c['pid'],c['correlation']):c for c in calls.values()}
-    require(len(keys)==len(calls),'CALLBACK_CORRELATION_DUPLICATE')
+    instances=None
+    if call_instance_policy is None:
+        keys={(c['domain'],c['pid'],c['correlation']):c for c in calls.values()}
+        require(len(keys)==len(calls),'CALLBACK_CORRELATION_DUPLICATE')
+    else:
+        from .cupti_call_instances import CallInstances,POLICY
+        require(call_instance_policy==POLICY and driver_query_policy==DRIVER_QUERY_POLICY,'CALL_INSTANCE_POLICY')
+        instances=CallInstances(list(calls.values()),raw['pid']);keys={}
     for c in calls.values():
         require(c.get('closed') is True,'CALLBACK_UNCLOSED')
         if scope['request_start']<=c['start']<scope['completion_end']:
@@ -126,17 +139,22 @@ def to_evidence(raw,scope,*,timing_policy=LEGACY_TIMING,driver_query_policy=None
         require(r['id'] not in ids,'RECORD_DUPLICATE');ids.add(r['id'])
         kind=r['kind'];k=(r.get('domain'),r.get('pid'),r.get('correlation'))
         if kind=='API':
-            c=keys.get(k)
+            c=instances.api(r) if instances else keys.get(k)
             if c is None and r['end']<=scope['drain_end']:continue
             require(c is not None and c['cbid']==r['cbid'],'API_CALLBACK')
-            apis.append({**r,'name':c['name']})
+            apis.append({**r,'name':c['name'],**({'callback_id':c['id']} if instances else {})})
         elif kind in ('KERNEL','MEMCPY','MEMSET'):
             require(r.get('graph')==0 and r.get('graph_node',0)==0,'GRAPH_UNSUPPORTED')
             if kind=='MEMCPY' and r.get('runtime_correlation',0):
-                c=keys.get(k);rt=keys.get(('RUNTIME',raw['pid'],r['runtime_correlation']))
+                if instances:
+                    c=instances.effect(r)
+                    rt=instances.root(c) if c else instances.groups[('RUNTIME',raw['pid'],r['runtime_correlation'])][0]
+                else:
+                    c=keys.get(k);rt=keys.get(('RUNTIME',raw['pid'],r['runtime_correlation']))
                 require(rt is not None and normal(rt['name'])=='cudaMemcpyAsync' and
                     (c is None or root(c)['id']==rt['id']),'COPY_RUNTIME_CORRELATION')
-            effects.append(r)
+            child=instances.effect(r) if instances else None
+            effects.append({**r,'submit_callback_id':child['id'] if child else None} if instances else r)
         elif kind=='SYNC':
             candidates=[c for c in calls.values() if c['correlation']==r['correlation'] and
                 normal(c['name']) in ('cudaStreamSynchronize','cudaDeviceSynchronize','cuStreamSynchronize')]
@@ -160,7 +178,8 @@ def to_evidence(raw,scope,*,timing_policy=LEGACY_TIMING,driver_query_policy=None
             # edge points explicitly to its verified runtime ancestor.
             syncs.append({**r,'domain':'RUNTIME','correlation':c['correlation'],
                 'raw_domain':r['domain'],'raw_correlation':r['correlation'],
-                'callback_bridge_ids':[c['id'] for c in candidates]})
+                'callback_bridge_ids':[c['id'] for c in candidates],
+                **({'callback_id':c['id']} if instances else {})})
             require((normal(c['name']),r.get('flags')) in
                 (('cudaStreamSynchronize',3),('cudaDeviceSynchronize',4)),'SYNC_KIND')
         elif kind=='CONTEXT':contexts.append(r)
@@ -189,6 +208,9 @@ def to_evidence(raw,scope,*,timing_policy=LEGACY_TIMING,driver_query_policy=None
     if driver_query_policy is not None:
         answer.update(schema_version='submit-effect-evidence/0.3.0',driver_query_policy=driver_query_policy,
             runtime_query_policy=RUNTIME_VERSION)
+    if instances:
+        answer.update(schema_version='submit-effect-evidence/0.3.1',call_instance_policy=call_instance_policy,
+                      correlation_groups=instances.inventory())
     return answer
 
 

@@ -116,7 +116,7 @@ def independent_intersection(window,intervals):
     require(count==0,'REFERENCE_UNCLOSED');return total
 
 
-def independent_reference(raw,side):
+def independent_reference(raw,side,*,call_instance_policy=None):
     """Construction picks logical steps; typed Raw joins only fill record IDs/time."""
     from analysis.cupti_timeline import marker_ranges # codec only, not set recovery
     p=json.loads(PLAN.read_text(encoding='utf8'))
@@ -174,13 +174,20 @@ def independent_reference(raw,side):
         if more<=prior:break
         prior.update(more)
     active=[c for c in calls.values() if c['id'] not in prior]
-    keyed={(c['domain'],c['pid'],c['correlation']):c for c in active}
-    require(len(keyed)==len(active),'CORRELATION_DUPLICATE')
+    instances=None
+    if call_instance_policy is None:
+        keyed={(c['domain'],c['pid'],c['correlation']):c for c in active}
+        require(len(keyed)==len(active),'CORRELATION_DUPLICATE')
+    else:
+        from analysis.cupti_call_instances import CallInstances,POLICY
+        require(call_instance_policy==POLICY,'CALL_INSTANCE_POLICY')
+        instances=CallInstances(raw['callbacks'],raw['pid'])
     for step in ('early_kernel','positive_memset','late_kernel','zero_memset','copy','future_kernel'):
         cb=chosen[step];found=[]
         for e in raw['records']:
             if e['kind'] not in ('KERNEL','MEMSET','MEMCPY'):continue
-            child=keyed.get((e.get('domain'),e.get('pid'),e.get('correlation')))
+            child=(instances.effect(e) if instances is not None else
+                   keyed.get((e.get('domain'),e.get('pid'),e.get('correlation'))))
             direct=e['kind']=='MEMCPY' and e.get('pid')==cb['pid'] and e.get('runtime_correlation',0)==cb['correlation']
             match=child is not None and root(child)['id']==cb['id']
             if direct:require(child is None or match,'COPY_PARENT_CONFLICT')
@@ -210,11 +217,15 @@ def independent_reference(raw,side):
     intervals=[[e['start'],e['end']] for e in members]
     window=[apis['copy']['start'],apis['paired_sync']['end']];sync=[apis['paired_sync']['start'],apis['paired_sync']['end']]
     q=independent_intersection(window,intervals)
-    return dict(members=[e['id'] for e in members],terminal=terminal['id'],logical_zero_call_ids=[chosen['zero_memset']['id']],
+    answer=dict(members=[e['id'] for e in members],terminal=terminal['id'],logical_zero_call_ids=[chosen['zero_memset']['id']],
         closed_initialization_callback_ids=sorted(prior),
         excluded_ids=[effects['future_kernel']['id']],window=window,sync=sync,raw_intervals=intervals,
         expected_coe_ns=q,expected_sync_ns=independent_intersection(sync,intervals),wall_ns=window[1]-window[0],
         complement_ns=window[1]-window[0]-q,expected_source='PREDECLARED_CONSTRUCTION_PLUS_RAW_ENDPOINT_SWEEP')
+    if instances:
+        answer.update(reference_version='coe-controlled-reference/0.2.0',
+                      call_instance_policy=call_instance_policy,correlation_groups=instances.inventory())
+    return answer
 
 
 def review(capture,side_path,output):

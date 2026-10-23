@@ -1,6 +1,53 @@
 # ExposedPath 科研进度清单
 
-## 7.248 既有CUPTI受控用例的最小待审交付（2026-10-23，当前）
+## 7.248 既有CUPTI受控用例：目标已执行、独立审查BLOCKED（2026-10-23，当前）
+
+**最新状态：目标受控已执行，独立审查BLOCKED；以下交付前NOT_RUN均为历史状态，
+不是当前运行结论。** repair2封存原件217924bytes，SHA256
+`680cb2418ee1aa3fd21c4d80f5b4e868df99a7709d3a66769833b42724cf06ed`；151成员/150项
+清单、CRC、安全路径、无重复及全部hash通过；manifest SHA256
+`675ed55614f3189de6ab3e0b94f32cec7015e54bd4ce1b4dc280e2d865be28c6`。目标程序已按c8构建
+并真实运行，GPU子进程PID36144退出2、无超时；controller退出1，无超时。构造11步及
+Host读回23完成，session open/close=0，quality closed=true、errors=[]、overflow/dropped/
+dropped_query_errors均0。这些事实不等于独立审查或完整Q0通过；原BLOCKED及退出码不改。
+
+- [x] 原最早拒绝为`COE_CONTROLLED_CORRELATION_DUPLICATE`，发生在独立参考，不是CUDA
+  程序执行失败。真实3个driver关联组各有多个调用：119为context准备、122为重复设备
+  查询、125为首次kernel提交内模块/上下文调用及唯一cuLaunchKernel。固定SDK12.4.127/
+  API22头文件及6c记录器源码已核：correlation来自CUPTI字段；独立call ID为ENTRY索引，
+  parent ID来自PID/TID栈及闭合ENTER/EXIT序列。不能把关联组作为唯一调用字典，亦不能
+  由同号、时间邻近或first匹配推断调用/效果。当前官方文档仅佐证字段用途，固定SDK
+  原字节为依据，不用新版文档替换API22；详情在本地source_review.json。
+- [x] 最小版本化离线接线：新增`cupti-api22-call-instance-groups/0.1.0`，保留全部160
+  callback；以domain/PID/correlation分组，API再按TID/CBID/返回码、已有名称唯一匹配；
+  device effect按固定driver类型/CBID及设备/context/stream唯一选择，再核真实parent。
+  同类型仍多义即拒绝，不按时间选、不丢重复查询、不伪造driver API记录或时长。
+  独立参考0.2.0在S之前用预先construction选择4个成员及D2H terminal，事件计数sweep
+  仅消费真实Raw端点；旧参考默认分支和旧0.1～0.3消费仍严格保留。新0.3.1证据明确
+  携带调用实例边，非默认启用；生产A/B、S恢复公式、COE及collector均未改。
+- [x] 先验成员对应record134早完成kernel、record138的4-byte memset、record140后续
+  kernel、record143 D2H；terminal=record143。零字节call152保留为逻辑节点，不虚构
+  activity；未来record147排除。真实Raw端点独立答案：操作墙钟80600ns，COE及原末尾
+  sync交集均1920ns（320+832+768），补集78680ns；早完成kernel1184ns仍是必要成员但
+  不与操作相交。以上是独立参考演算，不是消费者已经通过或纯Host阻塞结论。
+- [x] 已继续贯通Raw→scope→新实例证据→原S/COE消费，未停在首个异常。关联歧义修复
+  后发现独立支持域缺口：首个kernel内5个实际嵌套driver调用尚无现行精确规则，均属
+  runtime call139/correlation125：call140 cuLibraryLoadData/678、141 cuCtxPushCurrent_v2/323、
+  142 cuLibraryGetModule/682、143 cuCtxPopCurrent_v2/324、144 cuModuleGetFunction/23。
+  第一条拒绝`SUBMIT_EFFECT_DRIVER_NESTED_API_UNSUPPORTED:140:cuLibraryLoadData`。
+  全部回调/区间/parent仍保留；不以未观察额外activity推定无效果、不临时加白名单。
+  新派生审查继续BLOCKED，consumer_result=null，不发布消费者合格COE或受控PASS。
+- [x] 定向验证：新14项一对多/真实原件/离线入口正反例，加5项受影响旧默认分派/同号
+  跨domain/孤儿与真实文件链回归；实际`python -m pytest -q -ra -p no:cacheprovider
+  tests/test_coe_controlled_call_instances.py`加5个明确nodeid，basetemp=.local/cci_final、
+  XML为本地coe_controlled_offline_v0_2/final_tests.xml：**19 passed / 0 failed / 0 skipped，
+  2.37s**。新例先红后绿，原始缺陷和开发期空name字段适配失败均保留；没有重跑完整
+  Q0、旧24/72/26或无关全量测试。真实封存Raw离线消费与确定性损坏副本，无新GPU/编译。
+
+当前最高优先级：交付本次新离线审查及上述5条精确支持缺口。当前没有重采、重编、
+新部署包或Batch启动依据。原控制层后验检查因worker拒绝未到达，不补写已通过；
+受控/数据质量/消费者准入/完整Q0分别判断。原A/COE/E、Gate13限定PASS、旧资格、Raw、
+UNKNOWN和用户DOCX均保持；本轮仅本地代码及证据记录提交，不推送。
 
 - [x] 结束前置脚本排错；复用原receipt及三库hash，原退出码UNKNOWN不追补。以
   c8f3dad为执行/分析身份、6c744bf为服务器前置及既有collector身份，准备8个本地散件，
@@ -5280,7 +5327,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前数据资格（7.131）：Gate6历史Engineering/Q0保持；[首批/暖机对照](gate11_warmup_policy_review_v0_1.md)及[共同w3 Pilot](gate11_policy_closeout_v0_1.md)仍只作政策依据、不混池/升级。已签署限定Formal60次执行/30条P1质量、归档终态及冻结统计全部接受，见[完整审查](gate13_local_review_v0_1.md)/[最终裁决](gate13_closeout_v0_1.json)；不是普遍测量有效性或完整新Q0认证。UNKNOWN/NOT_ASSESSED与旧资格边界保持。
 - 当前 Gate 状态（7.131）：Gate0～7历史PASS、Gate8限定Engineering PASS、Gate9分域PASS、[Gate10仅选定G1三点一次可行性PASS](gate10_closeout_v0_1.md)、[N1独立Engineering PASS](n1_model_feasibility_closeout_v0_1.md)、[Gate11限定Pilot政策PASS](gate11_policy_closeout_v0_1.md)、[Gate12限定0.1.1重签PASS](gate12_closeout_v0_1_1.md)；[Gate13签署路线A限定PASS](gate13_closeout_v0_1.json)、Gate14 NOT_RUN。容量/精度/稳定性未授，旧报告/UNKNOWN/NOT_ASSESSED保持。
 - 当前新路线数据资格（7.239）：[bd377c来源](cupti_input_pilot_sources_v0_1.json)仅9run/3block/18链限定Pilot，native/runner/DLL为6c744bf、控制/分析bd377c/bridge0.3；不是旧Nsight Formal重复、通用provider资格或无插桩性能。旧批GPU独占UNKNOWN、第二token反例与1024分叉保持。
-- 当前最高优先级（7.248）：审阅repair2部署控制单ZIP；原真实授权/c8发布已完成，后续新控制代码本轮仅本地提交未推送。精确c8研究源码13项保持，接续已封存未构建的两次失败，不机械回退/重跑。目标14.38构建及受控NOT_RUN，新产物仅transfer；先prepare再手工显式execute。Batch另待受控通过及用户确认，性能确认/8P1/4096继续暂停。
+- 当前最高优先级（7.248）：目标受控已执行，独立审查BLOCKED。一对多关联已版本化修复并保留独立参考；后续S消费仍因call140～144五类嵌套driver操作缺精确支持规则而拒绝。只交离线证据和精确缺口，无重采/重编/新包或Batch依据；原后验控制未到达不补判通过，性能确认/8P1/4096继续暂停。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
