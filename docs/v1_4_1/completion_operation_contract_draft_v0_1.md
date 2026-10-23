@@ -733,3 +733,114 @@ batch的三block只能让各条件重复三次，不可能使九条件各占全�
 主稿、runner/P、生产S/A/B/COE、registry/DLL、受控/8次配置、Raw及用户DOCX均不变。
 下一项本地选择应先审边界候选与低观测模式、或上述A输入合同的明确条款，不自动启动
 矩阵、部署包、服务器或GPU；当前未知根因/旧BLOCKED/Gate13限定PASS均保持。
+
+## 14. 逻辑完成约束、COE与A迁移的统一模型（7.245）
+
+2026-10-23，`coe-completion-model/0.1.0`，仅独立离线模型/事后探索。
+本节优先于§13的下一步优化安排：先完善完成操作，不启动优化实验或完整CUPTI→A工程。
+旧`A_device_wait`、单sync B、签署G12-ROUTEA/0.1.1和原Formal产物不变。
+
+### 14.1 操作成立的证明义务，不是单复制API的阻塞认定
+
+命题是有条件的：固定调用源码/身份正确，且已声明的单FIFO局部依赖闭包与质量证据成立，
+才可定义逻辑操作`o=(copy,sync)`。证明链分别为：
+
+1. **程序路径。** 固定2.6.0的[CPU/GPU Copy分支](https://github.com/pytorch/pytorch/blob/v2.6.0/aten/src/ATen/native/cuda/Copy.cu#L341-L377)
+   在blocking分支取得当前stream并调用memcpy_and_sync；[helper](https://github.com/pytorch/pytorch/blob/v2.6.0/c10/cuda/CUDAFunctions.h#L70-L90)
+   对同一stream先copy、后sync，两次返回均经错误检查。目标2.6.0+cu124头文件的历史
+   实字节身份为4027bytes/SHA256 `343d0cd132554849db0825f03834912bb2d82ebd6785908662838452ad0dd84a`，
+   复用[已核验来源](completion_operation_candidate_review_v0_1.md#3-语义裁决单api不充分组合完成操作成立于限定范围)；
+   本轮回读固定官方版本及封存runner/producer绑定，不冒称重新取得native调用栈或重核目标安装。
+2. **实例配对。** 同一run/request/token的结构化helper范围内，唯一成功runtime copy→
+   成功runtime stream sync，同PID/TID。实际stream/context通过callback/资源桥和设备效果
+   核对，不把native handle和trace ID按数字相等，不按最近时间选对。已审scope/Raw来源
+   绑定与闭合范围是必需条件，NVTX自身不是GPU完成证明。
+3. **成员。** 沿已审S恢复的提交/效果边和FIFO顺序，W_q截止于sync捕获的提交边界。
+   copy入口不是统一截止：操作内提交的D2H仍属成员；已完成先行kernel仍保留。
+   逻辑count0节点保留API/顺序证明、没有伪造activity。窗前成功drain关闭历史前缀，
+   后提交和无依赖重叠不纳入。无未记录incoming依赖仍是明确支持假设；不称恢复了完整
+   token数学数据依赖图或全部自然默认流物理W。
+4. **完成。** [CUDA12.4.1 stream sync](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/group__CUDART__STREAM.html)
+   成功返回要求该scope先行任务完成，故包括已关联D2H。固定runner随后执行Host读取
+   和整数token取得，producer保存实际值，构成Host-readable证据。保证来自组合，不依赖
+   [Async copy可能对Host同步](https://docs.nvidia.com/cuda/archive/12.4.1/cuda-runtime-api/api-sync-behavior.html)
+   被提升成“单API每个实例都完成/阻塞”的保证。
+
+因此在已审scope内，必要GPU任务是越过该完成操作的前提。它不证明Host从copy入口到
+返回之间一直等待GPU；scope缺证则拒绝，而不是以“逻辑操作”跳过S。当前v7.1的
+physical-blocking universe要求仍保留；本模型没有据此把每个Memcpy注册为物理sync，
+也没有弥补单API内部机制或完整同步覆盖缺口。旧限定冻结处理不被本草案追溯修改。
+
+### 14.2 三项量与terminal的关系
+
+固定`I=[c,r)`，c为copy runtime入口、r为配对成功sync runtime返回；
+`U=union(intervals(W_q))`，`Q=μ(I∩U)`，`C=I\U`。分别报告：
+
+- 操作墙钟`T_o=r−c`；COE `Q`；未覆盖`μ(C)=T_o−Q`，三者不能相互改名。
+- **保留最后必要活动完成时刻τ**及真实terminal ID。当前FIFO/D2H profile里已有这个
+  证据，不新增采集量、顶层A类别或新的“等待指标”。τ能区分最后完成前间隙与完成后
+  尾部；仅给COE无法区分这两类时间结构。
+- 令`b=max(c,τ)`，合格成员要求τ≤r，则严格有
+  `T_o = Q + μ([c,b)\U) + (r−b)`，`Q≤max(0,τ−c)≤T_o`。
+  通用区间算术可描述τ<c、Q=0，此时全部I位于terminal后；**这不是当前正字节D2H
+  profile的准入正例**。当前操作内实际提交的D2H也必须保留，其非零执行区间若在I内，
+  自然要求Q>0；不能为制造合法零值删除它。τ−c不是纯等待，内部空隙也不是硬件空闲；
+  r−b不是纯CPU/驱动返回成本。
+- 再按原API时间拆`Q=Q_copy+Q_between+Q_sync`，区间互斥。允许API间有Host有用工作，
+  不为获得更大Q移动c。程序顺序上是必要完成→sync返回→实际Host token取得→point；
+  trace中可核τ≤r≤point。Host TTFT/ITL仍用各自perf_counter时间，不能跨钟相减。
+
+这统一了**完成前提、必要设备执行位置、墙钟分区**三种描述，不统一为净因果延迟。
+COE/τ和补集增加都不能单独推出TTFT变差或某项优化可节省相同时间；§13.1反例仍适用。
+
+### 14.3 同一bd377c三点Pilot实物核对
+
+独立新[模型入口](../../analysis/coe_completion_model.py)复用既有completion_overlap与
+preview_budget；从原ZIP按manifest/hash读取54份实际消费文件，每run只读/释放一个Raw对象，
+核scope、token、保存S输入hash/版本及成员区间；**没有重建S或重新授予准入**。
+9run/18链全保留，COE、原sync交集、terminal和补集与原CSV逐项一致。
+以下首token为ms，全部第二token与区间来源保存于新版本派生，不与首token充独立重复：
+
+| block / 输入 | 操作墙钟 | COE | 未覆盖 | terminal前未覆盖 | terminal后至sync返回 |
+|---|---:|---:|---:|---:|---:|
+| 1 / 512 | 5.060900 | 2.403154 | 2.657746 | 2.367382 | 0.290364 |
+| 1 / 1024 | 3.397200 | 3.115148 | 0.282052 | 0.256623 | 0.025429 |
+| 1 / 2048 | 120.935900 | 79.349730 | 41.586170 | 41.526596 | 0.059574 |
+| 2 / 512 | 2.805900 | 2.338357 | 0.467543 | 0.449021 | 0.018522 |
+| 2 / 1024 | 159.302500 | 46.853457 | 112.449043 | 112.400304 | 0.048739 |
+| 2 / 2048 | 115.610400 | 90.973368 | 24.637032 | 24.545498 | 0.091534 |
+| 3 / 512 | 2.183700 | 1.834358 | 0.349342 | 0.295147 | 0.054195 |
+| 3 / 1024 | 3.517700 | 3.299398 | 0.218302 | 0.192351 | 0.025951 |
+| 3 / 2048 | 86.623200 | 72.420046 | 14.203154 | 14.154595 | 0.048559 |
+
+全部18链`Q_sync=0`、`Q_between=0`、`Q_copy=Q`；不是GPU无执行，而是必要执行已在
+配对显式sync进入前完成。2048首token的72.420046～90.973368ms来自操作内必要活动，
+不能把86.623200～120.935900ms整个操作都迁移为设备暴露，更不能称纯Host阻塞。
+
+1024高值的112.400304ms发生在terminal前：原结构分解为首个活动前3.682856ms及内部
+未覆盖108.717448ms；末尾仅0.048739ms。因此“大补集主要是最后活动完成后才慢返回”
+不符合该实例，但空隙的CPU/驱动/资源/观测根因仍UNKNOWN；不能由该分解给出硬件因果。
+同布局高低分叉和第二token反向仍约束负载解释：第二token的2048−512为两负一正，
+没有从本模型推出统一单调、P0迁移、方法优越或新的Formal规律。
+
+来源仍为[三点完整CSV](cupti_input_pilot_operations_v0_1.csv)、[原件及资格索引](cupti_input_pilot_sources_v0_1.json)、
+[位置来源](cupti_input_pilot_positions_v0_1.json)。新派生位于本地`coe_completion_model_v0_1`，
+旧文件不改。API墙钟、phase GPU union、同操作GPU union与完整timeline公平保留；本批
+同操作union=COE。模型增加可审查的完成scope/成员/位置解释，不宣称Raw中独占新信息。
+
+### 14.4 版本化A扩展只能是同一墙钟的再分区
+
+沿§5已认可迁移规则，令旧A互斥分区为H/C_submit/C_non-submit/E/Z/U0，
+`J=union_o(I_o∩U_o)`，`Δ=J\E`；只有原子来源已证明才定义：
+`E_completion=E∪J`，`X_new=X\Δ`（X为H/C_submit/C_non-submit/Z），U0保持。
+`Δ∩U0`未解决则拒绝对应预览；不将COE另加到A，不把整个copy API搬入E。
+每片保留原API/source ID和操作/活动引用，跨操作/旧sync union去重，API父子和
+Request=Prefill+Decode守恒。字段必须叫版本化completion exposure，不冒充原Device wait。
+
+新入口的preview只调用已有迁移函数；独立手算含旧E、重复操作、来源和未知拒绝。
+**当前CUPTI实例没有合格旧A全窗原子来源，整窗迁移仍NOT_ASSESSED**，不以本模型强行
+接回全A，不把API union当A。旧Nsight来源已有[受审预览](completion_operation_budget_preview_review_v0_1.md)
+仅保留原事后角色；这次无生产A/B/registry改动，也没有新协议签署或历史资格升级。
+
+本轮只增加本节与独立模型/定向CPU检查，未重跑旧Gate、完整Q0或GPU；GPU暂停、
+受控目标验证NOT_RUN、原8P1候选和4096暂停不变。本地验证与保全记录见进度7.245。

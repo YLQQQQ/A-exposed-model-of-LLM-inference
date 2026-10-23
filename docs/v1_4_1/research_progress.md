@@ -1,6 +1,41 @@
 # ExposedPath 科研进度清单
 
-## 7.244 理论关系/机制判别/优化准备；完整A与batch输出差额（2026-10-23，当前）
+## 7.245 完成操作统一模型、terminal分解与最小离线连接（2026-10-23，当前）
+
+- [x] 按用户优先级先审完成操作，暂不进入完整CUPTI→A适配或优化实验。沿
+  [候选合同§14](completion_operation_contract_draft_v0_1.md#14-逻辑完成约束coe与a迁移的统一模型7245)
+  绑定固定PyTorch2.6.0源码、同stream copy→成功sync、实例身份及已审局部必要后缀，
+  Host真实token读取提供另一层完成证据。不将Async copy单独注册为已证明同步，不将局部
+  W_q升级为全部物理W；旧A_device_wait、签署路线A Formal和历史报告保持。
+- [x] 新增独立`analysis/coe_completion_model.py`，复用completion_overlap及preview_budget，
+  不改生产定义/registry/collector。显式保留原terminal τ，输出操作墙钟、COE及未覆盖，
+  再拆terminal前未覆盖与terminal后至sync返回；核`wall=Q+前空隙+后区间`。τ是已有
+  必要完成约束来源，不是新等待真值；Host TTFT/ITL不与trace钟相减。
+- [x] 在bd377c同一已审ZIP的全部9run/18token上执行新模型；54份实际消费成员核hash、
+  scope/token及保存S输入绑定，逐run释放Raw，不重建S或读取巨型domain。COE/原sync/
+  terminal与既有CSV一致。18条Q全部在copy内、原配对sync交集均0，全部第二token保留。
+  1024高值112.449043ms补集为terminal前112.400304ms、之后0.048739ms，不能全部叫
+  返回尾部；内部108.717448ms空隙的根因仍UNKNOWN，不改旧角色或升级Formal。
+- [x] 只在合格原A原子来源下按Δ=union(COE区间)\旧E迁移相同墙钟，保留来源/旧sync
+  去重与父子守恒；未知片段不迁移。新模型的preview复用旧函数，没把整个copy搬入E。
+  当前CUPTI全窗原A原子来源仍缺，扩展A保持NOT_ASSESSED，未启动大适配工程。
+- [x] tests-first新模型缺失时14项失败；实现后定向21 passed / 0 failed / 0 skipped，1.02s：
+  `python -m pytest -q -ra -p no:cacheprovider tests/test_coe_completion_model.py
+  tests/test_coe_budget_preview.py::test_admitted_preview_moves_same_wall_time_with_trace_sources
+  tests/test_coe_budget_preview.py::test_overlap_union_preview_and_unknown_remain_strict
+  --basetemp .local/coe_completion_model_final_20261023 --junitxml .local/coe_completion_model_final_20261023.xml`。
+  包含独立字面区间答案、合法零值/重叠、terminal冲突、真实ZIP文件链/hash/token/旧BLOCKED
+  拒绝及预算未知拒绝。均为本地CPU，不称新CUDA/Q0资格，未重跑旧19/72/24或完整Gate。
+  单文件语法、7个新增本地链接/锚点、18链与旧独立空隙分解及diff/源码和DOCX保全检查
+  通过；模型、代码绑定与`local_review.json`留本地`coe_completion_model_v0_1`。检查器曾把
+  https://误判为Windows路径，仅修检查器，不调整研究数值或质量门。
+- [ ] 当前来源受控目标GPU验证仍NOT_RUN，旧8P1/4096及所有目标采集暂停；没有新服务器
+  操作、CUDA初始化、模型、包或清理。用户DOCX/统一主稿、Raw和所有历史判定不变。
+
+最高优先级：以已绑定完成scope和来源的模型进行解释，不把大数改名为全部阻塞；
+完整A扩展仅待明确原子来源合同，不自动编码或采集。后续性能收益仍须独立TTFT/ITL证据。
+
+## 7.244 理论关系/机制判别/优化准备；完整A与batch输出差额（2026-10-23，历史；当前见7.245）
 
 - [x] 按用户调整暂停统一主稿继续扩写/修订，转入有界本地理论、机制和工程差额核对。
   只在[现有候选合同§13](completion_operation_contract_draft_v0_1.md#13-理论关系机制判别和工程差额7244gpu暂停)
@@ -4922,7 +4957,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前数据资格（7.131）：Gate6历史Engineering/Q0保持；[首批/暖机对照](gate11_warmup_policy_review_v0_1.md)及[共同w3 Pilot](gate11_policy_closeout_v0_1.md)仍只作政策依据、不混池/升级。已签署限定Formal60次执行/30条P1质量、归档终态及冻结统计全部接受，见[完整审查](gate13_local_review_v0_1.md)/[最终裁决](gate13_closeout_v0_1.json)；不是普遍测量有效性或完整新Q0认证。UNKNOWN/NOT_ASSESSED与旧资格边界保持。
 - 当前 Gate 状态（7.131）：Gate0～7历史PASS、Gate8限定Engineering PASS、Gate9分域PASS、[Gate10仅选定G1三点一次可行性PASS](gate10_closeout_v0_1.md)、[N1独立Engineering PASS](n1_model_feasibility_closeout_v0_1.md)、[Gate11限定Pilot政策PASS](gate11_policy_closeout_v0_1.md)、[Gate12限定0.1.1重签PASS](gate12_closeout_v0_1_1.md)；[Gate13签署路线A限定PASS](gate13_closeout_v0_1.json)、Gate14 NOT_RUN。容量/精度/稳定性未授，旧报告/UNKNOWN/NOT_ASSESSED保持。
 - 当前新路线数据资格（7.239）：[bd377c来源](cupti_input_pilot_sources_v0_1.json)仅9run/3block/18链限定Pilot，native/runner/DLL为6c744bf、控制/分析bd377c/bridge0.3；不是旧Nsight Formal重复、通用provider资格或无插桩性能。旧批GPU独占UNKNOWN、第二token反例与1024分叉保持。
-- 当前最高优先级（7.244）：暂停主稿修订，转理论关系、机制判别和唯一Host准备优化候选；CPU原型/完整A源输入差额及batch/输出短设计已完成，长输出存在固定容量风险，不扩collector。受控/8次候选保留不执行，4096/全部GPU继续暂停，不打包/清理/G2，不按COE变化判性能改善。
+- 当前最高优先级（7.245）：暂停主稿/优化实验和完整CUPTI→A工程，先收口已证完成操作模型、terminal/补集及来源。独立连接器已复用18链，无生产定义变化；整窗A原子来源缺口仍保留。受控/8次候选、4096/全部GPU暂停，不打包/清理/G2，不按COE变化判性能改善。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -5393,9 +5428,9 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 
 **7.26覆盖说明：** 已直接读取目标安装盘点回执及四份完整说明，四文件bytes/SHA256本地复核全部一致。CPU sampling lost-events段落不能证明CUDA/NVTX完整性；条件性teardown/flush建议不等于每会话认证；API subset与cuda-trace-all-apis适用性保留询证。组件hash来自服务器回执、非本地二进制复算。已准备[英文草稿及有限决策路线](gate8_nsys_vendor_inquiry_v0_1.md)，未发送。安装搜索结束，服务器无下一操作；不再执行7.25安装指令。无生产/冻结合同变化，无新测试或实验成绩。Q0影响矩阵继续有效但资格未取得；Gate7 PASS、Gate8 NOT_RUN，UNKNOWN阻塞科学验收。
 
-当前安排（7.244覆盖）：统一主稿暂停修订，完成理论关系、机制判别、Host准备CPU原型
-及完整A/batch/输出差额；512→2048八次候选和受控准备保留不执行，不默认先Pilot再同用途
-Formal。batch/输出仅短设计，无新实现/预算；长输出容量不足风险不借静默扩设施解决。
+当前安排（7.245覆盖）：统一主稿暂停修订，完成逻辑操作约束/COE/terminal的独立连接，
+不启动优化实验或完整CUPTI→A工程。512→2048八次候选和受控准备保留不执行，不默认先
+Pilot再同用途Formal。batch/输出仅短设计，无新实现/预算；长输出容量不足风险不借静默扩设施解决。
 旧Gate0～13按限定证据保持；当前CUPTI受控连接的编译/本地文件
 准备与统一正文已完成，实际GPU验证仍NOT_RUN；本地独立参考与原证据骨架继续复用，
 仅保留明确的目标实验差额。EP-COE-01～03仅导航，不是新串行流水线；目标GPU暂停，均非自动执行。
@@ -5415,6 +5450,11 @@ Gate14/G2继续后移。原总体顺序`Gate1合同→2 oracle→3 Raw→4 S→5
 **Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
 ## 8. 计划调整记录
+
+7.245（2026-10-23）：用户要求优先完善完成操作统一模型，暂停大规模CUPTI→A适配。
+在原合同§14集中给出组合完成保证、局部成员/假设、COE/terminal/补集关系及18链核对，
+新增独立离线模型和CPU文件链，预算迁移仅复用已有规则且要求原A片段来源。没有修改
+生产A/B/COE或旧Formal、采集器、Raw和用户DOCX；没有新GPU资格/预算或历史升级。
 
 7.244（2026-10-23）：用户将优先级由主稿修订改为理论关系/机制判别/实际优化准备。
 在原合同§13集中记录集合界限与CPU反例、唯一边界静态准备原型、完整A源合同差额及
