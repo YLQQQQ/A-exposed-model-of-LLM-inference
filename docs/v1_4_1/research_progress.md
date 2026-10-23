@@ -56,6 +56,31 @@ terminal与同源A/COE/E去重守恒。仅报告整批完成时延和实例资�
 授权仍为部署前置。三口径独立，预算迁移不等于加速、暴露不等于纯GPU阻塞；优化主张
 另需实际完成时延证据。用户DOCX、原Raw、不利结果和所有历史判定保留，不自动恢复。
 
+资源政策澄清（2026-10-23，覆盖以上一律等待表述）：用户允许在共享GPU上开展不明显
+干扰其他任务的小规模Engineering/正确性验证；不要求用独占性能环境作为该受控用例
+的前置。第一项仍仅为7.241既有程序，1进程/1 session、无模型/Nsight、GPU子进程硬限
+120秒，不重跑24/72/26项既有检查。共享引起的时间波动不单独判算法错误，但身份、
+必要成员/terminal、实际效果、零节点、Host读回23、独立Raw区间、丢失/容量和关闭门
+全部保留。通过只关闭本例限定正确性缺口，不授性能可比性、完整Q0或Formal。
+
+当前执行方式由用户明确为手工服务器命令；本窗口无已配置目标执行通道，未操作服务器。
+已复用封存bd377c交付索引核定目标设备、6c744bf DLL/SDK/runtime路径与期望hash，
+准备一次只读前置脚本`coe_shared_controlled_precheck_once.ps1`（本地transfer，7405 bytes，
+SHA256 `cf7af7648f3b1beeed867efbd2dfa3833f43b61ab4d34cafc91809d2f5be6ab6`）。
+脚本只写新诊断回执及原始查询日志：目标GPU显存/进程快照、profiling冲突线索、参与卷
+新鲜空间、HEAD/clean、Python和既有库/候选源码实字节。不初始化CUDA/CUPTI，不改
+checkout、不扫描历史YLQ/ACL、不清理/重试/推送。进程名不是无采集冲突证明；自身
+subscriber状态须真实session初始化时核验。历史总容量继续UNKNOWN，未知不算零。
+本地仅核PS5.1语法和语言构造，不称目标机检查通过；现场资源和受控程序产物绑定仍
+待回执，正确性执行NOT_RUN。实现身份仍c8f3dad，文档HEAD不替代执行身份。
+
+最新最高优先级：消费这一次目标前置回执；实际设备/代码/资源/共享约束满足且现场
+执行产物准确绑定后，由用户运行既有受控入口一次，失败即停，不裸跑未绑定程序。
+远端发布仍须另行授权，不自动push/部署。受控通过且资源余量明确后，仅提出一个
+L512/B2/输出2/P实例的实际预算和启动条件，等用户再次确认，不能自动执行。
+512→2048正式重复、1024性能对照、优化收益、8P1/4096及其他时延敏感实验继续暂停；
+不恢复矩阵，不增加collector或新Gate。旧Gate13限定PASS和历史资格/报告均不变。
+
 ## 7.246 同源CUPTI原公式A与COE区间迁移（2026-10-23，历史；当前见7.247）
 
 - [x] 用户将优先级调整为实际COE→扩展A归属；新增独立
@@ -5051,15 +5076,15 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 7.34后续用户回传（原件待收）：0.2首次export PASS，audit因`RAW_TABLE_MISSING:CUPTI_ACTIVITY_KIND_MEMSET` BLOCKED，尚未本地核验实际schema。先据对应版本的按需表规则审计，不默认缺表为空、不重采/重export；若只需分析adapter修复，使用原输入新目录离线复验。Gate8/新Q0仍NOT_RUN。
 - 7.33后续用户回传（原件待收）：07625b7的0.2窄受控capture已结束，run `controlled_20260926T133649Z_8dd7210fc970474eb1b6358a9e91d8cd`，plan/REP生成、capture exit0；未export/analysis/模型。本窗口尚未取得完整目录，不能声称trace语义或文件身份链通过。下一步仅到件只读审计及新run绑定后处理草案；Gate8/新Q0仍NOT_RUN。
 - 7.32验证：37项受控定向通过；本地Python3.12.7 CPU-only全量1169 passed/5 skipped（nvcc编译项），compileall/合同37/37/Canonical7模块/oracle/diff-check通过。不是目标机新native编译或采集资格。
-- 最近更新：`2026-10-22`（7.240）
+- 最近更新：`2026-10-23`（7.247共享资源政策澄清）
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：原DOCX v2.1仍为Pre-Pilot；[重签G12-ROUTEA/0.1.1](gate12_protocol_signed_v0_1_1.json)仅对其随后旧路线A Formal及[收尾边界](gate12_closeout_v0_1_1.md)有效，不覆盖原文，也不授权新CUPTI/COE。新[确认性候选§8](completion_operation_contract_draft_v0_1.md)未签署；旧0.1签署保留。
-- 当前研究阶段：旧Gate13签署0.1.1限定Formal最终PASS保持；新CUPTI/COE完成组件/实例Engineering、bd377c三点Pilot及离线机制收口，正做限定确认性准备，不是新Formal或全Q0。4096及全部目标GPU采集因用户资源暂停，Gate14未启动；旧后处理BLOCKED不恢复。
+- 当前研究阶段：旧Gate13签署0.1.1限定Formal最终PASS保持；新CUPTI/COE完成组件/实例Engineering、bd377c三点Pilot及离线机制收口，不是新Formal或全Q0。7.247允许共享资源下的一次既有受控正确性验证，现场前置待核、执行NOT_RUN；4096及其他时延敏感确认实验仍暂停，Gate14未启动，旧后处理BLOCKED不恢复。
 - 当前工作入口：根目录 `main`；目录约定见 `docs/repository_layout.md`。Gate7历史封存验收执行commit为 `8d64f7580d43d7c8e1cb7a416b459cec8f60b011`，closeout为 `16604d59b05ee6d7e8415f75dbaaa1be3be7cf8a`。N1历史Engineering执行V0为c21d835、Vmarker/V16为d25b4d1；新Pilot首批执行221f46c；审查提交不是新执行身份。
 - 当前数据资格（7.131）：Gate6历史Engineering/Q0保持；[首批/暖机对照](gate11_warmup_policy_review_v0_1.md)及[共同w3 Pilot](gate11_policy_closeout_v0_1.md)仍只作政策依据、不混池/升级。已签署限定Formal60次执行/30条P1质量、归档终态及冻结统计全部接受，见[完整审查](gate13_local_review_v0_1.md)/[最终裁决](gate13_closeout_v0_1.json)；不是普遍测量有效性或完整新Q0认证。UNKNOWN/NOT_ASSESSED与旧资格边界保持。
 - 当前 Gate 状态（7.131）：Gate0～7历史PASS、Gate8限定Engineering PASS、Gate9分域PASS、[Gate10仅选定G1三点一次可行性PASS](gate10_closeout_v0_1.md)、[N1独立Engineering PASS](n1_model_feasibility_closeout_v0_1.md)、[Gate11限定Pilot政策PASS](gate11_policy_closeout_v0_1.md)、[Gate12限定0.1.1重签PASS](gate12_closeout_v0_1_1.md)；[Gate13签署路线A限定PASS](gate13_closeout_v0_1.json)、Gate14 NOT_RUN。容量/精度/稳定性未授，旧报告/UNKNOWN/NOT_ASSESSED保持。
 - 当前新路线数据资格（7.239）：[bd377c来源](cupti_input_pilot_sources_v0_1.json)仅9run/3block/18链限定Pilot，native/runner/DLL为6c744bf、控制/分析bd377c/bridge0.3；不是旧Nsight Formal重复、通用provider资格或无插桩性能。旧批GPU独占UNKNOWN、第二token反例与1024分叉保持。
-- 当前最高优先级（7.246）：审阅同源CUPTI原公式A与COE迁移候选；9run/18链和27窗口已有来源分区/扣减预览，生产A/B与资格不变。受控/8次候选、4096/全部GPU暂停，不打包/清理/G2，不按扩展E变化判性能改善。
+- 当前最高优先级（7.247）：由用户手工返回一次只读目标前置回执，核GPU共享/显存、代码/库/程序身份、采集冲突及新鲜空间后衔接既有120秒受控验证。无新CPU回归/collector/矩阵；远端发布另须授权。Batch实例须受控通过后另审预算并获用户确认；性能确认、8P1/4096继续暂停，不以扩展E变化判性能改善。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -5530,13 +5555,13 @@ checkout、不运行模型/collector；目标资料回传前不为形式增加sc
 
 **7.26覆盖说明：** 已直接读取目标安装盘点回执及四份完整说明，四文件bytes/SHA256本地复核全部一致。CPU sampling lost-events段落不能证明CUDA/NVTX完整性；条件性teardown/flush建议不等于每会话认证；API subset与cuda-trace-all-apis适用性保留询证。组件hash来自服务器回执、非本地二进制复算。已准备[英文草稿及有限决策路线](gate8_nsys_vendor_inquiry_v0_1.md)，未发送。安装搜索结束，服务器无下一操作；不再执行7.25安装指令。无生产/冻结合同变化，无新测试或实验成绩。Q0影响矩阵继续有效但资格未取得；Gate7 PASS、Gate8 NOT_RUN，UNKNOWN阻塞科学验收。
 
-当前安排（7.246覆盖）：统一主稿暂停修订，完成同源原公式A/COE区间迁移的限定预览；
-7.245的逻辑操作约束/COE/terminal独立连接保留，
-不启动优化实验；同源候选A接线不等于完整CUPTI→A资格。512→2048八次候选和受控准备保留不执行，不默认先
-Pilot再同用途Formal。batch/输出仅短设计，无新实现/预算；长输出容量不足风险不借静默扩设施解决。
-旧Gate0～13按限定证据保持；当前CUPTI受控连接的编译/本地文件
-准备与统一正文已完成，实际GPU验证仍NOT_RUN；本地独立参考与原证据骨架继续复用，
-仅保留明确的目标实验差额。EP-COE-01～03仅导航，不是新串行流水线；目标GPU暂停，均非自动执行。
+当前安排（7.247共享资源澄清覆盖）：统一主稿暂停修订；7.246同源候选迁移及7.247
+batch输出2本地接线已完成，三口径和旧资格独立，不重复实现/旧测试。允许先审共享
+GPU上的一次既有受控正确性验证；用户手工执行，现场资源/代码及产物绑定尚待核验，
+实际GPU验证NOT_RUN。受控通过后最多提出一个L512/B2实例，仍须用户确认预算。
+512→2048八次候选、4096和时延敏感验证继续暂停，不默认先Pilot再同用途Formal；
+长输出容量风险不借静默扩设施解决。本地独立参考和已审DLL直接复用，不扩大collector。
+旧Gate0～13按限定证据保持；EP-COE-01～03只导航，不是新流水线，不自动执行/推送。
 Gate14/G2继续后移。原总体顺序`Gate1合同→2 oracle→3 Raw→4 S→5 A/B→6 Q0→7 runner→
 8 Engineering→9～12正式准备→13 N1/G1→14 G2`保留为设计历史，不是接下来直接跑G2的授权。
 
@@ -5553,6 +5578,12 @@ Gate14/G2继续后移。原总体顺序`Gate1合同→2 oracle→3 Raw→4 S→5
 **Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
 ## 8. 计划调整记录
+
+7.247资源澄清（2026-10-23）：用户许可共享GPU下有限Engineering/正确性，不再一律等
+独占。第一项仍为7.241受控程序一次/120秒；先由用户手工回传只读资源和身份快照，
+不把本地编译或查询脚本当目标资格。实际执行尚未发生，设备余量/冲突/现场程序绑定
+待核；无新collector、旧测试重跑或远端推送。Batch另待受控通过、实际预算及用户确认；
+正式性能重复/优化/4096继续暂停，不改变旧冻结、Formal、Raw或历史UNKNOWN/BLOCKED。
 
 7.246（2026-10-23）：用户批准优先接通同源COE→扩展A的区间来源迁移；先单实例后9run，
 不改生产定义/registry或签署协议。27窗口仅为限定事后候选预览，旧Formal/资格不升级；
