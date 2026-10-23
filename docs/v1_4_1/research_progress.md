@@ -81,6 +81,23 @@ L512/B2/输出2/P实例的实际预算和启动条件，等用户再次确认，
 512→2048正式重复、1024性能对照、优化收益、8P1/4096及其他时延敏感实验继续暂停；
 不恢复矩阵，不增加collector或新Gate。旧Gate13限定PASS和历史资格/报告均不变。
 
+前置失败收口（2026-10-23）：原receipt SHA256
+`8f145cb7ace2dba68d3dbd184915bab66d475409da39e67c35cdb03bd75ec24e`一致，已读5条queries
+及10份stdout/stderr。五次EXITED/null被旧Query误报非零，无TIMEOUT记录；第93行throw
+不是根因，原退出码仍UNKNOWN、不补0。本地PS5.1真实cmd退出0/7复现；0.1.1保留进程
+Handle再有界等待，null明确UNKNOWN拒绝。真实0/7、缺exe及超时/未知退出码两个明确
+替身共5通过/0失败/0跳过；未重跑全前置或旧CPU检查，非目标GPU证据。
+有效快照为free15033MiB/util16%、卷free366088892416bytes，三库hash一致；两个GPU
+进程名称权限不足/显存N/A，不证明无冲突。HEAD stdout6c744bf、status空、Python3.11.16，
+不因stdout正确就追补查询成功。候选九源码4缺/3不同/2一致，目标程序未绑定，是独立
+部署前置缺口、不是旧Pilot损坏。原receipt/BLOCKED及全部日志不改，受控仍NOT_RUN。
+修正版`coe_shared_controlled_precheck_v0_1_1.ps1`为7805bytes，SHA256
+`6b72c3d13e30fcd88e7851fafd9e24eea91a84d0975966d9d5fd6ce488268163`；本地审计与回归
+在`coe_shared_precheck_review_v0_1`。后续服务器新生成文件仅写YLQ的transfer新子目录，
+既有checkout/库/Raw不搬迁覆盖。当前先审新受控代码/程序授权部署与身份绑定，不重跑
+整套已取得的前置；真实执行前仅补必需退出状态和新鲜资源事实。本轮无服务器命令、
+GPU/模型执行或推送，不扩collector，不变更原A/COE/E、冻结或历史资格。
+
 ## 7.246 同源CUPTI原公式A与COE区间迁移（2026-10-23，历史；当前见7.247）
 
 - [x] 用户将优先级调整为实际COE→扩展A归属；新增独立
@@ -5084,7 +5101,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前数据资格（7.131）：Gate6历史Engineering/Q0保持；[首批/暖机对照](gate11_warmup_policy_review_v0_1.md)及[共同w3 Pilot](gate11_policy_closeout_v0_1.md)仍只作政策依据、不混池/升级。已签署限定Formal60次执行/30条P1质量、归档终态及冻结统计全部接受，见[完整审查](gate13_local_review_v0_1.md)/[最终裁决](gate13_closeout_v0_1.json)；不是普遍测量有效性或完整新Q0认证。UNKNOWN/NOT_ASSESSED与旧资格边界保持。
 - 当前 Gate 状态（7.131）：Gate0～7历史PASS、Gate8限定Engineering PASS、Gate9分域PASS、[Gate10仅选定G1三点一次可行性PASS](gate10_closeout_v0_1.md)、[N1独立Engineering PASS](n1_model_feasibility_closeout_v0_1.md)、[Gate11限定Pilot政策PASS](gate11_policy_closeout_v0_1.md)、[Gate12限定0.1.1重签PASS](gate12_closeout_v0_1_1.md)；[Gate13签署路线A限定PASS](gate13_closeout_v0_1.json)、Gate14 NOT_RUN。容量/精度/稳定性未授，旧报告/UNKNOWN/NOT_ASSESSED保持。
 - 当前新路线数据资格（7.239）：[bd377c来源](cupti_input_pilot_sources_v0_1.json)仅9run/3block/18链限定Pilot，native/runner/DLL为6c744bf、控制/分析bd377c/bridge0.3；不是旧Nsight Formal重复、通用provider资格或无插桩性能。旧批GPU独占UNKNOWN、第二token反例与1024分叉保持。
-- 当前最高优先级（7.247）：由用户手工返回一次只读目标前置回执，核GPU共享/显存、代码/库/程序身份、采集冲突及新鲜空间后衔接既有120秒受控验证。无新CPU回归/collector/矩阵；远端发布另须授权。Batch实例须受控通过后另审预算并获用户确认；性能确认、8P1/4096继续暂停，不以扩展E变化判性能改善。
+- 当前最高优先级（7.247前置失败收口）：回执已审，查询退出码缺陷已本地最小修复，复用已取得stdout/库hash；真实阻塞为受控候选源码尚未部署及目标程序未绑定，先审授权部署/发布，不重跑全前置。新服务器文件仅写transfer；受控NOT_RUN、Batch另待确认，性能确认/8P1/4096继续暂停。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
@@ -5578,6 +5595,10 @@ Gate14/G2继续后移。原总体顺序`Gate1合同→2 oracle→3 Raw→4 S→5
 **Gate 6 冻结边界（不再产生新任务）：** `final-01`/`final-02`/`final-03` 永久 frozen incomplete，`final-04` 为唯一有效 PASS 证据；不得重跑 Gate 6 GPU collection、synthetic 或 gate aggregation，不回填缺失的 prepare-time sidecar，不对 WDDM/driver/Runtime 作根因归因；`EP-G6-07` 只在需要第二平台时按 Gate 9 重启。Gate 6 清理与诊断周期已关闭。
 
 ## 8. 计划调整记录
+
+7.247前置收口（2026-10-23）：EXITED/null误报已定位并本地修复；5项定向检查通过，
+保留原失败/不可追补退出码和未部署事实。后续新服务器文件仅transfer，不重跑全前置、
+不推送/采集/扩设施，受控NOT_RUN；旧冻结、Formal、Raw及UNKNOWN/BLOCKED不受影响。
 
 7.247资源澄清（2026-10-23）：用户许可共享GPU下有限Engineering/正确性，不再一律等
 独占。第一项仍为7.241受控程序一次/120秒；先由用户手工回传只读资源和身份快照，
