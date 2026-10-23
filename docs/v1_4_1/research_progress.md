@@ -49,6 +49,17 @@ dropped_query_errors均0。这些事实不等于独立审查或完整Q0通过；
 受控/数据质量/消费者准入/完整Q0分别判断。原A/COE/E、Gate13限定PASS、旧资格、Raw、
 UNKNOWN和用户DOCX均保持；本轮仅本地代码及证据记录提交，不推送。
 
+离线实物收口：实现提交`6cbd1db11631dde4303351b7026ca6e19964dd03`；执行仍c8。实际只读
+命令`python -B -m scripts.review_coe_controlled_offline --archive <repair2_once.zip>
+--archive-sha256 680cb2418ee1aa3fd21c4d80f5b4e868df99a7709d3a66769833b42724cf06ed
+--output <coe_controlled_offline_v0_2/derived_v0_2_0>`已消费同一封存原件，保存reference、
+完整correlation分组、scope、新实例证据及BLOCKED审查。review.json SHA256
+`58c43144a17e4e39a5bfcad45ec32875b458e0a319568fb8752921010bfdb74e`；capture SHA256
+`13d1b6f90a28b969a0f6f7260f356df5a7112b9377f07c0456308917a8f7ef7c`。分析源码逐项摘要与
+上述实现Git blob一致，不拿文档HEAD替代分析身份。后续拒绝及5条具体支持缺口如上，
+不输出合格COE、不改原receipt，不因小交集或共享GPU波动判测量失败；没有重采需求的
+新事实。本地syntax/diff、原ZIP及用户DOCX哈希保持检查通过；未推送或运行服务器。
+
 - [x] 结束前置脚本排错；复用原receipt及三库hash，原退出码UNKNOWN不追补。以
   c8f3dad为执行/分析身份、6c744bf为服务器前置及既有collector身份，准备8个本地散件，
   总755035bytes，无新采集ZIP。源增量bundle696660bytes；携带main文档tip ca7c0fb，
