@@ -844,3 +844,71 @@ Request=Prefill+Decode守恒。字段必须叫版本化completion exposure，不
 
 本轮只增加本节与独立模型/定向CPU检查，未重跑旧Gate、完整Q0或GPU；GPU暂停、
 受控目标验证NOT_RUN、原8P1候选和4096暂停不变。本地验证与保全记录见进度7.245。
+
+## 15. 同源CUPTI原公式A分区与COE迁移接线（7.246）
+
+2026-10-23，`cupti-a-coe-migration-preview/0.1.0`，**事后探索性候选预览**。
+本节更新§14.4当时“尚无全窗原子来源”的接线状态，不追改其历史记录。新增
+[独立入口](../../analysis/cupti_a_migration.py)只读同一bd377c封存ZIP；原公式A、COE与
+扩展预算使用相同run、CUPTI时钟及三个半开窗口。这里的“原A”是**用旧公式新算的
+同源候选分区**，不是旧Nsight/Frozen Formal的预算，不拼接或覆盖任何历史A。
+
+来源接线与限制：
+
+- 原A沿用旧分区优先级：合格sync内必要活动→Device wait；sync余段→residual；
+  其余已证API→submit/non-submit；剩余request线程路径→Host。后者不是纯CPU执行。
+  分类复用原registry及已审API22精确查询政策，不修改冻结registry，不以Get前缀或
+  没有activity分类。实际零字节memset保留API预算、逻辑顺序及已审依赖，不伪造activity。
+- 每条Raw API必须对应实际callback/root owner，并检查其**真实ActivityAPI区间**包含于
+  所选owner的真实API区间；嵌套子API不另加预算。越界、缺owner或未知分类使全窗阻断，
+  不扩大owner、不用callback包络补造API时长。保存S的owner/submit来源还须逐项匹配Raw。
+- 复用最后token已准入的局部FIFO成员与提交来源，按每条实际成功stream sync捕获的
+  提交截止投影此前成员；保留已完成成员、不纳入后提交。每条物理sync、runtime/driver
+  父子关联及Host API须双向覆盖，不能凭跨域correlation数字相等或时间邻近选配。
+  这不是重建全部S或授予完整物理W/B，仍受closed-prior、单FIFO、无未记录incoming
+  依赖的原局部假设限制。当前适配还保守拒绝空必要前缀，以及未纳入本窄域的零字节
+  memcpy；不把这种较窄支持范围写成所有完成操作已支持。
+- 嵌套driver同步若只有物理/回调区间、没有真实Host API时间，则整个外层owner为不安全
+  来源：整窗A返回null及记录级gap；重叠局部预览也拒绝。callback采样边界或物理SYNC
+  区间都不能替代所缺Host API边界。未知/unattributed片段不能迁移。
+
+迁移仍严格使用§14.4的`J=union(COE区间)`、`Δ=J\E`、`E_ext=E∪J`；复用既有
+preview_budget作实际扣减。原子来源先分区，跨操作/旧wait去重，每片保留原类别、
+原API/sync ID、必要activity及操作sync引用。原/新API父预算均等于submit+non-submit；
+Request与Prefill+Decode逐类别相等。独立字段`completion_exposure`包括旧wait与新增Δ，
+不能直接将COE加到生产`A_device_wait`或把整个copy墙钟迁移。
+
+实际结果：先完成首个G512端到端，再消费9run/18链，27窗口均得到**全窗来源候选预览**。
+每run只保留一个Raw对象；54个消费成员核hash，未重建已准入S。完整原/新六个叶预算
+（API父类另列）、全部token、signed比较及来源索引见
+[机器可读对照](cupti_a_migration_preview_v0_1.json)。以下Prefill单位ms；本批全部窗口
+`COE∩旧wait=0`，新增Δ=COE，迁移来源均为submit API，其他类别不变：
+
+| block/输入 | 原Device wait | COE / 新增Δ | 扩展Device Exposure |
+|---|---:|---:|---:|
+| 1/512 | 0.016635 | 2.403154 | 2.419789 |
+| 1/1024 | 0.020608 | 3.115148 | 3.135756 |
+| 1/2048 | 0.651326 | 79.349730 | 80.001056 |
+| 2/512 | 0.028962 | 2.338357 | 2.367319 |
+| 2/1024 | 0.425470 | 46.853457 | 47.278927 |
+| 2/2048 | 0.042432 | 90.973368 | 91.015800 |
+| 3/512 | 0.016448 | 1.834358 | 1.850806 |
+| 3/1024 | 0.596734 | 3.299398 | 3.896132 |
+| 3/2048 | 0.026848 | 72.420046 | 72.446894 |
+
+每run有三条窗内物理sync，不能因18条token末尾sync交集都是0，就把其他sync的旧wait
+也填0。首run Request的原预算为H131.099500、submit77.316800、non-submit29.574300、
+wait0.016635、residual0.333165、unattributed0ms；COE union3.211182ms从submit扣除，
+变为74.105618ms，扩展E3.227817ms，总长仍238.340400ms。Prefill与Decode逐项相加吻合。
+
+趋势**不是验收条件**：首token512→2048的新增完成分量ΔCOE为
+76.946576/88.635011/70.585688ms，R为70.513613/80.496420/62.326314ms；本批仍三次为正。
+整个扩展E的signed差另为77.581267/88.648481/70.596088ms，R另为
+71.103774/80.409088/62.262655ms，不把它们与新增分量混同。第二tokenΔCOE仍为
+−0.121856/−0.719481/+2.191571ms，全部保留；1024高值未排除。
+
+验收只针对来源/去重/扣减/守恒：定向字面区间、真实文件链和缺证反例；另用Raw及保存
+成员清单、独立排序union重核实际区间与来源，不把候选自身输出当唯一答案。没有重新
+证明保存S的语义正确性，当前CUPTI来源的目标受控正确性验证仍NOT_RUN。
+本次无生产A/B、collector、runner、模型、GPU或协议变更；只授予此封存数据的候选来源
+预览状态。旧Formal、Gate13限定PASS、Pilot角色、UNKNOWN/BLOCKED及GPU暂停保持。

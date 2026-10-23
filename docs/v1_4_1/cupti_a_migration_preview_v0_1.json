@@ -1,0 +1,2218 @@
+{
+  "schema_version": "cupti-a-coe-migration-preview/0.1.0",
+  "timestamp_duration_unit": "integer_ns_except_signed_ratio_descriptors",
+  "role": "EXPLORATORY_SAME_CUPTI_SOURCE_PREVIEW_NOT_FORMAL_A",
+  "status": "NINE_COMPLETE_WINDOW_SOURCE_PREVIEWS_NOT_FORMAL_A",
+  "original_A_meaning": "New candidate CUPTI source partition with old A precedence; NOT a historical frozen A artifact",
+  "source_index": "cupti_input_pilot_sources_v0_1.json",
+  "archive_sha256": "2b2597669e5a66789daa75e4fba24de3aa23329510310ddd2197b4fe1ce92308",
+  "manifest_sha256": "7de99a3981b26cf8539a29092f88c07eea51c7a919bf5742ad99b267df3283dc",
+  "source_index_sha256": "4bb1d33fcf648bf13e63b0ddc6ca3471173c134116cd0493823177e7155289e9",
+  "source_execution": {
+    "native": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+    "control": "bd377c860faf16f9ac5cab1e85b99df101cc3676"
+  },
+  "analysis_sources": {
+    "analysis/cupti_a_migration.py": "7bc96b8bd4c568a7d9e5b739e5c95730b2dbed25bf0ba8660766142ccb542ce4",
+    "analysis/coe_completion_model.py": "1590bd28eceecc93cc90a6ce333c8e09e8f8a6cab42ac869cd7b20881dfb401c",
+    "analysis/coe_candidate.py": "3b9a5d85a8363ee6b29245d3a0593b4a74d97e156b6dae05d4c44368669bbd4e",
+    "scripts/analyze_completion_operation_candidate.py": "65719b4f768fde81dbbd1b7755919866eab65214a519b2cfee71caf3335e20ab",
+    "exposedpath_v141/a_accounting.py": "bb28fa3c93d33609021b6c4fb4209f0d9f2473fecc98a7afa6d259d6ed765725",
+    "exposedpath_v141/a_api_classification.py": "3e6688a54c4f6c6c97ba550eab9ec376cfeacc2fd6dd3164b00afc949792641f",
+    "exposedpath_v141/cupti_driver_queries.py": "56bdf101c2337af2bf4686f3f32c70fcaf13f2f24e663144d97a88287adee0ee",
+    "exposedpath_v141/submit_effect_bridge.py": "0d050b2cdb5326dd52cbaf13112e508351159adf1fbd8d6d1bdd85bbb00b92e0",
+    "exposedpath_v141/intervals.py": "db93d184415cd5ddf854c121894b21f2cdf6e10eb48c4aa97e13cae01f5a2afa",
+    "docs/v1_4_1/contracts/a_api_registry_v0_1.json": "e3b9b87b71e02101690012fc322bb7f78e4e902c08ac10bd7130cd8ea0fbbe7b"
+  },
+  "derived_artifact": {
+    "path": ".local/diagnostics/cupti_a_migration_v0_1/all_release/same_source_migration.json",
+    "bytes": 8588239,
+    "sha256": "ee395a5fca2adf1594a871779f2aa45ea268a36e795bab1cf1ea0fd052fa7ace"
+  },
+  "independent_raw_recheck": {
+    "path": ".local/diagnostics/cupti_a_migration_v0_1/all_release/raw_interval_review.json",
+    "sha256": "3fc998b9e69ef4acfac204d7a35bc4a55510f31269b4d564b53663af7ea55e07",
+    "status": "PASS_FINITE_RAW_ARITHMETIC_AND_SOURCE_RECHECK_NOT_NEW_S"
+  },
+  "counts": {
+    "runs": 9,
+    "operations": 18,
+    "windows": 27,
+    "complete_blocks": 3,
+    "blocked": 0,
+    "consumed_source_files": 54
+  },
+  "interpretation": {
+    "extended_device": "union(original_device_wait, all_admitted_COE_intervals)",
+    "delta": "COE_union_minus_original_wait",
+    "new_component": "NECESSARY_ACTIVITY_DURING_COMPLETION_NOT_PURE_BLOCKING",
+    "full_physical_W_qualified": false,
+    "production_A_B_changed": false,
+    "formal_eligible": false,
+    "stage": "Posthoc exploratory re-accounting of Pilot originals, no role upgrade"
+  },
+  "runs": [
+    {
+      "run_id": "cupti-input-bd377c860faf-b1-G512P-pass1",
+      "block": 1,
+      "input_tokens": 512,
+      "raw_sha256": "41d2dd7f3ebbda7828b3dcc7f12a10822490c19fd39ecf4f486a136e317d0d88",
+      "status": "COMPLETE_WINDOW_SOURCE_PREVIEW_NOT_FORMAL",
+      "windows": [
+        {
+          "name": "Request",
+          "window_ns": [
+            2511291939166600,
+            2511292177507000
+          ],
+          "wall_ns": 238340400,
+          "original_budgets_ns": {
+            "host": 131099500,
+            "submit": 77316800,
+            "non_submit": 29574300,
+            "device_wait": 16635,
+            "residual": 333165,
+            "unattributed": 0
+          },
+          "coe_union_ns": 3211182,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 3211182,
+          "migration_source_ns": {
+            "submit": 3211182
+          },
+          "extended_budgets_ns": {
+            "host": 131099500,
+            "submit": 74105618,
+            "non_submit": 29574300,
+            "residual": 333165,
+            "unattributed": 0,
+            "completion_exposure": 3227817
+          },
+          "original_atom_count": 113966,
+          "original_atom_sha256": "707534aacf633c418f73abb9958092d4c58209baa61d43a7377f27678a251baf",
+          "cuda_api_original_ns": 106891100,
+          "cuda_api_extended_ns": 103679918,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Prefill",
+          "window_ns": [
+            2511291939166600,
+            2511292071788500
+          ],
+          "wall_ns": 132621900,
+          "original_budgets_ns": {
+            "host": 66826900,
+            "submit": 48826700,
+            "non_submit": 16626100,
+            "device_wait": 16635,
+            "residual": 325565,
+            "unattributed": 0
+          },
+          "coe_union_ns": 2403154,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 2403154,
+          "migration_source_ns": {
+            "submit": 2403154
+          },
+          "extended_budgets_ns": {
+            "host": 66826900,
+            "submit": 46423546,
+            "non_submit": 16626100,
+            "residual": 325565,
+            "unattributed": 0,
+            "completion_exposure": 2419789
+          },
+          "original_atom_count": 60542,
+          "original_atom_sha256": "34b607b4c12e1fa555cf3ac90ac71928a3a6eacf0cab1d96b83a7247b6d2ee26",
+          "cuda_api_original_ns": 65452800,
+          "cuda_api_extended_ns": 63049646,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Decode",
+          "window_ns": [
+            2511292071788500,
+            2511292177507000
+          ],
+          "wall_ns": 105718500,
+          "original_budgets_ns": {
+            "host": 64272600,
+            "submit": 28490100,
+            "non_submit": 12948200,
+            "device_wait": 0,
+            "residual": 7600,
+            "unattributed": 0
+          },
+          "coe_union_ns": 808028,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 808028,
+          "migration_source_ns": {
+            "submit": 808028
+          },
+          "extended_budgets_ns": {
+            "host": 64272600,
+            "submit": 27682072,
+            "non_submit": 12948200,
+            "residual": 7600,
+            "unattributed": 0,
+            "completion_exposure": 808028
+          },
+          "original_atom_count": 53425,
+          "original_atom_sha256": "e30f59b2092e518008eda01090883c60aefdfa7dd3a9ac63acb09dd2d082c0ec",
+          "cuda_api_original_ns": 41438300,
+          "cuda_api_extended_ns": 40630272,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        }
+      ],
+      "operations": [
+        {
+          "copy_api_id": "record:30593",
+          "sync_api_id": "record:30595",
+          "coe_ns": 2403154,
+          "coe_by_api_part_ns": {
+            "copy": 2403154,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 39417788,
+          "phase_wall_ns": 132621900,
+          "operation_wall_ns": 5060900,
+          "uncovered_ns": 2657746,
+          "terminal_id": "record:30592",
+          "member_count": 1905
+        },
+        {
+          "copy_api_id": "record:57551",
+          "sync_api_id": "record:57553",
+          "coe_ns": 808028,
+          "coe_by_api_part_ns": {
+            "copy": 808028,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 11475659,
+          "phase_wall_ns": 105718500,
+          "operation_wall_ns": 1334300,
+          "uncovered_ns": 526272,
+          "terminal_id": "record:57550",
+          "member_count": 3497
+        }
+      ],
+      "owner_API_count": 54037,
+      "sync_projection_count": 3,
+      "sync_projections": [
+        {
+          "record_id": "record:132",
+          "api_id": "record:133",
+          "host_interval_ns": [
+            2511291941042800,
+            2511291941371400
+          ],
+          "physical_interval_ns": [
+            2511291941044300,
+            2511291941370200
+          ],
+          "terminal_ids": [
+            "record:130"
+          ],
+          "old_wait_ns": 16635,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:30594",
+          "api_id": "record:30595",
+          "host_interval_ns": [
+            2511292069393100,
+            2511292069406700
+          ],
+          "physical_interval_ns": [
+            2511292069395300,
+            2511292069402500
+          ],
+          "terminal_ids": [
+            "record:30592"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:57552",
+          "api_id": "record:57553",
+          "host_interval_ns": [
+            2511292176235800,
+            2511292176243400
+          ],
+          "physical_interval_ns": [
+            2511292176237700,
+            2511292176243000
+          ],
+          "terminal_ids": [
+            "record:57550"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        }
+      ]
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b1-G1024P-pass1",
+      "block": 1,
+      "input_tokens": 1024,
+      "raw_sha256": "17638a94ab3ec7f705b5366e65a88ba26a791986b5378e45061d1bbf78a190b0",
+      "status": "COMPLETE_WINDOW_SOURCE_PREVIEW_NOT_FORMAL",
+      "windows": [
+        {
+          "name": "Request",
+          "window_ns": [
+            2511361232795400,
+            2511361427931300
+          ],
+          "wall_ns": 195135900,
+          "original_budgets_ns": {
+            "host": 109269800,
+            "submit": 61499700,
+            "non_submit": 24041300,
+            "device_wait": 20608,
+            "residual": 304492,
+            "unattributed": 0
+          },
+          "coe_union_ns": 4303078,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 4303078,
+          "migration_source_ns": {
+            "submit": 4303078
+          },
+          "extended_budgets_ns": {
+            "host": 109269800,
+            "submit": 57196622,
+            "non_submit": 24041300,
+            "residual": 304492,
+            "unattributed": 0,
+            "completion_exposure": 4323686
+          },
+          "original_atom_count": 114233,
+          "original_atom_sha256": "ac52994d749426dc74ba94fc00afa16c57262fb3d793f6a94eee2b88e105bd77",
+          "cuda_api_original_ns": 85541000,
+          "cuda_api_extended_ns": 81237922,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Prefill",
+          "window_ns": [
+            2511361232795400,
+            2511361330391600
+          ],
+          "wall_ns": 97596200,
+          "original_budgets_ns": {
+            "host": 54584600,
+            "submit": 30831400,
+            "non_submit": 11862500,
+            "device_wait": 20608,
+            "residual": 297092,
+            "unattributed": 0
+          },
+          "coe_union_ns": 3115148,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 3115148,
+          "migration_source_ns": {
+            "submit": 3115148
+          },
+          "extended_budgets_ns": {
+            "host": 54584600,
+            "submit": 27716252,
+            "non_submit": 11862500,
+            "residual": 297092,
+            "unattributed": 0,
+            "completion_exposure": 3135756
+          },
+          "original_atom_count": 60616,
+          "original_atom_sha256": "e89a0d96e969e341dccd1217819c9b7192a4ae45465a794ea40b48eec18ba722",
+          "cuda_api_original_ns": 42693900,
+          "cuda_api_extended_ns": 39578752,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Decode",
+          "window_ns": [
+            2511361330391600,
+            2511361427931300
+          ],
+          "wall_ns": 97539700,
+          "original_budgets_ns": {
+            "host": 54685200,
+            "submit": 30668300,
+            "non_submit": 12178800,
+            "device_wait": 0,
+            "residual": 7400,
+            "unattributed": 0
+          },
+          "coe_union_ns": 1187930,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 1187930,
+          "migration_source_ns": {
+            "submit": 1187930
+          },
+          "extended_budgets_ns": {
+            "host": 54685200,
+            "submit": 29480370,
+            "non_submit": 12178800,
+            "residual": 7400,
+            "unattributed": 0,
+            "completion_exposure": 1187930
+          },
+          "original_atom_count": 53618,
+          "original_atom_sha256": "1af547a15fd8aab8ee949519d4bc687cfaf5d0890e9e2db854be1b009f6b75fc",
+          "cuda_api_original_ns": 42847100,
+          "cuda_api_extended_ns": 41659170,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        }
+      ],
+      "operations": [
+        {
+          "copy_api_id": "record:30649",
+          "sync_api_id": "record:30651",
+          "coe_ns": 3115148,
+          "coe_by_api_part_ns": {
+            "copy": 3115148,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 57877385,
+          "phase_wall_ns": 97596200,
+          "operation_wall_ns": 3397200,
+          "uncovered_ns": 282052,
+          "terminal_id": "record:30648",
+          "member_count": 1793
+        },
+        {
+          "copy_api_id": "record:57579",
+          "sync_api_id": "record:57581",
+          "coe_ns": 1187930,
+          "coe_by_api_part_ns": {
+            "copy": 1187930,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 11725829,
+          "phase_wall_ns": 97539700,
+          "operation_wall_ns": 2184600,
+          "uncovered_ns": 996670,
+          "terminal_id": "record:57578",
+          "member_count": 3385
+        }
+      ],
+      "owner_API_count": 54177,
+      "sync_projection_count": 3,
+      "sync_projections": [
+        {
+          "record_id": "record:132",
+          "api_id": "record:133",
+          "host_interval_ns": [
+            2511361234349000,
+            2511361234659400
+          ],
+          "physical_interval_ns": [
+            2511361234350300,
+            2511361234658700
+          ],
+          "terminal_ids": [
+            "record:130"
+          ],
+          "old_wait_ns": 20608,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:30650",
+          "api_id": "record:30651",
+          "host_interval_ns": [
+            2511361328983300,
+            2511361328990600
+          ],
+          "physical_interval_ns": [
+            2511361328985600,
+            2511361328990200
+          ],
+          "terminal_ids": [
+            "record:30648"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:57580",
+          "api_id": "record:57581",
+          "host_interval_ns": [
+            2511361426527800,
+            2511361426535200
+          ],
+          "physical_interval_ns": [
+            2511361426530000,
+            2511361426534800
+          ],
+          "terminal_ids": [
+            "record:57578"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        }
+      ]
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b1-G2048P-pass1",
+      "block": 1,
+      "input_tokens": 2048,
+      "raw_sha256": "fadc99eaaf65d6e06cc3417bd29abc9c0d192e96d36c1eb96aa8363109bb6092",
+      "status": "COMPLETE_WINDOW_SOURCE_PREVIEW_NOT_FORMAL",
+      "windows": [
+        {
+          "name": "Request",
+          "window_ns": [
+            2511427588290800,
+            2511427883388000
+          ],
+          "wall_ns": 295097200,
+          "original_budgets_ns": {
+            "host": 105111900,
+            "submit": 164871600,
+            "non_submit": 24320200,
+            "device_wait": 651326,
+            "residual": 142174,
+            "unattributed": 0
+          },
+          "coe_union_ns": 80035902,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 80035902,
+          "migration_source_ns": {
+            "submit": 80035902
+          },
+          "extended_budgets_ns": {
+            "host": 105111900,
+            "submit": 84835698,
+            "non_submit": 24320200,
+            "residual": 142174,
+            "unattributed": 0,
+            "completion_exposure": 80687228
+          },
+          "original_atom_count": 113753,
+          "original_atom_sha256": "e610d60643f5c980a243f80ec5bbb21f42d97010b85f170a1bb002dee7bcb107",
+          "cuda_api_original_ns": 189191800,
+          "cuda_api_extended_ns": 109155898,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Prefill",
+          "window_ns": [
+            2511427588290800,
+            2511427795333800
+          ],
+          "wall_ns": 207043000,
+          "original_budgets_ns": {
+            "host": 52714100,
+            "submit": 141856300,
+            "non_submit": 11686900,
+            "device_wait": 651326,
+            "residual": 134374,
+            "unattributed": 0
+          },
+          "coe_union_ns": 79349730,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 79349730,
+          "migration_source_ns": {
+            "submit": 79349730
+          },
+          "extended_budgets_ns": {
+            "host": 52714100,
+            "submit": 62506570,
+            "non_submit": 11686900,
+            "residual": 134374,
+            "unattributed": 0,
+            "completion_exposure": 80001056
+          },
+          "original_atom_count": 59999,
+          "original_atom_sha256": "c7374656d1d24aa2b1e13e0d0b0e84c901902354b5522d112b22fd6c7a317901",
+          "cuda_api_original_ns": 153543200,
+          "cuda_api_extended_ns": 74193470,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Decode",
+          "window_ns": [
+            2511427795333800,
+            2511427883388000
+          ],
+          "wall_ns": 88054200,
+          "original_budgets_ns": {
+            "host": 52397800,
+            "submit": 23015300,
+            "non_submit": 12633300,
+            "device_wait": 0,
+            "residual": 7800,
+            "unattributed": 0
+          },
+          "coe_union_ns": 686172,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 686172,
+          "migration_source_ns": {
+            "submit": 686172
+          },
+          "extended_budgets_ns": {
+            "host": 52397800,
+            "submit": 22329128,
+            "non_submit": 12633300,
+            "residual": 7800,
+            "unattributed": 0,
+            "completion_exposure": 686172
+          },
+          "original_atom_count": 53755,
+          "original_atom_sha256": "183754e28aa53d5b3ec6ac0892a5390481edaf4b2a21ccabc2b8cdf64f7d18f9",
+          "cuda_api_original_ns": 35648600,
+          "cuda_api_extended_ns": 34962428,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        }
+      ],
+      "operations": [
+        {
+          "copy_api_id": "record:30229",
+          "sync_api_id": "record:30231",
+          "coe_ns": 79349730,
+          "coe_by_api_part_ns": {
+            "copy": 79349730,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 144934612,
+          "phase_wall_ns": 207043000,
+          "operation_wall_ns": 120935900,
+          "uncovered_ns": 41586170,
+          "terminal_id": "record:30228",
+          "member_count": 1793
+        },
+        {
+          "copy_api_id": "record:57159",
+          "sync_api_id": "record:57161",
+          "coe_ns": 686172,
+          "coe_by_api_part_ns": {
+            "copy": 686172,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 10255673,
+          "phase_wall_ns": 88054200,
+          "operation_wall_ns": 1540100,
+          "uncovered_ns": 853928,
+          "terminal_id": "record:57158",
+          "member_count": 3385
+        }
+      ],
+      "owner_API_count": 53757,
+      "sync_projection_count": 3,
+      "sync_projections": [
+        {
+          "record_id": "record:132",
+          "api_id": "record:133",
+          "host_interval_ns": [
+            2511427589633500,
+            2511427590403600
+          ],
+          "physical_interval_ns": [
+            2511427589635000,
+            2511427590402700
+          ],
+          "terminal_ids": [
+            "record:130"
+          ],
+          "old_wait_ns": 651326,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:30230",
+          "api_id": "record:30231",
+          "host_interval_ns": [
+            2511427793296800,
+            2511427793312400
+          ],
+          "physical_interval_ns": [
+            2511427793302300,
+            2511427793311900
+          ],
+          "terminal_ids": [
+            "record:30228"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:57160",
+          "api_id": "record:57161",
+          "host_interval_ns": [
+            2511427882222200,
+            2511427882230000
+          ],
+          "physical_interval_ns": [
+            2511427882224200,
+            2511427882229700
+          ],
+          "terminal_ids": [
+            "record:57158"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        }
+      ]
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b2-G1024P-pass1",
+      "block": 2,
+      "input_tokens": 1024,
+      "raw_sha256": "fb335c740e7820a43d5e206fb33f802f727bd3a38da51d22351bf14500eae0ae",
+      "status": "COMPLETE_WINDOW_SOURCE_PREVIEW_NOT_FORMAL",
+      "windows": [
+        {
+          "name": "Request",
+          "window_ns": [
+            2511494376706700,
+            2511494723975900
+          ],
+          "wall_ns": 347269200,
+          "original_budgets_ns": {
+            "host": 101609800,
+            "submit": 212485900,
+            "non_submit": 22391600,
+            "device_wait": 425470,
+            "residual": 10356430,
+            "unattributed": 0
+          },
+          "coe_union_ns": 47738964,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 47738964,
+          "migration_source_ns": {
+            "submit": 47738964
+          },
+          "extended_budgets_ns": {
+            "host": 101609800,
+            "submit": 164746936,
+            "non_submit": 22391600,
+            "residual": 10356430,
+            "unattributed": 0,
+            "completion_exposure": 48164434
+          },
+          "original_atom_count": 113932,
+          "original_atom_sha256": "d6d07ef59b3470bb0d9bd9dcdc60ecf42ed3a2be2808fe62077e4d80b0229096",
+          "cuda_api_original_ns": 234877500,
+          "cuda_api_extended_ns": 187138536,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Prefill",
+          "window_ns": [
+            2511494376706700,
+            2511494638370600
+          ],
+          "wall_ns": 261663900,
+          "original_budgets_ns": {
+            "host": 53178900,
+            "submit": 185586100,
+            "non_submit": 12125200,
+            "device_wait": 425470,
+            "residual": 10348230,
+            "unattributed": 0
+          },
+          "coe_union_ns": 46853457,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 46853457,
+          "migration_source_ns": {
+            "submit": 46853457
+          },
+          "extended_budgets_ns": {
+            "host": 53178900,
+            "submit": 138732643,
+            "non_submit": 12125200,
+            "residual": 10348230,
+            "unattributed": 0,
+            "completion_exposure": 47278927
+          },
+          "original_atom_count": 60666,
+          "original_atom_sha256": "4b3b81e53780fea53c6f67ad9101bafc847d9ae6d2f7deba0f94f64ac56a08be",
+          "cuda_api_original_ns": 197711300,
+          "cuda_api_extended_ns": 150857843,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Decode",
+          "window_ns": [
+            2511494638370600,
+            2511494723975900
+          ],
+          "wall_ns": 85605300,
+          "original_budgets_ns": {
+            "host": 48430900,
+            "submit": 26899800,
+            "non_submit": 10266400,
+            "device_wait": 0,
+            "residual": 8200,
+            "unattributed": 0
+          },
+          "coe_union_ns": 885507,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 885507,
+          "migration_source_ns": {
+            "submit": 885507
+          },
+          "extended_budgets_ns": {
+            "host": 48430900,
+            "submit": 26014293,
+            "non_submit": 10266400,
+            "residual": 8200,
+            "unattributed": 0,
+            "completion_exposure": 885507
+          },
+          "original_atom_count": 53267,
+          "original_atom_sha256": "48ae22754e62e43dd863b451d2170f8a5f77e24c57afd1b2bf3887698254c6c6",
+          "cuda_api_original_ns": 37166200,
+          "cuda_api_extended_ns": 36280693,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        }
+      ],
+      "operations": [
+        {
+          "copy_api_id": "record:30649",
+          "sync_api_id": "record:30651",
+          "coe_ns": 46853457,
+          "coe_by_api_part_ns": {
+            "copy": 46853457,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 68586652,
+          "phase_wall_ns": 261663900,
+          "operation_wall_ns": 159302500,
+          "uncovered_ns": 112449043,
+          "terminal_id": "record:30648",
+          "member_count": 1793
+        },
+        {
+          "copy_api_id": "record:57579",
+          "sync_api_id": "record:57581",
+          "coe_ns": 885507,
+          "coe_by_api_part_ns": {
+            "copy": 885507,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 15111987,
+          "phase_wall_ns": 85605300,
+          "operation_wall_ns": 1763100,
+          "uncovered_ns": 877593,
+          "terminal_id": "record:57578",
+          "member_count": 3385
+        }
+      ],
+      "owner_API_count": 54177,
+      "sync_projection_count": 3,
+      "sync_projections": [
+        {
+          "record_id": "record:132",
+          "api_id": "record:133",
+          "host_interval_ns": [
+            2511494377869900,
+            2511494388629100
+          ],
+          "physical_interval_ns": [
+            2511494377871100,
+            2511494388626200
+          ],
+          "terminal_ids": [
+            "record:130"
+          ],
+          "old_wait_ns": 425470,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:30650",
+          "api_id": "record:30651",
+          "host_interval_ns": [
+            2511494636374800,
+            2511494636389300
+          ],
+          "physical_interval_ns": [
+            2511494636378600,
+            2511494636388800
+          ],
+          "terminal_ids": [
+            "record:30648"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:57580",
+          "api_id": "record:57581",
+          "host_interval_ns": [
+            2511494722760300,
+            2511494722768500
+          ],
+          "physical_interval_ns": [
+            2511494722762000,
+            2511494722768100
+          ],
+          "terminal_ids": [
+            "record:57578"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        }
+      ]
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b2-G2048P-pass1",
+      "block": 2,
+      "input_tokens": 2048,
+      "raw_sha256": "91c1ba1a1c81d7644a37bac1fd9018f031e952bc51f7c83378a8a72e24f5d3a3",
+      "status": "COMPLETE_WINDOW_SOURCE_PREVIEW_NOT_FORMAL",
+      "windows": [
+        {
+          "name": "Request",
+          "window_ns": [
+            2511566301852400,
+            2511566585672300
+          ],
+          "wall_ns": 283819900,
+          "original_budgets_ns": {
+            "host": 100255000,
+            "submit": 160795700,
+            "non_submit": 21962200,
+            "device_wait": 42432,
+            "residual": 764568,
+            "unattributed": 0
+          },
+          "coe_union_ns": 91567351,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 91567351,
+          "migration_source_ns": {
+            "submit": 91567351
+          },
+          "extended_budgets_ns": {
+            "host": 100255000,
+            "submit": 69228349,
+            "non_submit": 21962200,
+            "residual": 764568,
+            "unattributed": 0,
+            "completion_exposure": 91609783
+          },
+          "original_atom_count": 113024,
+          "original_atom_sha256": "db73f0ff2ad19905c2f172ed4f5692a15e0cb61c829af149e45a13bb4a3e4547",
+          "cuda_api_original_ns": 182757900,
+          "cuda_api_extended_ns": 91190549,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Prefill",
+          "window_ns": [
+            2511566301852400,
+            2511566500668000
+          ],
+          "wall_ns": 198815600,
+          "original_budgets_ns": {
+            "host": 49090800,
+            "submit": 138023800,
+            "non_submit": 10900900,
+            "device_wait": 42432,
+            "residual": 757668,
+            "unattributed": 0
+          },
+          "coe_union_ns": 90973368,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 90973368,
+          "migration_source_ns": {
+            "submit": 90973368
+          },
+          "extended_budgets_ns": {
+            "host": 49090800,
+            "submit": 47050432,
+            "non_submit": 10900900,
+            "residual": 757668,
+            "unattributed": 0,
+            "completion_exposure": 91015800
+          },
+          "original_atom_count": 59784,
+          "original_atom_sha256": "4358aed66af9d7ee44924c709185cec1a3a73cfcaefe1326a717adf3255c3711",
+          "cuda_api_original_ns": 148924700,
+          "cuda_api_extended_ns": 57951332,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Decode",
+          "window_ns": [
+            2511566500668000,
+            2511566585672300
+          ],
+          "wall_ns": 85004300,
+          "original_budgets_ns": {
+            "host": 51164200,
+            "submit": 22771900,
+            "non_submit": 11061300,
+            "device_wait": 0,
+            "residual": 6900,
+            "unattributed": 0
+          },
+          "coe_union_ns": 593983,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 593983,
+          "migration_source_ns": {
+            "submit": 593983
+          },
+          "extended_budgets_ns": {
+            "host": 51164200,
+            "submit": 22177917,
+            "non_submit": 11061300,
+            "residual": 6900,
+            "unattributed": 0,
+            "completion_exposure": 593983
+          },
+          "original_atom_count": 53241,
+          "original_atom_sha256": "b32685cefd31489ebbe5fd8c3ece62ae0b6c52534eea62146a0423dda4dbdb20",
+          "cuda_api_original_ns": 33833200,
+          "cuda_api_extended_ns": 33239217,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        }
+      ],
+      "operations": [
+        {
+          "copy_api_id": "record:30229",
+          "sync_api_id": "record:30231",
+          "coe_ns": 90973368,
+          "coe_by_api_part_ns": {
+            "copy": 90973368,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 156330307,
+          "phase_wall_ns": 198815600,
+          "operation_wall_ns": 115610400,
+          "uncovered_ns": 24637032,
+          "terminal_id": "record:30228",
+          "member_count": 1793
+        },
+        {
+          "copy_api_id": "record:57159",
+          "sync_api_id": "record:57161",
+          "coe_ns": 593983,
+          "coe_by_api_part_ns": {
+            "copy": 593983,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 12446774,
+          "phase_wall_ns": 85004300,
+          "operation_wall_ns": 1551600,
+          "uncovered_ns": 957617,
+          "terminal_id": "record:57158",
+          "member_count": 3385
+        }
+      ],
+      "owner_API_count": 53757,
+      "sync_projection_count": 3,
+      "sync_projections": [
+        {
+          "record_id": "record:132",
+          "api_id": "record:133",
+          "host_interval_ns": [
+            2511566303146000,
+            2511566303930100
+          ],
+          "physical_interval_ns": [
+            2511566303149800,
+            2511566303929300
+          ],
+          "terminal_ids": [
+            "record:130"
+          ],
+          "old_wait_ns": 42432,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:30230",
+          "api_id": "record:30231",
+          "host_interval_ns": [
+            2511566498552800,
+            2511566498568800
+          ],
+          "physical_interval_ns": [
+            2511566498557400,
+            2511566498568400
+          ],
+          "terminal_ids": [
+            "record:30228"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:57160",
+          "api_id": "record:57161",
+          "host_interval_ns": [
+            2511566584245100,
+            2511566584252000
+          ],
+          "physical_interval_ns": [
+            2511566584246900,
+            2511566584251600
+          ],
+          "terminal_ids": [
+            "record:57158"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        }
+      ]
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b2-G512P-pass1",
+      "block": 2,
+      "input_tokens": 512,
+      "raw_sha256": "e2dacf86f9e18925589aa94bab52ee5c2e4d875f62f446b8d8f9f2546a8fb661",
+      "status": "COMPLETE_WINDOW_SOURCE_PREVIEW_NOT_FORMAL",
+      "windows": [
+        {
+          "name": "Request",
+          "window_ns": [
+            2511636139340500,
+            2511636328346500
+          ],
+          "wall_ns": 189006000,
+          "original_budgets_ns": {
+            "host": 105065300,
+            "submit": 59638800,
+            "non_submit": 23836000,
+            "device_wait": 28962,
+            "residual": 436938,
+            "unattributed": 0
+          },
+          "coe_union_ns": 3651821,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 3651821,
+          "migration_source_ns": {
+            "submit": 3651821
+          },
+          "extended_budgets_ns": {
+            "host": 105065300,
+            "submit": 55986979,
+            "non_submit": 23836000,
+            "residual": 436938,
+            "unattributed": 0,
+            "completion_exposure": 3680783
+          },
+          "original_atom_count": 114226,
+          "original_atom_sha256": "81214745b3dbace877af5093bfbc28096b97c940fbba21967e066d8a414aba55",
+          "cuda_api_original_ns": 83474800,
+          "cuda_api_extended_ns": 79822979,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Prefill",
+          "window_ns": [
+            2511636139340500,
+            2511636241857300
+          ],
+          "wall_ns": 102516800,
+          "original_budgets_ns": {
+            "host": 56658100,
+            "submit": 32937700,
+            "non_submit": 12461900,
+            "device_wait": 28962,
+            "residual": 430138,
+            "unattributed": 0
+          },
+          "coe_union_ns": 2338357,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 2338357,
+          "migration_source_ns": {
+            "submit": 2338357
+          },
+          "extended_budgets_ns": {
+            "host": 56658100,
+            "submit": 30599343,
+            "non_submit": 12461900,
+            "residual": 430138,
+            "unattributed": 0,
+            "completion_exposure": 2367319
+          },
+          "original_atom_count": 60691,
+          "original_atom_sha256": "676b34b6e99214ec0275b4631212d7b274bdc6a776a6634fa46b878f7c9fbc3c",
+          "cuda_api_original_ns": 45399600,
+          "cuda_api_extended_ns": 43061243,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Decode",
+          "window_ns": [
+            2511636241857300,
+            2511636328346500
+          ],
+          "wall_ns": 86489200,
+          "original_budgets_ns": {
+            "host": 48407200,
+            "submit": 26701100,
+            "non_submit": 11374100,
+            "device_wait": 0,
+            "residual": 6800,
+            "unattributed": 0
+          },
+          "coe_union_ns": 1313464,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 1313464,
+          "migration_source_ns": {
+            "submit": 1313464
+          },
+          "extended_budgets_ns": {
+            "host": 48407200,
+            "submit": 25387636,
+            "non_submit": 11374100,
+            "residual": 6800,
+            "unattributed": 0,
+            "completion_exposure": 1313464
+          },
+          "original_atom_count": 53536,
+          "original_atom_sha256": "2c4123448b5e8ee64eed69cc991083fc6cafbe5c4f2df72cefc7c316d2eaa8c0",
+          "cuda_api_original_ns": 38075200,
+          "cuda_api_extended_ns": 36761736,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        }
+      ],
+      "operations": [
+        {
+          "copy_api_id": "record:30593",
+          "sync_api_id": "record:30595",
+          "coe_ns": 2338357,
+          "coe_by_api_part_ns": {
+            "copy": 2338357,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 34891465,
+          "phase_wall_ns": 102516800,
+          "operation_wall_ns": 2805900,
+          "uncovered_ns": 467543,
+          "terminal_id": "record:30592",
+          "member_count": 1905
+        },
+        {
+          "copy_api_id": "record:57551",
+          "sync_api_id": "record:57553",
+          "coe_ns": 1313464,
+          "coe_by_api_part_ns": {
+            "copy": 1313464,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 15588007,
+          "phase_wall_ns": 86489200,
+          "operation_wall_ns": 1774100,
+          "uncovered_ns": 460636,
+          "terminal_id": "record:57550",
+          "member_count": 3497
+        }
+      ],
+      "owner_API_count": 54037,
+      "sync_projection_count": 3,
+      "sync_projections": [
+        {
+          "record_id": "record:132",
+          "api_id": "record:133",
+          "host_interval_ns": [
+            2511636140674500,
+            2511636141125400
+          ],
+          "physical_interval_ns": [
+            2511636140676100,
+            2511636141124500
+          ],
+          "terminal_ids": [
+            "record:130"
+          ],
+          "old_wait_ns": 28962,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:30594",
+          "api_id": "record:30595",
+          "host_interval_ns": [
+            2511636240147700,
+            2511636240155900
+          ],
+          "physical_interval_ns": [
+            2511636240149500,
+            2511636240155500
+          ],
+          "terminal_ids": [
+            "record:30592"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:57552",
+          "api_id": "record:57553",
+          "host_interval_ns": [
+            2511636327163100,
+            2511636327169900
+          ],
+          "physical_interval_ns": [
+            2511636327164800,
+            2511636327169500
+          ],
+          "terminal_ids": [
+            "record:57550"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        }
+      ]
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b3-G2048P-pass1",
+      "block": 3,
+      "input_tokens": 2048,
+      "raw_sha256": "8c78e730b0901713b5810179ca38a8707ae48b4e2da06a4c9184add73e40b20c",
+      "status": "COMPLETE_WINDOW_SOURCE_PREVIEW_NOT_FORMAL",
+      "windows": [
+        {
+          "name": "Request",
+          "window_ns": [
+            2511702734739900,
+            2511703031435900
+          ],
+          "wall_ns": 296696000,
+          "original_budgets_ns": {
+            "host": 110714900,
+            "submit": 158426400,
+            "non_submit": 27410200,
+            "device_wait": 26848,
+            "residual": 117652,
+            "unattributed": 0
+          },
+          "coe_union_ns": 75186904,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 75186904,
+          "migration_source_ns": {
+            "submit": 75186904
+          },
+          "extended_budgets_ns": {
+            "host": 110714900,
+            "submit": 83239496,
+            "non_submit": 27410200,
+            "residual": 117652,
+            "unattributed": 0,
+            "completion_exposure": 75213752
+          },
+          "original_atom_count": 113433,
+          "original_atom_sha256": "d84d14bd20178185fdaa51a3dcd37af1d12481c2ced54fb10bafb833001d92be",
+          "cuda_api_original_ns": 185836600,
+          "cuda_api_extended_ns": 110649696,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Prefill",
+          "window_ns": [
+            2511702734739900,
+            2511702930838000
+          ],
+          "wall_ns": 196098100,
+          "original_budgets_ns": {
+            "host": 61383500,
+            "submit": 120276800,
+            "non_submit": 14302000,
+            "device_wait": 26848,
+            "residual": 108952,
+            "unattributed": 0
+          },
+          "coe_union_ns": 72420046,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 72420046,
+          "migration_source_ns": {
+            "submit": 72420046
+          },
+          "extended_budgets_ns": {
+            "host": 61383500,
+            "submit": 47856754,
+            "non_submit": 14302000,
+            "residual": 108952,
+            "unattributed": 0,
+            "completion_exposure": 72446894
+          },
+          "original_atom_count": 60256,
+          "original_atom_sha256": "b34d8e82dbd8f3849073e210ddf77a518d7be086e6a08f25670e609bbd9dd82e",
+          "cuda_api_original_ns": 134578800,
+          "cuda_api_extended_ns": 62158754,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Decode",
+          "window_ns": [
+            2511702930838000,
+            2511703031435900
+          ],
+          "wall_ns": 100597900,
+          "original_budgets_ns": {
+            "host": 49331400,
+            "submit": 38149600,
+            "non_submit": 13108200,
+            "device_wait": 0,
+            "residual": 8700,
+            "unattributed": 0
+          },
+          "coe_union_ns": 2766858,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 2766858,
+          "migration_source_ns": {
+            "submit": 2766858
+          },
+          "extended_budgets_ns": {
+            "host": 49331400,
+            "submit": 35382742,
+            "non_submit": 13108200,
+            "residual": 8700,
+            "unattributed": 0,
+            "completion_exposure": 2766858
+          },
+          "original_atom_count": 53178,
+          "original_atom_sha256": "3819741a279ca430c14a7777eca14d57a121270b601d0151f46bcdbb10b219bf",
+          "cuda_api_original_ns": 51257800,
+          "cuda_api_extended_ns": 48490942,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        }
+      ],
+      "operations": [
+        {
+          "copy_api_id": "record:30229",
+          "sync_api_id": "record:30231",
+          "coe_ns": 72420046,
+          "coe_by_api_part_ns": {
+            "copy": 72420046,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 158668567,
+          "phase_wall_ns": 196098100,
+          "operation_wall_ns": 86623200,
+          "uncovered_ns": 14203154,
+          "terminal_id": "record:30228",
+          "member_count": 1793
+        },
+        {
+          "copy_api_id": "record:57159",
+          "sync_api_id": "record:57161",
+          "coe_ns": 2766858,
+          "coe_by_api_part_ns": {
+            "copy": 2766858,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 16029392,
+          "phase_wall_ns": 100597900,
+          "operation_wall_ns": 10974800,
+          "uncovered_ns": 8207942,
+          "terminal_id": "record:57158",
+          "member_count": 3385
+        }
+      ],
+      "owner_API_count": 53757,
+      "sync_projection_count": 3,
+      "sync_projections": [
+        {
+          "record_id": "record:132",
+          "api_id": "record:133",
+          "host_interval_ns": [
+            2511702736314800,
+            2511702736436400
+          ],
+          "physical_interval_ns": [
+            2511702736316600,
+            2511702736435800
+          ],
+          "terminal_ids": [
+            "record:130"
+          ],
+          "old_wait_ns": 26848,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:30230",
+          "api_id": "record:30231",
+          "host_interval_ns": [
+            2511702929208700,
+            2511702929222900
+          ],
+          "physical_interval_ns": [
+            2511702929212300,
+            2511702929222400
+          ],
+          "terminal_ids": [
+            "record:30228"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:57160",
+          "api_id": "record:57161",
+          "host_interval_ns": [
+            2511703030209600,
+            2511703030218300
+          ],
+          "physical_interval_ns": [
+            2511703030212200,
+            2511703030217800
+          ],
+          "terminal_ids": [
+            "record:57158"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        }
+      ]
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b3-G512P-pass1",
+      "block": 3,
+      "input_tokens": 512,
+      "raw_sha256": "a63016fd9ab7c96a758e4fc2cedfdf4c9c582d93d42fb2a29e1718cbfb9e4cb9",
+      "status": "COMPLETE_WINDOW_SOURCE_PREVIEW_NOT_FORMAL",
+      "windows": [
+        {
+          "name": "Request",
+          "window_ns": [
+            2511773488009900,
+            2511773678628400
+          ],
+          "wall_ns": 190618500,
+          "original_budgets_ns": {
+            "host": 112781300,
+            "submit": 51513300,
+            "non_submit": 25925500,
+            "device_wait": 16448,
+            "residual": 381952,
+            "unattributed": 0
+          },
+          "coe_union_ns": 2409645,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 2409645,
+          "migration_source_ns": {
+            "submit": 2409645
+          },
+          "extended_budgets_ns": {
+            "host": 112781300,
+            "submit": 49103655,
+            "non_submit": 25925500,
+            "residual": 381952,
+            "unattributed": 0,
+            "completion_exposure": 2426093
+          },
+          "original_atom_count": 114426,
+          "original_atom_sha256": "ab89625e8cf8abd4207ac216f2e300bdc663830cfb02be168a640b8d9808a264",
+          "cuda_api_original_ns": 77438800,
+          "cuda_api_extended_ns": 75029155,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Prefill",
+          "window_ns": [
+            2511773488009900,
+            2511773589955900
+          ],
+          "wall_ns": 101946000,
+          "original_budgets_ns": {
+            "host": 59003700,
+            "submit": 28843400,
+            "non_submit": 13708700,
+            "device_wait": 16448,
+            "residual": 373752,
+            "unattributed": 0
+          },
+          "coe_union_ns": 1834358,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 1834358,
+          "migration_source_ns": {
+            "submit": 1834358
+          },
+          "extended_budgets_ns": {
+            "host": 59003700,
+            "submit": 27009042,
+            "non_submit": 13708700,
+            "residual": 373752,
+            "unattributed": 0,
+            "completion_exposure": 1850806
+          },
+          "original_atom_count": 60949,
+          "original_atom_sha256": "9343d22ff9b7d4d0f60ffd0aca037064ae22bd8c381083df7bc8b30fe17ae948",
+          "cuda_api_original_ns": 42552100,
+          "cuda_api_extended_ns": 40717742,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Decode",
+          "window_ns": [
+            2511773589955900,
+            2511773678628400
+          ],
+          "wall_ns": 88672500,
+          "original_budgets_ns": {
+            "host": 53777600,
+            "submit": 22669900,
+            "non_submit": 12216800,
+            "device_wait": 0,
+            "residual": 8200,
+            "unattributed": 0
+          },
+          "coe_union_ns": 575287,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 575287,
+          "migration_source_ns": {
+            "submit": 575287
+          },
+          "extended_budgets_ns": {
+            "host": 53777600,
+            "submit": 22094613,
+            "non_submit": 12216800,
+            "residual": 8200,
+            "unattributed": 0,
+            "completion_exposure": 575287
+          },
+          "original_atom_count": 53478,
+          "original_atom_sha256": "354c527f05a15feb39e1260b7ccb3504b545a852a17ca3e1c1199435e2d65f6c",
+          "cuda_api_original_ns": 34886700,
+          "cuda_api_extended_ns": 34311413,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        }
+      ],
+      "operations": [
+        {
+          "copy_api_id": "record:30593",
+          "sync_api_id": "record:30595",
+          "coe_ns": 1834358,
+          "coe_by_api_part_ns": {
+            "copy": 1834358,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 28835217,
+          "phase_wall_ns": 101946000,
+          "operation_wall_ns": 2183700,
+          "uncovered_ns": 349342,
+          "terminal_id": "record:30592",
+          "member_count": 1905
+        },
+        {
+          "copy_api_id": "record:57551",
+          "sync_api_id": "record:57553",
+          "coe_ns": 575287,
+          "coe_by_api_part_ns": {
+            "copy": 575287,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 14031120,
+          "phase_wall_ns": 88672500,
+          "operation_wall_ns": 760300,
+          "uncovered_ns": 185013,
+          "terminal_id": "record:57550",
+          "member_count": 3497
+        }
+      ],
+      "owner_API_count": 54037,
+      "sync_projection_count": 3,
+      "sync_projections": [
+        {
+          "record_id": "record:132",
+          "api_id": "record:133",
+          "host_interval_ns": [
+            2511773489103700,
+            2511773489485200
+          ],
+          "physical_interval_ns": [
+            2511773489106400,
+            2511773489484400
+          ],
+          "terminal_ids": [
+            "record:130"
+          ],
+          "old_wait_ns": 16448,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:30594",
+          "api_id": "record:30595",
+          "host_interval_ns": [
+            2511773588504400,
+            2511773588513100
+          ],
+          "physical_interval_ns": [
+            2511773588506800,
+            2511773588512600
+          ],
+          "terminal_ids": [
+            "record:30592"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:57552",
+          "api_id": "record:57553",
+          "host_interval_ns": [
+            2511773677184000,
+            2511773677192200
+          ],
+          "physical_interval_ns": [
+            2511773677185800,
+            2511773677191700
+          ],
+          "terminal_ids": [
+            "record:57550"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        }
+      ]
+    },
+    {
+      "run_id": "cupti-input-bd377c860faf-b3-G1024P-pass1",
+      "block": 3,
+      "input_tokens": 1024,
+      "raw_sha256": "f4a01563e044e4d11b8d5824901918930002233396cc1d6f2b97c418b3c528bc",
+      "status": "COMPLETE_WINDOW_SOURCE_PREVIEW_NOT_FORMAL",
+      "windows": [
+        {
+          "name": "Request",
+          "window_ns": [
+            2511842985162600,
+            2511843198297100
+          ],
+          "wall_ns": 213134500,
+          "original_budgets_ns": {
+            "host": 123179200,
+            "submit": 61166800,
+            "non_submit": 28029900,
+            "device_wait": 596734,
+            "residual": 161866,
+            "unattributed": 0
+          },
+          "coe_union_ns": 3859779,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 3859779,
+          "migration_source_ns": {
+            "submit": 3859779
+          },
+          "extended_budgets_ns": {
+            "host": 123179200,
+            "submit": 57307021,
+            "non_submit": 28029900,
+            "residual": 161866,
+            "unattributed": 0,
+            "completion_exposure": 4456513
+          },
+          "original_atom_count": 114956,
+          "original_atom_sha256": "8fe32dc70adba8249d77d17de66e41023f3cbd7836a87264fe843a778f53df5f",
+          "cuda_api_original_ns": 89196700,
+          "cuda_api_extended_ns": 85336921,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Prefill",
+          "window_ns": [
+            2511842985162600,
+            2511843104573500
+          ],
+          "wall_ns": 119410900,
+          "original_budgets_ns": {
+            "host": 67958200,
+            "submit": 35674800,
+            "non_submit": 15025800,
+            "device_wait": 596734,
+            "residual": 155366,
+            "unattributed": 0
+          },
+          "coe_union_ns": 3299398,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 3299398,
+          "migration_source_ns": {
+            "submit": 3299398
+          },
+          "extended_budgets_ns": {
+            "host": 67958200,
+            "submit": 32375402,
+            "non_submit": 15025800,
+            "residual": 155366,
+            "unattributed": 0,
+            "completion_exposure": 3896132
+          },
+          "original_atom_count": 61200,
+          "original_atom_sha256": "fa5f2994afe23bacd4f38403f1c20014e065e01aa7b24a60b588f715af8bc154",
+          "cuda_api_original_ns": 50700600,
+          "cuda_api_extended_ns": 47401202,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        },
+        {
+          "name": "Decode",
+          "window_ns": [
+            2511843104573500,
+            2511843198297100
+          ],
+          "wall_ns": 93723600,
+          "original_budgets_ns": {
+            "host": 55221000,
+            "submit": 25492000,
+            "non_submit": 13004100,
+            "device_wait": 0,
+            "residual": 6500,
+            "unattributed": 0
+          },
+          "coe_union_ns": 560381,
+          "old_wait_overlap_ns": 0,
+          "new_migration_ns": 560381,
+          "migration_source_ns": {
+            "submit": 560381
+          },
+          "extended_budgets_ns": {
+            "host": 55221000,
+            "submit": 24931619,
+            "non_submit": 13004100,
+            "residual": 6500,
+            "unattributed": 0,
+            "completion_exposure": 560381
+          },
+          "original_atom_count": 53757,
+          "original_atom_sha256": "0194e329ad4ec93c857c6855e331f0d09aad79d7890182350b3d2c0c45b3f878",
+          "cuda_api_original_ns": 38496100,
+          "cuda_api_extended_ns": 37935719,
+          "conservation_error_ns": 0,
+          "coe_fully_in_extended_union": true
+        }
+      ],
+      "operations": [
+        {
+          "copy_api_id": "record:30649",
+          "sync_api_id": "record:30651",
+          "coe_ns": 3299398,
+          "coe_by_api_part_ns": {
+            "copy": 3299398,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 66670739,
+          "phase_wall_ns": 119410900,
+          "operation_wall_ns": 3517700,
+          "uncovered_ns": 218302,
+          "terminal_id": "record:30648",
+          "member_count": 1793
+        },
+        {
+          "copy_api_id": "record:57579",
+          "sync_api_id": "record:57581",
+          "coe_ns": 560381,
+          "coe_by_api_part_ns": {
+            "copy": 560381,
+            "between": 0,
+            "sync": 0
+          },
+          "phase_gpu_union_ns": 14409400,
+          "phase_wall_ns": 93723600,
+          "operation_wall_ns": 741100,
+          "uncovered_ns": 180719,
+          "terminal_id": "record:57578",
+          "member_count": 3385
+        }
+      ],
+      "owner_API_count": 54177,
+      "sync_projection_count": 3,
+      "sync_projections": [
+        {
+          "record_id": "record:132",
+          "api_id": "record:133",
+          "host_interval_ns": [
+            2511842986451800,
+            2511842987193700
+          ],
+          "physical_interval_ns": [
+            2511842986453500,
+            2511842987192700
+          ],
+          "terminal_ids": [
+            "record:130"
+          ],
+          "old_wait_ns": 596734,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:30650",
+          "api_id": "record:30651",
+          "host_interval_ns": [
+            2511843102695800,
+            2511843102706000
+          ],
+          "physical_interval_ns": [
+            2511843102698200,
+            2511843102705400
+          ],
+          "terminal_ids": [
+            "record:30648"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        },
+        {
+          "record_id": "record:57580",
+          "api_id": "record:57581",
+          "host_interval_ns": [
+            2511843196998500,
+            2511843197005000
+          ],
+          "physical_interval_ns": [
+            2511843197000000,
+            2511843197004700
+          ],
+          "terminal_ids": [
+            "record:57578"
+          ],
+          "old_wait_ns": 0,
+          "assurance": "PREFIX_PROJECTION_OF_ACCEPTED_LOCAL_FIFO_NOT_FULL_PHYSICAL_W"
+        }
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "block": 1,
+      "low": 512,
+      "high": 1024,
+      "token_index": 0,
+      "phase": "Prefill",
+      "delta_coe_ns": 711994,
+      "proportional_R_ns": -413418.0695189187,
+      "R_numerator": -16296025819666,
+      "R_denominator": 39417788,
+      "delta_extended_device_ns": 715967,
+      "extended_R_ns": -417235.3442064532,
+      "extended_R_numerator": -16446494344037,
+      "phase_gpu_low_ns": 39417788,
+      "phase_gpu_high_ns": 57877385,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 1,
+      "low": 512,
+      "high": 1024,
+      "token_index": 1,
+      "phase": "Decode",
+      "delta_coe_ns": 379902,
+      "proportional_R_ns": 362286.9449726591,
+      "R_numerator": 4157481440658,
+      "R_denominator": 11475659,
+      "delta_extended_device_ns": 379902,
+      "extended_R_ns": 362286.9449726591,
+      "extended_R_numerator": 4157481440658,
+      "phase_gpu_low_ns": 11475659,
+      "phase_gpu_high_ns": 11725829,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 1,
+      "low": 1024,
+      "high": 2048,
+      "token_index": 0,
+      "phase": "Prefill",
+      "delta_coe_ns": 76234582,
+      "proportional_R_ns": 71548880.5541832,
+      "R_numerator": 4141062106153474,
+      "R_denominator": 57877385,
+      "delta_extended_device_ns": 76865300,
+      "extended_R_ns": 72148600.68974935,
+      "extended_R_numerator": 4175772339331888,
+      "phase_gpu_low_ns": 57877385,
+      "phase_gpu_high_ns": 144934612,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 1,
+      "low": 1024,
+      "high": 2048,
+      "token_index": 1,
+      "phase": "Decode",
+      "delta_coe_ns": -501758,
+      "proportional_R_ns": -352818.2178251107,
+      "R_numerator": -4137086090302,
+      "R_denominator": 11725829,
+      "delta_extended_device_ns": -501758,
+      "extended_R_ns": -352818.2178251107,
+      "extended_R_numerator": -4137086090302,
+      "phase_gpu_low_ns": 11725829,
+      "phase_gpu_high_ns": 10255673,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 1,
+      "low": 512,
+      "high": 2048,
+      "token_index": 0,
+      "phase": "Prefill",
+      "delta_coe_ns": 76946576,
+      "proportional_R_ns": 70513612.84988879,
+      "R_numerator": 2779490642430992,
+      "R_denominator": 39417788,
+      "delta_extended_device_ns": 77581267,
+      "extended_R_ns": 71103773.89383848,
+      "extended_R_numerator": 2802753485347260,
+      "phase_gpu_low_ns": 39417788,
+      "phase_gpu_high_ns": 144934612,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 1,
+      "low": 512,
+      "high": 2048,
+      "token_index": 1,
+      "phase": "Decode",
+      "delta_coe_ns": -121856,
+      "proportional_R_ns": -35953.931316362745,
+      "R_numerator": -412595055496,
+      "R_denominator": 11475659,
+      "delta_extended_device_ns": -121856,
+      "extended_R_ns": -35953.931316362745,
+      "extended_R_numerator": -412595055496,
+      "phase_gpu_low_ns": 11475659,
+      "phase_gpu_high_ns": 10255673,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 2,
+      "low": 512,
+      "high": 1024,
+      "token_index": 0,
+      "phase": "Prefill",
+      "delta_coe_ns": 44515100,
+      "proportional_R_ns": 42256915.18638558,
+      "R_numerator": 1474405677233741,
+      "R_denominator": 34891465,
+      "delta_extended_device_ns": 44911608,
+      "extended_R_ns": 42625454.16857868,
+      "extended_R_numerator": 1487264542232067,
+      "phase_gpu_low_ns": 34891465,
+      "phase_gpu_high_ns": 68586652,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 2,
+      "low": 512,
+      "high": 1024,
+      "token_index": 1,
+      "phase": "Decode",
+      "delta_coe_ns": -427957,
+      "proportional_R_ns": -387846.9889331587,
+      "R_numerator": -6045761578419,
+      "R_denominator": 15588007,
+      "delta_extended_device_ns": -427957,
+      "extended_R_ns": -387846.9889331587,
+      "extended_R_numerator": -6045761578419,
+      "phase_gpu_low_ns": 15588007,
+      "phase_gpu_high_ns": 15111987,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 2,
+      "low": 1024,
+      "high": 2048,
+      "token_index": 0,
+      "phase": "Prefill",
+      "delta_coe_ns": 44119911,
+      "proportional_R_ns": -15820229.635022322,
+      "R_numerator": -1085056584537363,
+      "R_denominator": 68586652,
+      "delta_extended_device_ns": 43736873,
+      "extended_R_ns": -16747576.065368943,
+      "extended_R_numerator": -1148660171438989,
+      "phase_gpu_low_ns": 68586652,
+      "phase_gpu_high_ns": 156330307,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 2,
+      "low": 1024,
+      "high": 2048,
+      "token_index": 1,
+      "phase": "Decode",
+      "delta_coe_ns": -291524,
+      "proportional_R_ns": -135352.29551196675,
+      "R_numerator": -2045442130197,
+      "R_denominator": 15111987,
+      "delta_extended_device_ns": -291524,
+      "extended_R_ns": -135352.29551196675,
+      "extended_R_numerator": -2045442130197,
+      "phase_gpu_low_ns": 15111987,
+      "phase_gpu_high_ns": 12446774,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 2,
+      "low": 512,
+      "high": 2048,
+      "token_index": 0,
+      "phase": "Prefill",
+      "delta_coe_ns": 88635011,
+      "proportional_R_ns": 80496419.90723293,
+      "R_numerator": 2808638017818521,
+      "R_denominator": 34891465,
+      "delta_extended_device_ns": 88648481,
+      "extended_R_ns": 80409088.41489078,
+      "extended_R_numerator": 2805590894110067,
+      "phase_gpu_low_ns": 34891465,
+      "phase_gpu_high_ns": 156330307,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 2,
+      "low": 512,
+      "high": 2048,
+      "token_index": 1,
+      "phase": "Decode",
+      "delta_coe_ns": -719481,
+      "proportional_R_ns": -454796.9732920315,
+      "R_numerator": -7089378403255,
+      "R_denominator": 15588007,
+      "delta_extended_device_ns": -719481,
+      "extended_R_ns": -454796.9732920315,
+      "extended_R_numerator": -7089378403255,
+      "phase_gpu_low_ns": 15588007,
+      "phase_gpu_high_ns": 12446774,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 3,
+      "low": 512,
+      "high": 1024,
+      "token_index": 0,
+      "phase": "Prefill",
+      "delta_coe_ns": 1465040,
+      "proportional_R_ns": -941874.1725160591,
+      "R_numerator": -27159146151196,
+      "R_denominator": 28835217,
+      "delta_extended_device_ns": 2045326,
+      "extended_R_ns": -383170.068912261,
+      "extended_R_numerator": -11048792084990,
+      "phase_gpu_low_ns": 28835217,
+      "phase_gpu_high_ns": 66670739,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 3,
+      "low": 512,
+      "high": 1024,
+      "token_index": 1,
+      "phase": "Decode",
+      "delta_coe_ns": -14906,
+      "proportional_R_ns": -30415.778717593465,
+      "R_numerator": -426767441080,
+      "R_denominator": 14031120,
+      "delta_extended_device_ns": -14906,
+      "extended_R_ns": -30415.778717593465,
+      "extended_R_numerator": -426767441080,
+      "phase_gpu_low_ns": 14031120,
+      "phase_gpu_high_ns": 14409400,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 3,
+      "low": 1024,
+      "high": 2048,
+      "token_index": 0,
+      "phase": "Prefill",
+      "delta_coe_ns": 69120648,
+      "proportional_R_ns": 64567864.36117542,
+      "R_numerator": 4304787232611328,
+      "R_denominator": 66670739,
+      "delta_extended_device_ns": 68550762,
+      "extended_R_ns": 63174555.18157406,
+      "extended_R_numerator": 4211894279951822,
+      "phase_gpu_low_ns": 66670739,
+      "phase_gpu_high_ns": 158668567,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 3,
+      "low": 1024,
+      "high": 2048,
+      "token_index": 1,
+      "phase": "Decode",
+      "delta_coe_ns": 2206477,
+      "proportional_R_ns": 2143475.574753147,
+      "R_numerator": 30886196946848,
+      "R_denominator": 14409400,
+      "delta_extended_device_ns": 2206477,
+      "extended_R_ns": 2143475.574753147,
+      "extended_R_numerator": 30886196946848,
+      "phase_gpu_low_ns": 14409400,
+      "phase_gpu_high_ns": 16029392,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 3,
+      "low": 512,
+      "high": 2048,
+      "token_index": 0,
+      "phase": "Prefill",
+      "delta_coe_ns": 70585688,
+      "proportional_R_ns": 62326313.907573365,
+      "R_numerator": 1797192786334996,
+      "R_denominator": 28835217,
+      "delta_extended_device_ns": 70596088,
+      "extended_R_ns": 62262655.19871052,
+      "extended_R_numerator": 1795357173650996,
+      "phase_gpu_low_ns": 28835217,
+      "phase_gpu_high_ns": 158668567,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    },
+    {
+      "block": 3,
+      "low": 512,
+      "high": 2048,
+      "token_index": 1,
+      "phase": "Decode",
+      "delta_coe_ns": 2191571,
+      "proportional_R_ns": 2109640.270018074,
+      "R_numerator": 29600615785456,
+      "R_denominator": 14031120,
+      "delta_extended_device_ns": 2191571,
+      "extended_R_ns": 2109640.270018074,
+      "extended_R_numerator": 29600615785456,
+      "phase_gpu_low_ns": 14031120,
+      "phase_gpu_high_ns": 16029392,
+      "inference": "DESCRIPTIVE_SAME_BLOCK_PILOT_NOT_CAUSAL_OR_FORMAL"
+    }
+  ]
+}
