@@ -1,0 +1,71 @@
+{
+  "schema_version": "coe-controlled-authorization/0.1.0",
+  "decision": "APPROVED",
+  "publication_approved": true,
+  "deployment_approved": true,
+  "execution_approved": true,
+  "execution_commit": "c8f3dad152659044691f9ff328498c7a127815ea",
+  "analysis_commit": "c8f3dad152659044691f9ff328498c7a127815ea",
+  "native_collector_commit": "6c744bf52daff3fc54571e264a0c34e3207aa1df",
+  "delivery_index_sha256": "238d31c40ee74cab158eb5ad8de67d753da6b4aa3878c756c7ded467633eaa1a",
+  "shared_use_acknowledged": true,
+  "scope": "ONE_CONTROLLED_NO_MODEL_NO_NSIGHT_120S",
+  "approval_reference": "USER-COE-CONTROLLED-C8F3DAD-20261023-01",
+  "recorded_at_utc": "2026-10-23T12:53:26Z",
+  "authority": {
+    "kind": "DIRECT_USER_MESSAGE",
+    "record_type": "AI_TRANSCRIPTION_OF_EXPLICIT_HUMAN_AUTHORIZATION_NOT_CRYPTOGRAPHIC_SIGNATURE",
+    "user_statement": [
+      "我明确批准本次固定受控版本c8f3dad152659044691f9ff328498c7a127815ea及必要交付记录正常发布到现有仓库YLQQQQ/A-exposed-model-of-LLM-inference的main，不强推，不包含用户DOCX、Raw或大型原件。",
+      "同时批准将已审交付部署到指定服务器，完成目标构建与身份绑定；准备成功且现场资源检查满足后，由我手工启动一次受控验证：1进程、1session、GPU硬限120秒、无模型／Nsight。认可共享GPU仅用于本次限定正确性验证，不用于性能比较。",
+      "请依据这条真实授权生成正式授权回执及其SHA256，提供准确复制路径。失败即停，不自动重试或启动Batch、性能实验及其他矩阵。不要新增无关实现或重复测试。"
+    ],
+    "recorded_time_is_not_original_message_timestamp": true
+  },
+  "publication": {
+    "repository": "YLQQQQ/A-exposed-model-of-LLM-inference",
+    "url": "https://github.com/YLQQQQ/A-exposed-model-of-LLM-inference.git",
+    "branch": "main",
+    "mode": "NORMAL_FAST_FORWARD_ONLY",
+    "force_push": false,
+    "includes": [
+      "fixed_execution_commit_and_required_ancestors",
+      "necessary_delivery_and_authorization_records"
+    ],
+    "excludes": ["user_DOCX_changes", "Raw", "large_original_artifacts"],
+    "authorization_is_not_proof_of_completed_push": true
+  },
+  "execution": {
+    "executor": "USER_MANUAL_ON_PREVIOUSLY_DESIGNATED_TARGET_SERVER",
+    "role": "Engineering",
+    "gpu_processes": 1,
+    "cupti_sessions": 1,
+    "gpu_subprocess_hard_seconds": 120,
+    "models": 0,
+    "nsight_profiles": 0,
+    "preconditions": [
+      "approved_delivery_index_and_fixed_code_identity_match",
+      "target_build_and_identity_binding_succeed",
+      "fresh_target_resource_and_conflict_checks_satisfy_existing_entry",
+      "explicit_separate_execute_action_by_user"
+    ],
+    "shared_gpu_use": "LIMITED_CORRECTNESS_ONLY_NOT_PERFORMANCE_COMPARISON",
+    "automatic_retry": false,
+    "automatic_replacement": false,
+    "automatic_next_batch": false,
+    "failure_policy": "STOP_AND_PRESERVE_ORIGINAL_ERRORS_AND_ARTIFACTS"
+  },
+  "not_authorized": [
+    "agent_server_execution",
+    "Batch_experiment_or_comparison_matrix",
+    "performance_experiment_or_claim",
+    "4096_or_long_output_or_old_8P1_resumption",
+    "collector_expansion_or_rebuild",
+    "quality_rule_relaxation",
+    "automatic_cleanup"
+  ],
+  "controlled_validation_status_at_issue": "NOT_RUN",
+  "qualification_granted_by_authorization": "NONE",
+  "formal_eligible": false,
+  "protocol_freeze_signed_by_this_record": false
+}
