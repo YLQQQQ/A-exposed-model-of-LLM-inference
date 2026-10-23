@@ -95,8 +95,22 @@ Git报告i/lf、w/crlf。只读核6c与c8的该文件Git blob相同，均2465byt
   为明确CPU替身，本机3.12.7；旧24/72/26/10及Q0/collector检查未重跑。针对性Python
   语法及真实PS5.1 parser通过；最终ZIP包内入口回归与交付hash随后单独记录。
 
-当前最高优先级：核最终修复ZIP内入口并交协调审查，不再让用户手工逐个改文件或
-重跑旧失败入口；目标构建/身份及现场门满足后才由用户显式运行一次受控程序。
+最终待审交付收口（2026-10-23）：控制实现提交
+`e87107c73fa704eac2ac4337502590675536aabb`，执行/分析仍精确c8。唯一修复ZIP
+`coe_controlled_c8f3dad_repair1_delivery.zip`为730558bytes，SHA256
+`90ab6e8e4345e52de47385fce7f692e64035a41ea45b9a99fc1c0e76ef7b1d80`；14成员/13项
+新清单、CRC、全覆盖与逐hash通过。新索引SHA256
+`47d247409b7ac325a48ddd8b607cc3acc11d2d3e9401e0d612f52d59d1833677`；原授权与原索引
+保持不变，兼容记录在新清单内，不伪造新批准。源码从上述控制提交Git blob封装，
+最终解压包入口通过**20 passed / 0 failed / 0 skipped，53.51s**（同一新检查集，不是
+重跑旧研究测试）；实际命令同上、额外设置仅测试用`COE_REPAIR_TEST_PACKAGE`指向最终
+解压目录，最终XML在本地`coe_controlled_deployment_v0_1/final_package_tests.xml`。
+它覆盖包内真实-I/-S/-B验证、PS5.1入口、固定授权/A/event读取及真实Git接续，目标
+工具/构建/3.11环境仍明确CPU替身；目标构建及GPU受控均NOT_RUN，不能据此授资格。
+本轮本地提交/待审交付，未推送、未操作服务器/GPU；DOCX、旧失败及Raw均保持。
+
+当前最高优先级：协调审查这一单ZIP，再由用户只传该ZIP并运行默认prepare，不再手工
+逐个改文件或重跑旧失败入口；目标构建/身份及现场门满足后才显式运行一次受控程序。
 不重启通用前置排错/新设施。真实受控
 通过并另获确认后才考虑一个L512/B2实例；Batch矩阵、性能验证、4096、长输出、旧8P1均
 未启动。原A/COE/E、Gate13限定PASS、旧Raw/UNKNOWN/BLOCKED和用户DOCX保持。
