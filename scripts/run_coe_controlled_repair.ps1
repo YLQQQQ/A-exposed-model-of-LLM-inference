@@ -9,7 +9,7 @@ if ((Get-FileHash -LiteralPath $Index -Algorithm SHA256).Hash -ne $DeliveryIndex
     throw 'Repair delivery index conflict; STOP'
 }
 $Value = Get-Content -LiteralPath $Index -Raw | ConvertFrom-Json
-if ($Value.schema_version -cne 'coe-controlled-repair-index/0.1.0') { throw 'Repair index version conflict; STOP' }
+if ($Value.schema_version -cne 'coe-controlled-repair-index/0.1.1') { throw 'Repair index version conflict; STOP' }
 foreach ($Name in @('coe_controlled_deployment.py','original/delivery.json')) {
     $Rows = @($Value.files | Where-Object { $_.path -ceq $Name })
     if ($Rows.Count -ne 1) { throw 'Required entry/config identity missing or duplicated; STOP' }

@@ -123,11 +123,43 @@ previous_evidence_unchanged=true。新鲜磁盘free366056738816bytes，非空间
 保留原BLOCKED及ZIP；需一次限定checkout的只读Git/源码快照补齐缺失事实，不查ACL、
 不采集GPU、不新增collector。详情在本地repair1_failure_review_v0_1。
 
-当前最高优先级：先取得上述缺失的具体Git变更列表并定位原因，再决定最小部署修复；
+当时最高优先级（已由下述只读原件和最小修复接续）：先取得缺失的具体Git变更列表并定位原因，再决定最小部署修复；
 不重跑旧prepare、不让用户逐文件改源码。目标构建/身份及现场门满足后才显式运行受控。
 不重启通用前置排错/新设施。真实受控
 通过并另获确认后才考虑一个L512/B2实例；Batch矩阵、性能验证、4096、长输出、旧8P1均
 未启动。原A/COE/E、Gate13限定PASS、旧Raw/UNKNOWN/BLOCKED和用户DOCX保持。
+
+Git快照与部署控制0.1.1追加（2026-10-23）：
+
+- [x] 用户回传只读Git状态ZIP8059bytes，SHA256
+  `6deed68b01d03f7cbc73719a89664a043de05baf4c320712c51009dbce956201`；manifest SHA256
+  `046cc54b54af25f292493c67f4b1a2cf84f16d7d1d8f5a37fe89818ccd3ef464`。26成员/25项
+  清单、CRC、安全路径、无重复及全覆盖实字节hash通过。8条查询均exit0，HEAD精确c8；
+  13项源码长度/hash均等于固定blob，全部i/lf、w/lf。status只列两个包入口和gate8源码
+  三个普通工作树M，content diff与staged diff均为空。证明裸status标记与内容证据不一致；
+  Git内部具体成因不作推定，不能将其写成已证实stat-cache/fsmonitor故障。
+- [x] 仅修部署控制：新内容核验同时要求HEAD=c8、暂存区及内容diff空、原始退出码正常、
+  清单各index stage0模式/blob ID等于HEAD、13项字节等于固定Git blob及原长度/hash。
+  全部满足才接受清单内普通M标记；无关路径、未跟踪、staged/rename/type、真实改动、
+  身份冲突仍拒绝。每个关键位置保存Git原始stdout/stderr/argv/退出码，不依赖空diff
+  单项放行。不写持久Git配置、不git add/reset/checkout；Git辅助index缓存字节不承诺
+  不变，stage0内容和模式仍严格核验。原二进制精确EOL落盘/备份规则保持。
+- [x] 新attempt为transfer下repair2；严格核封存repair1失败ZIP与现场完整失败树、原最早
+  receipt身份且无program/build/config/once，再接续新prepare。旧失败树/ZIP/BLOCKED
+  不改，不回退HEAD、不重跑旧入口；原3458bytes真实授权及原8件/索引逐字节保留。
+  compatibility/0.1.1仅绑定部署控制变化，不制造批准、不扩1进程/1session/120秒预算。
+- [x] 先红测暴露缺失实现，再定向命令`python -m pytest -q -ra -p no:cacheprovider
+  tests/test_coe_controlled_deployment.py --basetemp .local/dp2_g2 --junitxml .local/dp2_g2.xml`：
+  **26 passed / 0 failed / 0 skipped，110.24s**。含真实Git LF/CRLF、跨提交未变文件、
+  封存三M状态重放而实际HEAD/index/blob/diff走真实Git、真实改动/无关标记/staged拒绝、
+  repair1原件接续和篡改拒绝，以及真实授权/A/event与完整prepare/失败文件链。
+  目标路径/资产/构建/3.11环境明确为CPU替身，本机3.12.7；不是目标构建或CUDA证据。
+  开发期对index原始字节不变的额外假设不成立，改为检验stage0内容/模式不变，生产
+  身份门未放宽；开发失败记录保留。旧Q0/collector/24/72/26资格检查未重跑。
+
+当前最高优先级：固定新控制commit并从最终ZIP解压入口验证后交协调审查；执行/分析
+仍c8、collector仍6c，文档HEAD不替代二者。本轮不推送/操作服务器/GPU，不覆盖旧目录。
+目标14.38构建及受控验证仍NOT_RUN；prepare默认无CUDA，成功后才由用户另行显式执行。
 
 ## 7.247 输出2的batch参数化最小接线（2026-10-23，历史；当前见7.248）
 
@@ -5230,7 +5262,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前数据资格（7.131）：Gate6历史Engineering/Q0保持；[首批/暖机对照](gate11_warmup_policy_review_v0_1.md)及[共同w3 Pilot](gate11_policy_closeout_v0_1.md)仍只作政策依据、不混池/升级。已签署限定Formal60次执行/30条P1质量、归档终态及冻结统计全部接受，见[完整审查](gate13_local_review_v0_1.md)/[最终裁决](gate13_closeout_v0_1.json)；不是普遍测量有效性或完整新Q0认证。UNKNOWN/NOT_ASSESSED与旧资格边界保持。
 - 当前 Gate 状态（7.131）：Gate0～7历史PASS、Gate8限定Engineering PASS、Gate9分域PASS、[Gate10仅选定G1三点一次可行性PASS](gate10_closeout_v0_1.md)、[N1独立Engineering PASS](n1_model_feasibility_closeout_v0_1.md)、[Gate11限定Pilot政策PASS](gate11_policy_closeout_v0_1.md)、[Gate12限定0.1.1重签PASS](gate12_closeout_v0_1_1.md)；[Gate13签署路线A限定PASS](gate13_closeout_v0_1.json)、Gate14 NOT_RUN。容量/精度/稳定性未授，旧报告/UNKNOWN/NOT_ASSESSED保持。
 - 当前新路线数据资格（7.239）：[bd377c来源](cupti_input_pilot_sources_v0_1.json)仅9run/3block/18链限定Pilot，native/runner/DLL为6c744bf、控制/分析bd377c/bridge0.3；不是旧Nsight Formal重复、通用provider资格或无插桩性能。旧批GPU独占UNKNOWN、第二token反例与1024分叉保持。
-- 当前最高优先级（7.248）：审阅c8f3dad既有受控用例的8件散文件、13项实际依赖、14.38目标构建与条件式手工命令；发布/部署/执行尚未授权，受控NOT_RUN，不重做通用前置。新服务器产物仅transfer；Batch另待受控通过及用户确认，性能确认/8P1/4096继续暂停。
+- 当前最高优先级（7.248）：审阅repair2部署控制单ZIP；原真实授权/c8发布已完成，后续新控制代码本轮仅本地提交未推送。精确c8研究源码13项保持，接续已封存未构建的两次失败，不机械回退/重跑。目标14.38构建及受控NOT_RUN，新产物仅transfer；先prepare再手工显式execute。Batch另待受控通过及用户确认，性能确认/8P1/4096继续暂停。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。

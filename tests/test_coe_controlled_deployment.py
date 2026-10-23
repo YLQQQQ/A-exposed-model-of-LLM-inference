@@ -7,6 +7,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import zipfile
+from types import SimpleNamespace
 
 import pytest
 
@@ -16,6 +18,8 @@ AUTH = ROOT / '.local/transfer/coe_controlled_c8f3dad_authorized.json'
 FIXED = 'c8f3dad152659044691f9ff328498c7a127815ea'
 OLD_INDEX = '238d31c40ee74cab158eb5ad8de67d753da6b4aa3878c756c7ded467633eaa1a'
 AUTH_SHA = '39b46e3189e93b55f1bb21e895d38bbc0ae535e77e45633ee4584ef69ca5c69e'
+REPAIR1 = ROOT / '.local/transfer/coe_controlled_c8f3dad_repair1_once.zip'
+GIT_STATE = ROOT / '.local/transfer/coe_controlled_git_state_20261023T143900Z_e6097796bac048f2a4d7c6bb78196c5f.zip'
 
 
 @pytest.fixture(autouse=True)
@@ -210,10 +214,13 @@ def package(tmp_path):
     assert launcher.is_file(), 'repaired PS5.1 entry is not implemented'
     shutil.copyfile(launcher, out / launcher.name)
     (out / 'authorization_compatibility.json').write_text(json.dumps(m.BRIDGE), encoding='utf8')
+    (out / 'evidence').mkdir()
+    shutil.copyfile(REPAIR1, out / 'evidence/repair1_once.zip')
+    shutil.copyfile(GIT_STATE, out / 'evidence/git_state_once.zip')
     rows = [row(p.relative_to(out).as_posix(), p.read_bytes())
             for p in sorted(out.rglob('*')) if p.is_file()]
     (out / 'file_index.json').write_text(json.dumps(dict(
-        schema_version='coe-controlled-repair-index/0.1.0', control_commit='a' * 40, files=rows)), encoding='utf8')
+        schema_version='coe-controlled-repair-index/0.1.1', control_commit='a' * 40, files=rows)), encoding='utf8')
     return out
 
 
@@ -270,7 +277,15 @@ def full_target_double(tmp_path, monkeypatch, m):
     source = repo / 'scripts/gate8_qualification_token.cu'
     source.write_bytes(git(repo, 'show', FIXED + ':scripts/gate8_qualification_token.cu').replace(b'\n', b'\r\n'))
     old = tmp_path / 'old blocked attempt'
-    make_previous(old)
+    with zipfile.ZipFile(REPAIR1) as z:
+        prefix = 'prepare/previous_attempt_files/'
+        for name in z.namelist():
+            if name.startswith(prefix):
+                dest = old / name[len(prefix):]
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(z.read(name))
+        prior_repair = tmp_path / 'transfer/coe_controlled_c8f3dad_repair1'
+        z.extractall(prior_repair)
     original = json.loads((OLD / 'delivery.json').read_text())
     relocated = {**original, 'code_root': str(repo), 'git': shutil.which('git'),
                  'output_root': str(old), 'transfer_root': str(tmp_path / 'transfer')}
@@ -385,3 +400,91 @@ def test_real_ps51_package_entry_rejects_wrong_index_before_target_access(tmp_pa
         str(p / 'run_coe_controlled_repair.ps1'), '-DeliveryIndexSha256', '0' * 64],
         capture_output=True, timeout=15, env=env)
     assert done.returncode != 0 and b'Repair delivery index conflict' in done.stderr, done.stderr
+
+
+def fixed_rows():
+    return json.loads((OLD / 'delivery.json').read_text(encoding='utf8'))['sources']
+
+
+def test_returned_snapshot_proves_status_is_not_a_content_diff():
+    with zipfile.ZipFile(GIT_STATE) as z:
+        receipt = json.loads(z.read('receipt.json'))
+        assert len(receipt['sources']) == 13 and all(r['exact_match'] for r in receipt['sources'])
+        assert z.read('diff.stdout') == z.read('staged.stdout') == b''
+        assert z.read('status.stdout') == (b' M exposedpath/__init__.py\0'
+            b' M exposedpath_v141/__init__.py\0 M scripts/gate8_qualification_token.cu\0')
+        for name in ('status', 'diff', 'staged', 'eol', 'attributes', 'head'):
+            assert json.loads(z.read(name + '.query.json'))['exit_code'] == 0
+
+
+def replay_status_only(monkeypatch, m, repo, raw):
+    real = subprocess.run
+    def run(argv, *args, **kwargs):
+        if str(repo) in list(map(str, argv)) and 'status' in argv:
+            return SimpleNamespace(returncode=0, stdout=raw, stderr=b'')
+        return real(argv, *args, **kwargs)
+    monkeypatch.setattr(m.subprocess, 'run', run)
+
+
+def test_sealed_stat_only_status_with_real_git_content_and_index_is_accepted(tmp_path, monkeypatch):
+    m = module()
+    assert callable(getattr(m, 'check_deployed_tree', None)), 'content-backed clean gate missing'
+    repo, old, builds = full_target_double(tmp_path, monkeypatch, m)
+    (repo / 'scripts/gate8_qualification_token.cu').write_bytes(
+        git(repo, 'show', FIXED + ':scripts/gate8_qualification_token.cu'))
+    with zipfile.ZipFile(GIT_STATE) as z:
+        archived_status = z.read('status.stdout')
+    replay_status_only(monkeypatch, m, repo, archived_status)
+    before_entries = git(repo, 'ls-files', '--stage', '-z')
+    report = m.check_deployed_tree(shutil.which('git'), repo, FIXED, fixed_rows(), tmp_path / 'check')
+    assert report['content_clean'] is True and report['git_status_empty'] is False
+    assert report['verified_status_only_paths'] == ['exposedpath/__init__.py',
+        'exposedpath_v141/__init__.py', 'scripts/gate8_qualification_token.cu']
+    assert (tmp_path / 'check/status.stdout').read_bytes() == archived_status
+    # Git may refresh stat-cache metadata; staged blob IDs/modes must not change.
+    assert git(repo, 'ls-files', '--stage', '-z') == before_entries
+
+
+def test_stat_only_gate_does_not_accept_unknown_path_even_when_content_diff_is_empty(tmp_path, monkeypatch):
+    m = module()
+    assert callable(getattr(m, 'check_deployed_tree', None)), 'content-backed clean gate missing'
+    repo, old, builds = full_target_double(tmp_path, monkeypatch, m)
+    (repo / 'scripts/gate8_qualification_token.cu').write_bytes(
+        git(repo, 'show', FIXED + ':scripts/gate8_qualification_token.cu'))
+    replay_status_only(monkeypatch, m, repo, b' M unrelated.txt\0')
+    with pytest.raises(ValueError, match='UNRELATED_WORKTREE_CHANGE'):
+        m.check_deployed_tree(shutil.which('git'), repo, FIXED, fixed_rows(), tmp_path / 'check')
+    assert (tmp_path / 'check/status.stdout').read_bytes() == b' M unrelated.txt\0'
+
+
+def test_content_gate_rejects_real_modified_source_and_keeps_git_raw_evidence(tmp_path, monkeypatch):
+    m = module()
+    assert callable(getattr(m, 'check_deployed_tree', None)), 'content-backed clean gate missing'
+    repo, old, builds = full_target_double(tmp_path, monkeypatch, m)
+    (repo / 'scripts/gate8_qualification_token.cu').write_bytes(b'changed actual source\n')
+    with pytest.raises(ValueError, match='CONTENT_IDENTITY'):
+        m.check_deployed_tree(shutil.which('git'), repo, FIXED, fixed_rows(), tmp_path / 'check')
+    assert (tmp_path / 'check/status.stdout').is_file()
+
+
+def test_content_gate_rejects_real_staged_change(tmp_path, monkeypatch):
+    m = module()
+    assert callable(getattr(m, 'check_deployed_tree', None)), 'content-backed clean gate missing'
+    repo, old, builds = full_target_double(tmp_path, monkeypatch, m)
+    git(repo, 'update-index', '--chmod=+x', 'scripts/gate8_qualification_token.cu')
+    with pytest.raises(ValueError, match='STAGED_CHANGE'):
+        m.check_deployed_tree(shutil.which('git'), repo, FIXED, fixed_rows(), tmp_path / 'check')
+    assert (tmp_path / 'check/staged.stdout').read_bytes()
+
+
+def test_exact_repair1_failed_tree_is_accepted_but_any_change_is_rejected(tmp_path, monkeypatch):
+    m = module()
+    assert callable(getattr(m, 'inspect_repair1', None)), 'sealed failed-attempt continuation missing'
+    repo, old, builds = full_target_double(tmp_path, monkeypatch, m)
+    p = package(tmp_path)
+    evidence = m.inspect_repair1(tmp_path / 'transfer', p, old)
+    assert evidence['status'] == 'BLOCKED' and evidence['built_or_executed'] is False
+    previous = tmp_path / 'transfer/coe_controlled_c8f3dad_repair1/prepare/receipt.json'
+    previous.write_bytes(previous.read_bytes() + b' ')
+    with pytest.raises(ValueError, match='REPAIR1_EVIDENCE_CHANGED'):
+        m.inspect_repair1(tmp_path / 'transfer', p, old)

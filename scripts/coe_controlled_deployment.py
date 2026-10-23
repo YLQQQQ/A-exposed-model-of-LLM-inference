@@ -13,16 +13,20 @@ import re
 import shutil
 import subprocess
 import sys
+import zipfile
 
 EXECUTION = 'c8f3dad152659044691f9ff328498c7a127815ea'
 OLD_INDEX = '238d31c40ee74cab158eb5ad8de67d753da6b4aa3878c756c7ded467633eaa1a'
 AUTH_SHA = '39b46e3189e93b55f1bb21e895d38bbc0ae535e77e45633ee4584ef69ca5c69e'
-ATTEMPT = 'coe_controlled_c8f3dad_repair1'
-BRIDGE = dict(schema_version='coe-controlled-authorization-compatibility/0.1.0',
+ATTEMPT = 'coe_controlled_c8f3dad_repair2'
+REPAIR1_SHA = '88daa7e8e2204375af22bf411272b4ba1486b44c02848a7e638e12a1a75484c6'
+GIT_STATE_SHA = '6deed68b01d03f7cbc73719a89664a043de05baf4c320712c51009dbce956201'
+BRIDGE = dict(schema_version='coe-controlled-authorization-compatibility/0.1.1',
     original_authorization_sha256=AUTH_SHA, approved_delivery_index_sha256=OLD_INDEX,
     execution_commit=EXECUTION, permission_expansion=False,
     scope='ONE_CONTROLLED_NO_MODEL_NO_NSIGHT_120S',
-    changes=['fixed_blob_binary_materialization', 'new_attempt_after_unbuilt_source_failure'],
+    changes=['fixed_blob_binary_materialization', 'content_verified_source_only_git_status',
+             'new_attempt_after_sealed_unbuilt_clean_gate_failure'],
     authority='ORIGINAL_DIRECT_USER_APPROVAL_PLUS_EXPLICIT_LOCAL_DEPLOYMENT_REPAIR_REQUEST',
     not_a_new_approval=True)
 
@@ -72,11 +76,88 @@ def load(path, name):
 
 def git_bytes(git, repo, *args):
     # Binary PIPE: no decoding/re-encoding of Git blob stdout, no PS pipeline.
-    result = subprocess.run([str(git), '-C', str(repo), *args], capture_output=True,
-                            timeout=30)
+    result = subprocess.run([str(git), '-C', str(repo), '-c', 'core.fsmonitor=false', *args],
+                            capture_output=True, timeout=30,
+                            env=dict(os.environ, GIT_OPTIONAL_LOCKS='0'))
     require(result.returncode == 0, 'GIT_EXIT:' + str(result.returncode) + ':' + args[0]
             + ':stderr_bytes=' + repr(result.stderr))
     return result.stdout
+
+
+def check_deployed_tree(git, repo, commit, rows, evidence):
+    """A status flag is not proof of a diff; no unknown dirty path is allowed."""
+    repo, evidence = Path(repo), Path(evidence)
+    evidence.mkdir(parents=True, exist_ok=False)
+    def query(label, *args, diff=False):
+        argv = [str(git), '-C', str(repo), '-c', 'core.fsmonitor=false', *args]
+        try:
+            result = subprocess.run(argv, capture_output=True, timeout=30,
+                                    env=dict(os.environ, GIT_OPTIONAL_LOCKS='0'))
+        except subprocess.TimeoutExpired:
+            write(evidence / (label + '.query.json'), dict(argv=argv, status='TIMEOUT_UNKNOWN_STOP'))
+            raise
+        for suffix, data in (('stdout', result.stdout), ('stderr', result.stderr)):
+            with (evidence / (label + '.' + suffix)).open('xb') as stream:
+                stream.write(data)
+        write(evidence / (label + '.query.json'), dict(argv=argv, status='EXITED',
+            exit_code=result.returncode, optional_git_locks=False))
+        require(result.returncode in ((0, 1) if diff else (0,)), 'GIT_QUERY_EXIT:' + label)
+        return result
+    require(query('head', 'rev-parse', 'HEAD').stdout.decode('ascii').strip() == commit, 'CHECKOUT_COMMIT')
+    status = query('status', 'status', '--porcelain=v1', '-z', '--untracked-files=all').stdout
+    staged = query('staged', 'diff', '--cached', '--raw', '-z', '--exit-code',
+                   '--no-ext-diff', '--no-textconv', diff=True)
+    require(staged.returncode == 0 and staged.stdout == b'', 'STAGED_CHANGE')
+    content = query('content', 'diff', '--raw', '-z', '--exit-code',
+                    '--no-ext-diff', '--no-textconv', diff=True)
+    names = [r['path'] for r in rows]
+    require(len(names) == len({n.casefold() for n in names}), 'DUPLICATE_PATH')
+    tree = query('head_tree', 'ls-tree', '-z', commit, '--', *names).stdout
+    index = query('index', 'ls-files', '--stage', '-z', '--', *names).stdout
+    def entries(raw, is_index):
+        result = {}
+        require(not raw or raw.endswith(b'\0'), 'GIT_ENTRY_ENCODING')
+        for entry in raw.split(b'\0'):
+            if not entry:
+                continue
+            fields, path = entry.split(b'\t', 1)
+            mode, middle, last = fields.split(b' ')
+            require(mode in (b'100644', b'100755'), 'NONREGULAR_GIT_BLOB')
+            if is_index:
+                require(last == b'0', 'INDEX_STAGE')
+                oid = middle
+            else:
+                require(middle == b'blob', 'NONREGULAR_GIT_BLOB')
+                oid = last
+            name = path.decode('utf8')
+            require(name not in result, 'DUPLICATE_PATH')
+            result[name] = (mode.decode('ascii'), oid.decode('ascii'))
+        return result
+    head_entries, index_entries = entries(tree, False), entries(index, True)
+    require(set(head_entries) == set(names) and head_entries == index_entries, 'INDEX_HEAD_CONFLICT')
+    for row in rows:
+        path = relative(repo, row['path'])
+        blob = git_bytes(git, repo, 'cat-file', 'blob', commit + ':' + row['path'])
+        require(len(blob) == row['bytes'] and digest(blob) == row['sha256'], 'BLOB_MANIFEST_CONFLICT')
+        require(path.is_file() and path.read_bytes() == blob, 'CONTENT_IDENTITY:' + row['path'])
+    require(content.returncode == 0 and content.stdout == b'', 'CONTENT_DIFF')
+    require(not status or status.endswith(b'\0'), 'GIT_STATUS_ENCODING')
+    allowed = set(names)
+    status_only = []
+    for entry in status.split(b'\0'):
+        if entry:
+            name = entry[3:].decode('utf8')
+            require(entry[:3] == b' M ' and name in allowed, 'UNRELATED_WORKTREE_CHANGE')
+            require(name not in status_only, 'DUPLICATE_PATH')
+            status_only.append(name)
+    report = dict(schema_version='coe-content-verified-worktree/0.1.0', execution_commit=commit,
+        content_clean=True, git_status_empty=not status, verified_status_only_paths=sorted(status_only),
+        staged_diff_empty=True, content_diff_empty=True, index_matches_HEAD=True,
+        frozen_source_bytes_exact=True, staged_content_and_modes_changed=False,
+        git_configuration_modified=False, index_stat_cache_preservation='NOT_CLAIMED',
+        cause_of_status_content_disagreement='NOT_INFERRED')
+    write(evidence / 'check.json', report)
+    return report
 
 
 def materialize_sources(git, repo, commit, rows, evidence):
@@ -131,8 +212,7 @@ def materialize_sources(git, repo, commit, rows, evidence):
         facts.append(dict(path=row['path'], before_bytes=len(before),
             before_sha256=digest(before), after_bytes=len(blob), after_sha256=digest(blob),
             rewritten=changed, evidence='EXACT_LF_TO_CRLF_EXPANSION' if changed else 'EXACT_BLOB'))
-    require(git_bytes(git, repo, 'status', '--porcelain=v1', '-z') == b'',
-            'WORKTREE_NOT_CLEAN_AFTER_REPAIR')
+    check_deployed_tree(git, repo, commit, rows, evidence / 'git_after_write')
     report = dict(schema_version='coe-fixed-blob-materialization/0.1.0',
                   execution_commit=commit, files=facts, global_git_config_modified=False)
     write(evidence / 'materialization.json', report)
@@ -184,12 +264,58 @@ def inspect_previous(root, source_names, approval):
                 original_status='BLOCKED', original_unchanged=True)
 
 
+def verified_evidence_archive(path, expected_size, expected_sha, manifest_name, manifest_sha):
+    path = Path(path)
+    no_reparse(path)
+    require(path.is_file() and path.stat().st_size == expected_size
+        and digest(path.read_bytes()) == expected_sha, 'SEALED_EVIDENCE_ARCHIVE')
+    with zipfile.ZipFile(path) as z:
+        names = z.namelist()
+        require(len(names) == len({n.casefold() for n in names}) and z.testzip() is None, 'EVIDENCE_CRC_PATHS')
+        for name in names:
+            rel = Path(name)
+            require(not rel.is_absolute() and '..' not in rel.parts and ':' not in name
+                    and '\\' not in name and rel.as_posix() == name, 'EVIDENCE_CRC_PATHS')
+        require(digest(z.read(manifest_name)) == manifest_sha, 'EVIDENCE_MANIFEST')
+        rows = json.loads(z.read(manifest_name))['files']
+        require(len(rows) == len({r['path'].casefold() for r in rows})
+            and {r['path'] for r in rows} | {manifest_name} == set(names), 'EVIDENCE_COVERAGE')
+        data = {name: z.read(name) for name in names}
+        for row in rows:
+            value = data[row['path']]
+            require(len(value) == row['bytes'] and digest(value) == row['sha256'], 'EVIDENCE_MEMBER')
+    return data
+
+
+def inspect_repair1(transfer, package, original_root):
+    data = verified_evidence_archive(Path(package) / 'evidence/repair1_once.zip', 24761, REPAIR1_SHA,
+        'artifact_manifest.json', 'ade6ac4642c9c36931face65da1303767a704c8964cf85e44ee2d6068e6b62d0')
+    root = Path(transfer) / 'coe_controlled_c8f3dad_repair1'
+    require(not any((root / p).exists() for p in ('once', 'prepare/build', 'prepare/run_config.json')),
+            'PREVIOUS_ALREADY_BUILT_OR_EXECUTED')
+    expected = sorted([dict(path=name, bytes=len(value), sha256=digest(value)) for name, value in data.items()],
+                      key=lambda row: row['path'])
+    observed = sorted(snapshot(root), key=lambda row: row['path'])
+    require(observed == expected, 'REPAIR1_EVIDENCE_CHANGED')
+    receipt = json.loads(data['prepare/receipt.json'])
+    require(receipt['status'] == 'BLOCKED' and receipt['action'] == 'prepare'
+        and receipt['error'] == 'ValueError:CONTROLLED_REPAIR_WORKTREE_NOT_CLEAN_AFTER_REPAIR'
+        and receipt['execution_commit'] == receipt['analysis_commit'] == EXECUTION
+        and receipt['authorization_sha256'] == AUTH_SHA and receipt['program'] is None
+        and receipt['run_config_sha256'] is None and receipt['build_receipt_sha256'] is None
+        and receipt['previous_evidence_unchanged'] is True, 'REPAIR1_RECEIPT_BINDING')
+    require(digest((Path(original_root) / 'prepare/receipt.json').read_bytes())
+            == receipt['previous_receipt_sha256'], 'PREVIOUS_RECEIPT_BINDING')
+    return dict(status='BLOCKED', built_or_executed=False, archive_sha256=REPAIR1_SHA,
+                receipt_sha256=digest(data['prepare/receipt.json']), files=observed)
+
+
 def verify_package(package, index_sha, action):
     package = Path(package)
     index_path = package / 'file_index.json'
     require(digest(index_path.read_bytes()) == index_sha, 'DELIVERY_INDEX_HASH')
     index = read(index_path)
-    require(index.get('schema_version') == 'coe-controlled-repair-index/0.1.0'
+    require(index.get('schema_version') == 'coe-controlled-repair-index/0.1.1'
         and re.fullmatch('[0-9a-f]{40}', index.get('control_commit', '')) is not None,
         'INDEX_VERSION')
     names = set()
@@ -219,6 +345,8 @@ def verify_package(package, index_sha, action):
         and cfg['budget'] == dict(processes=1, sessions=1, models=0, nsight_profiles=0, hard_seconds=120),
         'ORIGINAL_CONTRACT')
     legacy.checked_references(original, cfg)
+    verified_evidence_archive(package / 'evidence/git_state_once.zip', 8059, GIT_STATE_SHA,
+        'manifest.json', '046cc54b54af25f292493c67f4b1a2cf84f16d7d1d8f5a37fe89818ccd3ef464')
     return legacy, cfg, approval, reference, index['control_commit']
 
 
@@ -232,7 +360,7 @@ def attempt_configuration(original):
     transfer = Path(cfg['transfer_root'])
     cfg.update(output_root=str(transfer / ATTEMPT),
                return_zip=str(transfer / (ATTEMPT + '_once.zip')),
-               run_id='coe-controlled-c8f3dad-repair1-once')
+               run_id='coe-controlled-c8f3dad-repair2-once')
     return cfg
 
 
@@ -281,6 +409,7 @@ def run_stage(package, index_sha, action):
     tools = legacy.load(package / 'original/process_support.py', 'reviewed_process_support')
     status, error, program = 'BLOCKED', None, None
     prior = None
+    prior_repair = None
     try:
         write(out / 'startup_disk.json', legacy.fresh_disk(root, cfg['temporary_required_bytes']))
         shutil.copyfile(package / 'file_index.json', out / 'delivery_index.json')
@@ -288,6 +417,10 @@ def run_stage(package, index_sha, action):
         shutil.copyfile(package / 'authorization_compatibility.json', out / 'authorization_compatibility.json')
         prior = inspect_previous(old, [r['path'] for r in cfg['sources']], approval)
         write(out / 'previous_attempt.json', prior)
+        prior_repair = inspect_repair1(cfg['transfer_root'], package, old)
+        write(out / 'previous_repair_attempt.json', prior_repair)
+        shutil.copyfile(package / 'evidence/repair1_once.zip', out / 'sealed_repair1_once.zip')
+        shutil.copyfile(package / 'evidence/git_state_once.zip', out / 'sealed_git_state_once.zip')
         legacy.check_assets(cfg)
         if action == 'prepare':
             for row in prior['files']:
@@ -298,7 +431,7 @@ def run_stage(package, index_sha, action):
         else:
             previous = read(root / 'prepare/previous_attempt.json')
             require(previous == prior, 'PREVIOUS_EVIDENCE_CHANGED')
-        legacy.check_tree(tools, cfg, EXECUTION)
+        check_deployed_tree(cfg['git'], cfg['code_root'], EXECUTION, cfg['sources'], out / 'tree_before_action')
         binding = legacy.source_binding(cfg)
         write(out / 'source_binding.json', dict(execution_commit=EXECUTION, sources=cfg['sources'], verified=binding))
         if action == 'prepare':
@@ -306,7 +439,7 @@ def run_stage(package, index_sha, action):
             status = 'PREPARED_NOT_EXECUTED'
         else:
             prepared = read(root / 'prepare/receipt.json')
-            require(prepared.get('schema_version') == 'coe-controlled-repair-receipt/0.1.0'
+            require(prepared.get('schema_version') == 'coe-controlled-repair-receipt/0.1.1'
                 and prepared.get('authorization_sha256') == AUTH_SHA
                 and prepared.get('control_commit') == control, 'PREPARED_REPAIR_BINDING')
             program = legacy.check_prepared(prepared, index_sha)
@@ -317,8 +450,9 @@ def run_stage(package, index_sha, action):
             status = 'CONTROLLED_EVIDENCE_COMPLETE_PENDING_REVIEW'
         require(snapshot(old) == prior['files'], 'PREVIOUS_EVIDENCE_CHANGED')
         legacy.check_assets(cfg)
-        legacy.check_tree(tools, cfg, EXECUTION)
+        check_deployed_tree(cfg['git'], cfg['code_root'], EXECUTION, cfg['sources'], out / 'tree_after_action')
         legacy.source_binding(cfg)
+        require(inspect_repair1(cfg['transfer_root'], package, old) == prior_repair, 'REPAIR1_EVIDENCE_CHANGED')
     except BaseException as exc:
         error = type(exc).__name__ + ':' + str(exc)
     previous_unchanged = None
@@ -328,13 +462,14 @@ def run_stage(package, index_sha, action):
             require(previous_unchanged, 'PREVIOUS_EVIDENCE_CHANGED')
         except BaseException as exc:
             error = (error + ';' if error else '') + type(exc).__name__ + ':' + str(exc)
-    receipt = dict(schema_version='coe-controlled-repair-receipt/0.1.0', action=action,
+    receipt = dict(schema_version='coe-controlled-repair-receipt/0.1.1', action=action,
         status=status if error is None else 'BLOCKED', error=error,
         execution_commit=EXECUTION, analysis_commit=EXECUTION, control_commit=control,
         native_collector_commit=legacy.PREREQUISITE, delivery_index_sha256=index_sha,
         authorization_sha256=AUTH_SHA, authorization_reference=reference,
         approved_original_index_sha256=OLD_INDEX, previous_receipt_sha256=prior['receipt_sha256'] if prior else None,
         previous_evidence_unchanged=previous_unchanged,
+        previous_repair_receipt_sha256=prior_repair['receipt_sha256'] if prior_repair else None,
         program=program, run_config_sha256=digest((root / 'prepare/run_config.json').read_bytes())
             if (root / 'prepare/run_config.json').is_file() else None,
         build_receipt_sha256=digest((root / 'prepare/build/build.json').read_bytes())
