@@ -204,11 +204,89 @@ def archive_package(output,archive):
         launcher_sha256=digest((output/'run_cupti_batch_once.ps1').read_bytes()),files=len(names))
 
 
+def build_repair_package(output,control_commit,*,source=blob,bundle_bytes=None,validation_xml=None):
+    """Copy the sealed e358 packet; replace only explicit control/metadata files."""
+    output=Path(output);output.mkdir(parents=True,exist_ok=False)
+    old=ROOT/'.local/transfer/coe_batch_e358d37f0bcd_delivery.zip'
+    assert digest(old.read_bytes())=='b5e9190080bb6ac3d9e7be4b357f1f457a6f2698ec0250d91c0b5a8f2b434626'
+    with zipfile.ZipFile(old) as z:payload={n:z.read(n) for n in z.namelist() if n!='package_manifest.json'}
+    controls=dict(CONTROL_FILES)
+    controls['cupti_batch_publication_repair.py']='scripts/cupti_batch_publication_repair.py'
+    for name,path in controls.items():payload[name]=source(control_commit,path)
+    helper_path=output/'cupti_batch_publication_repair.py';helper_path.write_bytes(payload[helper_path.name])
+    spec=importlib.util.spec_from_file_location('_pack_publication_repair',helper_path)
+    helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper)
+    if bundle_bytes is None:
+        assert subprocess.run(['git','rev-parse','refs/heads/main'],cwd=ROOT,capture_output=True,check=True).stdout.decode().strip()==control_commit
+        subprocess.run(['git','bundle','create',str((output/'repair.bundle').resolve()),'refs/heads/main','^'+SCIENCE],cwd=ROOT,check=True,capture_output=True)
+        bundle_bytes=(output/'repair.bundle').read_bytes()
+    payload['repair.bundle']=bundle_bytes
+    c=json.loads(payload['delivery.json'])
+    c.update(delivery_control_commit=control_commit,repair_profile=helper.profile(),
+        repair_bundle=dict(path='repair.bundle',bytes=len(bundle_bytes),sha256=digest(bundle_bytes),
+            prerequisite=SCIENCE,control_commit=control_commit),
+        control_sources=[fact(name,payload[name],git_path=path) for name,path in controls.items()])
+    payload['delivery.json']=encoded(c)
+    payload['README.txt']=('''Single B2 publication-control repair, pending review
+New control commit: '''+control_commit+'''
+Science/analysis remain c8f3dad; bridge0.3.0, native collector6c, no rebuild.
+The 16 scientific payloads, input/mask, plan and budget are unchanged e358 bytes.
+Default launcher action is package verification only. prepare is refused for this
+repair profile: the reviewed A is reused, never rerun or overwritten.
+
+Old B failed at published_main exit128, GitHub443, BEFORE model/session dispatch.
+Its BLOCKED, null session count and all logs remain unchanged. Before any model,
+the exact old A receipt/129-file seal, parent delivery, fixed publication records,
+failed-attempt 140-file seal and original ZIP hashes must all match.
+No online publication query runs on the target. The old A proves ONLY e358.
+NEW control publication must be separately authorized/pushed and remotely checked
+on the publishing machine. Supply the exact externally reviewed publication JSON
+as base64 plus its reviewed SHA256 via ReviewedControlPublication and
+ReviewedControlPublicationSha256. Missing, changed or wrong-target proof refuses.
+The supplied proof is operator authenticated, not a cryptographic signature.
+The repair.bundle independently binds all five new control payloads to the exact
+new Git commit. It is verified offline in transfer-only temporary objects; it
+proves Git content, never by itself proves remote publication.
+
+This packet does NOT grant deployment or a new model run. Review its new identity
+and publication proof first, then reconfirm the unused single-instance budget and
+fresh lab shared-use permission. Never reuse the original failed output directory.
+New output: transfer/coe_batch_L512B2_<new-control12>_repair1/;
+return ZIP: same prefix with _once.zip. No old tree, marker or library is modified.
+Fresh disk>=12GiB and GPU>=8GiB, UUID/PCI/driver/source/library checks still apply;
+8GiB is not a peak measurement or noninterference guarantee. Unknown process data
+stays UNKNOWN; real session open/quality/effect/dependency checks remain strict.
+One L512/B2/output2/P Engineering invocation, warmup3/repeat1, one model/session,
+zero Nsight; model300s, analysis180s, approx10min. No retries, smaller input,
+replacement or added experiments. Unknown writers refuse packing.
+Same-source original A, COE and E remain separate. No Formal qualification,
+comparison/matrix authorization or performance/numerical correctness claim.
+Old local_cpu.xml is reused history, not rerun. New repair validation, if present,
+is CPU-only with explicit device/interpreter observations and exit7 doubles.
+''').encode('utf8')
+    payload['local_authorization_scope.json']=encoded(dict(schema_version='cupti-batch-repair-local-scope/0.1.0',
+        local_repair_validation_packaging_approved=True,new_control_publication_approved=False,
+        new_deployment_execution_approved=False,prior_model_starts=0,remaining_model_process_budget=1,
+        prior_failure_status_unchanged=True,server_accessed=False))
+    if validation_xml is not None:
+        raw=Path(validation_xml).read_bytes();tree=ET.fromstring(raw)
+        assert tree.findall('.//testcase') and not any(tree.findall('.//'+n) for n in ('failure','error','skipped'))
+        payload['validation/repair_cpu.xml']=raw
+    for name,b in payload.items():
+        path=output/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b)
+    index=dict(schema_version='cupti-batch-once-package/0.1.1',delivery_control_commit=control_commit,
+        scientific_commit=SCIENCE,files=[fact(n,b) for n,b in sorted(payload.items())])
+    (output/'package_manifest.json').write_bytes(encoded(index))
+    return c
+
+
 def main():
     p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True);p.add_argument('--control-commit',required=True)
     p.add_argument('--validation-xml',type=Path)
     p.add_argument('--zip',type=Path)
-    a=p.parse_args();c=build_package(a.output,a.control_commit,validation_xml=a.validation_xml)
+    p.add_argument('--publication-repair',action='store_true')
+    a=p.parse_args();build=build_repair_package if a.publication_repair else build_package
+    c=build(a.output,a.control_commit,validation_xml=a.validation_xml)
     result=dict(path=str(a.output),control_commit=c['delivery_control_commit'],scientific_commit=SCIENCE)
     if a.zip is not None:result.update(archive_package(a.output,a.zip))
     print(json.dumps(result))

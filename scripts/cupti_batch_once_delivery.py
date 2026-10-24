@@ -16,6 +16,7 @@ import re
 import shutil
 import subprocess
 import sys
+from types import SimpleNamespace
 
 sys.dont_write_bytecode=True
 SCIENCE='c8f3dad152659044691f9ff328498c7a127815ea'
@@ -73,7 +74,7 @@ def validate_scientific_contract(c):
 
 def locations(c):
     transfer=Path(c['server_root'])/'transfer';tag=c['delivery_control_commit'][:12]
-    root=transfer/('coe_batch_L512B2_'+tag)
+    root=transfer/('coe_batch_L512B2_'+tag+('_repair1' if 'repair_profile' in c else ''))
     return dict(root=root,temporary=root/'temporary',static_zip=transfer/(root.name+'_static.zip'),
         once_zip=transfer/(root.name+'_once.zip'))
 
@@ -191,7 +192,11 @@ def startup_resources(out,archive,cfg):
     return result
 
 
-def check_publication(c,out,m):
+def check_publication(c,out,m,flags=None):
+    if 'repair_profile' in c:
+        repair=load(Path(c['package_root'])/'cupti_batch_publication_repair.py','batch_publication_repair')
+        api=SimpleNamespace(verify_package_files=verify_package_files,checked_preparation=checked_preparation)
+        return repair.checked_publication(c,out,m,api,flags or {})
     """Fetch into transfer-only temporary objects; no HEAD/index/ref writes."""
     git,repo=c['git'],c['code_root'];remote='https://github.com/YLQQQQ/A-exposed-model-of-LLM-inference'
     objects=Path(os.environ['TEMP'])/'publication_objects';objects.mkdir(exist_ok=True)
@@ -224,7 +229,7 @@ def verify_package_files(package):
     for q in (package,*package.parents):
         need(not q.is_symlink() and not (q.exists() and getattr(q.lstat(),'st_file_attributes',0)&0x400),'PACKAGE_REPARSE')
     index=read(package/'package_manifest.json');seen=set()
-    need(index.get('schema_version')=='cupti-batch-once-package/0.1.0' and
+    need(index.get('schema_version') in ('cupti-batch-once-package/0.1.0','cupti-batch-once-package/0.1.1') and
         index.get('scientific_commit')==SCIENCE,'PACKAGE_VERSION')
     for row in index['files']:
         name=row['path'];p=Path(name)
@@ -252,6 +257,10 @@ def configuration(package):
     stage,m=b.components(package);pilot=load(package/'cupti_input_pilot.py','batch_frozen_plan')
     c=pilot.configuration(package,b,m);validate_scientific_contract(c)
     need(c['delivery_control_commit']==index['delivery_control_commit'],'PACKAGE_CONTROL_IDENTITY')
+    if 'repair_profile' in c:
+        need(index['schema_version']=='cupti-batch-once-package/0.1.1','REPAIR_PACKAGE_VERSION')
+        load(package/'cupti_batch_publication_repair.py','batch_repair_config').validate(c)
+    else:need(index['schema_version']=='cupti-batch-once-package/0.1.0','PACKAGE_CONTROL_VERSION')
     lock=read(package/'science_lock.json')
     need(lock['scientific_commit']==SCIENCE and lock['native_commit']==NATIVE,'SOURCE_LOCK')
     need({r['path'] for r in lock['package_science']}==set(c['scientific_files']),'SCIENCE_COVERAGE')
@@ -332,13 +341,18 @@ def run(package,action,flags):
     if action=='verify':
         print(json.dumps(dict(status='PACKAGE_VERIFIED_NO_TARGET_ACCESS',scientific_commit=SCIENCE,
             delivery_control_commit=c['delivery_control_commit'],CUDA_initialized=False)));return 0
+    repaired='repair_profile' in c
+    if repaired:
+        need(action=='execute','REPAIR_NO_A_REPLAY')
+        need(str(flags.get('reviewed_prepare_sha256','')).lower()==c['repair_profile']['reviewed_prepare_sha256'],
+            'REPAIR_A_RECEIPT')
     approval=authorize(action,flags);environment=None;paths=locations(c)
     root=paths['root'];out=root/('prepare' if action=='prepare' else 'once')
     fixed=load(package/'git_materialization.py','batch_materialization')
     fixed.no_reparse(root)
     need(not out.exists() and not paths['once_zip'].exists() and
-        (not root.exists() if action=='prepare' else root.is_dir()) and
-        (not paths['static_zip'].exists() if action=='prepare' else paths['static_zip'].is_file()),'NO_OVERWRITE_RESUME_RETRY')
+        (not root.exists() if action=='prepare' or repaired else root.is_dir()) and
+        (not paths['static_zip'].exists() if action=='prepare' or repaired else paths['static_zip'].is_file()),'NO_OVERWRITE_RESUME_RETRY')
     root.mkdir(parents=True,exist_ok=action=='execute');out.mkdir()
     paths['temporary'].mkdir(exist_ok=action=='execute')
     for k in ('TEMP','TMP','TMPDIR'):os.environ[k]=str(paths['temporary'])
@@ -353,7 +367,7 @@ def run(package,action,flags):
         environment=target_environment(c)
         startup=startup_resources(out,paths['static_zip'] if action=='prepare' else paths['once_zip'],c)
         write(out/'startup_resources.json',startup)
-        publication=check_publication(c,out,m)
+        publication=check_publication(c,out,m,flags)
         lock=read(package/'science_lock.json')
         if action=='prepare':
             fixed.materialize_sources(c['git'],c['code_root'],SCIENCE,lock['current_sources'],out/'source_materialization')
@@ -365,7 +379,7 @@ def run(package,action,flags):
                 py_compile.compile(str(package/name),cfile=str(target/(name+'.pyc')),doraise=True)
             status='PREPARED_NOT_EXECUTED'
         else:
-            checked_preparation(package,paths,c,m,flags['reviewed_prepare_sha256'])
+            if not repaired:checked_preparation(package,paths,c,m,flags['reviewed_prepare_sha256'])
             gpu_resources(c,out,m)
             code=b.run_capture(package,one,stage,m,out,paths['once_zip'],A_SHA,EVENT_SHA,True,True,NATIVE,512,pack_result=False)
             capture_status=read(out/'receipt.json');need(code==0,'MODEL_OR_ANALYSIS_FAILED:'+str(capture_status['error']))
@@ -382,13 +396,14 @@ def run(package,action,flags):
     if (out/'model/timeline/receipt.json').is_file():
         session=read(out/'model/timeline/receipt.json')
         if type(session.get('open_code')) is int and session['open_code']==0:sessions=1
-    record=dict(schema_version='cupti-batch-once-control-receipt/0.1.0',phase=action,status=status if error is None else 'BLOCKED',
+    record=dict(schema_version='cupti-batch-once-control-receipt/0.1.1' if repaired else 'cupti-batch-once-control-receipt/0.1.0',phase=action,status=status if error is None else 'BLOCKED',
         error=error,scientific_commit=SCIENCE,analysis_commit=SCIENCE,delivery_control_commit=c['delivery_control_commit'],
         native_commit=NATIVE,package_manifest_sha256=sha(package/'package_manifest.json'),operator_approval=approval,
         environment=environment,publication=publication,model_receipt=capture_status,
         actual_model_processes=model_processes,actual_cupti_sessions=sessions,qualification='NOT_GRANTED',formal_eligible=False,
         independent_output_numerical_correctness='NOT_ASSESSED',historical_ylq_total_bytes=None,
         automatic_retry=False,automatic_cleanup=False,old_micro_authorization_used=False)
+    if repaired:record['repair_profile']=c['repair_profile']
     write(out/'control_receipt.json',record)
     if action=='prepare':
         # This is a NEW preparation receipt, not a replacement of any old A.
@@ -404,6 +419,7 @@ def main(argv=None):
     p.add_argument('--package',type=Path,default=Path(__file__).resolve().parent)
     p.add_argument('--approve-prepare',action='store_true');p.add_argument('--approve-model',action='store_true')
     p.add_argument('--shared-use-approved',action='store_true');p.add_argument('--reviewed-prepare-sha256')
+    p.add_argument('--reviewed-control-publication');p.add_argument('--reviewed-control-publication-sha256')
     p.add_argument('--operator-reference');a=p.parse_args(argv)
     return run(a.package,a.action,vars(a))
 

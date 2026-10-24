@@ -1,6 +1,89 @@
 # ExposedPath 科研进度清单
 
-## 7.250 单次L512/B2/P的有限控制与待审交付（2026-10-24，当前；目标NOT_RUN）
+## 7.251 B2未启动失败后的发布核验控制修复（2026-10-24，当前；模型NOT_RUN）
+
+- [x] 只读核验失败包`coe_batch_L512B2_e358d37f0bcd_once.zip`：971445bytes，收件计算
+  SHA256 `e7393356fa992633daf3b0136ac317a9c2d3f04b14c746c98ab46c8ba301c4f4`。
+  141文件/140清单、CRC/安全路径/全部hash通过，prepare子树逐文件等于已审A；没有
+  另给外部期望ZIP摘要，不冒称独立传输摘要比对。首错为`published_main` GitHub443
+  连接失败，exit128、timed_out=false，非模型/collector/分析错误。0模型、原session
+  计数null，无GPU查询/模型/session/分析产物；按控制顺序未到达模型分派。原BLOCKED、
+  null、网络错误及全部原件保留，不改写成联网成功。审查索引在忽略的本地诊断目录。
+- [x] 新控制profile0.1.0、包/控制回执0.1.1：仅B修复路径复用严格钉住的真实A receipt
+  d17423af…3d7e16、129项A清单、旧交付0aca6463…829634和四份发布源码证明历史e358
+  发布事实。旧0.1.0联网/校验分支保留。缺项、篡改、交付或科学配置变化、旧失败树有
+  额外模型产物等拒绝；新attempt使用transfer新目录，不重做A、不覆盖旧树。
+- [x] 新控制身份不能由旧A授予：独立Git bundle绑定新commit和五份控制源码，还必须
+  有发布机正常发布后核验远端的新控制发布回执，以外部已审SHA/base64内容显式传入。
+  回执必须对应新commit、固定main、正确父范围及无force；没有就阻断模型。回执由
+  操作方外部钉住，不冒称密码学签名；bundle仅证明Git内容，不冒充远端发布。修复B
+  路径不尝试GitHub，既不是吞网络异常fallback，也不重写旧失败状态。
+- [x] 模型/分析仍c8，bridge0.3.0、collector/DLL/SDK及16份科学源码/输入/mask/预算
+  不变，不重编或扩大采集器。模型前仍fresh核共享许可、参与卷12GiB、GPU身份及至少
+  8GiB、源码/库、profiler环境；真实session冲突/质量/依赖门和后验身份保持。8GiB不是
+  峰值或不干扰保证。旧模型启动额度消耗0，仍仅1模型/1session、300s/180s，不增预算。
+- [x] 测试先行的缺实现红测11 failed→11 passed。新增控制检查分别为完整19 passed
+  （73.06s）、交付输入/控制文件篡改2 passed（19 deselected，9.13s）、旧联网错误保留
+  1 passed（21 deselected，1.18s），合计22个唯一新控制用例；没有重跑旧25/26或Q0。
+  真实A/失败原件、本地Git bundle/索引与PS5.1参与验证；目标解释器/库/GPU观察是明确
+  替身，模型边界只运行Host exit7。验证了无网络固定证据准入、缺失/篡改拒绝、fresh
+  资源门、原退出码/错误传播、无分析/重试及旧证据保持。新发布回执是CPU fixture，
+  不宣称新控制已实际发布。四份Python解析及diff检查通过；最终包入口待追加实证。
+- [ ] 固定本地commit和单一待审修复ZIP，最终包解压检查后追加准确身份。新控制的
+  发布/部署执行未获本轮授权，不自动推送或执行；包默认只verify，prepare明确拒绝。
+  原A不重跑，本实例模型链仍NOT_RUN、旧控制失败BLOCKED保持。审查新控制身份及其
+  独立发布证据后，再由用户手工使用剩余一次B2预算；不启动比较/矩阵或其他实验。
+
+本轮仅本地控制修复、验证和待审制包，无服务器/模型/CUDA/Nsight。用户DOCX、Raw、
+历史资格及原A/COE/E保持。以下7.250为旧交付及授权/失败前历史，不恢复原失败入口。
+
+## 7.250 单次L512/B2/P的有限控制与待审交付（2026-10-24，历史；接续见7.251）
+
+**一次B真实授权追加（当前，尚未执行）**：用户明确批准L512/B2/每样本输出2/P，
+warmup3/repeat1，1模型进程/1CUPTI session/零Nsight，绑定已审新A SHA
+`d17423afd2422c7843564777f7603d034ff8ed4f03403682a1222592f73d7e16`。
+授权标识`USER-20261024-B2-ENGINEERING-ONCE`，用户原文回执SHA256
+`89ed5092666622e8d4b4decc20e969fb7480fcb8e26787e32d08333aebb6e4e2`。
+仅在现场共享许可、fresh显存>=8GiB、参与卷磁盘>=12GiB及身份/采集冲突门满足后，
+由用户手工执行已有包的Action=execute；模型300s、分析180s，约10min窗口估计。
+显存预留不是不干扰保证，条件不满足或任一硬失败即停，不重试/缩配/替补/追加。
+已填B命令复用现有入口，不重包/发布/运行A或重复测试；共享许可要求人工现场确认，
+脚本执行fresh资源/身份检查，session/参数效果/依赖/terminal/质量和同源A/COE/E仍须
+真实通过。仅本实例Engineering证据链；不授后续比较/矩阵或Formal。此时未操作服务器/
+GPU，目标NOT_RUN；原A审查结论及其当时“B未授权”作为历史保留。授权/命令与进度
+仅本地记录，无额外提交/推送。
+
+**真实A回传审查追加（当前）**：已只读核验`coe_batch_L512B2_e358d37f0bcd_static.zip`，
+396343bytes，ZIP SHA256 `d5de969e86f44199d26b06bfc6d3baf41551d1aa8677855943aa1100b01aecf1`，
+manifest `d3b39f51bcfed2e67bd5b60b18cb9ea1a63389cfef2fed2a2d124126cd3821fd`。
+130文件/129清单、CRC/安全路径/全hash通过。新A receipt SHA256
+`d17423afd2422c7843564777f7603d034ff8ed4f03403682a1222592f73d7e16`，
+status=PREPARED_NOT_EXECUTED/error=null，授权ID与本次真实授权一致，0模型/0session。
+实际Python3.11.16/-I/-S，包内两份编译产物header与源码大小相符；7项发布Git子进程
+与12项源码Git查询均exit0。当前c8 HEAD、141项Git blob/索引OID与落盘摘要一致，
+59项旧CRLF归一落盘逐一用封存before字节证明；62个仅Git状态标记仍保留，不将status
+伪称为空，内容diff/staged diff均为空。历史6c A/event及三库身份另核，与当前c8分开。
+控制源实字节与已发布e358d37匹配，服务器记录远端main=4f2ffc7且没有改科学HEAD。
+全部新路径在transfer，同卷空闲365401018368bytes，满足当时12GiB门；历史总量仍
+UNKNOWN，不外推未来资源。**阶段A回执审查通过**，本地审查未执行回传代码、CUDA或
+重跑CPU/GPU测试；原交付ZIP不变。审查产物位于忽略的本地诊断目录。
+B仍未授权且目标模型实例NOT_RUN；下一步只在另行模型执行授权后，绑定此真实新A
+SHA及fresh共享许可/资源/冲突检查，准备一次限定B命令。不重跑A、不重包、不自动启动
+模型、B1/B2比较或其他矩阵。以下A“待回传”叙述均是历史，原报告/资格保持。
+
+**2026-10-24后续真实授权与发布（当前）**：用户明确批准`0645fd7..4f2ffc7`的13提交
+正常发布到固定仓库main，以及指定服务器的本次A身份/源码/历史资产/空间/编译准备；
+不授权B、CUDA DLL加载、模型/GPU或其他实验。授权标识
+`USER-20261024-B2-A-PUBLISH-PREPARE`，直接用户原文回执SHA256
+`25c6a116c3dbe7717dabbf357fcd01f637c29678502abacb9b9aeec9a5e12170`。
+一次正常push成功，无force；fresh远端前值0645fd7，后值
+`4f2ffc769ac3a42bf08886c3cda09bccde067206 refs/heads/main`，准确13提交，无新增提交。
+发布回执SHA256 `2ad336295ebb89e3b3524c09b7092c301e87bb4b4ca03871713d55f7bbd05001`；
+实际argv/stdout/stderr保存本地授权目录。原146885bytes ZIP及SHA保持，不重包/重测，
+包内local authorization是制包时历史快照，本次新授权另存，不回写。服务器未由本窗口
+访问或执行；科学checkout须仍为c8，A实物待用户手工执行/回传，B仍NOT_RUN且未授权。
+此发布后进度/交接仅本地追加，未创建或推送授权13范围之外的记录提交。以下为授权前
+实现与交付历史，保留其中当时“未授权/未发布”状态，不作为当前阻塞。
 
 用户已批准7.249限定预算的本地实现/测试/制包；**未批准本轮推送、服务器部署或模型执行**。
 仅新增历史资产/当前源码兼容绑定与transfer单槽控制，不修改模型、P helper、collector、
@@ -5510,7 +5593,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 7.34后续用户回传（原件待收）：0.2首次export PASS，audit因`RAW_TABLE_MISSING:CUPTI_ACTIVITY_KIND_MEMSET` BLOCKED，尚未本地核验实际schema。先据对应版本的按需表规则审计，不默认缺表为空、不重采/重export；若只需分析adapter修复，使用原输入新目录离线复验。Gate8/新Q0仍NOT_RUN。
 - 7.33后续用户回传（原件待收）：07625b7的0.2窄受控capture已结束，run `controlled_20260926T133649Z_8dd7210fc970474eb1b6358a9e91d8cd`，plan/REP生成、capture exit0；未export/analysis/模型。本窗口尚未取得完整目录，不能声称trace语义或文件身份链通过。下一步仅到件只读审计及新run绑定后处理草案；Gate8/新Q0仍NOT_RUN。
 - 7.32验证：37项受控定向通过；本地Python3.12.7 CPU-only全量1169 passed/5 skipped（nvcc编译项），compileall/合同37/37/Canonical7模块/oracle/diff-check通过。不是目标机新native编译或采集资格。
-- 最近更新：`2026-10-24`（7.250单次Batch有限控制接线/本地待审交付，目标未执行）
+- 最近更新：`2026-10-24`（7.251 B未启动的网络控制失败及限定离线发布核验修复待审）
 - 权威研究主体：`docs/current/ExposedPath_研究设计.docx`，文内版本 `v7.1`
 - 当前执行依据：原DOCX v2.1仍为Pre-Pilot；[重签G12-ROUTEA/0.1.1](gate12_protocol_signed_v0_1_1.json)仅对其随后旧路线A Formal及[收尾边界](gate12_closeout_v0_1_1.md)有效，不覆盖原文，也不授权新CUPTI/COE。新[确认性候选§8](completion_operation_contract_draft_v0_1.md)未签署；旧0.1签署保留。
 - 当前研究阶段：旧Gate13签署0.1.1限定Formal最终PASS保持；新CUPTI/COE完成组件/实例Engineering、bd377c三点Pilot及离线机制收口，不是新Formal或全Q0。7.248目标受控已执行，同一原件的独立参考、消费者准入、限定连接离线通过；原控制回执BLOCKED及后验未执行保持，不授模型/Batch资格。4096及其他时延敏感确认实验仍暂停，Gate14未启动，旧后处理BLOCKED不恢复。
@@ -5518,7 +5601,7 @@ tests-first：初始缺模块、跨namespace、WAL旁路和未定义时间单位
 - 当前数据资格（7.131）：Gate6历史Engineering/Q0保持；[首批/暖机对照](gate11_warmup_policy_review_v0_1.md)及[共同w3 Pilot](gate11_policy_closeout_v0_1.md)仍只作政策依据、不混池/升级。已签署限定Formal60次执行/30条P1质量、归档终态及冻结统计全部接受，见[完整审查](gate13_local_review_v0_1.md)/[最终裁决](gate13_closeout_v0_1.json)；不是普遍测量有效性或完整新Q0认证。UNKNOWN/NOT_ASSESSED与旧资格边界保持。
 - 当前 Gate 状态（7.131）：Gate0～7历史PASS、Gate8限定Engineering PASS、Gate9分域PASS、[Gate10仅选定G1三点一次可行性PASS](gate10_closeout_v0_1.md)、[N1独立Engineering PASS](n1_model_feasibility_closeout_v0_1.md)、[Gate11限定Pilot政策PASS](gate11_policy_closeout_v0_1.md)、[Gate12限定0.1.1重签PASS](gate12_closeout_v0_1_1.md)；[Gate13签署路线A限定PASS](gate13_closeout_v0_1.json)、Gate14 NOT_RUN。容量/精度/稳定性未授，旧报告/UNKNOWN/NOT_ASSESSED保持。
 - 当前新路线数据资格（7.239）：[bd377c来源](cupti_input_pilot_sources_v0_1.json)仅9run/3block/18链限定Pilot，native/runner/DLL为6c744bf、控制/分析bd377c/bridge0.3；不是旧Nsight Formal重复、通用provider资格或无插桩性能。旧批GPU独占UNKNOWN、第二token反例与1024分叉保持。
-- 当前最高优先级（7.250）：审阅单次L512/B2/输出2/P最终包及新控制发布/准备授权；两项控制差额已本地实现，目标NOT_RUN。科学组件c8/bridge0.3、历史资产6c分开绑定，不启用受控0.3.2；全新产物transfer。新A真实回执审查后才另给B命令，模型/共享许可/新鲜资源待执行前明确；未推送、未部署/运行GPU，旧26项及微例不重跑。性能确认/8P1/4096及其他矩阵不自动恢复。
+- 当前最高优先级（7.251）：审查未启动B2的发布核验控制修复及最终单包。原A已通过；旧B在GitHub443查询exit128、0模型，BLOCKED/session-null保留。新路径复用A固定发布证据，新控制另需Git身份及独立已审发布回执；不联网fallback、不重做A或扩大1模型预算。科学c8/bridge0.3、历史库6c和fresh共享/8GiB/12GiB/质量门保持。新修复未推送/部署/执行，模型NOT_RUN；不自动恢复比较矩阵、性能确认、8P1或4096。
 - 7.27本地验证：tests-first新增16例，定向49 passed；显式令nvcc不可见的CPU全量1132 passed/5 skipped（编译相关5例，不改skip源码），compileall、contract37/37、Canonical boundary、oracle independence、diff-check通过。首次全量PATH隔离未生效，意外触发本机CUDA13旧Q0编译失败：1130 passed/1 failed/4 errors，保留事实；未运行GPU/Q0程序。review新增直接入口伪零/错basis的RED→GREEN，共享shape校验并绑定physical sync_id。新scope入口仅synthetic受控证据，真实受控桥接与目标栈资格尚缺。旧S/A/B/Derived公式、Q0源码/oracle及Gate6证据zero diff。
 - 7.28本地验证：先新增producer/Raw/file-proof回归；review的额外sync、前窗同流memset、独立Driver表、冲突trace/plan五项先失败后修复。29项定向通过；CPU全量1161 passed/5 skipped（nvcc隔离，196.78s），compileall、contract37/37、Canonical7模块、oracle independence、diff-check通过。所有Raw均确定性fixture，未编译/执行新native、未运行GPU/Nsight。局部API unknown20ns/request未改成Host，4个B独立oracle吻合，不产Derived。
 - 7.29服务器回执：本窗口直接读取用户传回文本，24f58f8已部署；模块式DevShell成功，cl19.38.33135.0/MSVC14.38.33130/nvcc12.4.131/Python3.11.16。该commit服务器全量1165 passed/1 skipped（195.55s，未打印skip原因，不推断）；contract37/37、Canonical7、oracle PASS。native在cudaDeviceGetUuid未定义处编译失败，未产成功build receipt、未采集GPU，mask恢复3。本轮只修UUID获取为既有Q0及官方CUDA12.4支持的cudaGetDeviceProperties().uuid，身份语义不变；source回归先RED后修复。恢复脚本以24f58f8为基线，旧8d64f75部署脚本停用；不无故重跑服务器全量。
