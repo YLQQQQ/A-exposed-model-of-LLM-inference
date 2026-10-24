@@ -13,6 +13,12 @@ Raw离线消费和CPU损坏副本分开。最终分析commit/派生摘要见[进
 模型/Batch或Formal资格；无推送/重采/重编/制包，不自动启动其他GPU任务。用户DOCX及
 原件保持，等待下一项明确决定。
 
+分析实现固定`9c9685b7062b76678aca945d3c8232d7ca410ec7`；目标执行仍c8f3dad、collector
+仍6c744bf，不以本交接文档HEAD替代分析身份。同一ZIP的新显式CLI离线exit0，派生目录
+为忽略的本地coe_controlled_offline_v0_3/derived_v0_3_0；review.json SHA256
+`0954d441712490871b291cbb2c0ac6c0f938e84752db88a109a1d7ce2037075b`，三项PASS、无剩余
+本例语义缺口。原控制后验NOT_REACHED_AFTER_WORKER_REFUSAL和full_Q0=NOT_GRANTED保留。
+
 以下全部为历史交接，其中“当前/唯一/待执行”不覆盖上述7.248状态：
 
 **7.129唯一现行：Gate13 BLOCKED；一次身份补证已结束，禁止继续追索进程/重跑静止检查或权限试验。** [进度7.129](research_progress.md)直接核验新JSON14910 bytes/`7536d1ee6f37953fd7b89e7b3115546aa5209a29075e379ebfd0f4d10d22340b`（本地实测，未获独立服务器hash回执），15组PID/创建时间与原封存源一致。实际非管理员令牌、成功单次查询；11匹配实例缺ExecutablePath/CommandLine仍UNKNOWN，4原实例EXITED。不推断缺字段原因或无写者。

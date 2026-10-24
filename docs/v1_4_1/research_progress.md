@@ -43,6 +43,20 @@
 原控制后验未执行单列，旧A/COE/E、Gate13限定PASS、历史UNKNOWN/BLOCKED和DOCX保持。
 没有重采、重编、新包、通用API/模型/Batch资格或远端发布；本轮仅本地提交、不推送。
 
+最终实物绑定（2026-10-24）：分析实现`9c9685b7062b76678aca945d3c8232d7ca410ec7`，目标
+执行仍`c8f3dad152659044691f9ff328498c7a127815ea`、collector仍6c744bf。实际CLI：
+`python -B -m scripts.review_coe_controlled_offline --archive <repair2_once.zip>
+--archive-sha256 680cb2418ee1aa3fd21c4d80f5b4e868df99a7709d3a66769833b42724cf06ed
+--output <coe_controlled_offline_v0_3/derived_v0_3_0>
+--nested-launch-policy cupti-api22-controlled-nested-launch/0.1.0`，exit0，
+`LIMITED_CONTROLLED_CONNECTION_PASS`；三项verdict独立列为PASS、remaining_semantic_gaps=[]。
+新review.json SHA256 `0954d441712490871b291cbb2c0ac6c0f938e84752db88a109a1d7ce2037075b`；
+reference、scope、完整调用分组、evidence、5类控制来源及consumer均独立留存。9项分析
+源码摘要与该实现Git blob一致，不使用后续文档HEAD替代分析身份。原API owner并集832100ns，
+嵌套控制无增量预算；四必要成员、terminal和1920ns同前述独立参考一致。原ZIP/Raw及
+DOCX摘要保持，syntax/diff检查通过；原控制后验NOT_REACHED_AFTER_WORKER_REFUSAL、
+full_Q0=NOT_GRANTED、Formal=false保持，后续文档提交不重写本次派生结果。
+
 以下是适配前历史记录：
 
 **历史状态：目标受控已执行，独立审查BLOCKED；以下交付前NOT_RUN均为历史状态，
