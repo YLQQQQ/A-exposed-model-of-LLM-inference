@@ -18,6 +18,7 @@ ROOT=Path(__file__).resolve().parents[1]
 SOURCE_FILES=('scripts/review_coe_controlled_offline.py','scripts/coe_cupti_controlled.py',
     'scripts/coe_controlled_deployment.py','analysis/cupti_call_instances.py','analysis/cupti_timeline.py',
     'exposedpath_v141/submit_effect_bridge.py','exposedpath_v141/cupti_driver_queries.py',
+    'exposedpath_v141/cupti_nested_launch_control.py',
     'scripts/analyze_completion_operation_candidate.py')
 
 
@@ -28,7 +29,9 @@ def write(path,v):
     with Path(path).open('x',encoding='utf8') as f:json.dump(v,f,indent=2)
 
 
-def review(archive,expected_sha,output):
+def review(archive,expected_sha,output,*,nested_launch_policy=None):
+    from exposedpath_v141.cupti_nested_launch_control import POLICY as NESTED_POLICY
+    controlled.require(nested_launch_policy in (None,NESTED_POLICY),'NESTED_LAUNCH_POLICY')
     archive,out=Path(archive),Path(output)
     controlled.require(not out.exists() and not archive.resolve().is_relative_to(out.resolve()),'NEW_OUTPUT')
     original=archive.read_bytes()
@@ -55,7 +58,8 @@ def review(archive,expected_sha,output):
     exact=all(sha(subprocess.run(['git','show',commit+':'+n],cwd=ROOT,capture_output=True).stdout)==s
               for n,s in source_hashes.items())
     out.mkdir(parents=True)
-    report=dict(schema_version='coe-controlled-offline-review/0.2.0',status='BLOCKED',
+    report=dict(schema_version='coe-controlled-offline-review/0.3.0' if nested_launch_policy else
+                              'coe-controlled-offline-review/0.2.0',status='BLOCKED',
         target_execution='EXECUTED',execution_commit=get('once/receipt.json')['execution_commit'],
         analysis_commit=commit if exact else None,analysis_source_sha256=source_hashes,
         call_instance_policy=POLICY,archive_sha256=expected_sha,manifest_sha256=manifest_sha,
@@ -64,26 +68,38 @@ def review(archive,expected_sha,output):
         original_reports_rewritten=False,original_post_control_status='NOT_REACHED_AFTER_WORKER_REFUSAL',
         reference=None,consumer_result=None,remaining_semantic_gaps=[],error=None,
         qualification='NOT_GRANTED',formal_eligible=False,server_action_required=False)
+    if nested_launch_policy:
+        report.update(nested_launch_policy=nested_launch_policy,full_Q0='NOT_GRANTED',
+            verdicts=dict(independent_reference='NOT_RUN',consumer_admission='NOT_RUN',
+                          controlled_connection='NOT_RUN'))
     try:
         # This fixes MEMBERS from the prior construction and times from Raw;
         # it never calls S to create an expected answer.
         ref=controlled.independent_reference(raw,side,call_instance_policy=POLICY)
         report['reference']=ref;write(out/'reference.json',ref)
+        if nested_launch_policy:report['verdicts']['independent_reference']='PASS'
         ix=CallInstances(raw['callbacks'],raw['pid'])
         write(out/'correlation_groups.json',ix.inventory())
         from analysis.cupti_timeline import select_scope,to_evidence,analyze_scope
         producer=dict(session_id=side['session_id'],pid=side['pid'],tid=side['tid'],run_id=side['run_id'],
                       actual_token_ids=side['actual_token_ids'],**side['labels'])
         scope=select_scope(raw,producer,timing_policy=controlled.TIMING,driver_query_policy=controlled.QUERIES,
-                           call_instance_policy=POLICY)
+                           call_instance_policy=POLICY,nested_launch_policy=nested_launch_policy)
         write(out/'scope.json',scope)
         evidence=to_evidence(raw,scope,timing_policy=controlled.TIMING,driver_query_policy=controlled.QUERIES,
-                             call_instance_policy=POLICY)
+                             call_instance_policy=POLICY,nested_launch_policy=nested_launch_policy)
         write(out/'evidence.json',evidence)
+        nested_controls=[]
+        if nested_launch_policy:
+            from exposedpath_v141.cupti_nested_launch_control import validate_nested_launch_controls
+            nested_controls=validate_nested_launch_controls(evidence)
+            write(out/'nested_launch_controls.json',nested_controls)
+        nested_ids={c['callback_id'] for c in nested_controls}
         from exposedpath_v141.cupti_driver_queries import RULES,DRIVER_OPERATIONS,NESTED_HELPERS
         for c in evidence['callbacks']:
             if c['domain']!='DRIVER' or c.get('parent_id') is None:continue
             if not scope['request_start']<=c['start']<scope['completion_end']:continue
+            if c['id'] in nested_ids:continue
             root=ix.root(c)
             if c['name'] in RULES or (c['name'],c['cbid']) in DRIVER_OPERATIONS or \
                 NESTED_HELPERS.get((c['name'],c['cbid']))==normal(root['name']):
@@ -94,15 +110,23 @@ def review(archive,expected_sha,output):
                 callback_interval_ns=[c['start'],c['end']],params=c['params'],
                 reason='NOT_IN_EXISTING_EXACT_NESTED_DRIVER_SUPPORT_RULES; NOT_PROVEN_NO_EFFECT'))
         result=analyze_scope(evidence)
+        report['consumer_result']=result
+        if nested_launch_policy:report['verdicts']['consumer_admission']='PASS'
         controlled.require(result['members']==ref['members'] and result['terminal']==ref['terminal'] and
             result['logical_zero_call_ids']==ref['logical_zero_call_ids'],'MEMBER_OR_TERMINAL_MISMATCH')
         controlled.require(result['coe_ns']==ref['expected_coe_ns'] and
             result['sync_intersection_ns']==ref['expected_sync_ns'] and
             result['operation_wall_ns']==ref['wall_ns'],'ARITHMETIC_MISMATCH')
-        report.update(status='CONTROLLED_REFERENCE_MATCH_PENDING_REVIEW',consumer_result=result)
+        if nested_launch_policy:
+            report['verdicts']['controlled_connection']='PASS'
+            report['status']='LIMITED_CONTROLLED_CONNECTION_PASS'
+        else:report['status']='CONTROLLED_REFERENCE_MATCH_PENDING_REVIEW'
         write(out/'consumer.json',result)
     except Exception as exc:
         report['error']=type(exc).__name__+':'+str(exc)
+        if nested_launch_policy:
+            first=next((k for k,v in report['verdicts'].items() if v=='NOT_RUN'),None)
+            if first:report['verdicts'][first]='BLOCKED'
     controlled.require(archive.read_bytes()==original,'SOURCE_CHANGED')
     write(out/'review.json',report)
     return report
@@ -113,9 +137,10 @@ def main():
     p.add_argument('--archive',type=Path,required=True)
     p.add_argument('--archive-sha256',required=True)
     p.add_argument('--output',type=Path,required=True)
-    a=p.parse_args();r=review(a.archive,a.archive_sha256,a.output)
+    p.add_argument('--nested-launch-policy',default=None)
+    a=p.parse_args();r=review(a.archive,a.archive_sha256,a.output,nested_launch_policy=a.nested_launch_policy)
     print(json.dumps(dict(status=r['status'],error=r['error'],target_execution=r['target_execution'])))
-    return 0 if r['status']=='CONTROLLED_REFERENCE_MATCH_PENDING_REVIEW' else 2
+    return 0 if r['status'] in ('CONTROLLED_REFERENCE_MATCH_PENDING_REVIEW','LIMITED_CONTROLLED_CONNECTION_PASS') else 2
 
 
 if __name__=='__main__':raise SystemExit(main())

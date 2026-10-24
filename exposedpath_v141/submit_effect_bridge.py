@@ -89,10 +89,15 @@ def validate_api_callback(a,c,*,policy=LEGACY_TIMING):
 
 
 def analyze_scope(v):
-    instance_profile=v.get('schema_version')=='submit-effect-evidence/0.3.1'
+    nested_profile=v.get('schema_version')=='submit-effect-evidence/0.3.2'
+    instance_profile=v.get('schema_version') in ('submit-effect-evidence/0.3.1','submit-effect-evidence/0.3.2')
     require(v.get('schema_version') in (INPUT_VERSION,SAMPLED_INPUT_VERSION,QUERY_INPUT_VERSION,
-                                      'submit-effect-evidence/0.3.1'),'VERSION')
-    query_profile=v['schema_version'] in (QUERY_INPUT_VERSION,'submit-effect-evidence/0.3.1')
+                                      'submit-effect-evidence/0.3.1','submit-effect-evidence/0.3.2'),'VERSION')
+    query_profile=v['schema_version'] in (QUERY_INPUT_VERSION,'submit-effect-evidence/0.3.1','submit-effect-evidence/0.3.2')
+    if nested_profile:
+        from .cupti_nested_launch_control import POLICY as NESTED_POLICY
+        require(v.get('nested_launch_policy')==NESTED_POLICY,'NESTED_LAUNCH_POLICY')
+    else:require('nested_launch_policy' not in v,'NESTED_LAUNCH_POLICY')
     instances=None
     if instance_profile:
         from analysis.cupti_call_instances import CallInstances,POLICY
@@ -175,6 +180,11 @@ def analyze_scope(v):
         if sampled:timing_counts[fact['relation']]+=1
         apis[a['id']]=a;api_keys[api_key(a)]=a
         if a['domain']=='RUNTIME':runtime.append(a)
+    nested_controls=[]
+    if nested_profile:
+        from .cupti_nested_launch_control import validate_nested_launch_controls
+        nested_controls=validate_nested_launch_controls(v)
+    nested_ids={f['callback_id'] for f in nested_controls}
     query_rules={}
     def ancestors(c):
         yield c
@@ -216,6 +226,7 @@ def analyze_scope(v):
             if c['domain']!='DRIVER' or not local_callback(c):continue
             if c.get('parent_id') is None:require(api_key(c) in api_keys,'DRIVER_API_COVERAGE')
             if c['id'] in query_rules:continue
+            if c['id'] in nested_ids:continue # Resource control, NOT a query/submit/W member.
             if c.get('parent_id') is None:
                 require((c['name'],c['cbid']) in DRIVER_OPERATIONS and normal(c['name']) in DRIVER_SUBMITS,
                     'DRIVER_ROOT_API_UNSUPPORTED:'+str(c['id'])+':'+c['name'])
@@ -434,4 +445,7 @@ def analyze_scope(v):
     if instance_profile:
         answer.update(schema_version='submit-effect-bridge/0.3.1',call_instance_policy=v['call_instance_policy'],
                       correlation_groups=instances.inventory())
+    if nested_profile:
+        answer.update(schema_version='submit-effect-bridge/0.3.2',nested_launch_policy=v['nested_launch_policy'],
+                      nested_launch_controls=nested_controls)
     return answer

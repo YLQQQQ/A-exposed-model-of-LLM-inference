@@ -32,7 +32,8 @@ def marker_ranges(rows):
     return dict(ranges=ranges,points=points)
 
 
-def select_scope(raw,producer,*,timing_policy=LEGACY_TIMING,driver_query_policy=None,call_instance_policy=None):
+def select_scope(raw,producer,*,timing_policy=LEGACY_TIMING,driver_query_policy=None,call_instance_policy=None,
+                 nested_launch_policy=None):
     """Join original producer labels to this capture's own CUPTI clock.
 
     Producer/token files must be bound by the caller's input manifest. This
@@ -82,14 +83,15 @@ def select_scope(raw,producer,*,timing_policy=LEGACY_TIMING,driver_query_policy=
         copy_api=copy['id'],sync_api=sync['id'],completion_proof='HOST_TOKEN_READABLE',
         actual_token_ids=deepcopy(producer['actual_token_ids']),ownership='CLOSED_SINGLE_FIFO_NO_EVENTS_OR_GRAPHS')
     evidence=to_evidence(raw,scope,timing_policy=timing_policy,driver_query_policy=driver_query_policy,
-                         call_instance_policy=call_instance_policy)
+                         call_instance_policy=call_instance_policy,nested_launch_policy=nested_launch_policy)
     physical=one((s for s in evidence['synchronizations'] if s['domain']=='RUNTIME' and
         s['correlation']==drain['correlation'] and s['flags']==4),'DRAIN_PHYSICAL_SYNC')
     require(physical['context']==scope['context'] and drain['start']<=physical['start']<=physical['end']<=drain['end'],'DRAIN_SCOPE')
     return scope
 
 
-def to_evidence(raw,scope,*,timing_policy=LEGACY_TIMING,driver_query_policy=None,call_instance_policy=None):
+def to_evidence(raw,scope,*,timing_policy=LEGACY_TIMING,driver_query_policy=None,call_instance_policy=None,
+                nested_launch_policy=None):
     require(timing_policy in (LEGACY_TIMING,SAMPLED_TIMING),'TIMING_POLICY')
     require(driver_query_policy is None or
         (driver_query_policy==DRIVER_QUERY_POLICY and timing_policy==SAMPLED_TIMING),'DRIVER_QUERY_POLICY')
@@ -211,6 +213,12 @@ def to_evidence(raw,scope,*,timing_policy=LEGACY_TIMING,driver_query_policy=None
     if instances:
         answer.update(schema_version='submit-effect-evidence/0.3.1',call_instance_policy=call_instance_policy,
                       correlation_groups=instances.inventory())
+    if nested_launch_policy is not None:
+        from exposedpath_v141.cupti_nested_launch_control import POLICY
+        require(nested_launch_policy==POLICY and instances is not None and
+                driver_query_policy==DRIVER_QUERY_POLICY,'NESTED_LAUNCH_POLICY')
+        answer.update(schema_version='submit-effect-evidence/0.3.2',nested_launch_policy=nested_launch_policy,
+                      resource_records=deepcopy(contexts+streams))
     return answer
 
 
