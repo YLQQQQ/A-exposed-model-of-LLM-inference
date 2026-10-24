@@ -940,3 +940,32 @@ COE、扩展completion exposure分别写文件，以来源/hash索引接入完�
 本地CPU文件链与Host替身不授予batch GPU资格。容量、真实参数/效果、依赖及terminal仍
 逐新run判定；collector容量不扩展。GPU恢复后的第一项保持7.241受控正确性验证，
 batch实测、8P1、4096继续NOT_RUN/暂停；本轮无部署包或目标执行命令。
+
+### 16.1 单次L512/B2/P的待审声明（7.249，2026-10-24，非执行授权）
+
+复用7.247和既有26项CPU文件链证据，不重复测试。模型/科学分析固定
+`c8f3dad152659044691f9ff328498c7a127815ea`；plan0.3/model-control0.5/bridge0.3、
+activity policy0.2/query policies0.1、迁移0.1.1。collector仍固定6c744bf及已审三库。
+控制入口若补身份/路径绑定，其新commit另记，不代替c8科学实现；不自动启用7.248受控
+专用0.3.2。此段仅沿既有语义选择一个实例，不更改生产A/B、COE或历史资格。
+
+计划为Engineering、conditions=[{input_tokens:512,batch_size:2}]、blocks=1、
+orders=[[G512B2P]]、comparisons=[]；batch1扩为整批2，其余固定模型/输入周期、全1 mask、
+FP16/eager/SDPA/P、输出2、warmup3/repeat1。完整[2,512]身份、真实[2,2]token、16-byte
+D2H、整批首/末Host-readable边界贯通。使用OBSERVED_ENGINEERING且独立预期矩阵为空；
+核形状、词表、EOS、读取及文件一致性，不声称独立内容/数值正确性。
+
+必要控制差额不是新collector：旧A验证仍要求当前checkout6c，但最近封存现场是c8；须
+显式拆分历史A/event资产资格和当前c8依赖身份，不改旧回执或假冒clean。旧通用计划的
+输出目录仍为diagnostics/evidence，未来新产物改为transfer的新子目录；不通过给旧CLI
+随意添加开关绕过总/子合同分派。当前仅核对差额，不实现、不打包、发布或运行。
+
+待审预算为1模型/1session，模型300秒、分析180秒硬限，约10分钟作业窗口估计；
+参与卷新鲜12GiB空闲。建议可分配GPU余量8GiB待审，非已证峰值；还须共享项目许可、
+新鲜身份/显存/冲突/空间核验及单独Batch授权，旧微例授权不适用。保留量预计展开
+0.3～1GiB/ZIP数十～200MiB（依据旧B1约219MB，不保证B2），不自动清理，历史总量UNKNOWN。
+
+只接受两token证据、零丢失/正常关闭和同源A/COE/E去重/迁移/守恒全部闭合；任一硬失败
+停止并保留具体缺口，无重试/替补或扩工具。报告整批完成时延，不将样本/token视为独立
+重复，不把共享P1时延作为性能比较。COE/E正负或零变化不是质量门，单次通过不授Batch
+规律、完整Q0或Formal资格；是否值得同期B1/B2须事后另行提出，不预授权矩阵。
