@@ -46,6 +46,31 @@ S/COE/E定义。7.248三项限定PASS、原受控BLOCKED及后验未执行保持
 本轮无服务器/GPU/模型/CUDA/Nsight动作，无推送；用户DOCX和大型原件不纳提交。
 旧Formal、数据角色、Raw和全部历史不利结果保持，不增加Gate或研究范围。
 
+**最终交付绑定（本地）**：控制实现`e358d37f0bcd1b07c4de7a882fabc4d7788f905c`；
+执行/分析仍c8，collector仍6c。唯一待审`coe_batch_e358d37f0bcd_delivery.zip`，
+**146885 bytes**，ZIP SHA256 `b5e9190080bb6ac3d9e7be4b357f1f457a6f2698ec0250d91c0b5a8f2b434626`；
+manifest `0aca6463d7c8b76a0ecc6095b9849afac56c9da0e75e95d5f7a7d3a452829634`；
+PS入口 `315351a66b021f4264993de91f752a3ec2a80edd8de15d6219dc732d6848b815`。
+34文件/33清单、CRC/安全路径/全hash、16科学及四控制源的Git blob对照通过；精确包内
+`python -I -S -B ... verify` exit0、无目标访问。最终解压副本控制回归：
+`BATCH_ONCE_REVIEWED_PACKAGE=<final_package_clean> python -B -m pytest -q -ra -p no:cacheprovider tests/test_cupti_batch_once_delivery.py --basetemp .local/bo_pkg2 --junitxml .local/diagnostics/cupti_batch_once_delivery_v0_1/final_package_tests_clean.xml --tb=short`，
+**25 passed / 0 failed / 0 skipped，180.57秒**。两次25项为同一新增回归在开发/最终包上
+的检查，不合计为50项资格。首次包回归的导入器在执行模块前生成pycache，严格覆盖门
+报10 passed/15 setup errors；原输出保留。改用实际launcher一致的`-B`、新解压副本后
+通过，未删除覆盖检查、未改包或放宽身份。实际PS5.1.26100.9711解析包内入口和整段
+待审A命令通过；命令未在服务器执行。包内保存前一轮25项XML，最终解压检查另存外部
+本地诊断，避免为了追记结果重包或哈希自引用。摘要/命令见忽略的本地交付索引。
+
+**发布仍未获本轮授权，未执行**：新增控制e358d37及本条绑定记录需要正常发布。当前
+本地origin/main仅跟踪`0645fd7519d335567c2c5c2a922e9a3a6adb5a57`，没有fresh远端查询；
+main从该引用到控制提交还含既有未发布`ff0bd24、e87107c、a143703、d6a3be1、38692c1、
+08d2d30、6cbd1db、ee5b75f、9c9685b、a451cb2、75d4792`，范围涉及旧部署修复、受控
+消费者/收口记录和7.249核对。若授权正常main快进，会连同这些祖先及新交付绑定记录
+一并发布，不能将它描述为只推一个文件或只推c8。无DOCX/Raw/大型原件纳入提交。
+服务器应保持c8工作树；发布后的控制提交只用于包身份，不替代科学checkout。
+待新发布/部署准备授权后执行A，回传transfer下同前缀`_static.zip`；真实新A审查通过
+后才另给B命令并核共享许可/新鲜资源。当前无模型启动授权，受控旧授权不可扩用。
+
 ## 7.249 单次L512/B2/P Engineering前置核对（2026-10-24，历史；接续见7.250）
 
 本轮只读核对实现/封存身份与预算，并更新本记录和交接；未运行测试、模型/GPU、编译、

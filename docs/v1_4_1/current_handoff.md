@@ -9,7 +9,10 @@ HEAD。全部新产物/临时/cache/fetch对象写transfer；旧树不迁移、�
 默认A仅新控制/源码/库/资源检查；B须真实已审新A SHA及单独Batch/共享许可，不借用
 微例授权。1模型/1session、L512/B2/输出2/P、w3/r1、模型300s/分析180s、12GiB，约10min
 估计；8GiB非峰值/不干扰保证，历史总量UNKNOWN。仅新增控制回归，旧26/微例不重跑，
-目标Python/库/GPU均未验证。本地提交/单包身份及命令在进度7.250追加固定；本轮不推送/
+目标Python/库/GPU均未验证。控制提交e358d37f0bcd，科学执行/分析仍c8；唯一包
+coe_batch_e358d37f0bcd_delivery.zip（146885bytes / b5e9190080bb6ac3d9e7be4b357f1f457a6f2698ec0250d91c0b5a8f2b434626），
+最终ZIP解压控制回归25 passed/0 failed/0 skipped（180.57s），真实PS5.1解析通过。
+manifest/入口身份与命令在进度7.250及本地交付索引固定；本轮不推送/
 部署/执行。7.248三项限定PASS和原BLOCKED/未执行后验不改；不自动扩矩阵或资格。
 
 以下7.249为历史核对记录，当前差额由7.250接续。
