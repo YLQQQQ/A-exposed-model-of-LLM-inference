@@ -35,6 +35,12 @@ def components(package):
 
 
 def checked_a(c,stage,m):
+    if 'asset_compatibility' in c:
+        # Explicit new control profile; the historical branch below is intact.
+        source=Path(__file__).with_name('cupti_batch_once_delivery.py')
+        spec=importlib.util.spec_from_file_location('_batch_current_source_control',source)
+        current=importlib.util.module_from_spec(spec);spec.loader.exec_module(current)
+        return current.checked_assets(c,stage,m)
     root=Path(c['a_root'])
     for name,key in [('receipt.json','reviewed_a_receipt_sha256'),('artifact_manifest.json','a_manifest_sha256'),('delivery.json','a_delivery_sha256')]:
         require(sha(root/name)==c[key],'A_HASH:'+name)
